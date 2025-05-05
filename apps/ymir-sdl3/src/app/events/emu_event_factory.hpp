@@ -91,6 +91,7 @@ EmuEvent InsertPort2Peripheral(ymir::peripheral::PeripheralType type);
 EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path);
 EmuEvent Insert8MbitDRAMCartridge();
 EmuEvent Insert32MbitDRAMCartridge();
+EmuEvent InsertROMCartridge(std::filesystem::path path);
 EmuEvent InsertCartridgeFromSettings();
 
 EmuEvent DeleteBackupFile(std::string filename, bool external);

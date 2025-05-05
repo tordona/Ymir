@@ -1,0 +1,74 @@
+#pragma once
+
+#include "cart_base.hpp"
+
+#include <ymir/util/data_ops.hpp>
+#include <ymir/util/size_ops.hpp>
+
+namespace ymir::cart {
+
+class ROMCartridge final : public BaseCartridge {
+public:
+    static constexpr size_t kRomSize = 2_MiB;
+
+    ROMCartridge()
+        : BaseCartridge(0xFFu, CartType::ROM) {}
+
+    uint8 ReadByte(uint32 address) const final {
+        if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
+            return m_rom[address & (kRomSize - 1)];
+        } else {
+            return 0xFFu;
+        }
+    }
+    uint16 ReadWord(uint32 address) const final {
+        if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
+            return util::ReadBE<uint16>(&m_rom[address & (kRomSize - 1) & ~1]);
+        } else {
+            return 0xFFFFu;
+        }
+    }
+
+    void WriteByte(uint32 address, uint8 value) final {}
+    void WriteWord(uint32 address, uint16 value) final {}
+
+    uint8 PeekByte(uint32 address) const final {
+        if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
+            return m_rom[address & (kRomSize - 1)];
+        } else {
+            return 0xFFu;
+        }
+    }
+    uint16 PeekWord(uint32 address) const final {
+        if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
+            return util::ReadBE<uint16>(&m_rom[address & (kRomSize - 1) & ~1]);
+        } else {
+            return 0xFFFFu;
+        }
+    }
+
+    void PokeByte(uint32 address, uint8 value) final {
+        if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
+            m_rom[address & (kRomSize - 1)] = value;
+        }
+    }
+    void PokeWord(uint32 address, uint16 value) final {
+        if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
+            util::WriteBE<uint16>(&m_rom[address & (kRomSize - 1) & ~1], value);
+        }
+    }
+
+    void LoadROM(std::span<const uint8> out) {
+        const size_t size = std::min(out.size(), kRomSize);
+        std::copy_n(out.begin(), size, m_rom.begin());
+    }
+
+    void DumpROM(std::span<uint8, kRomSize> out) const {
+        std::copy(m_rom.begin(), m_rom.end(), out.begin());
+    }
+
+protected:
+    std::array<uint8, kRomSize> m_rom;
+};
+
+} // namespace ymir::cart

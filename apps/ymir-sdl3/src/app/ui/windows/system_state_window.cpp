@@ -422,6 +422,9 @@ void SystemStateWindow::DrawCartridge() {
         if (ImGui::MenuItem("32 Mbit DRAM")) {
             m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge());
         }
+        if (ImGui::MenuItem("16 Mbit ROM")) {
+            m_context.EnqueueEvent(events::gui::OpenROMCartFileDialog());
+        }
         ImGui::EndPopup();
     }
     ImGui::SameLine();

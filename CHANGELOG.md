@@ -4,6 +4,8 @@
 
 ### New features and improvements
 
+- Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95 (#71)
+
 ### Fixes
 
 - VDP1: Preserve EWDR, EWLR and EWRR on reset. Fixes some graphics glitches on Capcom games (#67).

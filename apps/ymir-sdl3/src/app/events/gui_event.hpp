@@ -48,6 +48,7 @@ struct GUIEvent {
     enum class Type {
         LoadDisc,
         OpenBackupMemoryCartFileDialog,
+        OpenROMCartFileDialog,
         OpenPeripheralBindsEditor,
 
         OpenFile,      // Invoke generic open single file dialog; uses FileDialogParams

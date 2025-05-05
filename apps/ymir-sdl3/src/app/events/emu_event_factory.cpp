@@ -8,6 +8,8 @@
 #include <ymir/util/dev_log.hpp>
 #include <ymir/util/scope_guard.hpp>
 
+#include <util/file_loader.hpp>
+
 #include <fstream>
 #include <iostream>
 
@@ -183,10 +185,14 @@ EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
         bup::BackupMemory bupMem{};
         const auto result = bupMem.LoadFrom(path, error);
         switch (result) {
-        case bup::BackupMemoryImageLoadResult::Success:
-            ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+        case bup::BackupMemoryImageLoadResult::Success: //
+        {
+            auto *cart = ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+            ctx.settings.cartridge.backupRAM.capacity = SizeToCapacity(cart->GetBackupMemory().Size());
+            ctx.settings.cartridge.backupRAM.imagePath = path;
             devlog::info<grp::base>("External backup memory cartridge loaded from {}", path.string());
             break;
+        }
         case bup::BackupMemoryImageLoadResult::FilesystemError:
             if (error) {
                 devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
@@ -208,6 +214,52 @@ EmuEvent Insert8MbitDRAMCartridge() {
 
 EmuEvent Insert32MbitDRAMCartridge() {
     return RunFunction([](SharedContext &ctx) { ctx.saturn.InsertCartridge<cart::DRAM32MbitCartridge>(); });
+}
+
+EmuEvent InsertROMCartridge(std::filesystem::path path) {
+    return RunFunction([=](SharedContext &ctx) {
+        // TODO: deduplicate code
+        auto &settings = ctx.settings.cartridge.rom;
+
+        // Don't even bother if no path was specified
+        if (settings.imagePath.empty()) {
+            return;
+        }
+
+        std::error_code error{};
+        std::vector<uint8> rom = util::LoadFile(settings.imagePath, error);
+
+        // Check for file system errors
+        if (error) {
+            ctx.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load ROM cartridge image: {}", error.message())));
+            return;
+        }
+
+        // Check that the file has contents
+        if (rom.empty()) {
+            ctx.EnqueueEvent(
+                events::gui::ShowError("Could not load ROM cartridge image: file is empty or could not be read."));
+            return;
+        }
+
+        // Check that the image is not larger than the ROM cartridge capacity
+        if (rom.size() > cart::ROMCartridge::kRomSize) {
+            ctx.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Could not load ROM cartridge image: file is too large ({} > {})",
+                                                   rom.size(), cart::ROMCartridge::kRomSize)));
+            return;
+        }
+
+        // TODO: Check that the image is a proper Sega Saturn cartridge (headers)
+
+        // Insert cartridge
+        cart::ROMCartridge *cart = ctx.saturn.InsertCartridge<cart::ROMCartridge>();
+        if (cart != nullptr) {
+            devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}", settings.imagePath.string());
+            cart->LoadROM(rom);
+        }
+    });
 }
 
 EmuEvent InsertCartridgeFromSettings() {
@@ -279,6 +331,51 @@ EmuEvent InsertCartridgeFromSettings() {
                 break;
             }
             break;
+        case Settings::Cartridge::Type::ROM: //
+        {
+            // TODO: deduplicate code
+
+            // Don't even bother if no path was specified
+            if (settings.rom.imagePath.empty()) {
+                break;
+            }
+
+            std::error_code error{};
+            std::vector<uint8> rom = util::LoadFile(settings.rom.imagePath, error);
+
+            // Check for file system errors
+            if (error) {
+                ctx.EnqueueEvent(
+                    events::gui::ShowError(fmt::format("Could not load ROM cartridge image: {}", error.message())));
+                return;
+            }
+
+            // Check that the file has contents
+            if (rom.empty()) {
+                ctx.EnqueueEvent(
+                    events::gui::ShowError("Could not load ROM cartridge image: file is empty or could not be read."));
+                return;
+            }
+
+            // Check that the image is not larger than the ROM cartridge capacity
+            if (rom.size() > cart::ROMCartridge::kRomSize) {
+                ctx.EnqueueEvent(events::gui::ShowError(
+                    fmt::format("Could not load ROM cartridge image: file is too large ({} > {})", rom.size(),
+                                cart::ROMCartridge::kRomSize)));
+                return;
+            }
+
+            // TODO: Check that the image is a proper Sega Saturn cartridge (headers)
+
+            // Insert cartridge
+            cart::ROMCartridge *cart = ctx.saturn.InsertCartridge<cart::ROMCartridge>();
+            if (cart != nullptr) {
+                devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}",
+                                        settings.rom.imagePath.string());
+                cart->LoadROM(rom);
+            }
+            break;
+        }
         }
     });
 }

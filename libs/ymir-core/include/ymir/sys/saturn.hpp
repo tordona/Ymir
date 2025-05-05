@@ -101,10 +101,11 @@ struct Saturn {
     /// @tparam T the cartridge type, which must be a specialization of `ymir::cart::BaseCartridge`
     /// @tparam ...Args the types of the arguments to pass to the cartridge constructor
     /// @param[in] ...args the arguments to pass to the cartridge constructor
+    /// @return a pointer to the concrete instance of the cartridge
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
-    void InsertCartridge(Args &&...args) {
-        SCU.InsertCartridge<T>(std::forward<Args>(args)...);
+    T *InsertCartridge(Args &&...args) {
+        return SCU.InsertCartridge<T>(std::forward<Args>(args)...);
     }
 
     /// @brief Removes the cartridge from the cartridge slot.

@@ -156,12 +156,76 @@ namespace v2 {
 
 } // namespace v2
 
-inline namespace v3 {
+namespace v3 {
 
     using v2::SCUDMAState;
     using v2::SCUDSPState;
     using v2::SCUState;
 
 } // namespace v3
+
+inline namespace v4 {
+
+    using v3::SCUDMAState;
+    using v3::SCUDSPState;
+
+    struct SCUState {
+        std::array<SCUDMAState, 3> dma;
+        SCUDSPState dsp;
+
+        enum class CartType { None, BackupMemory, DRAM8Mbit, DRAM32Mbit, ROM };
+        CartType cartType;
+        std::vector<uint8> cartData; // DRAM or ROM carts
+
+        uint32 intrMask;
+        uint32 intrStatus;
+        bool abusIntrAck;
+        // bool intrPending;
+
+        uint16 timer0Counter;
+        uint16 timer0Compare;
+        uint16 timer1Reload;
+        bool timer1Enable;
+        bool timer1Mode;
+
+        bool wramSizeSelect;
+
+        void Upgrade(const v1::SCUState &s) {
+            auto s2 = std::make_unique<v2::SCUState>();
+            s2->Upgrade(s);
+            Upgrade(*s2);
+        }
+
+        void Upgrade(const v3::SCUState &s) {
+            dma = s.dma;
+            dsp = s.dsp;
+            // dma.Upgrade(s.dma);
+            // dsp.Upgrade(s.dsp);
+
+            switch (s.cartType) {
+            default: [[fallthrough]];
+            case v3::SCUState::CartType::None: cartType = CartType::None; break;
+            case v3::SCUState::CartType::BackupMemory: cartType = CartType::BackupMemory; break;
+            case v3::SCUState::CartType::DRAM8Mbit: cartType = CartType::DRAM8Mbit; break;
+            case v3::SCUState::CartType::DRAM32Mbit: cartType = CartType::DRAM32Mbit; break;
+            }
+            cartData = s.dramCartData;
+
+            intrMask = s.intrMask;
+            intrStatus = s.intrStatus;
+            abusIntrAck = s.abusIntrAck;
+            // intrPending = s.intrPending;
+
+            timer0Counter = s.timer0Counter;
+            timer0Compare = s.timer0Compare;
+            timer1Reload = s.timer1Reload;
+            timer1Enable = s.timer1Enable;
+            timer1Mode = s.timer1Mode;
+
+            wramSizeSelect = s.wramSizeSelect;
+        }
+    };
+
+} // namespace v4
 
 } // namespace ymir::state

@@ -19,6 +19,7 @@ void CartridgeInfo(SharedContext &ctx) {
     }
     case cart::CartType::DRAM8Mbit: ImGui::TextUnformatted("8 Mbit DRAM"); break;
     case cart::CartType::DRAM32Mbit: ImGui::TextUnformatted("32 Mbit DRAM"); break;
+    case cart::CartType::ROM: ImGui::TextUnformatted("16 Mbit ROM"); break;
     }
 }
 

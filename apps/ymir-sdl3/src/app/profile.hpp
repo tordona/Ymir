@@ -7,6 +7,7 @@ namespace app {
 enum class ProfilePath {
     Root,            // Root of the profile    <profile>/
     IPLROMImages,    // IPL ROM images         <profile>/roms/ipl/
+    CartROMImages,   // Cartridge ROMs         <profile>/roms/cart/
     BackupMemory,    // Backup memory images   <profile>/backup/
     ExportedBackups, // Exported backup files  <profile>/backup/exported/
     PersistentState, // Persistent app state   <profile>/state/

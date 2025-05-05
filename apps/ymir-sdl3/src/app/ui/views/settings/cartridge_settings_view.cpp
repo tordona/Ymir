@@ -8,6 +8,7 @@
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
+#include <util/file_loader.hpp>
 #include <util/sdl_file_dialog.hpp>
 
 #include <misc/cpp/imgui_stdlib.h>
@@ -21,6 +22,7 @@ static const char *GetCartTypeName(Settings::Cartridge::Type type) {
     case Settings::Cartridge::Type::None: return "None";
     case Settings::Cartridge::Type::BackupRAM: return "Backup RAM";
     case Settings::Cartridge::Type::DRAM: return "DRAM";
+    case Settings::Cartridge::Type::ROM: return "ROM";
     default: return "Unknown";
     }
 }
@@ -37,6 +39,7 @@ void CartridgeSettingsView::Display() {
         Settings::Cartridge::Type::None,
         Settings::Cartridge::Type::BackupRAM,
         Settings::Cartridge::Type::DRAM,
+        Settings::Cartridge::Type::ROM,
     };
 
     ImGui::TextUnformatted("Current cartridge: ");
@@ -65,6 +68,7 @@ void CartridgeSettingsView::Display() {
     case Settings::Cartridge::Type::None: break;
     case Settings::Cartridge::Type::BackupRAM: DrawBackupRAMSettings(); break;
     case Settings::Cartridge::Type::DRAM: DrawDRAMSettings(); break;
+    case Settings::Cartridge::Type::ROM: DrawROMSettings(); break;
     }
 }
 
@@ -154,6 +158,36 @@ void CartridgeSettingsView::DrawDRAMSettings() {
     }
 }
 
+void CartridgeSettingsView::DrawROMSettings() {
+    auto &settings = m_context.settings.cartridge.rom;
+
+    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
+    const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
+    const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Image path:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
+    std::string imagePath = settings.imagePath.string();
+    if (MakeDirty(ImGui::InputText("##rom_image_path", &imagePath))) {
+        settings.imagePath = imagePath;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("...##rom_image_path")) {
+        m_context.EnqueueEvent(events::gui::OpenFile({
+            .dialogTitle = "Load ROM cartridge image",
+            .defaultPath =
+                settings.imagePath.empty() ? m_context.profile.GetPath(ProfilePath::CartROMImages) : settings.imagePath,
+            .filters = {{"ROM cartridge image files (*.bin, *.ic1)", "bin;ic1"}, {"All files (*.*)", "*"}},
+            .userdata = this,
+            .callback = util::WrapSingleSelectionCallback<&CartridgeSettingsView::ProcessLoadROMImage,
+                                                          &util::NoopCancelFileDialogCallback,
+                                                          &CartridgeSettingsView::ProcessLoadROMImageError>,
+        }));
+    }
+}
+
 void CartridgeSettingsView::ProcessLoadBackupImage(void *userdata, std::filesystem::path file, int filter) {
     static_cast<CartridgeSettingsView *>(userdata)->LoadBackupImage(file);
 }
@@ -217,6 +251,55 @@ void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
 
 void CartridgeSettingsView::ShowLoadBackupImageError(const char *message) {
     m_context.EnqueueEvent(events::gui::ShowError(fmt::format("Could not load backup memory image: {}", message)));
+}
+
+void CartridgeSettingsView::ProcessLoadROMImage(void *userdata, std::filesystem::path file, int filter) {
+    static_cast<CartridgeSettingsView *>(userdata)->LoadROMImage(file);
+}
+
+void CartridgeSettingsView::ProcessLoadROMImageError(void *userdata, const char *message, int filter) {
+    static_cast<CartridgeSettingsView *>(userdata)->ShowLoadROMImageError(message);
+}
+
+void CartridgeSettingsView::LoadROMImage(std::filesystem::path file) {
+    auto &settings = m_context.settings.cartridge.rom;
+
+    // TODO: rework this entire process
+    // - everything here should be done by the emulator event
+
+    // Check that the file exists
+    if (!std::filesystem::is_regular_file(file)) {
+        m_context.EnqueueEvent(
+            events::gui::ShowError(fmt::format("Could not load ROM cartridge image: {} is not a file", file.string())));
+        return;
+    }
+
+    // Check that the file has contents
+    const auto size = std::filesystem::file_size(file);
+    if (size == 0) {
+        m_context.EnqueueEvent(
+            events::gui::ShowError("Could not load ROM cartridge image: file is empty or could not be read."));
+        return;
+    }
+
+    // Check that the image is not larger than the ROM cartridge capacity
+    if (size > cart::ROMCartridge::kRomSize) {
+        m_context.EnqueueEvent(
+            events::gui::ShowError(fmt::format("Could not load ROM cartridge image: file is too large ({} > {} bytes)",
+                                               size, cart::ROMCartridge::kRomSize)));
+        return;
+    }
+
+    // TODO: Check that the image is a proper Sega Saturn cartridge (headers)
+
+    // Update settings and insert cartridge
+    settings.imagePath = file;
+    m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
+    MakeDirty();
+}
+
+void CartridgeSettingsView::ShowLoadROMImageError(const char *message) {
+    m_context.EnqueueEvent(events::gui::ShowError(fmt::format("Could not load ROM cartridge image: {}", message)));
 }
 
 } // namespace app::ui

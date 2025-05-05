@@ -250,7 +250,7 @@ public:
     } audio;
 
     struct Cartridge {
-        enum Type { None, BackupRAM, DRAM };
+        enum Type { None, BackupRAM, DRAM, ROM };
         Type type;
 
         struct BackupRAM {
@@ -264,6 +264,10 @@ public:
             enum Capacity { _32Mbit, _8Mbit };
             Capacity capacity;
         } dram;
+
+        struct ROM {
+            std::filesystem::path imagePath;
+        } rom;
     } cartridge;
 
     // ---------------------------------------------------------------------------------------------

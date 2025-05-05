@@ -86,9 +86,10 @@ public:
 
     template <typename T, typename... Args>
         requires std::derived_from<T, cart::BaseCartridge>
-    void InsertCartridge(Args &&...args) {
-        m_cartSlot.InsertCartridge<T>(std::forward<Args>(args)...);
+    T *InsertCartridge(Args &&...args) {
+        T *cart = m_cartSlot.InsertCartridge<T>(std::forward<Args>(args)...);
         // TODO: m_cartSlot.MapMemory(bus)
+        return cart;
     }
 
     void RemoveCartridge() {

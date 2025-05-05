@@ -2,19 +2,18 @@
 
 #include <SDL3/SDL_filesystem.h>
 
-namespace fs = std::filesystem;
-
 namespace app {
 
 // Must match the order listed in the ProfilePath enum.
-const fs::path kPathSuffixes[] = {
-    "",                              // Root
-    fs::path("roms") / "ipl",        // IPLROMImages
-    "backup",                        // BackupMemory
-    fs::path("backup") / "exported", // ExportedBackups
-    "state",                         // PersistentState
-    "savestates",                    // SaveStates
-    "dumps",                         // Dumps
+const std::filesystem::path kPathSuffixes[] = {
+    "",                                           // Root
+    std::filesystem::path("roms") / "ipl",        // IPLROMImages
+    std::filesystem::path("roms") / "cart",       // CartROMImages
+    "backup",                                     // BackupMemory
+    std::filesystem::path("backup") / "exported", // ExportedBackups
+    "state",                                      // PersistentState
+    "savestates",                                 // SaveStates
+    "dumps",                                      // Dumps
 };
 
 Profile::Profile() {
@@ -33,13 +32,13 @@ void Profile::UsePortableProfilePath() {
     SDL_free(path);
 }
 
-void Profile::UseProfilePath(fs::path path) {
+void Profile::UseProfilePath(std::filesystem::path path) {
     m_profilePath = path;
 }
 
 bool Profile::CheckFolders() const {
     for (auto &suffix : kPathSuffixes) {
-        if (!fs::is_directory(m_profilePath / suffix)) {
+        if (!std::filesystem::is_directory(m_profilePath / suffix)) {
             return false;
         }
     }
@@ -50,7 +49,7 @@ bool Profile::CreateFolders(std::error_code &error) {
     error.clear();
 
     for (auto &suffix : kPathSuffixes) {
-        fs::create_directories(m_profilePath / suffix, error);
+        std::filesystem::create_directories(m_profilePath / suffix, error);
         if (error) {
             return false;
         }
@@ -58,7 +57,7 @@ bool Profile::CreateFolders(std::error_code &error) {
     return true;
 }
 
-fs::path Profile::GetPath(ProfilePath path) const {
+std::filesystem::path Profile::GetPath(ProfilePath path) const {
     const auto index = static_cast<size_t>(path);
     if (index < std::size(kPathSuffixes)) {
         return m_profilePath / kPathSuffixes[index] / "";

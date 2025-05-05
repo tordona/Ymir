@@ -28,10 +28,16 @@ namespace v2 {
 
 } // namespace v2
 
-inline namespace v3 {
+namespace v3 {
 
     using v2::SchedulerState;
 
 } // namespace v3
+
+inline namespace v4 {
+
+    using v3::SchedulerState;
+
+} // namespace v4
 
 } // namespace ymir::state

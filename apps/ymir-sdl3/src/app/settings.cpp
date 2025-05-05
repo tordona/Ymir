@@ -140,6 +140,8 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Cart
             value = Settings::Cartridge::Type::BackupRAM;
         } else if (*opt == "DRAM"s) {
             value = Settings::Cartridge::Type::DRAM;
+        } else if (*opt == "ROM"s) {
+            value = Settings::Cartridge::Type::ROM;
         }
     }
 }
@@ -244,6 +246,7 @@ FORCE_INLINE static const char *ToTOML(const Settings::Cartridge::Type value) {
     case Settings::Cartridge::Type::None: return "None";
     case Settings::Cartridge::Type::BackupRAM: return "BackupRAM";
     case Settings::Cartridge::Type::DRAM: return "DRAM";
+    case Settings::Cartridge::Type::ROM: return "ROM";
     }
 }
 
@@ -497,6 +500,7 @@ void Settings::ResetToDefaults() {
     cartridge.backupRAM.imagePath = "";
     cartridge.backupRAM.capacity = Settings::Cartridge::BackupRAM::Capacity::_32Mbit;
     cartridge.dram.capacity = Settings::Cartridge::DRAM::Capacity::_32Mbit;
+    cartridge.rom.imagePath = "";
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
@@ -687,6 +691,9 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         if (auto tblDRAM = tblCart["DRAM"]) {
             Parse(tblDRAM, "Capacity", cartridge.dram.capacity);
         }
+        if (auto tblROM = tblCart["ROM"]) {
+            Parse(tblROM, "ImagePath", cartridge.rom.imagePath);
+        }
     }
 
     if (auto tblCDBlock = data["CDBlock"]) {
@@ -871,6 +878,9 @@ SettingsSaveResult Settings::Save() {
             }}},
             {"DRAM", toml::table{{
                 {"Capacity", ToTOML(cartridge.dram.capacity)},
+            }}},
+            {"ROM", toml::table{{
+                {"ImagePath", cartridge.rom.imagePath.string()},
             }}},
         }}},
 

@@ -94,6 +94,9 @@ private:
     void OpenBackupMemoryCartFileDialog();
     void ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter);
 
+    void OpenROMCartFileDialog();
+    void ProcessOpenROMCartFileDialogSelection(const char *const *filelist, int filter);
+
     void InvokeOpenFileDialog(const FileDialogParams &params) const;
     void InvokeOpenManyFilesDialog(const FileDialogParams &params) const;
     void InvokeSaveFileDialog(const FileDialogParams &params) const;

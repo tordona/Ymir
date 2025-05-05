@@ -1,6 +1,7 @@
 #include <ymir/hw/scu/scu.hpp>
 
 #include <ymir/hw/cart/cart_impl_dram.hpp>
+#include <ymir/hw/cart/cart_impl_rom.hpp>
 
 #include "scu_devlog.hpp"
 
@@ -334,20 +335,30 @@ void SCU::SaveState(state::SCUState &state) const {
     case cart::CartType::BackupMemory: state.cartType = state::SCUState::CartType::BackupMemory; break;
     case cart::CartType::DRAM8Mbit: //
     {
-        const cart::DRAM8MbitCartridge *dramCart = m_cartSlot.GetCartridge().As<cart::CartType::DRAM8Mbit>();
-        assert(dramCart != nullptr);
+        const cart::DRAM8MbitCartridge *cart = m_cartSlot.GetCartridge().As<cart::CartType::DRAM8Mbit>();
+        assert(cart != nullptr);
         state.cartType = state::SCUState::CartType::DRAM8Mbit;
-        state.dramCartData.resize(1_MiB);
-        dramCart->DumpRAM(std::span<uint8, 1_MiB>(state.dramCartData.begin(), 1_MiB));
+        state.cartData.resize(1_MiB);
+        cart->DumpRAM(std::span<uint8, 1_MiB>(state.cartData.begin(), 1_MiB));
         break;
     }
     case cart::CartType::DRAM32Mbit: //
     {
-        const cart::DRAM32MbitCartridge *dramCart = m_cartSlot.GetCartridge().As<cart::CartType::DRAM32Mbit>();
-        assert(dramCart != nullptr);
+        const cart::DRAM32MbitCartridge *cart = m_cartSlot.GetCartridge().As<cart::CartType::DRAM32Mbit>();
+        assert(cart != nullptr);
         state.cartType = state::SCUState::CartType::DRAM32Mbit;
-        state.dramCartData.resize(4_MiB);
-        dramCart->DumpRAM(std::span<uint8, 4_MiB>(state.dramCartData.begin(), 4_MiB));
+        state.cartData.resize(4_MiB);
+        cart->DumpRAM(std::span<uint8, 4_MiB>(state.cartData.begin(), 4_MiB));
+        break;
+    }
+    case cart::CartType::ROM: //
+    {
+        const cart::ROMCartridge *cart = m_cartSlot.GetCartridge().As<cart::CartType::ROM>();
+        assert(cart != nullptr);
+        static constexpr size_t size = cart::ROMCartridge::kRomSize;
+        state.cartType = state::SCUState::CartType::ROM;
+        state.cartData.resize(size);
+        cart->DumpROM(std::span<uint8, size>(state.cartData.begin(), size));
         break;
     }
     }
@@ -378,12 +389,12 @@ bool SCU::ValidateState(const state::SCUState &state) const {
 
     switch (state.cartType) {
     case state::SCUState::CartType::DRAM8Mbit:
-        if (state.dramCartData.size() != 1_MiB) {
+        if (state.cartData.size() != 1_MiB) {
             return false;
         }
         break;
     case state::SCUState::CartType::DRAM32Mbit:
-        if (state.dramCartData.size() != 4_MiB) {
+        if (state.cartData.size() != 4_MiB) {
             return false;
         }
         break;
@@ -402,14 +413,20 @@ void SCU::LoadState(const state::SCUState &state) {
     switch (state.cartType) {
     case state::SCUState::CartType::DRAM8Mbit: //
     {
-        auto *dramCart = m_cartSlot.InsertCartridge<cart::DRAM8MbitCartridge>();
-        dramCart->CopyRAM(std::span<const uint8, 1_MiB>(state.dramCartData.begin(), 1_MiB));
+        auto *cart = m_cartSlot.InsertCartridge<cart::DRAM8MbitCartridge>();
+        cart->LoadRAM(std::span<const uint8, 1_MiB>(state.cartData.begin(), 1_MiB));
         break;
     }
     case state::SCUState::CartType::DRAM32Mbit: //
     {
-        auto *dramCart = m_cartSlot.InsertCartridge<cart::DRAM32MbitCartridge>();
-        dramCart->CopyRAM(std::span<const uint8, 4_MiB>(state.dramCartData.begin(), 4_MiB));
+        auto *cart = m_cartSlot.InsertCartridge<cart::DRAM32MbitCartridge>();
+        cart->LoadRAM(std::span<const uint8, 4_MiB>(state.cartData.begin(), 4_MiB));
+        break;
+    }
+    case state::SCUState::CartType::ROM: //
+    {
+        auto *cart = m_cartSlot.InsertCartridge<cart::ROMCartridge>();
+        cart->LoadROM(std::span<const uint8, 4_MiB>(state.cartData.begin(), 4_MiB));
         break;
     }
     default: break;

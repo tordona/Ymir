@@ -21,6 +21,7 @@ add_library(ymir-core
     include/ymir/hw/cart/cart_impl_bup.hpp
     include/ymir/hw/cart/cart_impl_dram.hpp
     include/ymir/hw/cart/cart_impl_none.hpp
+    include/ymir/hw/cart/cart_impl_rom.hpp
     include/ymir/hw/cart/cart_slot.hpp
 
     include/ymir/hw/cdblock/cdblock.hpp

@@ -26,7 +26,7 @@ public:
         m_ram.fill(0);
     }
 
-    void CopyRAM(std::span<const uint8, size> out) {
+    void LoadRAM(std::span<const uint8, size> out) {
         std::copy(out.begin(), out.end(), m_ram.begin());
     }
 

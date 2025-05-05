@@ -14,6 +14,10 @@ inline GUIEvent OpenBackupMemoryCartFileDialog() {
     return {.type = GUIEvent::Type::OpenBackupMemoryCartFileDialog};
 }
 
+inline GUIEvent OpenROMCartFileDialog() {
+    return {.type = GUIEvent::Type::OpenROMCartFileDialog};
+}
+
 inline GUIEvent OpenBackupMemoryManager() {
     return {.type = GUIEvent::Type::OpenBackupMemoryManager};
 }

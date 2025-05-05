@@ -5,13 +5,13 @@
 #include <cereal/types/array.hpp>
 #include <cereal/types/vector.hpp>
 
-CEREAL_CLASS_VERSION(ymir::state::State, 3);
+CEREAL_CLASS_VERSION(ymir::state::State, 4);
 
 namespace ymir::state {
 
 template <class Archive>
 void serialize(Archive &ar, State &s, const uint32 version) {
-    if (version == 3) {
+    if (version == 4) {
         ar(s.scheduler);
         ar(s.system);
         ar(s.msh2);
@@ -21,6 +21,20 @@ void serialize(Archive &ar, State &s, const uint32 version) {
         ar(s.vdp);
         ar(s.scsp);
         ar(s.cdblock);
+    } else if (version == 3) {
+        auto scu = std::make_unique<v3::SCUState>();
+
+        ar(s.scheduler);
+        ar(s.system);
+        ar(s.msh2);
+        ar(s.ssh2);
+        ar(*scu);
+        ar(s.smpc);
+        ar(s.vdp);
+        ar(s.scsp);
+        ar(s.cdblock);
+
+        s.scu.Upgrade(*scu);
     } else if (version == 2) {
         auto scsp = std::make_unique<v2::SCSPState>();
 
@@ -415,7 +429,7 @@ namespace v2 {
 // ---------------------------------------------------------------------------------------------------------------------
 // Version 3
 
-inline namespace v3 {
+namespace v3 {
 
     template <class Archive>
     void serialize(Archive &ar, SCSPState &s) {
@@ -460,5 +474,22 @@ inline namespace v3 {
     }
 
 } // namespace v3
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Version 4
+
+inline namespace v4 {
+
+    template <class Archive>
+    void serialize(Archive &ar, SCUState &s) {
+        ar(s.dma, s.dsp);
+        ar(s.cartType, s.cartData);
+        ar(s.intrMask, s.intrStatus, s.abusIntrAck /*, s.intrPending*/);
+        ar(s.timer0Counter, s.timer0Compare);
+        ar(s.timer1Reload, s.timer1Enable, s.timer1Mode);
+        ar(s.wramSizeSelect);
+    }
+
+} // namespace v4
 
 } // namespace ymir::state
