@@ -915,11 +915,33 @@ void Settings::RebindInputs() {
             for (auto *bind : mappings) {
                 assert(bind != nullptr);
                 for (auto &element : bind->elements) {
-                    // Sanitization -- skip ESC binds if they were manually added in the configuration file
+                    // Sanitize configuration in case the user tampered with the configuration file
+
+                    // Skip ESC binds
                     if (element.type == input::InputElement::Type::KeyCombo &&
                         element.keyCombo.key == input::KeyboardKey::Escape) {
                         continue;
                     }
+
+                    // Match input element types to action kinds
+                    switch (action.kind) {
+                    case input::Action::Kind::Button:
+                        if (!element.IsButton()) {
+                            continue;
+                        }
+                        break;
+                    case input::Action::Kind::Axis1D:
+                        if (!element.IsAxis1D()) {
+                            continue;
+                        }
+                        break;
+                    case input::Action::Kind::Axis2D:
+                        if (!element.IsAxis2D()) {
+                            continue;
+                        }
+                        break;
+                    }
+
                     (void)inputContext.MapAction(element, action, map.context);
                 }
             }
