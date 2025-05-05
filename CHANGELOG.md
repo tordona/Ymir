@@ -11,6 +11,7 @@
 
 - Input: Keys no longer get stuck when focusing windows, menus, etc.
 - Input: Keys bound to controller on port 2 (by default: arrow keys, numpad and navigation block) should no longer prevent keys bound to the controller on port 1 from working. (#50)
+- Several stability improvements (@Wunkolo)
 
 
 ## Version 0.1.1
