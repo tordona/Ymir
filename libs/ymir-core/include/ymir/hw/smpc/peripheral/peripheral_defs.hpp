@@ -4,20 +4,20 @@
 
 namespace ymir::peripheral {
 
-enum class PeripheralType { None, StandardPad };
+enum class PeripheralType { None, ControlPad };
 
 inline std::string_view GetPeripheralName(PeripheralType type) {
     switch (type) {
     case PeripheralType::None: return "None";
-    case PeripheralType::StandardPad: return "Standard Saturn Pad";
+    case PeripheralType::ControlPad: return "Saturn Control Pad";
     default: return "Invalid";
     }
 }
 
-inline constexpr PeripheralType kTypes[] = {PeripheralType::None, PeripheralType::StandardPad};
+inline constexpr PeripheralType kTypes[] = {PeripheralType::None, PeripheralType::ControlPad};
 
 class NullPeripheral;
-class StandardPad;
+class ControlPad;
 
 namespace detail {
 
@@ -30,8 +30,8 @@ namespace detail {
     };
 
     template <>
-    struct PeripheralTypeMeta<PeripheralType::StandardPad> {
-        using type = StandardPad;
+    struct PeripheralTypeMeta<PeripheralType::ControlPad> {
+        using type = ControlPad;
     };
 
     template <PeripheralType type>

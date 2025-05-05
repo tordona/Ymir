@@ -6,7 +6,7 @@
 
 namespace ymir::peripheral {
 
-enum class StandardPadButton : uint16 {
+enum class ControlPadButton : uint16 {
     None = 0,
 
     Right = (1u << 15u),
@@ -32,4 +32,4 @@ enum class StandardPadButton : uint16 {
 
 } // namespace ymir::peripheral
 
-ENABLE_BITMASK_OPERATORS(ymir::peripheral::StandardPadButton);
+ENABLE_BITMASK_OPERATORS(ymir::peripheral::ControlPadButton);

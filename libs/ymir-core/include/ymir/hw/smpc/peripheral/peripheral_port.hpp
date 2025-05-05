@@ -1,8 +1,8 @@
 #pragma once
 
 #include "peripheral_base.hpp"
+#include "peripheral_impl_control_pad.hpp"
 #include "peripheral_impl_null.hpp"
-#include "peripheral_impl_standard_pad.hpp"
 
 #include <ymir/core/types.hpp>
 
@@ -34,8 +34,8 @@ public:
         m_peripheral->m_cbPeripheralReport = callback;
     }
 
-    StandardPad *ConnectStandardPad() {
-        return ConnectPeripheral<StandardPad>(m_cbPeripheralReport);
+    ControlPad *ConnectControlPad() {
+        return ConnectPeripheral<ControlPad>(m_cbPeripheralReport);
     }
 
     void DisconnectPeripherals() {
@@ -80,7 +80,7 @@ private:
             // TODO: support multi-tap
             // TODO: support report lengths longer than 15
             // [0] 0xF1 -> 7-4 = F=no multitap/device directly connected; 3-0 = 1 device
-            // [1] 0x02 -> 7-4 = 0=standard pad; 3-0 = 2 data bytes
+            // [1] 0x02 -> 7-4 = 0=control pad ID; 3-0 = 2 data bytes
             // [2..N]   -> peripheral-specific report
             out[0] = 0xF1;
             out[1] = (m_peripheral->GetTypeCode() << 4u) | m_peripheral->GetReportLength();

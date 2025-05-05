@@ -37,7 +37,7 @@
 //
 // Sending input
 // -------------
-// This frontend attaches a standard Saturn Pad to both ports and redirects keyboard input to them with the following
+// This frontend attaches a Saturn Control Pad to both ports and redirects keyboard input to them with the following
 // default key mappings:
 //
 //          Port 1                        Port 2
@@ -48,7 +48,7 @@
 //                            (arrow keys)
 //                            (or Home/Del/End/PgDn)
 //
-// Saturn Standard Pad Layout
+// Saturn Control Pad Layout
 //     L                 R
 //     Up
 // Left  Right  Start  X Y Z
@@ -1312,13 +1312,13 @@ void App::RunEmulator() {
                                       });
     }
 
-    // Standard Saturn Pad
+    // Saturn Control Pad
     {
-        using Button = peripheral::StandardPadButton;
+        using Button = peripheral::ControlPadButton;
 
-        auto registerStandardPadButton = [&](input::Action action, Button button) {
+        auto registerControlPadButton = [&](input::Action action, Button button) {
             inputContext.SetButtonHandler(action, [=](void *context, const input::InputElement &, bool actuated) {
-                auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
+                auto &input = *reinterpret_cast<SharedContext::ControlPadInput *>(context);
                 if (actuated) {
                     input.buttons &= ~button;
                 } else {
@@ -1327,10 +1327,10 @@ void App::RunEmulator() {
             });
         };
 
-        auto registerStandardPadDPadButton = [&](input::Action action, float x, float y) {
+        auto registerControlPadDPadButton = [&](input::Action action, float x, float y) {
             inputContext.SetButtonHandler(
                 action, [=, this](void *context, const input::InputElement &element, bool actuated) {
-                    auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
+                    auto &input = *reinterpret_cast<SharedContext::ControlPadInput *>(context);
                     auto &dpadInput = input.dpad2DInputs[element];
                     if (actuated) {
                         dpadInput.x = x;
@@ -1343,10 +1343,10 @@ void App::RunEmulator() {
                 });
         };
 
-        auto registerStandardPadDPad2DAxis = [&](input::Action action) {
+        auto registerControlPadDPad2DAxis = [&](input::Action action) {
             inputContext.SetAxis2DHandler(
                 action, [this](void *context, const input::InputElement &element, float x, float y) {
-                    auto &input = *reinterpret_cast<SharedContext::StandardPadInput *>(context);
+                    auto &input = *reinterpret_cast<SharedContext::ControlPadInput *>(context);
                     auto &dpadInput = input.dpad2DInputs[element];
                     dpadInput.x = x;
                     dpadInput.y = y;
@@ -1354,20 +1354,20 @@ void App::RunEmulator() {
                 });
         };
 
-        registerStandardPadButton(actions::control_pad::A, Button::A);
-        registerStandardPadButton(actions::control_pad::B, Button::B);
-        registerStandardPadButton(actions::control_pad::C, Button::C);
-        registerStandardPadButton(actions::control_pad::X, Button::X);
-        registerStandardPadButton(actions::control_pad::Y, Button::Y);
-        registerStandardPadButton(actions::control_pad::Z, Button::Z);
-        registerStandardPadButton(actions::control_pad::Start, Button::Start);
-        registerStandardPadButton(actions::control_pad::L, Button::L);
-        registerStandardPadButton(actions::control_pad::R, Button::R);
-        registerStandardPadDPadButton(actions::control_pad::Up, 0.0f, -1.0f);
-        registerStandardPadDPadButton(actions::control_pad::Down, 0.0f, +1.0f);
-        registerStandardPadDPadButton(actions::control_pad::Left, -1.0f, 0.0f);
-        registerStandardPadDPadButton(actions::control_pad::Right, +1.0f, 0.0f);
-        registerStandardPadDPad2DAxis(actions::control_pad::DPad);
+        registerControlPadButton(actions::control_pad::A, Button::A);
+        registerControlPadButton(actions::control_pad::B, Button::B);
+        registerControlPadButton(actions::control_pad::C, Button::C);
+        registerControlPadButton(actions::control_pad::X, Button::X);
+        registerControlPadButton(actions::control_pad::Y, Button::Y);
+        registerControlPadButton(actions::control_pad::Z, Button::Z);
+        registerControlPadButton(actions::control_pad::Start, Button::Start);
+        registerControlPadButton(actions::control_pad::L, Button::L);
+        registerControlPadButton(actions::control_pad::R, Button::R);
+        registerControlPadDPadButton(actions::control_pad::Up, 0.0f, -1.0f);
+        registerControlPadDPadButton(actions::control_pad::Down, 0.0f, +1.0f);
+        registerControlPadDPadButton(actions::control_pad::Left, -1.0f, 0.0f);
+        registerControlPadDPadButton(actions::control_pad::Right, +1.0f, 0.0f);
+        registerControlPadDPad2DAxis(actions::control_pad::DPad);
     }
 
     RebindInputs();
@@ -2310,8 +2310,8 @@ template <int port>
 void App::ReadPeripheral(ymir::peripheral::PeripheralReport &report) {
     // TODO: this is the appropriate location to capture inputs for a movie recording
     switch (report.type) {
-    case ymir::peripheral::PeripheralType::StandardPad:
-        report.report.standardPad.buttons = m_context.standardPadInputs[port - 1].buttons;
+    case ymir::peripheral::PeripheralType::ControlPad:
+        report.report.controlPad.buttons = m_context.controlPadInputs[port - 1].buttons;
         break;
     default: break;
     }

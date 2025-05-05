@@ -81,8 +81,8 @@ method will return a valid pointer to the specialized controller instance which 
 peripheral. `nullptr` indicates failure to instantiate the object or to attach the peripheral due to incompatibility
 with other connected peripherals (e.g. you cannot use the Virtua Gun with a multi-tap adapter).
 
-@note The emulator currently only supports attaching a single standard Saturn Pad to the ports. More types of
-peripherals (including multi-tap) are planned.
+@note The emulator currently only supports attaching a single Saturn Control Pad to the ports. More types of peripherals
+(including multi-tap) are planned.
 
 Use `ymir::peripheral::PeripheralPort::DisconnectPeripherals()` to disconnect all peripherals connected to the port. Be
 careful: any existing pointers to previously connected peripherals will become invalid. The same applies when replacing

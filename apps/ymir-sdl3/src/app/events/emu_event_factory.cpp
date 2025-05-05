@@ -161,7 +161,7 @@ EmuEvent DumpMemory() {
 static void InsertPeripheral(peripheral::PeripheralType type, peripheral::PeripheralPort &port) {
     switch (type) {
     case ymir::peripheral::PeripheralType::None: port.DisconnectPeripherals(); break;
-    case ymir::peripheral::PeripheralType::StandardPad: port.ConnectStandardPad(); break;
+    case ymir::peripheral::PeripheralType::ControlPad: port.ConnectControlPad(); break;
     }
 }
 

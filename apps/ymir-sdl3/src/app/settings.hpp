@@ -105,9 +105,6 @@ struct Settings {
 
     SettingsLoadResult Load(const std::filesystem::path &path);
 
-private:
-    SettingsLoadResult LoadV1(toml::table &data);
-
 public:
     SettingsSaveResult Save();
 
@@ -208,7 +205,7 @@ public:
         struct Port {
             util::Observable<ymir::peripheral::PeripheralType> type;
 
-            struct StandardPadBinds {
+            struct ControlPadBinds {
                 input::InputBind a{actions::control_pad::A};
                 input::InputBind b{actions::control_pad::B};
                 input::InputBind c{actions::control_pad::C};
@@ -223,7 +220,7 @@ public:
                 input::InputBind left{actions::control_pad::Left};
                 input::InputBind right{actions::control_pad::Right};
                 input::InputBind dpad{actions::control_pad::DPad};
-            } standardPadBinds;
+            } controlPadBinds;
         };
         Port port1;
         Port port2;
@@ -286,9 +283,9 @@ public:
     // Returns all unbound actions.
     [[nodiscard]] std::unordered_set<input::MappedAction> ResetHotkeys();
 
-    // Restores all default input binds for the specified standard pad
+    // Restores all default input binds for the specified control pad
     // Returns all unbound actions.
-    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::StandardPadBinds &binds);
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ControlPadBinds &binds);
 
 private:
     SharedContext &m_context;

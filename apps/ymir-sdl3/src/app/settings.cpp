@@ -16,7 +16,10 @@ namespace app {
 
 // Increment this version and implement a new LoadV# when making breaking changes to the settings file structure.
 // Existing versions should convert old formats on a best-effort basis.
-inline constexpr int kConfigVersion = 1;
+//
+// Change history:
+// v2: renamed "Input.Port#.StandardPadBinds" to "Input.Port#.ControlPadBinds"
+inline constexpr int kConfigVersion = 2;
 
 namespace grp {
 
@@ -114,8 +117,10 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, peripheral::Pe
     if (auto opt = node.value<std::string>()) {
         if (*opt == "None"s) {
             value = peripheral::PeripheralType::None;
-        } else if (*opt == "StandardPad"s) {
-            value = peripheral::PeripheralType::StandardPad;
+        } else if (*opt == "StandardPad"s) { // obsoleted in v2
+            value = peripheral::PeripheralType::ControlPad;
+        } else if (*opt == "ControlPad"s) {
+            value = peripheral::PeripheralType::ControlPad;
         }
     }
 }
@@ -228,7 +233,7 @@ FORCE_INLINE static const char *ToTOML(const peripheral::PeripheralType value) {
     switch (value) {
     default: [[fallthrough]];
     case peripheral::PeripheralType::None: return "None";
-    case peripheral::PeripheralType::StandardPad: return "StandardPad";
+    case peripheral::PeripheralType::ControlPad: return "ControlPad";
     }
 }
 
@@ -360,8 +365,8 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
         map.map[bind.action].insert(&bind);
     };
 
-    m_port1ControlPadInputs.context = &m_context.standardPadInputs[0];
-    m_port2ControlPadInputs.context = &m_context.standardPadInputs[1];
+    m_port1ControlPadInputs.context = &m_context.controlPadInputs[0];
+    m_port2ControlPadInputs.context = &m_context.controlPadInputs[1];
 
     mapInput(m_actionInputs, hotkeys.openSettings);
     mapInput(m_actionInputs, hotkeys.toggleWindowedVideoOutput);
@@ -425,36 +430,36 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.saveStates.save10);
 
     // Saturn Control Pad on port 1
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.a);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.b);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.c);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.x);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.y);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.z);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.l);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.r);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.start);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.up);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.down);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.left);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.right);
-    mapInput(m_port1ControlPadInputs, input.port1.standardPadBinds.dpad);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.a);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.b);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.c);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.x);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.y);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.z);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.l);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.r);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.start);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.up);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.down);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.left);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.right);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.dpad);
 
     // Saturn Control Pad on port 2
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.a);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.b);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.c);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.x);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.y);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.z);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.l);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.r);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.start);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.up);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.down);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.left);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.right);
-    mapInput(m_port2ControlPadInputs, input.port2.standardPadBinds.dpad);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.a);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.b);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.c);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.x);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.y);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.z);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.l);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.r);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.start);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.up);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.down);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.left);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.right);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.dpad);
 
     ResetToDefaults();
 }
@@ -474,13 +479,13 @@ void Settings::ResetToDefaults() {
 
     {
         using PeriphType = peripheral::PeripheralType;
-        input.port1.type = PeriphType::StandardPad;
+        input.port1.type = PeriphType::ControlPad;
         input.port2.type = PeriphType::None;
 
         (void)ResetHotkeys();
 
-        (void)ResetBinds(input.port1.standardPadBinds);
-        (void)ResetBinds(input.port2.standardPadBinds);
+        (void)ResetBinds(input.port1.controlPadBinds);
+        (void)ResetBinds(input.port2.controlPadBinds);
     }
 
     input.gamepad.lsDeadzone = 0.15f;
@@ -504,36 +509,30 @@ void Settings::ResetToDefaults() {
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
-    if (std::filesystem::is_regular_file(path)) {
-        auto parseResult = toml::parse_file(path.string());
-        if (parseResult.failed()) {
-            return SettingsLoadResult::TOMLParseError(parseResult.error());
-        }
-        auto &data = parseResult.table();
-
-        ResetToDefaults();
-
-        int configVersion = 0;
-        if (auto opt = data["ConfigVersion"].value<int>()) {
-            configVersion = *opt;
-        }
-
-        SettingsLoadResult result{};
-        switch (configVersion) {
-        case 1: result = LoadV1(data); break;
-        default: return SettingsLoadResult::UnsupportedConfigVersion(configVersion);
-        }
-
-        this->path = path;
-        return result;
-    } else {
+    // Use defaults if configuration file does not exist
+    if (!std::filesystem::is_regular_file(path)) {
         ResetToDefaults();
         this->path = path;
         return SettingsLoadResult::Success();
     }
-}
 
-SettingsLoadResult Settings::LoadV1(toml::table &data) {
+    auto parseResult = toml::parse_file(path.string());
+    if (parseResult.failed()) {
+        return SettingsLoadResult::TOMLParseError(parseResult.error());
+    }
+    auto &data = parseResult.table();
+
+    ResetToDefaults();
+
+    int configVersion = 0;
+    if (auto opt = data["ConfigVersion"].value<int>()) {
+        configVersion = *opt;
+    }
+
+    SettingsLoadResult result{};
+    if (configVersion > kConfigVersion) {
+        return SettingsLoadResult::UnsupportedConfigVersion(configVersion);
+    }
     auto &emuConfig = m_context.saturn.configuration;
 
     if (auto tblGeneral = data["General"]) {
@@ -638,21 +637,22 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
             if (auto tblPort = tblInput[name]) {
                 Parse(tblPort, "PeripheralType", portSettings.type);
 
-                if (auto tblStandardPadBinds = tblPort["StandardPadBinds"]) {
-                    Parse(tblStandardPadBinds, "A", portSettings.standardPadBinds.a);
-                    Parse(tblStandardPadBinds, "B", portSettings.standardPadBinds.b);
-                    Parse(tblStandardPadBinds, "C", portSettings.standardPadBinds.c);
-                    Parse(tblStandardPadBinds, "X", portSettings.standardPadBinds.x);
-                    Parse(tblStandardPadBinds, "Y", portSettings.standardPadBinds.y);
-                    Parse(tblStandardPadBinds, "Z", portSettings.standardPadBinds.z);
-                    Parse(tblStandardPadBinds, "L", portSettings.standardPadBinds.l);
-                    Parse(tblStandardPadBinds, "R", portSettings.standardPadBinds.r);
-                    Parse(tblStandardPadBinds, "Start", portSettings.standardPadBinds.start);
-                    Parse(tblStandardPadBinds, "Up", portSettings.standardPadBinds.up);
-                    Parse(tblStandardPadBinds, "Down", portSettings.standardPadBinds.down);
-                    Parse(tblStandardPadBinds, "Left", portSettings.standardPadBinds.left);
-                    Parse(tblStandardPadBinds, "Right", portSettings.standardPadBinds.right);
-                    Parse(tblStandardPadBinds, "DPad", portSettings.standardPadBinds.dpad);
+                const char *controlPadName = configVersion == 1 ? "StandardPadBinds" : "ControlPadBinds";
+                if (auto tblControlPadBinds = tblPort[controlPadName]) {
+                    Parse(tblControlPadBinds, "A", portSettings.controlPadBinds.a);
+                    Parse(tblControlPadBinds, "B", portSettings.controlPadBinds.b);
+                    Parse(tblControlPadBinds, "C", portSettings.controlPadBinds.c);
+                    Parse(tblControlPadBinds, "X", portSettings.controlPadBinds.x);
+                    Parse(tblControlPadBinds, "Y", portSettings.controlPadBinds.y);
+                    Parse(tblControlPadBinds, "Z", portSettings.controlPadBinds.z);
+                    Parse(tblControlPadBinds, "L", portSettings.controlPadBinds.l);
+                    Parse(tblControlPadBinds, "R", portSettings.controlPadBinds.r);
+                    Parse(tblControlPadBinds, "Start", portSettings.controlPadBinds.start);
+                    Parse(tblControlPadBinds, "Up", portSettings.controlPadBinds.up);
+                    Parse(tblControlPadBinds, "Down", portSettings.controlPadBinds.down);
+                    Parse(tblControlPadBinds, "Left", portSettings.controlPadBinds.left);
+                    Parse(tblControlPadBinds, "Right", portSettings.controlPadBinds.right);
+                    Parse(tblControlPadBinds, "DPad", portSettings.controlPadBinds.dpad);
                 }
             }
         };
@@ -700,6 +700,7 @@ SettingsLoadResult Settings::LoadV1(toml::table &data) {
         Parse(tblCDBlock, "ReadSpeed", emuConfig.cdblock.readSpeedFactor);
     }
 
+    this->path = path;
     return SettingsLoadResult::Success();
 }
 
@@ -813,40 +814,40 @@ SettingsSaveResult Settings::Save() {
         {"Input", toml::table{{
             {"Port1", toml::table{{
                 {"PeripheralType", ToTOML(input.port1.type)},
-                {"StandardPadBinds", toml::table{{
-                    {"A", ToTOML(input.port1.standardPadBinds.a)},
-                    {"B", ToTOML(input.port1.standardPadBinds.b)},
-                    {"C", ToTOML(input.port1.standardPadBinds.c)},
-                    {"X", ToTOML(input.port1.standardPadBinds.x)},
-                    {"Y", ToTOML(input.port1.standardPadBinds.y)},
-                    {"Z", ToTOML(input.port1.standardPadBinds.z)},
-                    {"L", ToTOML(input.port1.standardPadBinds.l)},
-                    {"R", ToTOML(input.port1.standardPadBinds.r)},
-                    {"Start", ToTOML(input.port1.standardPadBinds.start)},
-                    {"Up", ToTOML(input.port1.standardPadBinds.up)},
-                    {"Down", ToTOML(input.port1.standardPadBinds.down)},
-                    {"Left", ToTOML(input.port1.standardPadBinds.left)},
-                    {"Right", ToTOML(input.port1.standardPadBinds.right)},
-                    {"DPad", ToTOML(input.port1.standardPadBinds.dpad)},
+                {"ControlPadBinds", toml::table{{
+                    {"A", ToTOML(input.port1.controlPadBinds.a)},
+                    {"B", ToTOML(input.port1.controlPadBinds.b)},
+                    {"C", ToTOML(input.port1.controlPadBinds.c)},
+                    {"X", ToTOML(input.port1.controlPadBinds.x)},
+                    {"Y", ToTOML(input.port1.controlPadBinds.y)},
+                    {"Z", ToTOML(input.port1.controlPadBinds.z)},
+                    {"L", ToTOML(input.port1.controlPadBinds.l)},
+                    {"R", ToTOML(input.port1.controlPadBinds.r)},
+                    {"Start", ToTOML(input.port1.controlPadBinds.start)},
+                    {"Up", ToTOML(input.port1.controlPadBinds.up)},
+                    {"Down", ToTOML(input.port1.controlPadBinds.down)},
+                    {"Left", ToTOML(input.port1.controlPadBinds.left)},
+                    {"Right", ToTOML(input.port1.controlPadBinds.right)},
+                    {"DPad", ToTOML(input.port1.controlPadBinds.dpad)},
                 }}},
             }}},
             {"Port2", toml::table{{
                 {"PeripheralType", ToTOML(input.port2.type)},
-                {"StandardPadBinds", toml::table{{
-                    {"A", ToTOML(input.port2.standardPadBinds.a)},
-                    {"B", ToTOML(input.port2.standardPadBinds.b)},
-                    {"C", ToTOML(input.port2.standardPadBinds.c)},
-                    {"X", ToTOML(input.port2.standardPadBinds.x)},
-                    {"Y", ToTOML(input.port2.standardPadBinds.y)},
-                    {"Z", ToTOML(input.port2.standardPadBinds.z)},
-                    {"L", ToTOML(input.port2.standardPadBinds.l)},
-                    {"R", ToTOML(input.port2.standardPadBinds.r)},
-                    {"Start", ToTOML(input.port2.standardPadBinds.start)},
-                    {"Up", ToTOML(input.port2.standardPadBinds.up)},
-                    {"Down", ToTOML(input.port2.standardPadBinds.down)},
-                    {"Left", ToTOML(input.port2.standardPadBinds.left)},
-                    {"Right", ToTOML(input.port2.standardPadBinds.right)},
-                    {"DPad", ToTOML(input.port2.standardPadBinds.dpad)},
+                {"ControlPadBinds", toml::table{{
+                    {"A", ToTOML(input.port2.controlPadBinds.a)},
+                    {"B", ToTOML(input.port2.controlPadBinds.b)},
+                    {"C", ToTOML(input.port2.controlPadBinds.c)},
+                    {"X", ToTOML(input.port2.controlPadBinds.x)},
+                    {"Y", ToTOML(input.port2.controlPadBinds.y)},
+                    {"Z", ToTOML(input.port2.controlPadBinds.z)},
+                    {"L", ToTOML(input.port2.controlPadBinds.l)},
+                    {"R", ToTOML(input.port2.controlPadBinds.r)},
+                    {"Start", ToTOML(input.port2.controlPadBinds.start)},
+                    {"Up", ToTOML(input.port2.controlPadBinds.up)},
+                    {"Down", ToTOML(input.port2.controlPadBinds.down)},
+                    {"Left", ToTOML(input.port2.controlPadBinds.left)},
+                    {"Right", ToTOML(input.port2.controlPadBinds.right)},
+                    {"DPad", ToTOML(input.port2.controlPadBinds.dpad)},
                 }}},
             }}},
             {"GamepadLSDeadzone", input.gamepad.lsDeadzone.Get()},
@@ -962,12 +963,12 @@ void Settings::RebindInputs() {
 
     switch (m_context.settings.input.port1.type) {
     case peripheral::PeripheralType::None: break;
-    case peripheral::PeripheralType::StandardPad: bindAll(m_port1ControlPadInputs); break;
+    case peripheral::PeripheralType::ControlPad: bindAll(m_port1ControlPadInputs); break;
     }
 
     switch (m_context.settings.input.port2.type) {
     case peripheral::PeripheralType::None: break;
-    case peripheral::PeripheralType::StandardPad: bindAll(m_port2ControlPadInputs); break;
+    case peripheral::PeripheralType::ControlPad: bindAll(m_port2ControlPadInputs); break;
     }
 
     SyncInputSettings();
@@ -1142,7 +1143,7 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     return replacedActions;
 }
 
-std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::StandardPadBinds &binds) {
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ControlPadBinds &binds) {
     using namespace input;
 
     using Key = KeyboardKey;
@@ -1191,38 +1192,38 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Standa
         }
     };
 
-    if (&binds == &input.port1.standardPadBinds) {
+    if (&binds == &input.port1.controlPadBinds) {
         // Default port 1 Control Pad controller inputs
-        rebind(input.port1.standardPadBinds.a, {{{Key::J}, {0, GPBtn::X}}});
-        rebind(input.port1.standardPadBinds.b, {{{Key::K}, {0, GPBtn::A}}});
-        rebind(input.port1.standardPadBinds.c, {{{Key::L}, {0, GPBtn::B}}});
-        rebind(input.port1.standardPadBinds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
-        rebind(input.port1.standardPadBinds.y, {{{Key::I}, {0, GPBtn::Y}}});
-        rebind(input.port1.standardPadBinds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
-        rebind(input.port1.standardPadBinds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
-        rebind(input.port1.standardPadBinds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
-        rebind(input.port1.standardPadBinds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
-        rebind(input.port1.standardPadBinds.up, {{{Key::W}}});
-        rebind(input.port1.standardPadBinds.down, {{{Key::S}}});
-        rebind(input.port1.standardPadBinds.left, {{{Key::A}}});
-        rebind(input.port1.standardPadBinds.right, {{{Key::D}}});
-        rebind(input.port1.standardPadBinds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
-    } else if (&binds == &input.port2.standardPadBinds) {
+        rebind(input.port1.controlPadBinds.a, {{{Key::J}, {0, GPBtn::X}}});
+        rebind(input.port1.controlPadBinds.b, {{{Key::K}, {0, GPBtn::A}}});
+        rebind(input.port1.controlPadBinds.c, {{{Key::L}, {0, GPBtn::B}}});
+        rebind(input.port1.controlPadBinds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
+        rebind(input.port1.controlPadBinds.y, {{{Key::I}, {0, GPBtn::Y}}});
+        rebind(input.port1.controlPadBinds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
+        rebind(input.port1.controlPadBinds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
+        rebind(input.port1.controlPadBinds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
+        rebind(input.port1.controlPadBinds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
+        rebind(input.port1.controlPadBinds.up, {{{Key::W}}});
+        rebind(input.port1.controlPadBinds.down, {{{Key::S}}});
+        rebind(input.port1.controlPadBinds.left, {{{Key::A}}});
+        rebind(input.port1.controlPadBinds.right, {{{Key::D}}});
+        rebind(input.port1.controlPadBinds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
+    } else if (&binds == &input.port2.controlPadBinds) {
         // Default port 2 Control Pad controller inputs
-        rebind(input.port2.standardPadBinds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
-        rebind(input.port2.standardPadBinds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
-        rebind(input.port2.standardPadBinds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
-        rebind(input.port2.standardPadBinds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
-        rebind(input.port2.standardPadBinds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
-        rebind(input.port2.standardPadBinds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
-        rebind(input.port2.standardPadBinds.l, {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}});
-        rebind(input.port2.standardPadBinds.r, {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}});
-        rebind(input.port2.standardPadBinds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
-        rebind(input.port2.standardPadBinds.up, {{{Key::Up}, {Key::Home}}});
-        rebind(input.port2.standardPadBinds.down, {{{Key::Down}, {Key::End}}});
-        rebind(input.port2.standardPadBinds.left, {{{Key::Left}, {Key::Delete}}});
-        rebind(input.port2.standardPadBinds.right, {{{Key::Right}, {Key::PageDown}}});
-        rebind(input.port2.standardPadBinds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
+        rebind(input.port2.controlPadBinds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
+        rebind(input.port2.controlPadBinds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
+        rebind(input.port2.controlPadBinds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
+        rebind(input.port2.controlPadBinds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
+        rebind(input.port2.controlPadBinds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
+        rebind(input.port2.controlPadBinds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
+        rebind(input.port2.controlPadBinds.l, {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}});
+        rebind(input.port2.controlPadBinds.r, {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}});
+        rebind(input.port2.controlPadBinds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
+        rebind(input.port2.controlPadBinds.up, {{{Key::Up}, {Key::Home}}});
+        rebind(input.port2.controlPadBinds.down, {{{Key::Down}, {Key::End}}});
+        rebind(input.port2.controlPadBinds.left, {{{Key::Left}, {Key::Delete}}});
+        rebind(input.port2.controlPadBinds.right, {{{Key::Right}, {Key::PageDown}}});
+        rebind(input.port2.controlPadBinds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
     }
 
     RebindInputs();
@@ -1231,10 +1232,10 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Standa
 }
 
 Settings::InputMap &Settings::GetInputMapForContext(void *context) {
-    if (context == &m_context.standardPadInputs[0]) {
+    if (context == &m_context.controlPadInputs[0]) {
         // Port 1 Control Pad inputs
         return m_port1ControlPadInputs;
-    } else if (context == &m_context.standardPadInputs[1]) {
+    } else if (context == &m_context.controlPadInputs[1]) {
         // Port 2 Control Pad inputs
         return m_port2ControlPadInputs;
     } else {

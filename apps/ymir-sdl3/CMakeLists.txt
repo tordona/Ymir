@@ -113,6 +113,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/settings/cartridge_settings_view.hpp
     src/app/ui/views/settings/cdblock_settings_view.cpp
     src/app/ui/views/settings/cdblock_settings_view.hpp
+    src/app/ui/views/settings/control_pad_binds_view.cpp
+    src/app/ui/views/settings/control_pad_binds_view.hpp
     src/app/ui/views/settings/general_settings_view.cpp
     src/app/ui/views/settings/general_settings_view.hpp
     src/app/ui/views/settings/hotkeys_settings_view.cpp
@@ -123,8 +125,6 @@ add_executable(ymir-sdl3
     src/app/ui/views/settings/ipl_settings_view.hpp
     src/app/ui/views/settings/settings_view_base.cpp
     src/app/ui/views/settings/settings_view_base.hpp
-    src/app/ui/views/settings/standard_pad_binds_view.cpp
-    src/app/ui/views/settings/standard_pad_binds_view.hpp
     src/app/ui/views/settings/system_settings_view.cpp
     src/app/ui/views/settings/system_settings_view.hpp
     src/app/ui/views/settings/video_settings_view.cpp

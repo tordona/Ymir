@@ -29,9 +29,9 @@ void UnboundActionsWidget::Display() {
             const char *category = "Unknown";
             if (action.context == nullptr) {
                 category = "Hotkeys";
-            } else if (action.context == &m_context.standardPadInputs[0]) {
+            } else if (action.context == &m_context.controlPadInputs[0]) {
                 category = "Peripheral port 1";
-            } else if (action.context == &m_context.standardPadInputs[1]) {
+            } else if (action.context == &m_context.controlPadInputs[1]) {
                 category = "Peripheral port 2";
             } else {
                 category = "Unknown";

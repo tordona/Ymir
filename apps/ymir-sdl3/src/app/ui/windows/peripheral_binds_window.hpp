@@ -2,7 +2,7 @@
 
 #include <app/ui/window_base.hpp>
 
-#include <app/ui/views/settings/standard_pad_binds_view.hpp>
+#include <app/ui/views/settings/control_pad_binds_view.hpp>
 
 namespace app::ui {
 
@@ -20,7 +20,7 @@ private:
     uint32 m_portIndex;
     uint32 m_slotIndex;
 
-    StandardPadBindsView m_standardPadView;
+    ControlPadBindsView m_controlPadView;
 };
 
 } // namespace app::ui

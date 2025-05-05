@@ -1,13 +1,13 @@
-#include <ymir/hw/smpc/peripheral/peripheral_impl_standard_pad.hpp>
+#include <ymir/hw/smpc/peripheral/peripheral_impl_control_pad.hpp>
 
 #include <ymir/util/bit_ops.hpp>
 
 namespace ymir::peripheral {
 
-StandardPad::StandardPad(CBPeripheralReport callback)
-    : BasePeripheral(PeripheralType::StandardPad, 0x0, 2, callback) {}
+ControlPad::ControlPad(CBPeripheralReport callback)
+    : BasePeripheral(PeripheralType::ControlPad, 0x0, 2, callback) {}
 
-void StandardPad::Read(std::span<uint8> out) {
+void ControlPad::Read(std::span<uint8> out) {
     assert(out.size() == 2);
 
     // [0] 7-0 = left, right, down, up, start, A, C, B
@@ -17,7 +17,7 @@ void StandardPad::Read(std::span<uint8> out) {
     out[1] = (bit::extract<3, 7>(btnValue) << 3) | 0x7;
 }
 
-uint8 StandardPad::WritePDR(uint8 ddr, uint8 value) {
+uint8 ControlPad::WritePDR(uint8 ddr, uint8 value) {
     const uint16 btnValue = static_cast<uint16>(ReadButtons());
 
     switch (ddr & 0x7F) {
@@ -47,11 +47,11 @@ uint8 StandardPad::WritePDR(uint8 ddr, uint8 value) {
     return 0xFF;
 }
 
-StandardPadButton StandardPad::ReadButtons() {
-    PeripheralReport report{.type = PeripheralType::StandardPad,
-                            .report = {.standardPad = {.buttons = StandardPadButton::Default}}};
+ControlPadButton ControlPad::ReadButtons() {
+    PeripheralReport report{.type = PeripheralType::ControlPad,
+                            .report = {.controlPad = {.buttons = ControlPadButton::Default}}};
     m_cbPeripheralReport(report);
-    return (report.report.standardPad.buttons & StandardPadButton::All) | StandardPadButton::_bit2;
+    return (report.report.controlPad.buttons & ControlPadButton::All) | ControlPadButton::_bit2;
 }
 
 } // namespace ymir::peripheral

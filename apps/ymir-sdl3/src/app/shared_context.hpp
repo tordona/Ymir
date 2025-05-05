@@ -35,8 +35,8 @@ struct SharedContext {
 
     input::InputContext inputContext;
 
-    struct StandardPadInput {
-        ymir::peripheral::StandardPadButton buttons = ymir::peripheral::StandardPadButton::Default;
+    struct ControlPadInput {
+        ymir::peripheral::ControlPadButton buttons = ymir::peripheral::ControlPadButton::Default;
 
         struct DPad {
             float x, y;
@@ -44,7 +44,7 @@ struct SharedContext {
         std::unordered_map<input::InputElement, DPad> dpad2DInputs;
 
         void UpdateDPadInput(float sensitivity) {
-            using Button = ymir::peripheral::StandardPadButton;
+            using Button = ymir::peripheral::ControlPadButton;
 
             // Aggregate all D-Pad inputs
             float x = 0.0f;
@@ -65,7 +65,7 @@ struct SharedContext {
         }
     };
 
-    std::array<StandardPadInput, 2> standardPadInputs;
+    std::array<ControlPadInput, 2> controlPadInputs;
 
     Profile profile;
     Settings settings{*this};

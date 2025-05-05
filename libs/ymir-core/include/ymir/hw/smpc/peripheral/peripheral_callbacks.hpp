@@ -1,7 +1,7 @@
 #pragma once
 
 #include "peripheral_defs.hpp"
-#include "peripheral_state_standard_pad.hpp"
+#include "peripheral_state_control_pad.hpp"
 
 #include <ymir/util/callback.hpp>
 
@@ -12,10 +12,10 @@ struct PeripheralReport {
     PeripheralType type;
 
     union Report {
-        // Valid when type == PeripheralType::StandardPad
-        struct StandardPad {
-            StandardPadButton buttons;
-        } standardPad;
+        // Valid when type == PeripheralType::ControlPad
+        struct ControlPad {
+            ControlPadButton buttons;
+        } controlPad;
     } report;
 };
 
