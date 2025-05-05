@@ -13,13 +13,13 @@ std::string ToHumanString(const InputElement &bind) {
     case InputElement::Type::KeyCombo: return ToHumanString(bind.keyCombo);
     case InputElement::Type::MouseCombo: return ToHumanString(bind.mouseCombo);
     case InputElement::Type::GamepadButton:
-        return fmt::format("Gamepad {} {}", bind.gamepadButton.id + 1, ToHumanString(bind.gamepadButton.button));
+        return fmt::format("GP{} {}", bind.gamepadButton.id + 1, ToHumanString(bind.gamepadButton.button));
     case InputElement::Type::MouseAxis1D: return std::string(ToHumanString(bind.mouseAxis1D.axis));
     case InputElement::Type::MouseAxis2D: return std::string(ToHumanString(bind.mouseAxis2D.axis));
     case InputElement::Type::GamepadAxis1D:
-        return fmt::format("Gamepad {} {}", bind.gamepadAxis1D.id + 1, ToHumanString(bind.gamepadAxis1D.axis));
+        return fmt::format("GP{} {}", bind.gamepadAxis1D.id + 1, ToHumanString(bind.gamepadAxis1D.axis));
     case InputElement::Type::GamepadAxis2D:
-        return fmt::format("Gamepad {} {}", bind.gamepadAxis2D.id + 1, ToHumanString(bind.gamepadAxis2D.axis));
+        return fmt::format("GP{} {}", bind.gamepadAxis2D.id + 1, ToHumanString(bind.gamepadAxis2D.axis));
     }
 }
 
