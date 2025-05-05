@@ -1,5 +1,14 @@
 # Ymir changelog
 
+## Version 0.1.3
+
+### New features and improvements
+
+### Fixes
+
+- VDP1: Preserve EWDR, EWLR and EWRR on reset. Fixes some graphics glitches on Capcom games (#67).
+
+
 ## Version 0.1.2
 
 ### New features and improvements

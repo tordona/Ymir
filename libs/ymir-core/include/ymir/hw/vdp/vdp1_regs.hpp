@@ -13,6 +13,16 @@
 namespace ymir::vdp {
 
 struct VDP1Regs {
+    VDP1Regs() {
+        eraseWriteValue = 0;
+        eraseX1 = 0;
+        eraseY1 = 0;
+        eraseX3 = 0;
+        eraseY3 = 0;
+
+        Reset();
+    }
+
     void Reset() {
         vblankErase = false;
         hdtvEnable = false;
@@ -26,13 +36,6 @@ struct VDP1Regs {
         evenOddCoordSelect = false;
 
         plotTrigger = 0;
-
-        eraseWriteValue = 0;
-
-        eraseX1 = 0;
-        eraseY1 = 0;
-        eraseX3 = 0;
-        eraseY3 = 0;
 
         currFrameEnded = false;
         prevFrameEnded = false;
