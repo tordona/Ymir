@@ -105,6 +105,7 @@ void InputSettingsView::Display() {
         static constexpr ImU32 kBorderColor = 0xE0F5D4C6;
         static constexpr ImU32 kBackgroundColor = 0xAA401A0A;
         static constexpr ImU32 kDeadzoneBackgroundColor = 0xC02F2A69;
+        static constexpr ImU32 kSensBackgroundColor = 0xC02A5669;
         static constexpr ImU32 kAxisActiveColor = 0xF05FF58F;
         static constexpr ImU32 kAxisAtRestColor = 0xF08F5FF5;
 
@@ -112,7 +113,7 @@ void InputSettingsView::Display() {
 
         const float widgetSize = kWidgetSize * m_context.displayScale;
 
-        auto drawStick = [&](const char *name, float x, float y, float dz) {
+        auto drawStick = [&](const char *name, float x, float y, float dz, float sens) {
             static constexpr float kArrowSize = 8.0f;
             static constexpr float kPadding = 4.0f;
             static constexpr float kCircleRadius = (kWidgetSize - kArrowSize - kPadding) * 0.5f;
@@ -149,8 +150,9 @@ void InputSettingsView::Display() {
             static constexpr ImVec2 kOctantDir{0.38268343f, 0.9238795f};
             static constexpr ImVec2 kDiagonalDir{0.70710678f, 0.70710678f};
 
-            // Circle background, deadzone
+            // Circle background, sensitivity zone, deadzone
             drawList->AddCircleFilled(center, circleRadius, kBackgroundColor);
+            drawList->AddCircleFilled(center, (dz + (1.0f - dz) * sens) * circleRadius, kSensBackgroundColor);
             drawList->AddCircleFilled(center, dz * circleRadius, kDeadzoneBackgroundColor);
 
             // Octant dividers
@@ -202,12 +204,13 @@ void InputSettingsView::Display() {
 
             // Label and values
             drawText(name, 0, textColor);
-            drawText(fmt::format("{:.2f}x{:.2f}", x, y).c_str(), 1, zero ? kAxisAtRestColor : kAxisActiveColor);
-            drawText(fmt::format("{:.2f}x{:.2f}", xAdj, yAdj).c_str(), 2, kAdjustedStickPointColor);
+            drawText(fmt::format("{:.2f}x{:.2f} ({:.2f})", x, y, sqrt(x * x + y * y)).c_str(), 1,
+                     zero ? kAxisAtRestColor : kAxisActiveColor);
+            drawText(fmt::format("{:.2f}x{:.2f} ({:.2f})", xAdj, yAdj, sqrt(xAdj * xAdj + yAdj * yAdj)).c_str(), 2,
+                     kAdjustedStickPointColor);
 
             // D-Pad arrows
             const float distSq = xAdj * xAdj + yAdj * yAdj;
-            const float sens = settings.gamepad.analogToDigitalSensitivity;
             if (distSq > 0.0f && distSq >= sens * sens) {
                 static constexpr uint32 kPosX = 1u << 0u;
                 static constexpr uint32 kNegX = 1u << 1u;
@@ -282,9 +285,9 @@ void InputSettingsView::Display() {
         ImGui::Text("Gamepad %u", id + 1);
         ImGui::PopFont();
         ImGui::PushID(id);
-        drawStick("Left Stick", lsx, lsy, settings.gamepad.lsDeadzone);
+        drawStick("Left Stick", lsx, lsy, settings.gamepad.lsDeadzone, settings.gamepad.analogToDigitalSensitivity);
         ImGui::SameLine();
-        drawStick("Right Stick", rsx, rsy, settings.gamepad.rsDeadzone);
+        drawStick("Right Stick", rsx, rsy, settings.gamepad.rsDeadzone, settings.gamepad.analogToDigitalSensitivity);
         ImGui::SameLine();
         drawTrigger("LT", lt, settings.gamepad.analogToDigitalSensitivity);
         ImGui::SameLine();
