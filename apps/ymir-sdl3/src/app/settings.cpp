@@ -842,8 +842,8 @@ SettingsSaveResult Settings::Save() {
                     {"DPad", ToTOML(input.port2.standardPadBinds.dpad)},
                 }}},
             }}},
-            {"GamepadLSDeadzoneY", input.gamepad.lsDeadzone.Get()},
-            {"GamepadRSDeadzoneY", input.gamepad.rsDeadzone.Get()},
+            {"GamepadLSDeadzone", input.gamepad.lsDeadzone.Get()},
+            {"GamepadRSDeadzone", input.gamepad.rsDeadzone.Get()},
             {"GamepadAnalogToDigitalSensitivity", input.gamepad.analogToDigitalSensitivity.Get()},
         }}},
 
