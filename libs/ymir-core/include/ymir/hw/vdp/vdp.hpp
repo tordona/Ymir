@@ -770,7 +770,7 @@ private:
         uint32 fracScrollY;
 
         // Fractional X scroll coordinate increment.
-        // Applied every scanline.
+        // Applied every pixel and updated every scanline.
         uint32 scrollIncH;
 
         // Current line scroll table address.

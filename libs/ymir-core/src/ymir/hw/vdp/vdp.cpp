@@ -823,6 +823,8 @@ void VDP::LoadState(const state::VDPState &state) {
 
     m_VDPRenderContext.displayFB = state.renderer.displayFB;
     m_VDPRenderContext.vdp1Done = state.renderer.vdp1Done;
+
+    UpdateResolution<true>();
 }
 
 void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext) {
