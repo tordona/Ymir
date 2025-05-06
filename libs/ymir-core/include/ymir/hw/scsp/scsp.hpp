@@ -90,6 +90,7 @@ namespace grp {
 
     struct kyonex : public regs {
         static constexpr bool enabled = false;
+        static constexpr devlog::Level level = devlog::level::trace;
         static constexpr std::string_view name = "SCSP-KYONEX";
     };
 
@@ -625,8 +626,8 @@ private:
         } else {
             devlog::trace<grp::regs>(
                 "Monitor slot {} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
-                m_monitorSlotCall, value, slot.currAddress, slot.currSample, static_cast<uint8>(slot.egState),
-                slot.egLevel);
+                m_monitorSlotCall, value, slot.startAddress + slot.addressInc, slot.currSample,
+                static_cast<uint8>(slot.egState), slot.egLevel);
         }
         return value;
     }

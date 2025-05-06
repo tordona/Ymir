@@ -5,67 +5,60 @@
 #include <cereal/types/array.hpp>
 #include <cereal/types/vector.hpp>
 
-CEREAL_CLASS_VERSION(ymir::state::State, 4);
+namespace ymir::state {
+
+inline constexpr uint32 kStateVersion = 4;
+
+} // namespace ymir::state
+
+CEREAL_CLASS_VERSION(ymir::state::State, ymir::state::kStateVersion);
 
 namespace ymir::state {
 
 template <class Archive>
 void serialize(Archive &ar, State &s, const uint32 version) {
-    if (version == 4) {
-        ar(s.scheduler);
-        ar(s.system);
-        ar(s.msh2);
-        ar(s.ssh2);
-        ar(s.scu);
-        ar(s.smpc);
-        ar(s.vdp);
-        ar(s.scsp);
-        ar(s.cdblock);
-    } else if (version == 3) {
-        auto scu = std::make_unique<v3::SCUState>();
-
-        ar(s.scheduler);
-        ar(s.system);
-        ar(s.msh2);
-        ar(s.ssh2);
-        ar(*scu);
-        ar(s.smpc);
-        ar(s.vdp);
-        ar(s.scsp);
-        ar(s.cdblock);
-
-        s.scu.Upgrade(*scu);
-    } else if (version == 2) {
-        auto scsp = std::make_unique<v2::SCSPState>();
-
-        ar(s.scheduler);
-        ar(s.system);
-        ar(s.msh2);
-        ar(s.ssh2);
-        ar(s.scu);
-        ar(s.smpc);
-        ar(s.vdp);
-        ar(*scsp);
-        ar(s.cdblock);
-
-        s.scsp.Upgrade(*scsp);
-    } else if (version == 1) {
-        auto scsp = std::make_unique<v1::SCSPState>();
-        auto scu = std::make_unique<v1::SCUState>();
-
-        ar(s.scheduler);
-        ar(s.system);
-        ar(s.msh2);
-        ar(s.ssh2);
-        ar(*scu);
-        ar(s.smpc);
-        ar(s.vdp);
-        ar(*scsp);
-        ar(s.cdblock);
-
-        s.scu.Upgrade(*scu);
-        s.scsp.Upgrade(*scsp);
+    if (version == 0 || version > ymir::state::kStateVersion) {
+        return;
     }
+
+    // All states that haven't had revisions
+    ar(s.scheduler);
+    ar(s.system);
+    ar(s.msh2);
+    ar(s.ssh2);
+
+    if (version == 1) {
+        auto scu1 = std::make_unique<v1::SCUState>();
+        auto scu2 = std::make_unique<v2::SCUState>();
+        ar(*scu1);
+        scu2->Upgrade(*scu1);
+        s.scu.Upgrade(*scu2);
+    } else if (version <= 3) {
+        auto scu = std::make_unique<v3::SCUState>();
+        ar(*scu);
+        s.scu.Upgrade(*scu);
+    } else {
+        ar(s.scu);
+    }
+
+    ar(s.smpc);
+    ar(s.vdp);
+
+    if (version <= 2) {
+        auto scsp2 = std::make_unique<v2::SCSPState>();
+        auto scsp3 = std::make_unique<v3::SCSPState>();
+        ar(*scsp2);
+        scsp3->Upgrade(*scsp2);
+        s.scsp.Upgrade(*scsp3);
+    } else if (version == 3) {
+        auto scsp = std::make_unique<v3::SCSPState>();
+        ar(*scsp);
+        s.scsp.Upgrade(*scsp);
+    } else {
+        ar(s.scsp);
+    }
+
+    ar(s.cdblock);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -488,6 +481,48 @@ inline namespace v4 {
         ar(s.timer0Counter, s.timer0Compare);
         ar(s.timer1Reload, s.timer1Enable, s.timer1Mode);
         ar(s.wramSizeSelect);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, SCSPState &s) {
+        ar(s.WRAM);
+        ar(s.cddaBuffer, s.cddaReadPos, s.cddaWritePos, s.cddaReady);
+        ar(s.m68k, s.m68kSpilloverCycles, s.m68kEnabled);
+        ar(s.slots, s.KYONEX);
+        ar(s.MVOL, s.DAC18B, s.MEM4MB, s.MSLC);
+        ar(s.timers);
+        ar(s.MCIEB, s.MCIPD);
+        ar(s.SCIEB, s.SCIPD);
+        ar(s.DEXE, s.DDIR, s.DGATE, s.DMEA, s.DRGA, s.DTLG);
+        ar(s.SOUS, s.soundStackIndex);
+        ar(s.dsp);
+        ar(s.m68kCycles, s.sampleCycles, s.sampleCounter);
+        ar(s.egCycle, s.egStep);
+        ar(s.lfsr);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, SCSPSlotState &s) {
+        ar(s.SA, s.LSA, s.LEA, s.PCM8B, s.KYONB);
+        ar(s.SBCTL);
+        ar(s.LPCTL);
+        ar(s.SSCTL);
+        ar(s.AR, s.D1R, s.D2R, s.RR, s.DL);
+        ar(s.KRS, s.EGHOLD, s.LPSLNK, s.EGBYPASS);
+        ar(s.MDL, s.MDXSL, s.MDYSL, s.STWINH);
+        ar(s.TL, s.SDIR);
+        ar(s.OCT, s.FNS);
+        ar(s.LFORE, s.LFOF, s.ALFOS, s.PLFOS, s.ALFOWS, s.PLFOWS);
+        ar(s.IMXL, s.ISEL, s.DISDL, s.DIPAN);
+        ar(s.EFSDL, s.EFPAN);
+        ar(s.extra0C, s.extra10, s.extra14);
+        ar(s.active);
+        ar(s.egState);
+        ar(s.egLevel);
+        ar(s.sampleCount, s.currSample, s.currPhase, s.nextPhase, s.addressInc, s.reverse, s.crossedLoopStart);
+        ar(s.lfoCycles, s.lfoStep);
+        ar(s.alfoOutput);
+        ar(s.sample1, s.sample2, s.output);
     }
 
 } // namespace v4

@@ -708,16 +708,18 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
     case Slot::SoundSource::SoundRAM: //
     {
         const sint32 inc = slot.reverse ? -1 : +1;
+        const sint32 addrInc1 = (slot.addressInc + 0) & 0xFFFF;
+        const sint32 addrInc2 = (slot.addressInc + 1) & 0xFFFF;
         if (slot.pcm8Bit) {
-            const uint32 address1 = slot.currAddress;
-            const uint32 address2 = slot.currAddress + inc * sizeof(uint8);
+            const uint32 address1 = slot.startAddress + addrInc1 * sizeof(uint8);
+            const uint32 address2 = slot.startAddress + addrInc2 * sizeof(uint8);
             slot.sample1 = static_cast<sint8>(ReadWRAM<uint8>(address1)) << 8;
             slot.sample2 = static_cast<sint8>(ReadWRAM<uint8>(address2)) << 8;
         } else {
-            const uint32 address1 = slot.currAddress;
-            const uint32 address2 = slot.currAddress + inc * sizeof(uint16);
-            slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1 & ~1));
-            slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2 & ~1));
+            const uint32 address1 = (slot.startAddress & ~1) + addrInc1 * sizeof(uint16);
+            const uint32 address2 = (slot.startAddress & ~1) + addrInc2 * sizeof(uint16);
+            slot.sample1 = static_cast<sint16>(ReadWRAM<uint16>(address1));
+            slot.sample2 = static_cast<sint16>(ReadWRAM<uint16>(address2));
         }
         break;
     }

@@ -190,12 +190,6 @@ inline namespace v4 {
 
         bool wramSizeSelect;
 
-        void Upgrade(const v1::SCUState &s) {
-            auto s2 = std::make_unique<v2::SCUState>();
-            s2->Upgrade(s);
-            Upgrade(*s2);
-        }
-
         void Upgrade(const v3::SCUState &s) {
             dma = s.dma;
             dsp = s.dsp;

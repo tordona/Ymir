@@ -277,10 +277,10 @@ struct Slot {
     uint16 egLevel;
 
     uint32 sampleCount;
-    uint32 currAddress;
     uint32 currSample;
     uint32 currPhase;
     uint32 nextPhase;
+    uint16 addressInc;
     bool reverse;
     bool crossedLoopStart;
 

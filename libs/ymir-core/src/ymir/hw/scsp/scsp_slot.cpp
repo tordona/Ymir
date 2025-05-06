@@ -70,10 +70,10 @@ void Slot::Reset() {
     egLevel = 0x3FF;
 
     sampleCount = 0;
-    currAddress = 0;
     currSample = 0;
     currPhase = 0;
     nextPhase = 0;
+    addressInc = 0;
     reverse = false;
     crossedLoopStart = false;
 
@@ -107,9 +107,9 @@ bool Slot::TriggerKey() {
             }
 
             sampleCount = 0;
-            currAddress = startAddress;
             currSample = 0;
             nextPhase = 0;
+            addressInc = 0;
             reverse = false;
             crossedLoopStart = false;
 
@@ -588,10 +588,10 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.egLevel = egLevel;
 
     state.sampleCount = sampleCount;
-    state.currAddress = currAddress;
     state.currSample = currSample;
     state.currPhase = currPhase;
     state.nextPhase = nextPhase;
+    state.addressInc = addressInc;
     state.reverse = reverse;
     state.crossedLoopStart = crossedLoopStart;
 
@@ -738,10 +738,10 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     egLevel = state.egLevel & 0x3FF;
 
     sampleCount = state.sampleCount;
-    currAddress = state.currAddress;
     currSample = state.currSample;
     currPhase = state.currPhase;
     nextPhase = state.nextPhase;
+    addressInc = state.addressInc;
     reverse = state.reverse;
     crossedLoopStart = state.crossedLoopStart;
 
@@ -816,6 +816,7 @@ void Slot::IncrementSampleCounter() {
         }
     }
 
+    // TODO: rework this
     switch (loopControl) {
     case LoopControl::Off:
         if (loopEndAddress != 0xFFFF && currSample >= loopEndAddress) {
@@ -858,8 +859,7 @@ void Slot::IncrementSampleCounter() {
 }
 
 void Slot::IncrementAddress(sint32 modulation) {
-    const uint32 addressInc = (currSample + modulation) << (pcm8Bit ? 0 : 1);
-    currAddress = startAddress + addressInc;
+    addressInc = currSample + modulation;
 }
 
 } // namespace ymir::scsp
