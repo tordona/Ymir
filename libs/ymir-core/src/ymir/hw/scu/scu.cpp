@@ -330,6 +330,7 @@ void SCU::SaveState(state::SCUState &state) const {
     }
     m_dsp.SaveState(state.dsp);
 
+    state.cartData.clear();
     switch (m_cartSlot.GetCartridgeType()) {
     case cart::CartType::None: state.cartType = state::SCUState::CartType::None; break;
     case cart::CartType::BackupMemory: state.cartType = state::SCUState::CartType::BackupMemory; break;
