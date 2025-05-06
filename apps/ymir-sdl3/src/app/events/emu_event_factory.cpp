@@ -60,8 +60,8 @@ EmuEvent SetDebugTrace(bool enable) {
 
 EmuEvent DumpMemory() {
     return RunFunction([](SharedContext &ctx) {
-        devlog::info<grp::base>("Dumping all memory to {}...", std::filesystem::current_path().string());
         auto dumpPath = ctx.profile.GetPath(ProfilePath::Dumps);
+        devlog::info<grp::base>("Dumping all memory to {}...", dumpPath.string());
         {
             std::ofstream out{dumpPath / "msh2-cache-data.bin", std::ios::binary};
             ctx.saturn.masterSH2.DumpCacheData(out);
