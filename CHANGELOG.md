@@ -10,7 +10,8 @@
 
 - VDP1: Preserve EWDR, EWLR and EWRR on reset. Fixes some graphics glitches on Capcom games (#67).
 - VDP2: RBGs would render incorrectly when starting the emulator with threaded VDP rendering disabled (#77).
-- SCSP: More accuracy improvement and bug fixes (thanks to @celeriyacon)
+- SCSP: More accuracy improvements and bug fixes (thanks to @celeriyacon)
+- Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.
 
 
 ## Version 0.1.2
