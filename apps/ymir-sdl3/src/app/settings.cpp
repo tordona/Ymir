@@ -979,12 +979,27 @@ std::optional<input::MappedAction> Settings::UnbindInput(const input::InputEleme
         return std::nullopt;
     }
 
+    // Check if there is an action mapped to the input element
     auto &inputContext = m_context.inputContext;
-    auto existingAction = inputContext.UnmapInput(element);
+    auto existingAction = inputContext.GetMappedAction(element);
     if (!existingAction) {
         return std::nullopt;
     }
 
+    // In case the action belongs to a controller, make sure it is actually connected before removing the bind
+    if (existingAction->context == &m_context.controlPadInputs[0] &&
+        m_context.settings.input.port1.type != peripheral::PeripheralType::ControlPad) {
+        return std::nullopt;
+    } else if (existingAction->context == &m_context.controlPadInputs[1] &&
+               m_context.settings.input.port2.type != peripheral::PeripheralType::ControlPad) {
+        return std::nullopt;
+    }
+
+    // Unmap the input from the context.
+    // The return value is exactly the same as the one from GetMappedAction above.
+    (void)inputContext.UnmapInput(element);
+
+    // Unassign the bind from the settings
     auto &map = GetInputMapForContext(existingAction->context);
     if (map.map.contains(existingAction->action)) {
         auto &inputs = map.map.at(existingAction->action);
