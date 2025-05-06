@@ -661,7 +661,7 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
     }();
 
     // Compute pitch LFO
-    sint8 pitchLFO = 0;
+    sint32 pitchLFO = 0;
     if (slot.pitchLFOSens != 0) {
         using enum Slot::Waveform;
         switch (slot.pitchLFOWaveform) {
@@ -671,6 +671,8 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
         case Noise: pitchLFO = static_cast<sint8>((m_lfsr ^ 0x80) & ~1); break;
         }
         pitchLFO >>= 7 - (int)slot.pitchLFOSens;
+        pitchLFO *= slot.freqNumSwitch >> 4u; // NOTE: FNS already has ^ 0x400
+        pitchLFO >>= 6;
     }
 
     slot.IncrementLFO();
