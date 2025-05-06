@@ -1024,8 +1024,16 @@ void Settings::SyncInputSettings() {
     };
 
     sync(m_actionInputs);
-    sync(m_port1ControlPadInputs);
-    sync(m_port2ControlPadInputs);
+
+    switch (m_context.settings.input.port1.type) {
+    case peripheral::PeripheralType::None: break;
+    case peripheral::PeripheralType::ControlPad: sync(m_port1ControlPadInputs); break;
+    }
+
+    switch (m_context.settings.input.port2.type) {
+    case peripheral::PeripheralType::None: break;
+    case peripheral::PeripheralType::ControlPad: sync(m_port2ControlPadInputs); break;
+    }
 }
 
 std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
