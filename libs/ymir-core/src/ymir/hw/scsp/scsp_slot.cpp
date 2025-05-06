@@ -818,7 +818,7 @@ void Slot::IncrementSampleCounter() {
 
     switch (loopControl) {
     case LoopControl::Off:
-        if (currSample >= loopEndAddress) {
+        if (loopEndAddress != 0xFFFF && currSample >= loopEndAddress) {
             active = false;
         }
         break;
