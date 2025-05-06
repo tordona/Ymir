@@ -79,6 +79,13 @@ void InputCaptureWidget::CaptureButton(input::InputBind &bind, size_t elementInd
                 }
             }
         }
+
+        if (bind.elements[elementIndex] == event.element) {
+            // User bound the same input element as before; do nothing
+            m_closePopup = true;
+            return true;
+        }
+
         bind.elements[elementIndex] = event.element;
         MakeDirty();
         m_unboundActionsWidget.Capture(m_context.settings.UnbindInput(event.element));
@@ -97,6 +104,13 @@ void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementInd
         if (abs(event.axis1DValue) < 0.5f) {
             return false;
         }
+
+        if (bind.elements[elementIndex] == event.element) {
+            // User bound the same input element as before; do nothing
+            m_closePopup = true;
+            return true;
+        }
+
         bind.elements[elementIndex] = event.element;
         MakeDirty();
         m_unboundActionsWidget.Capture(m_context.settings.UnbindInput(event.element));
@@ -116,6 +130,13 @@ void InputCaptureWidget::CaptureAxis2D(input::InputBind &bind, size_t elementInd
         if (d < 0.5f * 0.5f) {
             return false;
         }
+
+        if (bind.elements[elementIndex] == event.element) {
+            // User bound the same input element as before; do nothing
+            m_closePopup = true;
+            return true;
+        }
+
         bind.elements[elementIndex] = event.element;
         MakeDirty();
         m_unboundActionsWidget.Capture(m_context.settings.UnbindInput(event.element));
