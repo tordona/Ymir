@@ -668,7 +668,7 @@ FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
         case Saw: pitchLFO = sawTable[slot.lfoStep]; break;
         case Square: pitchLFO = squareTable[slot.lfoStep]; break;
         case Triangle: pitchLFO = triangleTable[slot.lfoStep]; break;
-        case Noise: pitchLFO = static_cast<sint8>(m_lfsr & ~1) ^ 0x80; break;
+        case Noise: pitchLFO = static_cast<sint8>((m_lfsr ^ 0x80) & ~1); break;
         }
         pitchLFO >>= 7 - (int)slot.pitchLFOSens;
     }
