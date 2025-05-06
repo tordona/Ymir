@@ -823,7 +823,7 @@ void Slot::IncrementSampleCounter() {
         }
         break;
     case LoopControl::Normal:
-        if (currSample >= loopEndAddress) {
+        if (loopEndAddress != 0xFFFF && currSample >= loopEndAddress) {
             currSample -= loopEndAddress - loopStartAddress;
         }
         break;
