@@ -3511,13 +3511,9 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
-        // Apply vertical cell-scrolling or horizontal mosaic
-        if (bgParams.verticalCellScrollEnable) {
-            // Update vertical cell scroll amount
-            if (((fracScrollX >> 8u) & 7) == 0) {
-                cellScrollY = readCellScrollY();
-            }
-        } else if (bgParams.mosaicEnable) {
+        // Apply horizontal mosaic or vertical cell-scrolling
+        // Mosaic takes priority
+        if (bgParams.mosaicEnable) {
             // Apply horizontal mosaic
             const uint8 currMosaicCounterX = mosaicCounterX;
             mosaicCounterX++;
@@ -3531,6 +3527,11 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
                 // Increment horizontal coordinate
                 fracScrollX += bgState.scrollIncH;
                 continue;
+            }
+        } else if (bgParams.verticalCellScrollEnable) {
+            // Update vertical cell scroll amount
+            if (((fracScrollX >> 8u) & 7) == 0) {
+                cellScrollY = readCellScrollY();
             }
         }
 
@@ -3577,12 +3578,9 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     uint32 cellScrollY = 0;
 
     for (uint32 x = 0; x < m_HRes; x++) {
-        // Update vertical cell scroll amount
-        if (bgParams.verticalCellScrollEnable) {
-            if (((fracScrollX >> 8u) & 7) == 0) {
-                cellScrollY = readCellScrollY();
-            }
-        } else if (bgParams.mosaicEnable) {
+        // Apply horizontal mosaic or vertical cell-scrolling
+        // Mosaic takes priority
+        if (bgParams.mosaicEnable) {
             // Apply horizontal mosaic
             const uint8 currMosaicCounterX = mosaicCounterX;
             mosaicCounterX++;
@@ -3596,6 +3594,11 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
                 // Increment horizontal coordinate
                 fracScrollX += bgState.scrollIncH;
                 continue;
+            }
+        } else if (bgParams.verticalCellScrollEnable) {
+            // Update vertical cell scroll amount
+            if (((fracScrollX >> 8u) & 7) == 0) {
+                cellScrollY = readCellScrollY();
             }
         }
 
