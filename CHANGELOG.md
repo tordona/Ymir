@@ -13,6 +13,7 @@
 - VDP2: RBGs would render incorrectly when starting the emulator with threaded VDP rendering disabled. (#77)
 - VDP2: Honor access cycle settings (CYCA0/A1/B0/B1 registers) to fix vertical cell scroll effect. (#76)
 - VDP2: Disable NBGs 1 to 3 if NBG0 or NBG1 use high color formats. (#76)
+- VDP2: Apply mid-frame scroll effects properly. (#72)
 - SCSP: More accuracy improvements and bug fixes (thanks to @celeriyacon)
 - Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.
 - Rewind: Fix rare crash due to a race condition when resetting the rewind buffer.

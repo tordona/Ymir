@@ -326,6 +326,17 @@ inline namespace v4 {
             VCounter = s.VCounter;
 
             renderer.Upgrade(s.renderer);
+
+            // Compensate for the removal of SCXIN/SCYIN from fracScrollX/Y
+            renderer.normBGLayerStates[1].fracScrollX -= (regs2.SCXIN0 << 8u) | (regs2.SCXDN0 >> 8u);
+            renderer.normBGLayerStates[2].fracScrollX -= (regs2.SCXIN1 << 8u) | (regs2.SCXDN1 >> 8u);
+            renderer.normBGLayerStates[3].fracScrollX -= (regs2.SCXIN2 << 8u);
+            renderer.normBGLayerStates[4].fracScrollX -= (regs2.SCXIN3 << 8u);
+
+            renderer.normBGLayerStates[1].fracScrollY -= (regs2.SCYIN0 << 8u) | (regs2.SCYDN0 >> 8u);
+            renderer.normBGLayerStates[2].fracScrollY -= (regs2.SCYIN1 << 8u) | (regs2.SCYDN1 >> 8u);
+            renderer.normBGLayerStates[3].fracScrollY -= (regs2.SCYIN2 << 8u);
+            renderer.normBGLayerStates[4].fracScrollY -= (regs2.SCYIN3 << 8u);
         }
     };
 

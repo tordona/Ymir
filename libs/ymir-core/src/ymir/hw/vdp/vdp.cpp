@@ -51,10 +51,12 @@ namespace grp {
     };
 
     struct vdp2_regs : public vdp2 {
+        // static constexpr devlog::Level level = devlog::level::trace;
         static constexpr std::string_view name = "VDP2-Regs";
     };
 
     struct vdp2_render : public vdp2 {
+        // static constexpr devlog::Level level = devlog::level::trace;
         static constexpr std::string_view name = "VDP2-Render";
     };
 
@@ -1028,6 +1030,7 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2RegWrite(address, value));
     }
     m_VDP2.Write(address, value);
+    devlog::trace<grp::vdp2_regs>("VDP2 register write to {:03X} = {:04X}", address, value);
 
     switch (address) {
     case 0x000:
@@ -2540,8 +2543,8 @@ FORCE_INLINE void VDP::VDP2InitNormalBG() {
 
     const BGParams &bgParams = m_VDP2.bgParams[index + 1];
     NormBGLayerState &bgState = m_normBGLayerStates[index];
-    bgState.fracScrollX = bgParams.scrollAmountH;
-    bgState.fracScrollY = bgParams.scrollAmountV;
+    bgState.fracScrollX = 0;
+    bgState.fracScrollY = 0;
     if (m_VDP2.TVMD.LSMDn == InterlaceMode::DoubleDensity && m_VDP2.TVSTAT.ODD) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
@@ -2616,11 +2619,11 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
     };
 
     if (bgParams.lineScrollXEnable) {
-        bgState.fracScrollX = bgParams.scrollAmountH + bit::extract<8, 26>(read());
+        bgState.fracScrollX = bit::extract<8, 26>(read());
     }
     if (bgParams.lineScrollYEnable) {
         // TODO: check/optimize this
-        bgState.fracScrollY = bgParams.scrollAmountV + bit::extract<8, 26>(read());
+        bgState.fracScrollY = bit::extract<8, 26>(read());
     }
     if (bgParams.lineZoomEnable) {
         bgState.scrollIncH = bit::extract<8, 18>(read());
@@ -3548,8 +3551,8 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
                                            NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
 
-    uint32 fracScrollX = bgState.fracScrollX;
-    const uint32 fracScrollY = bgState.fracScrollY;
+    uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
+    const uint32 fracScrollY = bgState.fracScrollY + bgParams.scrollAmountV;
     bgState.fracScrollY += bgParams.scrollIncV;
     if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         bgState.fracScrollY += bgParams.scrollIncV;
@@ -3622,8 +3625,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
                                            NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
 
-    uint32 fracScrollX = bgState.fracScrollX;
-    const uint32 fracScrollY = bgState.fracScrollY;
+    uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
+    const uint32 fracScrollY = bgState.fracScrollY + bgParams.scrollAmountV;
     bgState.fracScrollY += bgParams.scrollIncV;
     if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         bgState.fracScrollY += bgParams.scrollIncV;
