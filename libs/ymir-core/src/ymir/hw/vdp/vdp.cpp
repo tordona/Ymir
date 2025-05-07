@@ -1034,7 +1034,11 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
                                       (uint16)m_VDP2.TVMD.LSMDn, (uint16)m_VDP2.TVMD.BDCLMD, (uint16)m_VDP2.TVMD.DISP,
                                       (m_VDP2.TVMDDirty ? " (dirty)" : ""));
         break;
-    case 0x020: VDP2UpdateEnabledBGs(); break;
+    case 0x020: [[fallthrough]]; // BGON
+    case 0x028: [[fallthrough]]; // CHCTLA
+    case 0x02A:                  // CHCTLB
+        VDP2UpdateEnabledBGs();
+        break;
     }
 }
 
@@ -2536,11 +2540,23 @@ void VDP::VDP2UpdateEnabledBGs() {
         m_layerStates[4].enabled = false; // not used
         m_layerStates[5].enabled = false; // not used
     } else {
-        m_layerStates[1].enabled = m_VDP2.bgEnabled[4]; // RBG0
-        m_layerStates[2].enabled = m_VDP2.bgEnabled[0]; // NBG0
-        m_layerStates[3].enabled = m_VDP2.bgEnabled[1]; // NBG1/EXBG
-        m_layerStates[4].enabled = m_VDP2.bgEnabled[2]; // NBG2
-        m_layerStates[5].enabled = m_VDP2.bgEnabled[3]; // NBG3
+        // Certain color format settings on NBG0 and NBG1 restrict which BG layers can be enabled
+        // - NBG1 is disabled when NBG0 uses 8:8:8 RGB
+        // - NBG2 is disabled when NBG0 uses 2048 color palette or any RGB format
+        // - NBG3 is disabled when NBG0 uses 8:8:8 RGB or NBG1 uses 2048 color palette or 5:5:5 RGB color format
+        const ColorFormat colorFormatNBG0 = m_VDP2.bgParams[1].colorFormat;
+        const ColorFormat colorFormatNBG1 = m_VDP2.bgParams[2].colorFormat;
+        const bool disableNBG1 = colorFormatNBG0 == ColorFormat::RGB888;
+        const bool disableNBG2 = colorFormatNBG0 == ColorFormat::Palette2048 ||
+                                 colorFormatNBG0 == ColorFormat::RGB555 || colorFormatNBG0 == ColorFormat::RGB888;
+        const bool disableNBG3 = colorFormatNBG0 == ColorFormat::RGB888 ||
+                                 colorFormatNBG1 == ColorFormat::Palette2048 || colorFormatNBG1 == ColorFormat::RGB555;
+
+        m_layerStates[1].enabled = m_VDP2.bgEnabled[4];                 // RBG0
+        m_layerStates[2].enabled = m_VDP2.bgEnabled[0];                 // NBG0
+        m_layerStates[3].enabled = m_VDP2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
+        m_layerStates[4].enabled = m_VDP2.bgEnabled[2] && !disableNBG2; // NBG2
+        m_layerStates[5].enabled = m_VDP2.bgEnabled[3] && !disableNBG3; // NBG3
     }
 }
 
