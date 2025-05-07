@@ -4,14 +4,17 @@
 
 ### New features and improvements
 
-- Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95 (#71)
+- Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95. (#71)
 
 ### Fixes
 
-- VDP1: Preserve EWDR, EWLR and EWRR on reset. Fixes some graphics glitches on Capcom games (#67).
-- VDP2: RBGs would render incorrectly when starting the emulator with threaded VDP rendering disabled (#77).
+- VDP1: Preserve EWDR, EWLR and EWRR on reset. Fixes some graphics glitches on Capcom games. (#67)
+- VDP2: RBGs would render incorrectly when starting the emulator with threaded VDP rendering disabled. (#77)
+- VDP2: Honor access cycle settings (CYCA0/A1/B0/B1 registers) to fix vertical cell scroll effect. (#76)
+- VDP2: Disable NBGs 1 to 3 if NBG0 or NBG1 use high color formats. (#76)
 - SCSP: More accuracy improvements and bug fixes (thanks to @celeriyacon)
 - Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.
+- Rewind: Fix rare crash due to a race condition when resetting the rewind buffer.
 
 
 ## Version 0.1.2
