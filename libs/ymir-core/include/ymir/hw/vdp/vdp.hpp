@@ -759,6 +759,7 @@ private:
             fracScrollY = 0;
             scrollIncH = 0x100;
             lineScrollTableAddress = 0;
+            vertCellScrollOffset = 0;
             mosaicCounterY = 0;
         }
 
@@ -776,6 +777,10 @@ private:
         // Current line scroll table address.
         // Reset at the start of every frame and incremented every 1/2/4/8/16 lines.
         uint32 lineScrollTableAddress;
+
+        // Vertical cell scroll offset.
+        // Based on CYCA0/A1/B0/B1 parameters.
+        uint32 vertCellScrollOffset;
 
         // Vertical mosaic counter.
         // Reset at the start of every frame and incremented every line.
@@ -876,6 +881,10 @@ private:
 
     // Window state for color calculation.
     alignas(16) std::array<bool, kMaxResH> m_colorCalcWindow;
+
+    // Vertical cell scroll increment.
+    // Based on CYCA0/A1/B0/B1 parameters.
+    uint32 m_vertCellScrollInc;
 
     // Current display framebuffer.
     std::array<uint32, kMaxResH * kMaxResV> m_framebuffer;

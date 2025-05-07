@@ -484,6 +484,33 @@ inline namespace v4 {
     }
 
     template <class Archive>
+    void serialize(Archive &ar, VDPState &s) {
+        ar(s.VRAM1, s.VRAM2, s.CRAM, s.spriteFB, s.displayFB);
+        ar(s.regs1, s.regs2);
+        ar(s.HPhase, s.VPhase, s.VCounter);
+        ar(s.renderer);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, VDPState::VDPRendererState &s) {
+        ar(s.vdp1State);
+        ar(s.normBGLayerStates);
+        ar(s.rotParamStates);
+        ar(s.lineBackLayerState);
+        ar(s.vertCellScrollInc);
+        ar(s.displayFB);
+        ar(s.vdp1Done);
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s) {
+        ar(s.fracScrollX, s.fracScrollY, s.scrollIncH);
+        ar(s.lineScrollTableAddress);
+        ar(s.vertCellScrollOffset);
+        ar(s.mosaicCounterY);
+    }
+
+    template <class Archive>
     void serialize(Archive &ar, SCSPState &s) {
         ar(s.WRAM);
         ar(s.cddaBuffer, s.cddaReadPos, s.cddaWritePos, s.cddaReady);

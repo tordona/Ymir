@@ -250,7 +250,84 @@ namespace v3 {
 
 inline namespace v4 {
 
-    using v3::VDPState;
+    struct VDPState {
+        alignas(16) std::array<uint8, vdp::kVDP1VRAMSize> VRAM1;
+        alignas(16) std::array<uint8, vdp::kVDP2VRAMSize> VRAM2;
+        alignas(16) std::array<uint8, vdp::kVDP2CRAMSize> CRAM;
+        alignas(16) std::array<std::array<uint8, vdp::kVDP1FramebufferRAMSize>, 2> spriteFB;
+        uint8 displayFB;
+
+        using VDP1RegsState = v3::VDPState::VDP1RegsState;
+        using VDP2RegsState = v3::VDPState::VDP2RegsState;
+
+        VDP1RegsState regs1;
+        VDP2RegsState regs2;
+
+        using HorizontalPhase = v3::VDPState::HorizontalPhase;
+        HorizontalPhase HPhase; // Current horizontal display phase
+
+        using VerticalPhase = v3::VDPState::VerticalPhase;
+        VerticalPhase VPhase; // Current vertical display phase
+
+        uint16 VCounter;
+
+        struct VDPRendererState {
+            using VDP1RenderState = v3::VDPState::VDPRendererState::VDP1RenderState;
+
+            struct NormBGLayerState {
+                uint32 fracScrollX;
+                uint32 fracScrollY;
+                uint32 scrollIncH;
+                uint32 lineScrollTableAddress;
+                uint32 vertCellScrollOffset;
+                uint8 mosaicCounterY;
+            };
+
+            using RotationParamState = v3::VDPState::VDPRendererState::RotationParamState;
+            using LineBackLayerState = v3::VDPState::VDPRendererState::LineBackLayerState;
+
+            VDP1RenderState vdp1State;
+            std::array<NormBGLayerState, 4> normBGLayerStates;
+            std::array<RotationParamState, 2> rotParamStates;
+            LineBackLayerState lineBackLayerState;
+            uint32 vertCellScrollInc;
+
+            uint8 displayFB;
+            bool vdp1Done;
+
+            void Upgrade(const v3::VDPState::VDPRendererState &s) {
+                vdp1State = s.vdp1State;
+                for (size_t i = 0; i < normBGLayerStates.size(); ++i) {
+                    normBGLayerStates[i].fracScrollX = s.normBGLayerStates[i].fracScrollX;
+                    normBGLayerStates[i].fracScrollY = s.normBGLayerStates[i].fracScrollY;
+                    normBGLayerStates[i].scrollIncH = s.normBGLayerStates[i].scrollIncH;
+                    normBGLayerStates[i].lineScrollTableAddress = s.normBGLayerStates[i].lineScrollTableAddress;
+                    normBGLayerStates[i].vertCellScrollOffset = 0;
+                    normBGLayerStates[i].mosaicCounterY = s.normBGLayerStates[i].mosaicCounterY;
+                }
+                rotParamStates = s.rotParamStates;
+                lineBackLayerState = s.lineBackLayerState;
+                vertCellScrollInc = sizeof(uint32);
+                displayFB = s.displayFB;
+                vdp1Done = s.vdp1Done;
+            }
+        } renderer;
+
+        void Upgrade(const v3::VDPState &s) {
+            VRAM1 = s.VRAM1;
+            VRAM2 = s.VRAM2;
+            CRAM = s.CRAM;
+            spriteFB = s.spriteFB;
+            displayFB = s.displayFB;
+            regs1 = s.regs1;
+            regs2 = s.regs2;
+            HPhase = s.HPhase;
+            VPhase = s.VPhase;
+            VCounter = s.VCounter;
+
+            renderer.Upgrade(s.renderer);
+        }
+    };
 
 } // namespace v4
 

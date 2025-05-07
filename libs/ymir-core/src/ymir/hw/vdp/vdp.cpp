@@ -558,6 +558,7 @@ void VDP::SaveState(state::VDPState &state) const {
         state.renderer.normBGLayerStates[i].fracScrollY = m_normBGLayerStates[i].fracScrollY;
         state.renderer.normBGLayerStates[i].scrollIncH = m_normBGLayerStates[i].scrollIncH;
         state.renderer.normBGLayerStates[i].lineScrollTableAddress = m_normBGLayerStates[i].lineScrollTableAddress;
+        state.renderer.normBGLayerStates[i].vertCellScrollOffset = m_normBGLayerStates[i].vertCellScrollOffset;
         state.renderer.normBGLayerStates[i].mosaicCounterY = m_normBGLayerStates[i].mosaicCounterY;
     }
 
@@ -570,6 +571,7 @@ void VDP::SaveState(state::VDPState &state) const {
 
     state.renderer.lineBackLayerState.lineColor = m_lineBackLayerState.lineColor.u32;
     state.renderer.lineBackLayerState.backColor = m_lineBackLayerState.backColor.u32;
+    state.renderer.vertCellScrollInc = m_vertCellScrollInc;
 
     state.renderer.displayFB = m_VDPRenderContext.displayFB;
     state.renderer.vdp1Done = m_VDPRenderContext.vdp1Done;
@@ -2480,6 +2482,51 @@ void VDP::VDP2InitFrame() {
         VDP2InitNormalBG<1>();
         VDP2InitNormalBG<2>();
         VDP2InitNormalBG<3>();
+
+        // Translate VRAM access cycles for vertical cell scroll data into increment and offset for NBG0 and NBG1.
+        //
+        // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
+        // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
+
+        const bool useVertScrollNBG0 = m_VDP2.bgParams[1].verticalCellScrollEnable;
+        const bool useVertScrollNBG1 = m_VDP2.bgParams[2].verticalCellScrollEnable;
+
+        if (useVertScrollNBG0 || useVertScrollNBG1) {
+            m_vertCellScrollInc = 0;
+            uint32 accessOffset = 0;
+
+            // Check in which bank the vertical cell scroll table is located at
+            uint32 bank = m_VDP2.verticalCellScrollTableAddress >> 17;
+            if (bank < 2 && !m_VDP2.vramControl.partitionVRAMA) {
+                bank = 0;
+            } else if (!m_VDP2.vramControl.partitionVRAMB) {
+                bank = 2;
+            }
+
+            // Get the corresponding CYCxn register
+            const RegCYC cyc = [&] {
+                switch (bank) {
+                case 0: return m_VDP2.CYCA0;
+                case 1: return m_VDP2.CYCA1;
+                case 2: return m_VDP2.CYCB0;
+                case 3: return m_VDP2.CYCB1;
+                }
+                util::unreachable();
+            }();
+
+            for (auto access : {cyc.L.VCP0n, cyc.L.VCP1n, cyc.L.VCP2n, cyc.L.VCP3n, //
+                                cyc.U.VCP4n, cyc.U.VCP5n, cyc.U.VCP6n, cyc.U.VCP7n}) {
+                if (useVertScrollNBG0 && access == 0xC) {
+                    m_vertCellScrollInc += sizeof(uint32);
+                    m_normBGLayerStates[0].vertCellScrollOffset = accessOffset;
+                    accessOffset += sizeof(uint32);
+                } else if (useVertScrollNBG1 && access == 0xD) {
+                    m_vertCellScrollInc += sizeof(uint32);
+                    m_normBGLayerStates[1].vertCellScrollOffset = accessOffset;
+                    accessOffset += sizeof(uint32);
+                }
+            }
+        }
     }
 }
 
@@ -3508,11 +3555,11 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
-    uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress;
+    uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
 
     auto readCellScrollY = [&] {
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
-        cellScrollTableAddress += sizeof(uint32);
+        cellScrollTableAddress += m_vertCellScrollInc;
         return bit::extract<8, 26>(value);
     };
 
@@ -3582,11 +3629,11 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
-    uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress;
+    uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
 
     auto readCellScrollY = [&] {
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
-        cellScrollTableAddress += sizeof(uint32);
+        cellScrollTableAddress += m_vertCellScrollInc;
         return bit::extract<8, 26>(value);
     };
 
