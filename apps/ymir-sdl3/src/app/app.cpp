@@ -706,7 +706,7 @@ void App::RunEmulator() {
         const int scaledHeight = baseHeight * scale;
 
         // Assume the following calls succeed
-        SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Unnamed Sega Saturn emulator");
+        SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Ymir " Ymir_VERSION);
         SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, scaledWidth);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, scaledHeight + menuBarHeight);
@@ -1509,11 +1509,11 @@ void App::RunEmulator() {
 
             std::string title{};
             if (paused) {
-                title = fmt::format("Ymir - {} | VDP2: paused | VDP1: paused | GUI: {:.0f} fps", fullGameTitle,
-                                    io.Framerate);
+                title = fmt::format("Ymir " Ymir_VERSION " - {} | VDP2: paused | VDP1: paused | GUI: {:.0f} fps",
+                                    fullGameTitle, io.Framerate);
             } else {
-                title = fmt::format("Ymir - {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps", fullGameTitle,
-                                    screen.frames, screen.vdp1Frames, io.Framerate);
+                title = fmt::format("Ymir " Ymir_VERSION " - {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps",
+                                    fullGameTitle, screen.frames, screen.vdp1Frames, io.Framerate);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
             screen.frames = 0;
