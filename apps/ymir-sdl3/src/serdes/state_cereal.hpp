@@ -42,7 +42,14 @@ void serialize(Archive &ar, State &s, const uint32 version) {
     }
 
     ar(s.smpc);
-    ar(s.vdp);
+
+    if (version <= 3) {
+        auto vdp3 = std::make_unique<v3::VDPState>();
+        ar(*vdp3);
+        s.vdp.Upgrade(*vdp3);
+    } else {
+        ar(s.vdp);
+    }
 
     if (version <= 2) {
         auto scsp2 = std::make_unique<v2::SCSPState>();
