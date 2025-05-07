@@ -84,6 +84,19 @@ public:
     bool ValidateState(const state::VDPState &state) const;
     void LoadState(const state::VDPState &state);
 
+    // -------------------------------------------------------------------------
+    // Rendering control
+
+    // Layers
+    enum class Layer { Sprite, RBG0, NBG0_RBG1, NBG1_EXBG, NBG2, NBG3 };
+
+    // Enables or disables a layer.
+    // Useful for debugging and troubleshooting.
+    void SetLayerEnabled(Layer layer, bool enabled);
+
+    // Detemrines if a layer is forcibly disabled.
+    bool IsLayerEnabled(Layer layer) const;
+
 private:
     alignas(16) std::array<uint8, kVDP1VRAMSize> m_VRAM1;
     alignas(16) std::array<uint8, kVDP2VRAMSize> m_VRAM2; // 4x 128 KiB banks: A0, A1, B0, B1
@@ -713,6 +726,7 @@ private:
     // Layer state, containing the pixel output for the current scanline.
     struct alignas(4096) LayerState {
         LayerState() {
+            rendered = true;
             Reset();
         }
 
@@ -723,7 +737,9 @@ private:
 
         alignas(16) std::array<Pixel, kMaxResH> pixels;
 
-        bool enabled;
+        bool enabled; // Enabled by BGON and other factors
+
+        bool rendered; // Enabled for rendering (externally configured - do not include in save state!)
     };
 
     // Layer state specific to the sprite layer.
@@ -844,7 +860,7 @@ private:
     };
 
     // Layer state indices
-    enum Layer { LYR_Sprite, LYR_RBG0, LYR_NBG0_RBG1, LYR_NBG1_EXBG, LYR_NBG2, LYR_NBG3, LYR_Back, LYR_LineColor };
+    enum LayerIndex { LYR_Sprite, LYR_RBG0, LYR_NBG0_RBG1, LYR_NBG1_EXBG, LYR_NBG2, LYR_NBG3, LYR_Back, LYR_LineColor };
 
     // Common layer states
     //     RBG0+RBG1   RBG0        no RBGs

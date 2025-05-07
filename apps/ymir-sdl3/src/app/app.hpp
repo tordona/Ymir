@@ -15,6 +15,7 @@
 #include "ui/windows/debug/memory_viewer_window.hpp"
 #include "ui/windows/debug/scu_window_set.hpp"
 #include "ui/windows/debug/sh2_window_set.hpp"
+#include "ui/windows/debug/vdp_window_set.hpp"
 
 #include <util/ipl_rom_loader.hpp>
 
@@ -119,6 +120,8 @@ private:
     ui::SH2WindowSet m_slaveSH2WindowSet;
 
     ui::SCUWindowSet m_scuWindowSet;
+
+    ui::VDPWindowSet m_vdpWindowSet;
 
     ui::DebugOutputWindow m_debugOutputWindow;
 

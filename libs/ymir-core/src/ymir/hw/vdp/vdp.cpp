@@ -66,7 +66,6 @@ VDP::VDP(core::Scheduler &scheduler, core::Configuration &config)
     : m_scheduler(scheduler) {
 
     config.system.videoStandard.Observe([&](VideoStandard videoStandard) { SetVideoStandard(videoStandard); });
-
     config.video.threadedVDP.Observe([&](bool value) { EnableThreadedVDP(value); });
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
@@ -829,6 +828,15 @@ void VDP::LoadState(const state::VDPState &state) {
     m_VDPRenderContext.vdp1Done = state.renderer.vdp1Done;
 
     UpdateResolution<true>();
+}
+
+void VDP::SetLayerEnabled(Layer layer, bool enabled) {
+    m_layerStates[static_cast<size_t>(layer)].rendered = enabled;
+    VDP2UpdateEnabledBGs();
+}
+
+bool VDP::IsLayerEnabled(Layer layer) const {
+    return m_layerStates[static_cast<size_t>(layer)].rendered;
 }
 
 void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext) {
@@ -2580,15 +2588,15 @@ FORCE_INLINE void VDP::VDP2InitRotationBG() {
 }
 
 void VDP::VDP2UpdateEnabledBGs() {
-    // Sprite layer is always enabled
-    m_layerStates[0].enabled = true;
+    // Sprite layer is always enabled, unless forcibly disabled
+    m_layerStates[0].enabled = m_layerStates[0].rendered;
 
     if (m_VDP2.bgEnabled[5]) {
-        m_layerStates[1].enabled = true;  // RBG0
-        m_layerStates[2].enabled = true;  // RBG1
-        m_layerStates[3].enabled = false; // EXBG
-        m_layerStates[4].enabled = false; // not used
-        m_layerStates[5].enabled = false; // not used
+        m_layerStates[1].enabled = m_layerStates[1].rendered; // RBG0
+        m_layerStates[2].enabled = m_layerStates[2].rendered; // RBG1
+        m_layerStates[3].enabled = false;                     // EXBG
+        m_layerStates[4].enabled = false;                     // not used
+        m_layerStates[5].enabled = false;                     // not used
     } else {
         // Certain color format settings on NBG0 and NBG1 restrict which BG layers can be enabled
         // - NBG1 is disabled when NBG0 uses 8:8:8 RGB
@@ -2602,11 +2610,11 @@ void VDP::VDP2UpdateEnabledBGs() {
         const bool disableNBG3 = colorFormatNBG0 == ColorFormat::RGB888 ||
                                  colorFormatNBG1 == ColorFormat::Palette2048 || colorFormatNBG1 == ColorFormat::RGB555;
 
-        m_layerStates[1].enabled = m_VDP2.bgEnabled[4];                 // RBG0
-        m_layerStates[2].enabled = m_VDP2.bgEnabled[0];                 // NBG0
-        m_layerStates[3].enabled = m_VDP2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
-        m_layerStates[4].enabled = m_VDP2.bgEnabled[2] && !disableNBG2; // NBG2
-        m_layerStates[5].enabled = m_VDP2.bgEnabled[3] && !disableNBG3; // NBG3
+        m_layerStates[1].enabled = m_layerStates[1].rendered && m_VDP2.bgEnabled[4];                 // RBG0
+        m_layerStates[2].enabled = m_layerStates[2].rendered && m_VDP2.bgEnabled[0];                 // NBG0
+        m_layerStates[3].enabled = m_layerStates[3].rendered && m_VDP2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
+        m_layerStates[4].enabled = m_layerStates[4].rendered && m_VDP2.bgEnabled[2] && !disableNBG2; // NBG2
+        m_layerStates[5].enabled = m_layerStates[5].rendered && m_VDP2.bgEnabled[3] && !disableNBG3; // NBG3
     }
 }
 
@@ -3334,7 +3342,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
     uint32 *fbPtr = &m_framebuffer[y * m_HRes];
     for (uint32 x = 0; x < m_HRes; x++) {
-        std::array<Layer, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
+        std::array<LayerIndex, 3> layers = {LYR_Back, LYR_Back, LYR_Back};
         std::array<uint8, 3> layerPrios = {0, 0, 0};
 
         // Determine layer order
@@ -3369,7 +3377,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                         layers[j] = layers[j - 1];
                         layerPrios[j] = layerPrios[j - 1];
                     }
-                    layers[i] = static_cast<Layer>(layer);
+                    layers[i] = static_cast<LayerIndex>(layer);
                     layerPrios[i] = pixel.priority;
                     break;
                 }
@@ -3377,7 +3385,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         }
 
         // Retrieves the color of the given layer
-        auto getLayerColor = [&](Layer layer) -> Color888 {
+        auto getLayerColor = [&](LayerIndex layer) -> Color888 {
             if (layer == LYR_Back) {
                 return m_lineBackLayerState.backColor;
             } else {
@@ -3387,7 +3395,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         };
 
-        auto isColorCalcEnabled = [&](Layer layer) {
+        auto isColorCalcEnabled = [&](LayerIndex layer) {
             if (layer == LYR_Sprite) {
                 const SpriteParams &spriteParams = regs.spriteParams;
                 if (!spriteParams.colorCalcEnable) {
@@ -3411,7 +3419,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         };
 
-        auto getColorCalcRatio = [&](Layer layer) {
+        auto getColorCalcRatio = [&](LayerIndex layer) {
             if (layer == LYR_Sprite) {
                 return m_spriteLayerState.attrs[x].colorCalcRatio;
             } else if (layer == LYR_Back) {
@@ -3421,7 +3429,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         };
 
-        auto isLineColorEnabled = [&](Layer layer) {
+        auto isLineColorEnabled = [&](LayerIndex layer) {
             if (layer == LYR_Sprite) {
                 return regs.spriteParams.lineColorScreenEnable;
             } else if (layer == LYR_Back) {
@@ -3431,7 +3439,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         };
 
-        auto getLineColor = [&](Layer layer) {
+        auto getLineColor = [&](LayerIndex layer) {
             if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && regs.bgEnabled[5])) {
                 const auto &rotParams = regs.rotParams[layer - LYR_RBG0];
                 if (rotParams.coeffTableEnable && rotParams.coeffUseLineColorData) {
@@ -3444,7 +3452,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         };
 
-        auto isShadowEnabled = [&](Layer layer) {
+        auto isShadowEnabled = [&](LayerIndex layer) {
             if (layer == LYR_Sprite) {
                 return m_spriteLayerState.attrs[x].shadowOrWindow;
             } else if (layer == LYR_Back) {

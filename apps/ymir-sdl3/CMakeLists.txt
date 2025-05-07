@@ -106,6 +106,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/debug/sh2_registers_view.hpp
     src/app/ui/views/debug/sh2_wdt_view.cpp
     src/app/ui/views/debug/sh2_wdt_view.hpp
+    src/app/ui/views/debug/vdp2_layers_enable_view.cpp
+    src/app/ui/views/debug/vdp2_layers_enable_view.hpp
 
     src/app/ui/views/settings/audio_settings_view.cpp
     src/app/ui/views/settings/audio_settings_view.hpp
@@ -192,6 +194,11 @@ add_executable(ymir-sdl3
     src/app/ui/windows/debug/sh2_window_base.cpp
     src/app/ui/windows/debug/sh2_window_base.hpp
     src/app/ui/windows/debug/sh2_window_set.hpp
+    src/app/ui/windows/debug/vdp_window_base.cpp
+    src/app/ui/windows/debug/vdp_window_base.hpp
+    src/app/ui/windows/debug/vdp_window_set.hpp
+    src/app/ui/windows/debug/vdp2_layers_window.cpp
+    src/app/ui/windows/debug/vdp2_layers_window.hpp
 
     src/serdes/cereal_archive_vector.hpp
     src/serdes/state_cereal.hpp
