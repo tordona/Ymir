@@ -959,300 +959,164 @@ void App::RunEmulator() {
 
     // General
     {
-        inputContext.SetButtonHandler(actions::general::OpenSettings,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_settingsWindow.Open = true;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::general::ToggleWindowedVideoOutput,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.settings.video.displayVideoOutputInWindow ^= true;
-                                          }
-                                      });
+        inputContext.SetTriggerHandler(actions::general::OpenSettings,
+                                       [&](void *, const input::InputElement &) { m_settingsWindow.Open = true; });
+        inputContext.SetTriggerHandler(
+            actions::general::ToggleWindowedVideoOutput,
+            [&](void *, const input::InputElement &) { m_context.settings.video.displayVideoOutputInWindow ^= true; });
     }
 
     // Audio
     {
-        inputContext.SetButtonHandler(actions::audio::ToggleMute,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.settings.audio.mute = !m_context.settings.audio.mute;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(
-            actions::audio::IncreaseVolume, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.settings.audio.volume = std::min(m_context.settings.audio.volume + 0.1f, 1.0f);
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::audio::DecreaseVolume, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.settings.audio.volume = std::max(m_context.settings.audio.volume - 0.1f, 0.0f);
-                }
-            });
+        inputContext.SetTriggerHandler(actions::audio::ToggleMute, [&](void *, const input::InputElement &) {
+            m_context.settings.audio.mute = !m_context.settings.audio.mute;
+        });
+        inputContext.SetTriggerHandler(actions::audio::IncreaseVolume, [&](void *, const input::InputElement &) {
+            m_context.settings.audio.volume = std::min(m_context.settings.audio.volume + 0.1f, 1.0f);
+        });
+        inputContext.SetTriggerHandler(actions::audio::DecreaseVolume, [&](void *, const input::InputElement &) {
+            m_context.settings.audio.volume = std::max(m_context.settings.audio.volume - 0.1f, 0.0f);
+        });
     }
 
     // CD drive
     {
-        inputContext.SetButtonHandler(actions::cd_drive::LoadDisc,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              OpenLoadDiscDialog();
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::cd_drive::EjectDisc,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.EnqueueEvent(events::emu::EjectDisc());
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::cd_drive::OpenCloseTray,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.EnqueueEvent(events::emu::OpenCloseTray());
-                                          }
-                                      });
+        inputContext.SetTriggerHandler(actions::cd_drive::LoadDisc,
+                                       [&](void *, const input::InputElement &) { OpenLoadDiscDialog(); });
+        inputContext.SetTriggerHandler(actions::cd_drive::EjectDisc, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::EjectDisc());
+        });
+        inputContext.SetTriggerHandler(actions::cd_drive::OpenCloseTray, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::OpenCloseTray());
+        });
     }
 
     // Save states
     {
-        inputContext.SetButtonHandler(
-            actions::save_states::QuickLoadState, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::QuickSaveState, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
+        inputContext.SetTriggerHandler(actions::save_states::QuickLoadState, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::QuickSaveState, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
 
         // Select state
 
-        inputContext.SetButtonHandler(actions::save_states::SelectState1,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 0;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState2,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 1;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState3,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 2;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState4,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 3;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState5,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 4;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState6,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 5;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState7,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 6;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState8,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 7;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState9,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 8;
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::save_states::SelectState10,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.currSaveStateSlot = 9;
-                                          }
-                                      });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState1,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 0; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState2,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 1; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState3,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 2; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState4,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 3; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState5,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 4; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState6,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 5; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState7,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 6; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState8,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 7; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState9,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 8; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState10,
+                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 9; });
 
         // Load state
 
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState1, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 0;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState2, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 1;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState3, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 2;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState4, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 3;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState5, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 4;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState6, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 5;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState7, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 6;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState8, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 7;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState9, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 8;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::LoadState10, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 9;
-                    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-                }
-            });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState1, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 0;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState2, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 1;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState3, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 2;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState4, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 3;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState5, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 4;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState6, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 5;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState7, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 6;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState8, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 7;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState9, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 8;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState10, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 9;
+            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+        });
 
         // Save state
 
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState1, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 0;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState2, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 1;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState3, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 2;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState4, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 3;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState5, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 4;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState6, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 5;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState7, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 6;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState8, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 7;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState9, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 8;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
-        inputContext.SetButtonHandler(
-            actions::save_states::SaveState10, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.currSaveStateSlot = 9;
-                    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-                }
-            });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState1, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 0;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState2, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 1;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState3, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 2;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState4, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 3;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState5, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 4;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState6, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 5;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState7, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 6;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState8, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 7;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState9, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 8;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState10, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 9;
+            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+        });
     }
 
     // System
     {
-        inputContext.SetButtonHandler(actions::sys::HardReset, [&](void *, const input::InputElement &, bool actuated) {
-            if (actuated) {
-                m_context.EnqueueEvent(events::emu::HardReset());
-            }
+        inputContext.SetTriggerHandler(actions::sys::HardReset, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::HardReset());
         });
-        inputContext.SetButtonHandler(actions::sys::SoftReset, [&](void *, const input::InputElement &, bool actuated) {
-            if (actuated) {
-                m_context.EnqueueEvent(events::emu::SoftReset());
-            }
+        inputContext.SetTriggerHandler(actions::sys::SoftReset, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::SoftReset());
         });
         inputContext.SetButtonHandler(actions::sys::ResetButton,
                                       [&](void *, const input::InputElement &, bool actuated) {
@@ -1265,27 +1129,20 @@ void App::RunEmulator() {
         inputContext.SetButtonHandler(
             actions::emu::TurboSpeed,
             [&](void *, const input::InputElement &, bool actuated) { m_audioSystem.SetSync(!actuated); });
-        inputContext.SetButtonHandler(actions::emu::PauseResume,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              paused = !paused;
-                                              m_context.EnqueueEvent(events::emu::SetPaused(paused));
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::emu::ForwardFrameStep,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              paused = true;
-                                              m_context.EnqueueEvent(events::emu::ForwardFrameStep());
-                                          }
-                                      });
-        inputContext.SetButtonHandler(actions::emu::ReverseFrameStep,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated && m_context.rewindBuffer.IsRunning()) {
-                                              paused = true;
-                                              m_context.EnqueueEvent(events::emu::ReverseFrameStep());
-                                          }
-                                      });
+        inputContext.SetTriggerHandler(actions::emu::PauseResume, [&](void *, const input::InputElement &) {
+            paused = !paused;
+            m_context.EnqueueEvent(events::emu::SetPaused(paused));
+        });
+        inputContext.SetTriggerHandler(actions::emu::ForwardFrameStep, [&](void *, const input::InputElement &) {
+            paused = true;
+            m_context.EnqueueEvent(events::emu::ForwardFrameStep());
+        });
+        inputContext.SetTriggerHandler(actions::emu::ReverseFrameStep, [&](void *, const input::InputElement &) {
+            if (m_context.rewindBuffer.IsRunning()) {
+                paused = true;
+                m_context.EnqueueEvent(events::emu::ReverseFrameStep());
+            }
+        });
         inputContext.SetButtonHandler(actions::emu::Rewind, [&](void *, const input::InputElement &, bool actuated) {
             m_context.rewinding = actuated;
         });
@@ -1300,18 +1157,12 @@ void App::RunEmulator() {
 
     // Debugger
     {
-        inputContext.SetButtonHandler(
-            actions::dbg::ToggleDebugTrace, [&](void *, const input::InputElement &, bool actuated) {
-                if (actuated) {
-                    m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
-                }
-            });
-        inputContext.SetButtonHandler(actions::dbg::DumpMemory,
-                                      [&](void *, const input::InputElement &, bool actuated) {
-                                          if (actuated) {
-                                              m_context.EnqueueEvent(events::emu::DumpMemory());
-                                          }
-                                      });
+        inputContext.SetTriggerHandler(actions::dbg::ToggleDebugTrace, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
+        });
+        inputContext.SetTriggerHandler(actions::dbg::DumpMemory, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::emu::DumpMemory());
+        });
     }
 
     // Saturn Control Pad

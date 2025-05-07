@@ -46,14 +46,14 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
     default: break;
     }
 
-    m_currModifiers = modifiers;
     const auto index = static_cast<size_t>(key);
-    if (m_keyStates[index] != pressed || key == KeyboardKey::None) {
-        if (key != KeyboardKey::None) {
-            m_keyStates[index] = pressed;
-        }
-        ProcessEvent({.element = {KeyCombo{modifiers, key}}, .buttonPressed = pressed});
+    const bool changed = m_keyStates[index] != pressed || key == KeyboardKey::None;
+
+    m_currModifiers = modifiers;
+    if (key != KeyboardKey::None) {
+        m_keyStates[index] = pressed;
     }
+    ProcessEvent({.element = {KeyCombo{modifiers, key}}, .buttonPressed = pressed}, changed);
 }
 
 void InputContext::ProcessPrimitive(MouseButton button, bool pressed) {
@@ -306,7 +306,7 @@ Axis2DValue InputContext::GetAxis2D(uint32 id, GamepadAxis2D axis) const {
     }
 }
 
-void InputContext::ProcessEvent(const InputEvent &event) {
+void InputContext::ProcessEvent(const InputEvent &event, bool changed) {
     if (m_captureCallback) [[unlikely]] {
         if (event.element.type == InputElement::Type::KeyCombo && event.element.keyCombo.key == KeyboardKey::Escape &&
             event.buttonPressed) {
@@ -323,8 +323,15 @@ void InputContext::ProcessEvent(const InputEvent &event) {
         case InputElement::Type::KeyCombo: [[fallthrough]];
         case InputElement::Type::MouseCombo: [[fallthrough]];
         case InputElement::Type::GamepadButton:
-            if (auto handler = m_buttonHandlers.find(action->second.action); handler != m_buttonHandlers.end()) {
-                handler->second(action->second.context, event.element, event.buttonPressed);
+            if (changed) {
+                if (auto handler = m_buttonHandlers.find(action->second.action); handler != m_buttonHandlers.end()) {
+                    handler->second(action->second.context, event.element, event.buttonPressed);
+                }
+            }
+            if (event.buttonPressed) {
+                if (auto handler = m_triggerHandlers.find(action->second.action); handler != m_triggerHandlers.end()) {
+                    handler->second(action->second.context, event.element);
+                }
             }
             break;
         case InputElement::Type::MouseAxis1D: [[fallthrough]];
@@ -443,6 +450,14 @@ void InputContext::UnmapAllActions() {
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Action handler mapping
+
+void InputContext::SetTriggerHandler(Action action, TriggerHandler handler) {
+    m_triggerHandlers[action] = handler;
+}
+
+void InputContext::ClearTriggerHandler(Action action) {
+    m_triggerHandlers.erase(action);
+}
 
 void InputContext::SetButtonHandler(Action action, ButtonHandler handler) {
     m_buttonHandlers[action] = handler;

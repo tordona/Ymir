@@ -13,6 +13,7 @@
 
 namespace app::input {
 
+using TriggerHandler = std::function<void(void *context, const InputElement &element)>;
 using ButtonHandler = std::function<void(void *context, const InputElement &element, bool actuated)>;
 using Axis1DHandler = std::function<void(void *context, const InputElement &element, float value)>;
 using Axis2DHandler = std::function<void(void *context, const InputElement &element, float x, float y)>;
@@ -47,7 +48,7 @@ struct Axis2DValue {
 //
 // Input handling begins by processing input primitives with the ProcessPrimitive() methods which translate them into
 // input events. These are mapped to actions based on mappings configured with the MapAction() methods. Finally, the
-// corresponding action handlers set up with SetActionHandler() are invoked.
+// corresponding action handlers set up with SetTriggerHandler() are invoked.
 //
 // TODO: implement primitive processing in input_backend_sdl3
 class InputContext {
@@ -122,7 +123,7 @@ public:
     Axis2DValue GetAxis2D(uint32 id, GamepadAxis2D axis) const;
 
 private:
-    void ProcessEvent(const InputEvent &event);
+    void ProcessEvent(const InputEvent &event, bool changed = true);
 
     CaptureCallback m_captureCallback;
 
@@ -167,6 +168,12 @@ public:
 public:
     // -----------------------------------------------------------------------------------------------------------------
     // Button and axis handler mapping
+
+    // Registers a trigger handler to handle the specified action.
+    void SetTriggerHandler(Action action, TriggerHandler handler);
+
+    // Unregisters the trigger handler from the specified action.
+    void ClearTriggerHandler(Action action);
 
     // Registers a button handler to handle the specified action.
     void SetButtonHandler(Action action, ButtonHandler handler);
@@ -222,8 +229,9 @@ private:
     std::unordered_map<Action, std::unordered_set<MappedInputElement>> m_actionsReverse;
 
     // -----------------------------------------------------------------------------------------------------------------
-    // Button and axis handlers
+    // Action handlers
 
+    std::unordered_map<Action, TriggerHandler> m_triggerHandlers;
     std::unordered_map<Action, ButtonHandler> m_buttonHandlers;
     std::unordered_map<Action, Axis1DHandler> m_axis1DHandlers;
     std::unordered_map<Action, Axis2DHandler> m_axis2DHandlers;

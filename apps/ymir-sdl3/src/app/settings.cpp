@@ -936,6 +936,7 @@ void Settings::RebindInputs() {
 
                     // Match input element types to action kinds
                     switch (action.kind) {
+                    case input::Action::Kind::Trigger: [[fallthrough]];
                     case input::Action::Kind::Button:
                         if (!element.IsButton()) {
                             continue;

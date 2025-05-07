@@ -9,13 +9,28 @@ namespace app::input {
 //
 // Any number of input elements can be mapped to a given action.
 struct Action {
-    enum class Kind { Button, Axis1D, Axis2D };
+    enum class Kind {
+        // Invoked when a button is pressed, including keyboard key repeats.
+        Trigger,
+
+        // Synced to a button or keyboard key.
+        Button,
+
+        // Synced to an 1D axis.
+        Axis1D,
+
+        // Synced to a 2D axis.
+        Axis2D
+    };
 
     uint32 id;
     Kind kind;
     const char *group;
     const char *name;
 
+    static constexpr Action Trigger(uint32 id, const char *group, const char *name) {
+        return {id, Kind::Trigger, group, name};
+    }
     static constexpr Action Button(uint32 id, const char *group, const char *name) {
         return {id, Kind::Button, group, name};
     }
