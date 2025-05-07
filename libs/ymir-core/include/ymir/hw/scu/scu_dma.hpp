@@ -17,6 +17,20 @@ enum class DMATrigger {
     Immediate = 7,
 };
 
+inline const char *ToString(DMATrigger trigger) {
+    switch (trigger) {
+    case DMATrigger::VBlankIN: return "VBlank IN";
+    case DMATrigger::VBlankOUT: return "VBlank OUT";
+    case DMATrigger::HBlankIN: return "HBlank IN";
+    case DMATrigger::Timer0: return "Timer 0";
+    case DMATrigger::Timer1: return "Timer 1";
+    case DMATrigger::SoundRequest: return "Sound Request";
+    case DMATrigger::SpriteDrawEnd: return "Sprite Draw End";
+    case DMATrigger::Immediate: return "Immediate";
+    default: return "Invalid";
+    }
+}
+
 struct DMAChannel {
     DMAChannel() {
         Reset();

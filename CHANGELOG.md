@@ -17,7 +17,7 @@
 - SCSP: More accuracy improvements and bug fixes (thanks to @celeriyacon)
 - Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.
 - Rewind: Fix rare crash due to a race condition when resetting the rewind buffer.
-
+- SCU: Fix repeated indirect DMA transfers when the write address update flag is enabled. (#84)
 
 ## Version 0.1.2
 

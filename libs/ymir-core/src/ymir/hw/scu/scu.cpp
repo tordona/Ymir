@@ -646,7 +646,11 @@ void SCU::RunDMA() {
                 ch.srcAddr = ch.currSrcAddr;
             }
             if (ch.updateDstAddr) {
-                ch.dstAddr = ch.currDstAddr;
+                if (ch.indirect) {
+                    ch.dstAddr = ch.currIndirectSrc;
+                } else {
+                    ch.dstAddr = ch.currDstAddr;
+                }
             }
             TriggerDMAEnd(level);
             RecalcDMAChannel();
@@ -709,8 +713,10 @@ void SCU::RecalcDMAChannel() {
 }
 
 void SCU::TriggerDMATransfer(DMATrigger trigger) {
-    for (auto &ch : m_dmaChannels) {
+    for (int i = 0; i < m_dmaChannels.size(); ++i) {
+        auto &ch = m_dmaChannels[i];
         if (ch.enabled && !ch.active && ch.trigger == trigger) {
+            devlog::trace<grp::dma>("SCU DMA{}: Transfer triggered by {}", i, ToString(trigger));
             ch.start = true;
         }
     }
@@ -1030,8 +1036,10 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         ch.enabled = bit::test<8>(value);
         if constexpr (!poke) {
             if (ch.enabled) {
-                devlog::trace<grp::dma>("DMA{} enabled - {:08X} (+{:02X}) -> {:08X} (+{:02X})", index, ch.srcAddr,
-                                        ch.srcAddrInc, ch.dstAddr, ch.dstAddrInc);
+                devlog::trace<grp::dma>("DMA{} enabled - {:08X} (+{:02X}){} -> {:08X} (+{:02X}){} ({}), {}", index,
+                                        ch.srcAddr, ch.srcAddrInc, (ch.updateSrcAddr ? "!" : ""), ch.dstAddr,
+                                        ch.dstAddrInc, (ch.updateDstAddr ? "!" : ""),
+                                        (ch.indirect ? "indirect" : "direct"), ToString(ch.trigger));
             }
             if (ch.enabled && ch.trigger == DMATrigger::Immediate && bit::test<0>(value)) {
                 if (ch.active) {
@@ -1040,6 +1048,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
                     // Finish previous transfer
                     RunDMA();
                 }
+                devlog::trace<grp::dma>("SCU DMA{}: Transfer triggered immediately", index);
                 ch.start = true;
                 RecalcDMAChannel();
                 RunDMA(); // HACK: run immediate DMA transfers immediately and instantly
