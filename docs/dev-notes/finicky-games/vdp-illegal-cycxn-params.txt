@@ -1,0 +1,12 @@
+=================================================
+Games that use illegal VRAM access cycle patterns
+=================================================
+
+Street Fighter Zero
+Street Fighter Zero 2
+Street Fighter Zero 3
+Vampire Hunter - Darkstalkers' Revenge
+Vampire Savior - The Lord of Vampire
+  Sets up two consecutive accesses for NBG0 vertical cell scroll table during intro videos:
+    CYCB1 = FFFFCCFF
+  This causes the vertical cell scroll fetch for NBG0 to happen twice; the first value is discarded.
