@@ -2442,7 +2442,11 @@ void App::LoadSaveStates() {
             m_context.saveStates[slot] = std::make_unique<ymir::state::State>();
             auto &state = *m_context.saveStates[slot];
             cereal::PortableBinaryInputArchive archive{in};
-            archive(state);
+            try {
+                archive(state);
+            } catch (const cereal::Exception &e) {
+                devlog::error<grp::base>("Could not load save state from {}: {}", statePath.string(), e.what());
+            }
         } else {
             m_context.saveStates[slot].reset();
         }
