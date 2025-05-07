@@ -24,12 +24,14 @@ RewindBuffer::~RewindBuffer() {
 }
 
 void RewindBuffer::Reset() {
+    std::unique_lock lock{m_lock};
+
     for (auto &buffer : m_buffers) {
         buffer.clear();
         buffer.shrink_to_fit();
     }
     m_deltaBuffer.clear();
- 
+
     for (auto &delta : m_deltas) {
         delta.clear();
         delta.shrink_to_fit();
