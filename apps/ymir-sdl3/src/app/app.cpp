@@ -2563,8 +2563,9 @@ void App::InvokeSaveFileDialog(const FileDialogParams &params) const {
 }
 
 void App::InvokeSelectFolderDialog(const FolderDialogParams &params) const {
+    // FIXME: Sadly, there's either a Windows or an SDL3 limitation that prevents us from using an UTF-8 path here
     InvokeFileDialog(SDL_FILEDIALOG_OPENFOLDER, StrNullIfEmpty(params.dialogTitle), nullptr, 0, false,
-                     StrNullIfEmpty(fmt::format("{}", params.defaultPath)), params.userdata, params.callback);
+                     StrNullIfEmpty(params.defaultPath.string()), params.userdata, params.callback);
 }
 
 void App::InvokeFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters, bool allowMany,

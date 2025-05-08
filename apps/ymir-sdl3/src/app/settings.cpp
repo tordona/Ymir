@@ -541,6 +541,22 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
         Parse(tblGeneral, "RewindCompressionLevel", general.rewindCompressionLevel);
+
+        if (auto tblPathOverrides = tblGeneral["PathOverrides"]) {
+            auto parse = [&](const char *name, ProfilePath pathType) {
+                std::filesystem::path path{};
+                Parse(tblPathOverrides, name, path);
+                m_context.profile.SetPathOverride(pathType, path);
+            };
+
+            parse("IPLROMImages", ProfilePath::IPLROMImages);
+            parse("CartROMImages", ProfilePath::CartROMImages);
+            parse("BackupMemory", ProfilePath::BackupMemory);
+            parse("ExportedBackups", ProfilePath::ExportedBackups);
+            parse("PersistentState", ProfilePath::PersistentState);
+            parse("SaveStates", ProfilePath::SaveStates);
+            parse("Dumps", ProfilePath::Dumps);
+        }
     }
 
     if (auto tblSystem = data["System"]) {
@@ -722,6 +738,16 @@ SettingsSaveResult Settings::Save() {
             {"BoostProcessPriority", general.boostProcessPriority},
             {"EnableRewindBuffer", general.enableRewindBuffer},
             {"RewindCompressionLevel", general.rewindCompressionLevel},
+
+            {"PathOverrides", toml::table{{
+                {"IPLROMImages", m_context.profile.GetPathOverride(ProfilePath::IPLROMImages).native()},
+                {"CartROMImages", m_context.profile.GetPathOverride(ProfilePath::CartROMImages).native()},
+                {"BackupMemory", m_context.profile.GetPathOverride(ProfilePath::BackupMemory).native()},
+                {"ExportedBackups", m_context.profile.GetPathOverride(ProfilePath::ExportedBackups).native()},
+                {"PersistentState", m_context.profile.GetPathOverride(ProfilePath::PersistentState).native()},
+                {"SaveStates", m_context.profile.GetPathOverride(ProfilePath::SaveStates).native()},
+                {"Dumps", m_context.profile.GetPathOverride(ProfilePath::Dumps).native()},
+            }}},
         }}},
 
         {"System", toml::table{{

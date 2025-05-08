@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <filesystem>
 
 namespace app {
@@ -13,6 +14,8 @@ enum class ProfilePath {
     PersistentState, // Persistent app state   <profile>/state/
     SaveStates,      // Save states            <profile>/savestates/
     Dumps,           // Memory dumps           <profile>/dumps/
+
+    _Count,
 };
 
 class Profile {
@@ -37,10 +40,21 @@ public:
     bool CreateFolders(std::error_code &error);
 
     // Gets the specified path relative to the profile path.
-    std::filesystem::path GetPath(ProfilePath path) const;
+    std::filesystem::path GetPath(ProfilePath profPath) const;
+
+    // Gets the specified path override.
+    std::filesystem::path GetPathOverride(ProfilePath profPath) const;
+
+    // Overrides the specified path.
+    void SetPathOverride(ProfilePath profPath, std::filesystem::path path);
+
+    // Clears the override for the specified path.
+    void ClearOverridePath(ProfilePath profPath);
 
 private:
     std::filesystem::path m_profilePath;
+
+    std::array<std::filesystem::path, static_cast<size_t>(ProfilePath::_Count)> m_pathOverrides;
 };
 
 } // namespace app

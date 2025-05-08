@@ -276,6 +276,7 @@ target_precompile_headers(ymir-core
         <vector>
 
         <fmt/format.h>
+        <fmt/std.h>
         <fmt/xchar.h>
 
         <mio/mmap.hpp>

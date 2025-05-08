@@ -63,6 +63,13 @@ EmuEvent SetDebugTrace(bool enable) {
 EmuEvent DumpMemory() {
     return RunFunction([](SharedContext &ctx) {
         auto dumpPath = ctx.profile.GetPath(ProfilePath::Dumps);
+        std::error_code error{};
+        std::filesystem::create_directories(dumpPath, error);
+        if (error) {
+            devlog::warn<grp::base>("Could not create dump directory {}: {}", dumpPath, error.message());
+            return;
+        }
+
         devlog::info<grp::base>("Dumping all memory to {}...", dumpPath);
         {
             std::ofstream out{dumpPath / "msh2-cache-data.bin", std::ios::binary};

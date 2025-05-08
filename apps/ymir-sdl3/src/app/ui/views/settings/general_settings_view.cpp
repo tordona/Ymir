@@ -5,6 +5,12 @@
 
 #include <app/ui/widgets/common_widgets.hpp>
 
+#include <misc/cpp/imgui_stdlib.h>
+
+#include <util/sdl_file_dialog.hpp>
+
+#include <fmt/std.h>
+
 namespace app::ui {
 
 GeneralSettingsView::GeneralSettingsView(SharedContext &context)
@@ -12,6 +18,12 @@ GeneralSettingsView::GeneralSettingsView(SharedContext &context)
 
 void GeneralSettingsView::Display() {
     auto &settings = m_context.settings.general;
+    auto &profile = m_context.profile;
+
+    const float paddingWidth = ImGui::GetStyle().FramePadding.x;
+    const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
+    const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
+    const float clearButtonWidth = ImGui::CalcTextSize("Clear").x + paddingWidth * 2;
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -61,6 +73,84 @@ void GeneralSettingsView::Display() {
                                 "Higher values improve compression ratio, reducing memory usage.\n"
                                 "Lower values increase compression speed and improve emulation performance.\n",
                                 m_context.displayScale);
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Profile paths");
+    ImGui::PopFont();
+
+    ImGui::TextUnformatted("Override profile paths");
+
+    if (ImGui::BeginTable("path_overrides", 2, ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+
+        auto drawRow = [&](const char *name, ProfilePath profPath) {
+            ImGui::TableNextRow();
+            if (ImGui::TableNextColumn()) {
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(name);
+            }
+            if (ImGui::TableNextColumn()) {
+                std::string label = fmt::format("##prof_path_override_{}", static_cast<uint32>(profPath));
+                std::string imagePath = fmt::format("{}", profile.GetPathOverride(profPath));
+                std::string currPath = fmt::format("{}", profile.GetPath(profPath));
+
+                ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + clearButtonWidth + itemSpacingWidth * 2));
+                if (MakeDirty(ImGui::InputTextWithHint(label.c_str(), currPath.c_str(), &imagePath))) {
+                    profile.SetPathOverride(profPath, std::u8string{imagePath.begin(), imagePath.end()});
+                }
+                ImGui::SameLine();
+                if (ImGui::Button(fmt::format("...{}", label).c_str())) {
+                    m_selectedProfPath = profPath;
+                    m_context.EnqueueEvent(events::gui::SelectFolder({
+                        .dialogTitle = fmt::format("Select {} directory", name),
+                        .defaultPath = m_context.profile.GetPath(profPath),
+                        .userdata = this,
+                        .callback =
+                            util::WrapSingleSelectionCallback<&GeneralSettingsView::ProcessPathOverrideSelection,
+                                                              &util::NoopCancelFileDialogCallback,
+                                                              &GeneralSettingsView::ProcessPathOverrideSelectionError>,
+                    }));
+                }
+                ImGui::SameLine();
+                if (ImGui::Button(fmt::format("Clear{}", label).c_str())) {
+                    profile.ClearOverridePath(profPath);
+                }
+            }
+        };
+
+        drawRow("IPL ROM images", ProfilePath::IPLROMImages);
+        drawRow("Cartridge ROM images", ProfilePath::CartROMImages);
+        drawRow("Backup memory", ProfilePath::BackupMemory);
+        drawRow("Exported backup files", ProfilePath::ExportedBackups);
+        drawRow("Persistent state", ProfilePath::PersistentState);
+        drawRow("Save states", ProfilePath::SaveStates);
+        drawRow("Dumps", ProfilePath::Dumps);
+
+        ImGui::EndTable();
+    }
+}
+
+void GeneralSettingsView::ProcessPathOverrideSelection(void *userdata, std::filesystem::path file, int filter) {
+    static_cast<GeneralSettingsView *>(userdata)->SelectPathOverride(file);
+}
+
+void GeneralSettingsView::ProcessPathOverrideSelectionError(void *userdata, const char *message, int filter) {
+    static_cast<GeneralSettingsView *>(userdata)->ShowPathOverrideSelectionError(message);
+}
+
+void GeneralSettingsView::SelectPathOverride(std::filesystem::path file) {
+    if (std::filesystem::is_directory(file)) {
+        m_context.profile.SetPathOverride(m_selectedProfPath, file);
+        MakeDirty();
+    }
+}
+
+void GeneralSettingsView::ShowPathOverrideSelectionError(const char *message) {
+    m_context.EnqueueEvent(events::gui::ShowError(fmt::format("Could not open directory: {}", message)));
 }
 
 } // namespace app::ui

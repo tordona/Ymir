@@ -61,13 +61,31 @@ bool Profile::CreateFolders(std::error_code &error) {
     return true;
 }
 
-std::filesystem::path Profile::GetPath(ProfilePath path) const {
-    const auto index = static_cast<size_t>(path);
+std::filesystem::path Profile::GetPath(ProfilePath profPath) const {
+    const auto index = static_cast<size_t>(profPath);
     if (index < std::size(kPathSuffixes)) {
+        if (!m_pathOverrides[index].empty()) {
+            return m_pathOverrides[index];
+        }
         return m_profilePath / kPathSuffixes[index] / "";
     } else {
         return m_profilePath / "";
     }
+}
+
+std::filesystem::path Profile::GetPathOverride(ProfilePath profPath) const {
+    const auto index = static_cast<size_t>(profPath);
+    return m_pathOverrides[index];
+}
+
+void Profile::SetPathOverride(ProfilePath profPath, std::filesystem::path path) {
+    const auto index = static_cast<size_t>(profPath);
+    m_pathOverrides[index] = path;
+}
+
+void Profile::ClearOverridePath(ProfilePath profPath) {
+    const auto index = static_cast<size_t>(profPath);
+    m_pathOverrides[index].clear();
 }
 
 } // namespace app
