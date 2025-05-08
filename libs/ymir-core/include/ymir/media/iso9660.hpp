@@ -177,8 +177,14 @@ struct DirectoryRecord {
             }
         } else {
             const auto sep2Pos = fileID.find_last_of(';');
+            std::string verNum;
             if (sep2Pos != std::string::npos) {
-                fileVersion = std::stoi(fileID.substr(sep2Pos + 1));
+                verNum = fileID.substr(sep2Pos + 1);
+            } else {
+                verNum = "";
+            }
+            if (!verNum.empty()) {
+                fileVersion = std::stoi(verNum);
                 fileID = fileID.substr(0, sep2Pos);
             } else {
                 fileVersion = 0;
