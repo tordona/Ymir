@@ -480,7 +480,7 @@ void SCSP::ExecuteDMA() {
         }
         m_dmaMemAddress = (m_dmaMemAddress + sizeof(uint16)) & 0x7FFFE;
         m_dmaRegAddress = (m_dmaRegAddress + sizeof(uint16)) & 0xFFE;
-        m_dmaXferLength--;
+        m_dmaXferLength -= sizeof(uint16);
         if (m_dmaXferLength == 0) {
             m_dmaExec = false;
             SetInterrupt(kIntrDMATransferEnd, true);
