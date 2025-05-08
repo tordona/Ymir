@@ -44,6 +44,7 @@ void Slot::Reset() {
 
     octave = 0;
     freqNumSwitch = 0x400u;
+    maskMode = false;
 
     lfoReset = false;
     lfofRaw = 0;
@@ -60,7 +61,6 @@ void Slot::Reset() {
     effectPan = 0;
 
     extraBits0C = 0;
-    extraBits10 = 0;
     extraBits14 = 0;
 
     active = false;
@@ -405,7 +405,7 @@ uint16 Slot::ReadReg10() const {
 
     if constexpr (upperByte) {
         bit::deposit_into<11, 14>(value, octave);
-        bit::deposit_into<15>(value, bit::extract<15>(extraBits10));
+        bit::deposit_into<15>(value, maskMode);
     }
     return value;
 }
@@ -417,7 +417,7 @@ void Slot::WriteReg10(uint16 value) {
     if constexpr (upperByte) {
         freqNumSwitch ^= 0x400u;
         octave = bit::extract<11, 14>(value);
-        bit::deposit_into<15>(extraBits10, bit::extract<15>(value));
+        maskMode = bit::test<15>(value);
     }
 }
 
@@ -545,6 +545,7 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
 
     state.OCT = octave;
     state.FNS = freqNumSwitch;
+    state.MM = maskMode;
 
     auto castWaveform = [](Waveform waveform) {
         switch (waveform) {
@@ -572,7 +573,6 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.EFPAN = effectPan;
 
     state.extra0C = extraBits0C;
-    state.extra10 = extraBits10;
     state.extra14 = extraBits14;
 
     state.active = active;
@@ -694,6 +694,7 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
 
     octave = state.OCT & 0xF;
     freqNumSwitch = state.FNS & 0x7FF;
+    maskMode = state.MM;
 
     auto castWaveform = [](state::SCSPSlotState::Waveform waveform) {
         switch (waveform) {
@@ -722,7 +723,6 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     effectPan = state.EFPAN & 0x1F;
 
     extraBits0C = state.extra0C;
-    extraBits10 = state.extra10;
     extraBits14 = state.extra14;
 
     active = state.active;

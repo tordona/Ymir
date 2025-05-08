@@ -205,7 +205,7 @@ struct Slot {
                         //          if the state change happens below DL, decay 2 state is never reached
                         //   false: state changes are dictated by rates only
 
-    bool egBypass; // (R/W) EGBYPASS (undocumented
+    bool egBypass; // (R/W) EGBYPASS(?) (undocumented)
                    //  true:  volume is always set to maximum regardless of EG state
                    //  false: volume follows EG level
 
@@ -227,6 +227,7 @@ struct Slot {
 
     uint8 octave;         // (R/W) OCT - octave
     uint16 freqNumSwitch; // (R/W) FNS - frequency number switch
+    bool maskMode;        // (R/W) MM(?) - mask mode (undocumented)
 
     // --- LFO Register ---
 
@@ -261,7 +262,6 @@ struct Slot {
 
     // Storage for unused but writable bits.
     uint16 extraBits0C; // bits 10 and 11
-    uint16 extraBits10; // bit 15
     uint16 extraBits14; // bit 7
 
     // -------------------------------------------------------------------------

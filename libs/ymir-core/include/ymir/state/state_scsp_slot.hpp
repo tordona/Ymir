@@ -2,6 +2,8 @@
 
 #include <ymir/core/types.hpp>
 
+#include <ymir/util/bit_ops.hpp>
+
 namespace ymir::state {
 
 namespace v1 {
@@ -285,6 +287,7 @@ inline namespace v4 {
 
         uint8 OCT;
         uint16 FNS;
+        bool MM;
 
         using Waveform = v2::SCSPSlotState::Waveform;
         bool LFORE;
@@ -303,7 +306,6 @@ inline namespace v4 {
         uint8 EFPAN;
 
         uint16 extra0C;
-        uint16 extra10;
         uint16 extra14;
 
         bool active;
@@ -363,6 +365,7 @@ inline namespace v4 {
 
             OCT = state.OCT;
             FNS = state.FNS;
+            MM = bit::test<15>(state.extra10);
 
             LFORE = state.LFORE;
             LFOF = state.LFOF;
@@ -379,9 +382,8 @@ inline namespace v4 {
             EFSDL = state.EFSDL;
             EFPAN = state.EFPAN;
 
-            extra0C = 0;
-            extra10 = 0;
-            extra14 = 0;
+            extra0C = state.extra0C;
+            extra14 = state.extra14;
 
             active = state.active;
 

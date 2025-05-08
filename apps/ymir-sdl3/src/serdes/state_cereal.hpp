@@ -545,11 +545,11 @@ inline namespace v4 {
         ar(s.KRS, s.EGHOLD, s.LPSLNK, s.EGBYPASS);
         ar(s.MDL, s.MDXSL, s.MDYSL, s.STWINH);
         ar(s.TL, s.SDIR);
-        ar(s.OCT, s.FNS);
+        ar(s.OCT, s.FNS, s.MM);
         ar(s.LFORE, s.LFOF, s.ALFOS, s.PLFOS, s.ALFOWS, s.PLFOWS);
         ar(s.IMXL, s.ISEL, s.DISDL, s.DIPAN);
         ar(s.EFSDL, s.EFPAN);
-        ar(s.extra0C, s.extra10, s.extra14);
+        ar(s.extra0C, s.extra14);
         ar(s.active);
         ar(s.egState);
         ar(s.egLevel);
