@@ -2000,7 +2000,7 @@ void App::RunEmulator() {
             }
             scale *= scaleFactor;
             if (videoSettings.forceIntegerScaling) {
-                scale = round(scale);
+                scale = floor(scale);
             }
             const int scaledWidth = baseWidth * scale;
             const int scaledHeight = baseHeight * scale;
