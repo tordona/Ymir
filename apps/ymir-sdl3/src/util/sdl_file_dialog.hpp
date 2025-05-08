@@ -61,7 +61,9 @@ void WrapSingleSelectionCallback(void *userdata, const char *const *filelist, in
         // Only one file or directory should be selected
         assert(filelist[1] == nullptr);
         const char *file = *filelist;
-        acceptCallback(userdata, file, filter);
+        std::string fileStr = file;
+        const std::u8string u8File{fileStr.begin(), fileStr.end()};
+        acceptCallback(userdata, u8File, filter);
     }
 }
 
@@ -90,7 +92,10 @@ void WrapMultiSelectionCallback(void *userdata, const char *const *filelist, int
     } else {
         std::vector<std::filesystem::path> files{};
         while (*filelist != nullptr) {
-            files.push_back(*filelist);
+            const char *file = *filelist;
+            std::string fileStr = *filelist;
+            const std::u8string u8File{fileStr.begin(), fileStr.end()};
+            files.push_back(u8File);
             filelist++;
         }
         acceptCallback(userdata, files, filter);

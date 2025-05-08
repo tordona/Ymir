@@ -10,6 +10,8 @@
 
 #include <util/file_loader.hpp>
 
+#include <fmt/std.h>
+
 #include <fstream>
 #include <iostream>
 
@@ -61,7 +63,7 @@ EmuEvent SetDebugTrace(bool enable) {
 EmuEvent DumpMemory() {
     return RunFunction([](SharedContext &ctx) {
         auto dumpPath = ctx.profile.GetPath(ProfilePath::Dumps);
-        devlog::info<grp::base>("Dumping all memory to {}...", dumpPath.string());
+        devlog::info<grp::base>("Dumping all memory to {}...", dumpPath);
         {
             std::ofstream out{dumpPath / "msh2-cache-data.bin", std::ios::binary};
             ctx.saturn.masterSH2.DumpCacheData(out);
@@ -190,7 +192,7 @@ EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
             auto *cart = ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
             ctx.settings.cartridge.backupRAM.capacity = SizeToCapacity(cart->GetBackupMemory().Size());
             ctx.settings.cartridge.backupRAM.imagePath = path;
-            devlog::info<grp::base>("External backup memory cartridge loaded from {}", path.string());
+            devlog::info<grp::base>("External backup memory cartridge loaded from {}", path);
             break;
         }
         case bup::BackupMemoryImageLoadResult::FilesystemError:
@@ -256,7 +258,7 @@ EmuEvent InsertROMCartridge(std::filesystem::path path) {
         // Insert cartridge
         cart::ROMCartridge *cart = ctx.saturn.InsertCartridge<cart::ROMCartridge>();
         if (cart != nullptr) {
-            devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}", settings.imagePath.string());
+            devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}", settings.imagePath);
             cart->LoadROM(rom);
         }
     });
@@ -306,12 +308,12 @@ EmuEvent InsertCartridgeFromSettings() {
             bupMem.CreateFrom(settings.backupRAM.imagePath, CapacityToBupSize(settings.backupRAM.capacity), error);
             if (error) {
                 devlog::info<grp::base>("Failed to insert {} backup RAM cartridge from {}: {}",
-                                        BupCapacityShortName(settings.backupRAM.capacity),
-                                        settings.backupRAM.imagePath.string(), error.message());
+                                        BupCapacityShortName(settings.backupRAM.capacity), settings.backupRAM.imagePath,
+                                        error.message());
             } else {
                 devlog::info<grp::base>("{} backup RAM cartridge inserted with image from {}",
                                         BupCapacityShortName(settings.backupRAM.capacity),
-                                        settings.backupRAM.imagePath.string());
+                                        settings.backupRAM.imagePath);
                 ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
 
                 // If the cartridge was successfully inserted, we don't need to reinsert the previous cartridge
@@ -370,8 +372,7 @@ EmuEvent InsertCartridgeFromSettings() {
             // Insert cartridge
             cart::ROMCartridge *cart = ctx.saturn.InsertCartridge<cart::ROMCartridge>();
             if (cart != nullptr) {
-                devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}",
-                                        settings.rom.imagePath.string());
+                devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}", settings.rom.imagePath);
                 cart->LoadROM(rom);
             }
             break;
@@ -412,10 +413,9 @@ EmuEvent LoadInternalBackupMemory() {
         }
         std::error_code error{};
         if (ctx.saturn.LoadInternalBackupMemoryImage(path, error); error) {
-            devlog::warn<grp::base>("Failed to load internal backup memory from {}: {}", path.string(),
-                                    error.message());
+            devlog::warn<grp::base>("Failed to load internal backup memory from {}: {}", path, error.message());
         } else {
-            devlog::warn<grp::base>("Internal backup memory image loaded from {}", path.string());
+            devlog::info<grp::base>("Internal backup memory image loaded from {}", path);
         }
     });
 }

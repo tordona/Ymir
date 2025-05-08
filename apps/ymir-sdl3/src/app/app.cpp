@@ -126,6 +126,8 @@
 
 #include <stb_image.h>
 
+#include <fmt/std.h>
+
 #include <mutex>
 #include <numbers>
 #include <span>
@@ -177,7 +179,7 @@ int App::Run(const CommandLineOptions &options) {
         }
     }
 
-    devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(ProfilePath::Root).string());
+    devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(ProfilePath::Root));
 
     {
         auto &inputSettings = m_context.settings.input;
@@ -262,8 +264,8 @@ int App::Run(const CommandLineOptions &options) {
                 ImGui::NewLine();
                 ImGui::TextUnformatted("Ymir will automatically load IPL ROMs placed in ");
                 ImGui::SameLine(0, 0);
-                auto romPath = m_context.profile.GetPath(ProfilePath::IPLROMImages).string();
-                if (ImGui::TextLink(romPath.c_str())) {
+                auto romPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
+                if (ImGui::TextLink(fmt::format("{}", romPath).c_str())) {
                     SDL_OpenURL(fmt::format("file:///{}", romPath).c_str());
                 }
                 ImGui::TextUnformatted("Alternatively, you can ");
@@ -281,15 +283,16 @@ int App::Run(const CommandLineOptions &options) {
                 ImGui::TextUnformatted(".");
                 if (romSelectResult.hasResult && !romSelectResult.result.succeeded) {
                     ImGui::NewLine();
-                    ImGui::Text("The file %s does not contain a valid IPL ROM.", romSelectResult.path.string().c_str());
+                    ImGui::Text("The file %s does not contain a valid IPL ROM.",
+                                fmt::format("{}", romSelectResult.path).c_str());
                     ImGui::Text("Reason: %s.", romSelectResult.result.errorMessage.c_str());
                 }
 
                 ImGui::Separator();
 
                 if (ImGui::Button("Open IPL ROMs directory")) {
-                    SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages).string())
-                                    .c_str());
+                    SDL_OpenURL(
+                        fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages)).c_str());
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Select IPL ROM...")) {
@@ -316,9 +319,11 @@ int App::Run(const CommandLineOptions &options) {
                                 } else {
                                     // Only one file should be selected
                                     const char *file = *filelist;
+                                    std::string fileStr = file;
+                                    std::u8string u8File{fileStr.begin(), fileStr.end()};
                                     auto &result = *static_cast<ROMSelectResult *>(userdata);
                                     result.fileSelected = true;
-                                    result.path = file;
+                                    result.path = u8File;
                                 }
                             },
                     };
@@ -374,9 +379,9 @@ int App::Run(const CommandLineOptions &options) {
                                                  error);
     if (error) {
         devlog::warn<grp::base>("Failed to load SMPC settings from {}: {}",
-                                m_context.saturn.SMPC.GetPersistentDataPath().string(), error.message());
+                                m_context.saturn.SMPC.GetPersistentDataPath(), error.message());
     } else {
-        devlog::info<grp::base>("Loaded SMPC settings from {}", m_context.saturn.SMPC.GetPersistentDataPath().string());
+        devlog::info<grp::base>("Loaded SMPC settings from {}", m_context.saturn.SMPC.GetPersistentDataPath());
     }
 
     LoadSaveStates();
@@ -466,11 +471,12 @@ void App::RunEmulator() {
     devlog::info<grp::base>("Primary display DPI scaling: {:.1f}%", m_context.displayScale * 100.0f);
 
     std::filesystem::path imguiIniLocation = m_context.profile.GetPath(ProfilePath::PersistentState) / "imgui.ini";
-    ScopeGuard sgSaveImguiIni{[&] { ImGui::SaveIniSettingsToDisk(imguiIniLocation.string().c_str()); }};
+    auto imguiIniLocationStr = fmt::format("{}", imguiIniLocation);
+    ScopeGuard sgSaveImguiIni{[&] { ImGui::SaveIniSettingsToDisk(imguiIniLocationStr.c_str()); }};
 
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
-    ImGui::LoadIniSettingsFromDisk(imguiIniLocation.string().c_str());
+    ImGui::LoadIniSettingsFromDisk(imguiIniLocationStr.c_str());
     io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
@@ -1449,7 +1455,7 @@ void App::RunEmulator() {
                     }
                 } else {
                     OpenSimpleErrorModal(
-                        fmt::format("Failed to load IPL ROM from \"{}\": {}", path.string(), result.errorMessage));
+                        fmt::format("Failed to load IPL ROM from \"{}\": {}", path, result.errorMessage));
                 }
                 break;
             }
@@ -1458,8 +1464,8 @@ void App::RunEmulator() {
                 if (result.succeeded) {
                     m_context.EnqueueEvent(events::emu::HardReset());
                 } else {
-                    OpenSimpleErrorModal(fmt::format("Failed to reload IPL ROM from \"{}\": {}",
-                                                     m_context.iplRomPath.string(), result.errorMessage));
+                    OpenSimpleErrorModal(fmt::format("Failed to reload IPL ROM from \"{}\": {}", m_context.iplRomPath,
+                                                     result.errorMessage));
                 }
                 break;
             }
@@ -1565,15 +1571,14 @@ void App::RunEmulator() {
                 ImGui::Separator();
 
                 if (ImGui::MenuItem("Open profile directory")) {
-                    SDL_OpenURL(
-                        fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root).string()).c_str());
+                    SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root)).c_str());
                 }
                 if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
                                     !m_context.state.loadedDiscImagePath.empty())) {
                     auto path =
                         m_context.profile.GetPath(ProfilePath::SaveStates) / ToString(m_context.saturn.GetDiscHash());
 
-                    SDL_OpenURL(fmt::format("file:///{}", path.string()).c_str());
+                    SDL_OpenURL(fmt::format("file:///{}", path).c_str());
                 }
 
                 ImGui::Separator();
@@ -2053,7 +2058,7 @@ void App::RunEmulator() {
         // Process ImGui INI file write requests
         // TODO: compress and include in state blob
         if (io.WantSaveIniSettings) {
-            ImGui::SaveIniSettingsToDisk(imguiIniLocation.string().c_str());
+            ImGui::SaveIniSettingsToDisk(imguiIniLocationStr.c_str());
             io.WantSaveIniSettings = false;
         }
 
@@ -2112,7 +2117,7 @@ void App::EmulatorThread() {
                 break;
             case LoadDisc:
                 // LoadDiscImage locks the disc mutex
-                LoadDiscImage(std::get<std::string>(evt.value));
+                LoadDiscImage(std::get<std::filesystem::path>(evt.value));
                 LoadSaveStates();
                 break;
             case EjectDisc: //
@@ -2195,7 +2200,7 @@ void App::ReadPeripheral(ymir::peripheral::PeripheralReport &report) {
 
 void App::ScanIPLROMs() {
     auto iplRomsPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
-    devlog::info<grp::base>("Scanning for IPL ROMs in {}...", iplRomsPath.string());
+    devlog::info<grp::base>("Scanning for IPL ROMs in {}...", iplRomsPath);
     m_context.iplRomManager.Scan(iplRomsPath);
 
     if constexpr (devlog::info_enabled<grp::base>) {
@@ -2219,7 +2224,7 @@ util::IPLROMLoadResult App::LoadIPLROM() {
         return util::IPLROMLoadResult::Fail("No IPL ROM found");
     }
 
-    devlog::info<grp::base>("Loading IPL ROM from {}...", iplPath.string());
+    devlog::info<grp::base>("Loading IPL ROM from {}...", iplPath);
     util::IPLROMLoadResult result = util::LoadIPLROM(iplPath, m_context.saturn);
     if (result.succeeded) {
         m_context.iplRomPath = iplPath;
@@ -2318,7 +2323,7 @@ void App::LoadSaveStates() {
             try {
                 archive(state);
             } catch (const cereal::Exception &e) {
-                devlog::error<grp::base>("Could not load save state from {}: {}", statePath.string(), e.what());
+                devlog::error<grp::base>("Could not load save state from {}: {}", statePath, e.what());
             }
         } else {
             m_context.saveStates[slot].reset();
@@ -2436,7 +2441,7 @@ void App::OpenLoadDiscDialog() {
     std::filesystem::path defaultPath = m_context.state.loadedDiscImagePath;
 
     InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, "Load Sega Saturn disc image", (void *)kCartFileFilters,
-                     std::size(kCartFileFilters), false, defaultPath.string().c_str(), this,
+                     std::size(kCartFileFilters), false, fmt::format("{}", defaultPath).c_str(), this,
                      [](void *userdata, const char *const *filelist, int filter) {
                          static_cast<App *>(userdata)->ProcessOpenDiscImageFileDialogSelection(filelist, filter);
                      });
@@ -2450,12 +2455,14 @@ void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, i
     } else {
         // Only one file should be selected
         const char *file = *filelist;
-        m_context.EnqueueEvent(events::emu::LoadDisc(file));
+        std::string fileStr = file;
+        const std::u8string u8File{fileStr.begin(), fileStr.end()};
+        m_context.EnqueueEvent(events::emu::LoadDisc(u8File));
     }
 }
 
 bool App::LoadDiscImage(std::filesystem::path path) {
-    devlog::info<grp::base>("Loading disc image from {}", path.string());
+    devlog::info<grp::base>("Loading disc image from {}", path);
     ymir::media::Disc disc{};
     if (!ymir::media::LoadDisc(path, disc, m_context.settings.general.preloadDiscImagesToRAM)) {
         devlog::error<grp::base>("Failed to load disc image");
@@ -2488,7 +2495,7 @@ void App::OpenBackupMemoryCartFileDialog() {
     }
 
     InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, "Load Sega Saturn backup memory image", (void *)kFileFilters,
-                     std::size(kFileFilters), false, defaultPath.string().c_str(), this,
+                     std::size(kFileFilters), false, fmt::format("{}", defaultPath).c_str(), this,
                      [](void *userdata, const char *const *filelist, int filter) {
                          static_cast<App *>(userdata)->ProcessOpenBackupMemoryCartFileDialogSelection(filelist, filter);
                      });
@@ -2515,7 +2522,7 @@ void App::OpenROMCartFileDialog() {
     std::filesystem::path defaultPath = m_context.settings.cartridge.rom.imagePath;
 
     InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, "Load 16 Mbit ROM cartridge image", (void *)kFileFilters,
-                     std::size(kFileFilters), false, defaultPath.string().c_str(), this,
+                     std::size(kFileFilters), false, fmt::format("{}", defaultPath).c_str(), this,
                      [](void *userdata, const char *const *filelist, int filter) {
                          static_cast<App *>(userdata)->ProcessOpenROMCartFileDialogSelection(filelist, filter);
                      });
@@ -2539,25 +2546,25 @@ static const char *StrNullIfEmpty(const std::string &str) {
 
 void App::InvokeOpenFileDialog(const FileDialogParams &params) const {
     InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
-                     params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
-                     params.callback);
+                     params.filters.size(), false, StrNullIfEmpty(fmt::format("{}", params.defaultPath)),
+                     params.userdata, params.callback);
 }
 
 void App::InvokeOpenManyFilesDialog(const FileDialogParams &params) const {
     InvokeFileDialog(SDL_FILEDIALOG_OPENFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
-                     params.filters.size(), true, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
-                     params.callback);
+                     params.filters.size(), true, StrNullIfEmpty(fmt::format("{}", params.defaultPath)),
+                     params.userdata, params.callback);
 }
 
 void App::InvokeSaveFileDialog(const FileDialogParams &params) const {
     InvokeFileDialog(SDL_FILEDIALOG_SAVEFILE, StrNullIfEmpty(params.dialogTitle), (void *)params.filters.data(),
-                     params.filters.size(), false, StrNullIfEmpty(params.defaultPath.string()), params.userdata,
-                     params.callback);
+                     params.filters.size(), false, StrNullIfEmpty(fmt::format("{}", params.defaultPath)),
+                     params.userdata, params.callback);
 }
 
 void App::InvokeSelectFolderDialog(const FolderDialogParams &params) const {
     InvokeFileDialog(SDL_FILEDIALOG_OPENFOLDER, StrNullIfEmpty(params.dialogTitle), nullptr, 0, false,
-                     StrNullIfEmpty(params.defaultPath.string()), params.userdata, params.callback);
+                     StrNullIfEmpty(fmt::format("{}", params.defaultPath)), params.userdata, params.callback);
 }
 
 void App::InvokeFileDialog(SDL_FileDialogType type, const char *title, void *filters, int numFilters, bool allowMany,

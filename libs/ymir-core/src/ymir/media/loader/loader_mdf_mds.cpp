@@ -6,6 +6,7 @@
 #include <ymir/util/scope_guard.hpp>
 
 #include <fmt/format.h>
+#include <fmt/std.h>
 #include <fmt/xchar.h>
 
 #include <filesystem>
@@ -268,7 +269,7 @@ bool Load(std::filesystem::path mdsPath, Disc &disc, bool preloadToRAM) {
                     mdfPath = mdsPath;
                     mdfPath.replace_extension("mdf");
                 }
-                // fmt::println("MDF/MDS: MDF path: {}", mdfPath.string());
+                // fmt::println("MDF/MDS: MDF path: {}", mdfPath);
 
                 if (!files.contains(mdfPath)) {
                     std::error_code err{};
@@ -278,7 +279,7 @@ bool Load(std::filesystem::path mdsPath, Disc &disc, bool preloadToRAM) {
                         files.insert({mdfPath, std::make_shared<MemoryMappedBinaryReader>(mdfPath, err)});
                     }
                     if (err) {
-                        // fmt::println("MDF/MDS: Failed to load MDF file {} - {}", mdfPath.string(), err.message());
+                        // fmt::println("MDF/MDS: Failed to load MDF file {} - {}", mdfPath, err.message());
                         return false;
                     }
 

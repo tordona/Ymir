@@ -43,7 +43,7 @@ inline EmuEvent OpenCloseTray() {
     return {.type = EmuEvent::Type::OpenCloseTray};
 }
 
-inline EmuEvent LoadDisc(std::string path) {
+inline EmuEvent LoadDisc(std::filesystem::path path) {
     return {.type = EmuEvent::Type::LoadDisc, .value = path};
 }
 

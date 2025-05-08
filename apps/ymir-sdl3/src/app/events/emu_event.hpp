@@ -2,6 +2,7 @@
 
 #include <ymir/sys/backup_ram.hpp>
 
+#include <filesystem>
 #include <functional>
 #include <string>
 #include <variant>
@@ -39,7 +40,8 @@ struct EmuEvent {
 
     Type type;
 
-    std::variant<std::monostate, bool, std::string, ymir::bup::BackupMemory, std::function<void(SharedContext &)>>
+    std::variant<std::monostate, bool, std::string, std::filesystem::path, ymir::bup::BackupMemory,
+                 std::function<void(SharedContext &)>>
         value;
 };
 

@@ -6,6 +6,7 @@
 #include <ymir/util/scope_guard.hpp>
 
 #include <fmt/format.h>
+#include <fmt/std.h>
 
 #include <fstream>
 #include <set>
@@ -138,7 +139,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
 
             fs::path binPath = cuePath.parent_path() / filename;
             if (!fs::is_regular_file(binPath)) {
-                // fmt::println("BIN/CUE: File not found: {} (line {})", binPath.string(), lineNum);
+                // fmt::println("BIN/CUE: File not found: {} (line {})", binPath, lineNum);
                 return false;
             }
 

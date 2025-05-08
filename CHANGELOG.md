@@ -20,6 +20,7 @@
 - SCU: Fix repeated indirect DMA transfers when the write address update flag is enabled. (#84)
 - Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.
 - Rewind: Fix rare crash due to a race condition when resetting the rewind buffer.
+- App: Fix handling of UTF-8 paths. (#88)
 - Backup memory manager: Fix crash when loading an image with less files than the current image while having selected files at positions past the new image's file count.
 
 

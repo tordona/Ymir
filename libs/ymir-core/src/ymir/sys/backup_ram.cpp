@@ -40,7 +40,7 @@ BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &
     error.clear();
 
     // Attempt to memory-map the file
-    m_backupRAM = mio::make_mmap_sink(path.string(), error);
+    m_backupRAM = mio::make_mmap_sink(path.native(), error);
     if (error) {
         return BackupMemoryImageLoadResult::FilesystemError;
     }
@@ -102,7 +102,7 @@ void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySiz
     }
 
     // Attempt to memory-map the file
-    m_backupRAM = mio::make_mmap_sink(path.string(), error);
+    m_backupRAM = mio::make_mmap_sink(path.native(), error);
     if (error) {
         return;
     }

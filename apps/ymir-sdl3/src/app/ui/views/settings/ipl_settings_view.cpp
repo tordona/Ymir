@@ -8,6 +8,8 @@
 
 #include <SDL3/SDL_misc.h>
 
+#include <fmt/std.h>
+
 using namespace ymir;
 
 namespace app::ui {
@@ -53,11 +55,11 @@ void IPLSettingsView::Display() {
     std::filesystem::path iplRomsPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
 
     ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
-    ImGui::Text("IPL ROMs in %s", iplRomsPath.string().c_str());
+    ImGui::Text("IPL ROMs in %s", fmt::format("{}", iplRomsPath).c_str());
     ImGui::PopTextWrapPos();
 
     if (ImGui::Button("Open directory")) {
-        SDL_OpenURL(fmt::format("file:///{}", iplRomsPath.string()).c_str());
+        SDL_OpenURL(fmt::format("file:///{}", iplRomsPath).c_str());
     }
     ImGui::SameLine();
     if (ImGui::Button("Rescan")) {
@@ -84,7 +86,7 @@ void IPLSettingsView::Display() {
             if (ImGui::TableNextColumn()) {
                 std::filesystem::path relativePath = std::filesystem::relative(path, iplRomsPath);
                 ImGui::AlignTextToFramePadding();
-                ImGui::Text("%s", relativePath.string().c_str());
+                ImGui::Text("%s", fmt::format("{}", relativePath).c_str());
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
@@ -150,9 +152,9 @@ void IPLSettingsView::Display() {
     ImGui::TextUnformatted("IPL ROM path");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
-    std::string iplPath = settings.path.string();
+    std::string iplPath = fmt::format("{}", settings.path);
     if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
-        settings.path = iplPath;
+        settings.path = std::u8string{iplPath.begin(), iplPath.end()};
     }
     ImGui::SameLine();
     if (ImGui::Button("...##ipl_path")) {
@@ -182,7 +184,7 @@ void IPLSettingsView::Display() {
         ImGui::TextUnformatted("No IPL ROM loaded");
     } else {
         ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
-        ImGui::Text("Currently using IPL ROM at %s", m_context.iplRomPath.string().c_str());
+        ImGui::Text("Currently using IPL ROM at %s", fmt::format("{}", m_context.iplRomPath).c_str());
         ImGui::PopTextWrapPos();
     }
     const db::IPLROMInfo *info = db::GetIPLROMInfo(m_context.saturn.GetIPLHash());

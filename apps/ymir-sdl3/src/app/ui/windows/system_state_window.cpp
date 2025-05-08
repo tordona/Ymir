@@ -8,6 +8,8 @@
 
 #include <SDL3/SDL_clipboard.h>
 
+#include <fmt/std.h>
+
 using namespace ymir;
 
 namespace app::ui {
@@ -220,7 +222,7 @@ void SystemStateWindow::DrawCDDrive() {
     if (m_context.state.loadedDiscImagePath.empty()) {
         ImGui::TextUnformatted("No image loaded");
     } else {
-        ImGui::Text("Image from %s", m_context.state.loadedDiscImagePath.string().c_str());
+        ImGui::Text("Image from %s", fmt::format("{}", m_context.state.loadedDiscImagePath).c_str());
         std::string hash{};
         {
             std::unique_lock lock{m_context.locks.disc};

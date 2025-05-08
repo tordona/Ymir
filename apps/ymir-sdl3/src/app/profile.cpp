@@ -2,6 +2,8 @@
 
 #include <SDL3/SDL_filesystem.h>
 
+#include <string>
+
 namespace app {
 
 // Must match the order listed in the ProfilePath enum.
@@ -27,9 +29,11 @@ void Profile::UseUserProfilePath() {
 }
 
 void Profile::UsePortableProfilePath() {
-    char *path = SDL_GetCurrentDirectory();
-    m_profilePath = path;
-    SDL_free(path);
+    char *cpath = SDL_GetCurrentDirectory();
+    std::string path = cpath;
+    std::u8string u8Path{path.begin(), path.end()};
+    m_profilePath = u8Path;
+    SDL_free(cpath);
 }
 
 void Profile::UseProfilePath(std::filesystem::path path) {

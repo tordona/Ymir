@@ -22,6 +22,8 @@
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/size_ops.hpp>
 
+#include <fmt/std.h>
+
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -698,7 +700,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
                         // path
                         if (ImGui::TableNextColumn()) {
                             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
-                            ImGui::Text("%s", file.file.string().c_str());
+                            ImGui::Text("%s", fmt::format("{}", file.file).c_str());
                             ImGui::PopFont();
                         }
                         // reason
@@ -1050,10 +1052,10 @@ void BackupMemoryView::ImportImage(std::filesystem::path file) {
     switch (result) {
     case bup::BackupMemoryImageLoadResult::Success: break;
     case bup::BackupMemoryImageLoadResult::FilesystemError:
-        OpenErrorModal(fmt::format("Could not import {} as {}: {}", file.string(), m_name, error.message()));
+        OpenErrorModal(fmt::format("Could not import {} as {}: {}", file, m_name, error.message()));
         return;
     case bup::BackupMemoryImageLoadResult::InvalidSize:
-        OpenErrorModal(fmt::format("Could not import {} as {}: invalid image size", file.string(), m_name));
+        OpenErrorModal(fmt::format("Could not import {} as {}: invalid image size", file, m_name));
         return;
     }
 
@@ -1062,7 +1064,7 @@ void BackupMemoryView::ImportImage(std::filesystem::path file) {
     // - for cartridge memory, file must be 512 KiB, 1 MiB, 2 MiB or 4 MiB
     auto size = bupMem.Size();
     if ((!m_external && size != 32_KiB) || (m_external && (size < 512_KiB || size > 4_MiB))) {
-        OpenErrorModal(fmt::format("Could not import {} as {}: invalid image size", file.string(), m_name));
+        OpenErrorModal(fmt::format("Could not import {} as {}: invalid image size", file, m_name));
         return;
     }
 

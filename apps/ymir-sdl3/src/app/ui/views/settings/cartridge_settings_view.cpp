@@ -13,6 +13,8 @@
 
 #include <misc/cpp/imgui_stdlib.h>
 
+#include <fmt/std.h>
+
 using namespace ymir;
 
 namespace app::ui {
@@ -112,9 +114,9 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     ImGui::TextUnformatted("Image path:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
-    std::string imagePath = settings.imagePath.string();
+    std::string imagePath = fmt::format("{}", settings.imagePath);
     if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath))) {
-        settings.imagePath = imagePath;
+        settings.imagePath = std::u8string{imagePath.begin(), imagePath.end()};
     }
     ImGui::SameLine();
     if (ImGui::Button("...##bup_image_path")) {
@@ -169,9 +171,9 @@ void CartridgeSettingsView::DrawROMSettings() {
     ImGui::TextUnformatted("Image path:");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
-    std::string imagePath = settings.imagePath.string();
+    std::string imagePath = fmt::format("{}", settings.imagePath);
     if (MakeDirty(ImGui::InputText("##rom_image_path", &imagePath))) {
-        settings.imagePath = imagePath;
+        settings.imagePath = std::u8string{imagePath.begin(), imagePath.end()};
     }
     ImGui::SameLine();
     if (ImGui::Button("...##rom_image_path")) {
@@ -270,7 +272,7 @@ void CartridgeSettingsView::LoadROMImage(std::filesystem::path file) {
     // Check that the file exists
     if (!std::filesystem::is_regular_file(file)) {
         m_context.EnqueueEvent(
-            events::gui::ShowError(fmt::format("Could not load ROM cartridge image: {} is not a file", file.string())));
+            events::gui::ShowError(fmt::format("Could not load ROM cartridge image: {} is not a file", file)));
         return;
     }
 

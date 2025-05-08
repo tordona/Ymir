@@ -516,7 +516,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         return SettingsLoadResult::Success();
     }
 
-    auto parseResult = toml::parse_file(path.string());
+    auto parseResult = toml::parse_file(path.native());
     if (parseResult.failed()) {
         return SettingsLoadResult::TOMLParseError(parseResult.error());
     }
@@ -729,11 +729,11 @@ SettingsSaveResult Settings::Save() {
             {"AutoDetectRegion", emuConfig.system.autodetectRegion},
             {"PreferredRegionOrder", ToTOML(emuConfig.system.preferredRegionOrder.Get())},
             {"EmulateSH2Cache", emuConfig.system.emulateSH2Cache.Get()},
-            {"InternalBackupRAMImagePath", system.internalBackupRAMImagePath.string()},
+            {"InternalBackupRAMImagePath", system.internalBackupRAMImagePath.native()},
         
             {"IPL", toml::table{{
                 {"Override", system.ipl.overrideImage},
-                {"Path", system.ipl.path.string()},
+                {"Path", system.ipl.path.native()},
                 {"Variant", ToTOML(system.ipl.variant)},
             }}},
 
@@ -874,14 +874,14 @@ SettingsSaveResult Settings::Save() {
         {"Cartridge", toml::table{{
             {"Type", ToTOML(cartridge.type)},
             {"BackupRAM", toml::table{{
-                {"ImagePath", cartridge.backupRAM.imagePath.string()},
+                {"ImagePath", cartridge.backupRAM.imagePath.native()},
                 {"Capacity", ToTOML(cartridge.backupRAM.capacity)},
             }}},
             {"DRAM", toml::table{{
                 {"Capacity", ToTOML(cartridge.dram.capacity)},
             }}},
             {"ROM", toml::table{{
-                {"ImagePath", cartridge.rom.imagePath.string()},
+                {"ImagePath", cartridge.rom.imagePath.native()},
             }}},
         }}},
 

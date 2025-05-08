@@ -15,6 +15,7 @@
 #include <ymir/util/size_ops.hpp>
 
 #include <fmt/format.h>
+#include <fmt/std.h>
 
 #include <set>
 
@@ -243,9 +244,9 @@ void SystemSettingsView::Display() {
     ImGui::TextUnformatted("Image path");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
-    std::string imagePath = settings.internalBackupRAMImagePath.string();
+    std::string imagePath = fmt::format("{}", settings.internalBackupRAMImagePath);
     if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath))) {
-        settings.internalBackupRAMImagePath = imagePath;
+        settings.internalBackupRAMImagePath = std::u8string{imagePath.begin(), imagePath.end()};
         m_bupSettingsDirty = true;
     }
     ImGui::SameLine();

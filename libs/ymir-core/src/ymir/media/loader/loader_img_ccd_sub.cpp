@@ -6,6 +6,7 @@
 #include <ymir/util/scope_guard.hpp>
 
 #include <fmt/format.h>
+#include <fmt/std.h>
 
 #include <algorithm>
 #include <fstream>
@@ -235,7 +236,7 @@ bool Load(std::filesystem::path ccdPath, Disc &disc, bool preloadToRAM) {
         imgFile = std::make_shared<MemoryMappedBinaryReader>(imgPath, err);
     }
     if (err) {
-        // fmt::println("IMG/CCD/SUB: Failed to load image file {}: {}", imgPath.string(), err.message());
+        // fmt::println("IMG/CCD/SUB: Failed to load image file {}: {}", imgPath, err.message());
         return false;
     }
 
