@@ -1072,6 +1072,7 @@ void BackupMemoryView::ImportImage(std::filesystem::path file) {
     } else {
         m_context.EnqueueEvent(events::emu::ReplaceInternalBackupMemory(std::move(bupMem)));
     }
+    m_selected.clear();
 
     OpenImageImportSuccessfulModal();
 }
