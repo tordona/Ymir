@@ -6,7 +6,7 @@
 
 - Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95. (#71)
 - Input: Categorize some actions as "triggers" (one-shot actions) to differentiate them from "buttons" (a binary state). This allows frame step to be repeated by holding the keyboard key bound to it.
-- Debugger: Added VDP2 layer toggles to menu and in a new window.
+- Debugger: Added VDP2 layer toggles to Debug menu and in a new window.
 
 ### Fixes
 
@@ -15,10 +15,12 @@
 - VDP2: Honor access cycle settings (CYCA0/A1/B0/B1 registers) to fix vertical cell scroll effect. (#76)
 - VDP2: Disable NBGs 1 to 3 if NBG0 or NBG1 use high color formats. (#76)
 - VDP2: Apply mid-frame scroll effects properly. (#72)
+- VDP2: Ignore CCCTL.CCRTMD, which fixes background priority bugs on Dragon Ball Z - Shinbutouden (#69)
 - SCSP: More accuracy improvements and bug fixes (thanks to @celeriyacon)
+- SCU: Fix repeated indirect DMA transfers when the write address update flag is enabled. (#84)
 - Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.
 - Rewind: Fix rare crash due to a race condition when resetting the rewind buffer.
-- SCU: Fix repeated indirect DMA transfers when the write address update flag is enabled. (#84)
+
 
 ## Version 0.1.2
 
