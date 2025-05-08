@@ -709,7 +709,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
     {
         const sint32 inc = slot.reverse ? -1 : +1;
         const sint32 addrInc1 = (slot.addressInc + 0) & 0xFFFF;
-        const sint32 addrInc2 = (slot.addressInc + 1) & 0xFFFF;
+        const sint32 addrInc2 = (slot.addressInc + (slot.reverse ? -1 : +1)) & 0xFFFF;
         if (slot.pcm8Bit) {
             const uint32 address1 = slot.startAddress + addrInc1 * sizeof(uint8);
             const uint32 address2 = slot.startAddress + addrInc2 * sizeof(uint8);
