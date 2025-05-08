@@ -703,13 +703,21 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
         return;
     }
 
+    uint32 mask = ~0u;
+    if (slot.maskMode) {
+        mask = (slot.loopEndAddress & 0x080) - 1;
+        mask &= (slot.loopEndAddress & 0x100) - 1;
+        mask &= (slot.loopEndAddress & 0x200) - 1;
+        mask &= (slot.loopEndAddress & 0x400) - 1;
+    }
+
     // TODO: check behavior on loop boundaries
     switch (slot.soundSource) {
     case Slot::SoundSource::SoundRAM: //
     {
         const sint32 inc = slot.reverse ? -1 : +1;
-        const sint32 addrInc1 = (slot.addressInc + 0) & 0xFFFF;
-        const sint32 addrInc2 = (slot.addressInc + (slot.reverse ? -1 : +1)) & 0xFFFF;
+        const sint32 addrInc1 = (slot.addressInc + 0) & 0xFFFF & mask;
+        const sint32 addrInc2 = (slot.addressInc + (slot.reverse ? -1 : +1)) & 0xFFFF & mask;
         if (slot.pcm8Bit) {
             const uint32 address1 = slot.startAddress + addrInc1 * sizeof(uint8);
             const uint32 address2 = slot.startAddress + addrInc2 * sizeof(uint8);
