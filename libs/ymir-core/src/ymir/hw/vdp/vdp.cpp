@@ -3519,7 +3519,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 outputColor.g = std::min<uint32>(topColor.g + btmColor.g, 255u);
                 outputColor.b = std::min<uint32>(topColor.b + btmColor.b, 255u);
             } else {
-                const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
+                // FIXME: this doesn't seem right
+                // const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
+                const uint8 ratio = getColorCalcRatio(layers[0]);
                 outputColor.r = topColor.r + ((int)btmColor.r - (int)topColor.r) * ratio / 32;
                 outputColor.g = topColor.g + ((int)btmColor.g - (int)topColor.g) * ratio / 32;
                 outputColor.b = topColor.b + ((int)btmColor.b - (int)topColor.b) * ratio / 32;
