@@ -86,7 +86,6 @@ jobs:
           -DYmir_ENABLE_SANDBOX=OFF
           -DYmir_ENABLE_YMDASM=ON
           -S ${{ github.workspace }}
-          -G Ninja
 
       - name: Build
         run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
