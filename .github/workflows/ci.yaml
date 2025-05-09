@@ -50,7 +50,8 @@ jobs:
 
   build-windows-a64:
     name: windows-a64
-    runs-on: windows-11-arm
+    # runs-on: windows-11-arm
+    runs-on: windows-latest
 
     strategy:
       fail-fast: false
@@ -73,6 +74,9 @@ jobs:
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
       - name: Configure CMake
+        env:
+          CFLAGS: "--target=arm64-pc-windows-gnullvm"
+          CXXFLAGS: "--target=arm64-pc-windows-gnullvm"
         run: >
           cmake -B ${{ steps.strings.outputs.build-output-dir }}
           -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
@@ -84,6 +88,7 @@ jobs:
           -DYmir_ENABLE_SANDBOX=OFF
           -DYmir_ENABLE_YMDASM=ON
           -S ${{ github.workspace }}
+          -G Ninja
 
       - name: Build
         run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel
