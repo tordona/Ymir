@@ -17,7 +17,7 @@
 - VDP2: Honor access cycle settings (CYCA0/A1/B0/B1 registers) to fix vertical cell scroll effect. (#76)
 - VDP2: Disable NBGs 1 to 3 if NBG0 or NBG1 use high color formats. (#76)
 - VDP2: Apply mid-frame scroll effects properly. (#72)
-- VDP2: Ignore CCCTL.CCRTMD, which fixes background priority bugs on Dragon Ball Z - Shinbutouden (#69)
+- VDP2: Use the MSB from the final color value instead of the raw sprite data MSB, which fixes background priority bugs on Dragon Ball Z - Shinbutouden (#69)
 - SCSP: More accuracy improvements and bug fixes (thanks to @celeriyacon)
 - SCU: Fix repeated indirect DMA transfers when the write address update flag is enabled. (#84)
 - Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.

@@ -2811,8 +2811,8 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCCRSn(uint32 offset) const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, spriteParams.colorCalcRatios[offset * 2 + 0] - 1);
-        bit::deposit_into<8, 12>(value, spriteParams.colorCalcRatios[offset * 2 + 1] - 1);
+        bit::deposit_into<0, 4>(value, spriteParams.colorCalcRatios[offset * 2 + 0] ^ 31);
+        bit::deposit_into<8, 12>(value, spriteParams.colorCalcRatios[offset * 2 + 1] ^ 31);
         return value;
     }
     FORCE_INLINE uint16 ReadCCRSA() const {
@@ -2829,8 +2829,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCCRSn(uint32 offset, uint16 value) {
-        spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 4>(value) + 1;
-        spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 12>(value) + 1;
+        spriteParams.colorCalcRatios[offset * 2 + 0] = bit::extract<0, 4>(value) ^ 31;
+        spriteParams.colorCalcRatios[offset * 2 + 1] = bit::extract<8, 12>(value) ^ 31;
     }
     FORCE_INLINE void WriteCCRSA(uint16 value) {
         WriteCCRSn(0, value);
@@ -2877,48 +2877,48 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadCCRNA() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, bgParams[1].colorCalcRatio - 1);
-        bit::deposit_into<8, 12>(value, bgParams[2].colorCalcRatio - 1);
+        bit::deposit_into<0, 4>(value, bgParams[1].colorCalcRatio ^ 31);
+        bit::deposit_into<8, 12>(value, bgParams[2].colorCalcRatio ^ 31);
         return value;
     }
 
     FORCE_INLINE void WriteCCRNA(uint16 value) {
-        bgParams[1].colorCalcRatio = bit::extract<0, 4>(value) + 1;
-        bgParams[2].colorCalcRatio = bit::extract<8, 12>(value) + 1;
+        bgParams[1].colorCalcRatio = bit::extract<0, 4>(value) ^ 31;
+        bgParams[2].colorCalcRatio = bit::extract<8, 12>(value) ^ 31;
     }
 
     FORCE_INLINE uint16 ReadCCRNB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, bgParams[3].colorCalcRatio - 1);
-        bit::deposit_into<8, 12>(value, bgParams[4].colorCalcRatio - 1);
+        bit::deposit_into<0, 4>(value, bgParams[3].colorCalcRatio ^ 31);
+        bit::deposit_into<8, 12>(value, bgParams[4].colorCalcRatio ^ 31);
         return value;
     }
 
     FORCE_INLINE void WriteCCRNB(uint16 value) {
-        bgParams[3].colorCalcRatio = bit::extract<0, 4>(value) + 1;
-        bgParams[4].colorCalcRatio = bit::extract<8, 12>(value) + 1;
+        bgParams[3].colorCalcRatio = bit::extract<0, 4>(value) ^ 31;
+        bgParams[4].colorCalcRatio = bit::extract<8, 12>(value) ^ 31;
     }
 
     FORCE_INLINE uint16 ReadCCRR() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, bgParams[0].colorCalcRatio - 1);
+        bit::deposit_into<0, 4>(value, bgParams[0].colorCalcRatio ^ 31);
         return value;
     }
 
     FORCE_INLINE void WriteCCRR(uint16 value) {
-        bgParams[0].colorCalcRatio = bit::extract<0, 4>(value) + 1;
+        bgParams[0].colorCalcRatio = bit::extract<0, 4>(value) ^ 31;
     }
 
     FORCE_INLINE uint16 ReadCCRLB() const {
         uint16 value = 0;
-        bit::deposit_into<0, 4>(value, lineScreenParams.colorCalcRatio - 1);
-        bit::deposit_into<8, 12>(value, backScreenParams.colorCalcRatio - 1);
+        bit::deposit_into<0, 4>(value, lineScreenParams.colorCalcRatio ^ 31);
+        bit::deposit_into<8, 12>(value, backScreenParams.colorCalcRatio ^ 31);
         return value;
     }
 
     FORCE_INLINE void WriteCCRLB(uint16 value) {
-        lineScreenParams.colorCalcRatio = bit::extract<0, 4>(value) + 1;
-        backScreenParams.colorCalcRatio = bit::extract<8, 12>(value) + 1;
+        lineScreenParams.colorCalcRatio = bit::extract<0, 4>(value) ^ 31;
+        backScreenParams.colorCalcRatio = bit::extract<8, 12>(value) ^ 31;
     }
 
     // 180110   CLOFEN  Color Offset Enable

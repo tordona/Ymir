@@ -3149,7 +3149,6 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
                 pixel.color = ConvertRGB555to888(Color555{spriteDataValue});
                 pixel.transparent = false;
                 pixel.priority = params.priorities[0];
-                attr.msbSet = pixel.color.msb;
                 attr.colorCalcRatio = params.colorCalcRatios[0];
                 attr.shadowOrWindow = false;
                 attr.normalShadow = false;
@@ -3163,7 +3162,6 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
         pixel.color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
         pixel.transparent = spriteData.colorData == 0;
         pixel.priority = params.priorities[spriteData.priority];
-        attr.msbSet = spriteData.colorDataMSB;
         attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
         attr.shadowOrWindow = spriteData.shadowOrWindow;
         attr.normalShadow = spriteData.normalShadow;
@@ -3409,7 +3407,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 case PriorityLessThanOrEqual: return pixel.priority <= spriteParams.colorCalcValue;
                 case PriorityEqual: return pixel.priority == spriteParams.colorCalcValue;
                 case PriorityGreaterThanOrEqual: return pixel.priority >= spriteParams.colorCalcValue;
-                case MsbEqualsOne: return m_spriteLayerState.attrs[x].msbSet;
+                case MsbEqualsOne: return pixel.color.msb != 0;
                 default: util::unreachable();
                 }
             } else if (layer == LYR_Back) {
@@ -3519,12 +3517,10 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 outputColor.g = std::min<uint32>(topColor.g + btmColor.g, 255u);
                 outputColor.b = std::min<uint32>(topColor.b + btmColor.b, 255u);
             } else {
-                // FIXME: this doesn't seem right
-                // const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
-                const uint8 ratio = getColorCalcRatio(layers[0]);
-                outputColor.r = topColor.r + ((int)btmColor.r - (int)topColor.r) * ratio / 32;
-                outputColor.g = topColor.g + ((int)btmColor.g - (int)topColor.g) * ratio / 32;
-                outputColor.b = topColor.b + ((int)btmColor.b - (int)topColor.b) * ratio / 32;
+                const uint8 ratio = getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? layers[1] : layers[0]);
+                outputColor.r = btmColor.r + ((int)topColor.r - (int)btmColor.r) * ratio / 32;
+                outputColor.g = btmColor.g + ((int)topColor.g - (int)btmColor.g) * ratio / 32;
+                outputColor.b = btmColor.b + ((int)topColor.b - (int)btmColor.b) * ratio / 32;
             }
         } else {
             outputColor = getLayerColor(layers[0]);
@@ -4435,21 +4431,18 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
     switch (regs.spriteParams.type) {
     case 0x0:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14, 15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x1:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 15>(rawData);
         data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
         break;
     case 0x2:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
@@ -4457,7 +4450,6 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         break;
     case 0x3:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
@@ -4465,7 +4457,6 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         break;
     case 0x4:
         data.colorData = bit::extract<0, 9>(rawData);
-        data.colorDataMSB = bit::test<9>(rawData);
         data.colorCalcRatio = bit::extract<10, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
@@ -4473,7 +4464,6 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         break;
     case 0x5:
         data.colorData = bit::extract<0, 10>(rawData);
-        data.colorDataMSB = bit::test<10>(rawData);
         data.colorCalcRatio = bit::extract<11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
@@ -4481,7 +4471,6 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         break;
     case 0x6:
         data.colorData = bit::extract<0, 9>(rawData);
-        data.colorDataMSB = bit::test<9>(rawData);
         data.colorCalcRatio = bit::extract<10, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
@@ -4489,7 +4478,6 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
         break;
     case 0x7:
         data.colorData = bit::extract<0, 8>(rawData);
-        data.colorDataMSB = bit::test<8>(rawData);
         data.colorCalcRatio = bit::extract<9, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
@@ -4510,51 +4498,43 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type
     switch (regs.spriteParams.type) {
     case 0x8:
         data.colorData = bit::extract<0, 6>(rawData);
-        data.colorDataMSB = bit::test<6>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<6>(data.colorData);
         break;
     case 0x9:
         data.colorData = bit::extract<0, 5>(rawData);
-        data.colorDataMSB = bit::test<5>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xA:
         data.colorData = bit::extract<0, 5>(rawData);
-        data.colorDataMSB = bit::test<5>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xB:
         data.colorData = bit::extract<0, 5>(rawData);
-        data.colorDataMSB = bit::test<5>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
         break;
     case 0xC:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::test<7>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xD:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::test<7>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xE:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::test<7>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;
     case 0xF:
         data.colorData = bit::extract<0, 7>(rawData);
-        data.colorDataMSB = bit::test<7>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
         data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
         break;

@@ -757,7 +757,6 @@ private:
             uint8 colorCalcRatio = 0;
             bool shadowOrWindow = false;
             bool normalShadow = false;
-            bool msbSet = false;
         };
 
         alignas(16) std::array<Attributes, kMaxResH> attrs;

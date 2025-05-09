@@ -162,7 +162,7 @@ struct alignas(128) BGParams {
         mosaicEnable = false;
 
         colorCalcEnable = false;
-        colorCalcRatio = 0;
+        colorCalcRatio = 31;
         specialColorCalcMode = SpecialColorCalcMode::PerScreen;
 
         windowSet.Reset();
@@ -582,7 +582,7 @@ struct SpriteParams {
         colorCalcValue = 0;
         colorCalcCond = SpriteColorCalculationCondition::PriorityLessThanOrEqual;
         priorities.fill(0);
-        colorCalcRatios.fill(0);
+        colorCalcRatios.fill(31);
         colorDataOffset = 0;
         lineColorScreenEnable = false;
         windowSet.Reset();
@@ -636,7 +636,6 @@ struct SpriteParams {
 
 struct SpriteData {
     uint16 colorData = 0;        // DC10-0
-    bool colorDataMSB = false;   // MSB of color data, depends on sprite type
     uint8 colorCalcRatio = 0;    // CC2-0
     uint8 priority = 0;          // PR2-0
     bool shadowOrWindow = false; // SD
@@ -666,7 +665,7 @@ struct LineBackScreenParams {
         perLine = false;
         baseAddress = 0;
         colorCalcEnable = false;
-        colorCalcRatio = 0;
+        colorCalcRatio = 31;
         shadowEnable = false;
     }
 
