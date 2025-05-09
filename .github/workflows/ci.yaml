@@ -40,14 +40,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set reusable strings
-        id: strings
-        shell: bash
-        run: |
-          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-
       - name: Configure MSVC
         if: ${{ matrix.c_compiler == 'cl' }}
         uses: TheMrMilchmann/setup-msvc-dev@v3
@@ -62,7 +54,6 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_SHARED_LIBS=OFF
           -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
-          -DYmir_ENABLE_IPO=ON
           -DYmir_ENABLE_DEVLOG=${{ matrix.subsystem.enable_devlog_option }}
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
@@ -99,14 +90,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set reusable strings
-        id: strings
-        shell: bash
-        run: |
-          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-
       - name: Install SDL3 Dependencies
         run: |
           sudo apt-get update
@@ -129,7 +112,6 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_SHARED_LIBS=OFF
           -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
-          -DYmir_ENABLE_IPO=ON
           -DYmir_ENABLE_DEVLOG=OFF
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
@@ -162,14 +144,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Set reusable strings
-        id: strings
-        shell: bash
-        run: |
-          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-macos-${{ matrix.arch.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-macos-${{ matrix.arch.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-
       - name: Configure CMake
         run: >
           cmake -B ${{ steps.strings.outputs.build-output-dir }}
@@ -178,7 +152,6 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_SHARED_LIBS=OFF
           -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch.name }}
-          -DYmir_ENABLE_IPO=ON
           -DYmir_ENABLE_DEVLOG=OFF
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
