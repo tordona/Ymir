@@ -452,6 +452,7 @@ void InputContext::UnmapAllActions() {
 // Action handler mapping
 
 void InputContext::SetTriggerHandler(Action action, TriggerHandler handler) {
+    assert(!m_triggerHandlers.contains(action));
     m_triggerHandlers[action] = handler;
 }
 
@@ -460,6 +461,7 @@ void InputContext::ClearTriggerHandler(Action action) {
 }
 
 void InputContext::SetButtonHandler(Action action, ButtonHandler handler) {
+    assert(!m_buttonHandlers.contains(action));
     m_buttonHandlers[action] = handler;
 }
 
@@ -468,6 +470,7 @@ void InputContext::ClearButtonHandler(Action action) {
 }
 
 void InputContext::SetAxis1DHandler(Action action, Axis1DHandler handler) {
+    assert(!m_axis1DHandlers.contains(action));
     m_axis1DHandlers[action] = handler;
 }
 
@@ -476,6 +479,7 @@ void InputContext::ClearAxis1DHandler(Action action) {
 }
 
 void InputContext::SetAxis2DHandler(Action action, Axis2DHandler handler) {
+    assert(!m_axis2DHandlers.contains(action));
     m_axis2DHandlers[action] = handler;
 }
 
