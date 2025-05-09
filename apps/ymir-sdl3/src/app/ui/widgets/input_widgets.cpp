@@ -19,6 +19,7 @@ void InputCaptureWidget::DrawInputBindButton(input::InputBind &bind, size_t elem
         m_capturing = true;
         switch (bind.action.kind) {
         case input::Action::Kind::Trigger: [[fallthrough]];
+        case input::Action::Kind::RepeatableTrigger: [[fallthrough]];
         case input::Action::Kind::Button: CaptureButton(bind, elementIndex, context); break;
         case input::Action::Kind::Axis1D: CaptureAxis1D(bind, elementIndex, context); break;
         case input::Action::Kind::Axis2D: CaptureAxis2D(bind, elementIndex, context); break;
@@ -42,6 +43,7 @@ void InputCaptureWidget::DrawCapturePopup() {
         }
         switch (m_kind) {
         case input::Action::Kind::Trigger: [[fallthrough]];
+        case input::Action::Kind::RepeatableTrigger: [[fallthrough]];
         case input::Action::Kind::Button:
             ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.\n\n"
                                    "Press Escape or click outside of this popup to cancel.");

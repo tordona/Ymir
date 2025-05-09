@@ -328,7 +328,7 @@ void InputContext::ProcessEvent(const InputEvent &event, bool changed) {
                     handler->second(action->second.context, event.element, event.buttonPressed);
                 }
             }
-            if (event.buttonPressed) {
+            if (event.buttonPressed && (action->second.action.kind == Action::Kind::RepeatableTrigger || changed)) {
                 if (auto handler = m_triggerHandlers.find(action->second.action); handler != m_triggerHandlers.end()) {
                     handler->second(action->second.context, event.element);
                 }

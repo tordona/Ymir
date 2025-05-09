@@ -5,7 +5,7 @@
 ### New features and improvements
 
 - Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95. (#71)
-- Input: Categorize some actions as "triggers" (one-shot actions) to differentiate them from "buttons" (a binary state). This allows frame step to be repeated by holding the keyboard key bound to it.
+- Input: Categorize some actions as "triggers" (one-shot actions, optionally repeatable) to differentiate them from "buttons" (a binary state). This allows frame step to be repeated by holding the keyboard key bound to it.
 - Debugger: Added VDP2 layer toggles to Debug menu and in a new window.
 - App: Allow customizing all profile paths. (#74)
 - App: Add IPL ROM list sorting. (#92) (@Wunkolo)

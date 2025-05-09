@@ -15,8 +15,10 @@ namespace general {
 namespace audio {
 
     inline constexpr auto ToggleMute = input::Action::Trigger(0x001100, "Audio", "Toggle mute");
-    inline constexpr auto IncreaseVolume = input::Action::Trigger(0x001101, "Audio", "Increase volume by 10%");
-    inline constexpr auto DecreaseVolume = input::Action::Trigger(0x001102, "Audio", "Decrease volume by 10%");
+    inline constexpr auto IncreaseVolume =
+        input::Action::RepeatableTrigger(0x001101, "Audio", "Increase volume by 10%");
+    inline constexpr auto DecreaseVolume =
+        input::Action::RepeatableTrigger(0x001102, "Audio", "Decrease volume by 10%");
 
 } // namespace audio
 
@@ -81,8 +83,10 @@ namespace emu {
     inline constexpr auto TurboSpeed = input::Action::Button(0xE02000, "Emulation", "Turbo speed");
     // TODO: inline constexpr auto SlowMotion = input::Action::Button(0xE02001, "Emulation", "Slow motion");
     inline constexpr auto PauseResume = input::Action::Trigger(0xE02002, "Emulation", "Pause/resume");
-    inline constexpr auto ForwardFrameStep = input::Action::Trigger(0xE02003, "Emulation", "Forward frame step");
-    inline constexpr auto ReverseFrameStep = input::Action::Trigger(0xE02004, "Emulation", "Reverse frame step");
+    inline constexpr auto ForwardFrameStep =
+        input::Action::RepeatableTrigger(0xE02003, "Emulation", "Forward frame step");
+    inline constexpr auto ReverseFrameStep =
+        input::Action::RepeatableTrigger(0xE02004, "Emulation", "Reverse frame step");
     inline constexpr auto Rewind = input::Action::Button(0xE02005, "Emulation", "Rewind");
 
     inline constexpr auto ToggleRewindBuffer = input::Action::Trigger(0xE02100, "Emulation", "Toggle rewind buffer");
