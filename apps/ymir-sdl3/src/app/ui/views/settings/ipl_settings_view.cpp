@@ -70,8 +70,10 @@ void IPLSettingsView::Display() {
     }
 
     int index = 0;
-    if (ImGui::BeginTable("sys_ipl_roms", 6, ImGuiTableFlags_ScrollY, ImVec2(0, 250 * m_context.displayScale))) {
-        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch);
+    if (ImGui::BeginTable("sys_ipl_roms", 6,
+                          ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti,
+                          ImVec2(0, 250 * m_context.displayScale))) {
+        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch, 0.0f);
         ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 50 * m_context.displayScale);
         ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 75 * m_context.displayScale);
         ImGui::TableSetupColumn("Variant", ImGuiTableColumnFlags_WidthFixed, 60 * m_context.displayScale);
@@ -80,42 +82,108 @@ void IPLSettingsView::Display() {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
 
-        for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
+        std::vector<IPLROMEntry> sortedIpl;
+
+        for (const auto &[path, info] : m_context.iplRomManager.GetROMs()) {
+            sortedIpl.emplace_back(info);
+        }
+
+        if (const ImGuiTableSortSpecs *sortSpecs = ImGui::TableGetSortSpecs();
+            sortSpecs->SpecsDirty && sortedIpl.size() > 1) {
+
+            for (int specIndex = 0; specIndex < sortSpecs->SpecsCount; ++specIndex) {
+                const ImGuiTableColumnSortSpecs &sortSpec = sortSpecs->Specs[specIndex];
+
+                const auto sortColumns = [&sortSpec](auto sortStart, auto sortEnd) -> void {
+                    switch (sortSpec.ColumnIndex) {
+                    case 0: // Path
+                        std::stable_sort(sortStart, sortEnd, [](const IPLROMEntry &lhs, const IPLROMEntry &rhs) {
+                            return lhs.path < rhs.path;
+                        });
+                        break;
+                    case 1: // Version
+                        std::stable_sort(sortStart, sortEnd, [](const IPLROMEntry &lhs, const IPLROMEntry &rhs) {
+                            return lhs.versionString < rhs.versionString;
+                        });
+                        break;
+                    case 2: // Date
+                        std::stable_sort(sortStart, sortEnd, [](const IPLROMEntry &lhs, const IPLROMEntry &rhs) {
+                            if (lhs.info && rhs.info) {
+                                return std::tie(lhs.info->year, lhs.info->month, lhs.info->day) <
+                                       std::tie(rhs.info->year, rhs.info->month, rhs.info->day);
+                            } else {
+                                return (lhs.info != nullptr) < (rhs.info != nullptr);
+                            }
+                        });
+                        break;
+                    case 3: // Variant
+                        std::stable_sort(sortStart, sortEnd, [](const IPLROMEntry &lhs, const IPLROMEntry &rhs) {
+                            if (lhs.info && rhs.info) {
+                                return (lhs.info->variant < rhs.info->variant);
+                            } else {
+                                return (lhs.info != nullptr) < (rhs.info != nullptr);
+                            }
+                        });
+                        break;
+                    case 4: // Region
+                        std::stable_sort(sortStart, sortEnd, [](const IPLROMEntry &lhs, const IPLROMEntry &rhs) {
+                            if (lhs.info && rhs.info) {
+                                return (lhs.info->region < rhs.info->region);
+                            } else {
+                                return (lhs.info != nullptr) < (rhs.info != nullptr);
+                            }
+                        });
+                        break;
+                    case 5: // ##Use
+                        break;
+                    default: util::unreachable();
+                    }
+                };
+
+                switch (sortSpec.SortDirection) {
+                case ImGuiSortDirection_None: break;
+                case ImGuiSortDirection_Ascending: sortColumns(sortedIpl.begin(), sortedIpl.end()); break;
+                case ImGuiSortDirection_Descending: sortColumns(sortedIpl.rbegin(), sortedIpl.rend()); break;
+                }
+            }
+        }
+
+        for (const auto &iplRom : sortedIpl) {
             ImGui::TableNextRow();
 
             if (ImGui::TableNextColumn()) {
-                std::filesystem::path relativePath = std::filesystem::relative(path, iplRomsPath);
+                std::filesystem::path relativePath = std::filesystem::relative(iplRom.path, iplRomsPath);
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("%s", fmt::format("{}", relativePath).c_str());
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    ImGui::Text("%s", info.info->version);
+                if (iplRom.info != nullptr) {
+                    ImGui::Text("%s", iplRom.info->version);
                 } else {
                     ImGui::TextUnformatted("-");
                 }
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    ImGui::Text("%04u/%02u/%02u", info.info->year, info.info->month, info.info->day);
+                if (iplRom.info != nullptr) {
+                    ImGui::Text("%04u/%02u/%02u", iplRom.info->year, iplRom.info->month, iplRom.info->day);
                 } else {
                     ImGui::TextUnformatted("-");
                 }
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    ImGui::Text("%s", GetVariantName(info.info->variant));
+                if (iplRom.info != nullptr) {
+                    ImGui::Text("%s", GetVariantName(iplRom.info->variant));
                 } else {
                     ImGui::TextUnformatted("Unknown");
                 }
             }
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
-                if (info.info != nullptr) {
-                    ImGui::Text("%s", GetRegionName(info.info->region));
+                if (iplRom.info != nullptr) {
+                    ImGui::Text("%s", GetRegionName(iplRom.info->region));
                 } else {
                     ImGui::TextUnformatted("Unknown");
                 }
@@ -123,7 +191,7 @@ void IPLSettingsView::Display() {
             if (ImGui::TableNextColumn()) {
                 if (ImGui::Button(fmt::format("Use##{}", index).c_str())) {
                     settings.overrideImage = true;
-                    settings.path = path;
+                    settings.path = iplRom.path;
                     if (!settings.path.empty()) {
                         m_context.EnqueueEvent(events::gui::ReloadIPLROM());
                         m_context.settings.MakeDirty();

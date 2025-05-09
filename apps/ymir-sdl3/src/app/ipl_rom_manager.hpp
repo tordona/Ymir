@@ -11,7 +11,7 @@ namespace app {
 
 struct IPLROMEntry {
     std::filesystem::path path;
-    const ymir::db::IPLROMInfo *info;
+    const ymir::db::IPLROMInfo *info = nullptr;
     ymir::XXH128Hash hash;
     std::string versionString;
 };
