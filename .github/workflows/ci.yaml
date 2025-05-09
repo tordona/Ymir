@@ -92,7 +92,7 @@ jobs:
 
   build-linux-x64:
     name: linux-x64
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -148,7 +148,7 @@ jobs:
 
   build-linux-a64:
     name: linux-a64
-    runs-on: ubuntu-22.04-arm
+    runs-on: ubuntu-24.04-arm
 
     strategy:
       fail-fast: false
