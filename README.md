@@ -45,6 +45,7 @@ Usage:
 
   -p, --profile arg  Path to profile directory
   -h, --help         Display help text
+  -f, --fullscreen   Start in fullscreen mode
 ```
 
 Use `-p <profile-path>` to point to a separate set of configuration and state files, useful if you wish to have different user profiles (hence the name).
@@ -55,7 +56,7 @@ Ymir requires an IPL (BIOS) ROM to work. You can place the ROMs under the `roms`
 The emulator will scan and automatically select the IPL ROM matching the loaded disc. If no disc is loaded, it will use a ROM matching the first preferred region. Failing that, it will pick whatever is available.
 You can override the selection on Settings > IPL.
 
-Ymir can load game disc images from BIN+CUE, IMG+CCD, MDF+MDS or ISO files. It does not support loading .elf files directly at the moment.
+Ymir can load game disc images from BIN+CUE, IMG+CCD, MDF+MDS or ISO files. It does not support MAME CHD or injecting .elf files directly at the moment.
 
 
 ## Compiling

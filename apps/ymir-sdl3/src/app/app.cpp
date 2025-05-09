@@ -11,14 +11,13 @@
 // If you wish to rewrite it from scratch, be my guest. Use whatever tech you want, come up with whatever design you
 // wish, or just fix this mess and send a PR.
 //
-// Just make sure it's awesome, and follow the instructions below on how to use the emulator core.
+// Just make sure it's awesome, and follow the instructions in mainpage.hpp to use the emulator core.
 //
 // - StrikerX3
 //
 // ---------------------------------------------------------------------------------------------------------------------
 //
-// Check the documentation on mainpage.hpp for how to use the emulator core. Listed below are some high-level
-// implementation details on how this frontend uses it.
+// Listed below are some high-level implementation details on how this frontend uses the emulator core library.
 //
 // General usage
 // -------------
@@ -447,7 +446,8 @@ void App::RunEmulator() {
         std::vector<uint32> framebuffer;
         std::mutex mtxFramebuffer;
         bool updated = false;
-        bool reduceLatency = false; // false = more performance; true = update frames more often
+        bool reduceLatency = false;         // false = more performance; true = update frames more often
+        util::Event frameReadyEvent{false}; // used to sync fullscreen updates for VRR displays
 
         uint64 frames = 0;
         uint64 vdp1Frames = 0;
@@ -670,6 +670,11 @@ void App::RunEmulator() {
     // ---------------------------------
     // Create window
 
+    // Apply command line override
+    if (m_options.fullScreen) {
+        m_context.settings.video.fullScreen = true;
+    }
+
     SDL_PropertiesID windowProps = SDL_CreateProperties();
     if (windowProps == 0) {
         devlog::error<grp::base>("Unable to create window properties: {}", SDL_GetError());
@@ -720,6 +725,8 @@ void App::RunEmulator() {
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN,
+                              m_context.settings.video.fullScreen);
     }
 
     screen.window = SDL_CreateWindowWithProperties(windowProps);
@@ -741,9 +748,8 @@ void App::RunEmulator() {
 
     // Assume the following calls succeed
     SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, screen.window);
-    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_DISABLED);
-    // SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, SDL_RENDERER_VSYNC_ADAPTIVE);
-    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, 1);
+    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER,
+                          m_context.settings.video.fullScreen ? SDL_RENDERER_VSYNC_ADAPTIVE : 1);
 
     auto renderer = SDL_CreateRendererWithProperties(rendererProps);
     if (renderer == nullptr) {
@@ -751,6 +757,15 @@ void App::RunEmulator() {
         return;
     }
     ScopeGuard sgDestroyRenderer{[&] { SDL_DestroyRenderer(renderer); }};
+
+    m_context.settings.video.fullScreen.Observe([&](bool fullScreen) {
+        devlog::info<grp::base>("{} full screen mode", (fullScreen ? "Entering" : "Leaving"));
+        SDL_SetWindowFullscreen(screen.window, fullScreen);
+        SDL_SyncWindow(screen.window);
+        if (!SDL_SetRenderVSync(renderer, fullScreen ? SDL_RENDERER_VSYNC_ADAPTIVE : 1)) {
+            devlog::warn<grp::base>("Could not change VSync mode: {}", SDL_GetError());
+        }
+    });
 
     // ---------------------------------
     // Create textures to render on
@@ -873,6 +888,7 @@ void App::RunEmulator() {
                                                     std::unique_lock lock{screen.mtxFramebuffer};
                                                     std::copy_n(fb, width * height, screen.framebuffer.data());
                                                     screen.updated = true;
+                                                    screen.frameReadyEvent.Set();
                                                 }
                                             }});
 
@@ -887,7 +903,7 @@ void App::RunEmulator() {
     static constexpr int kSampleRate = 44100;
     static constexpr SDL_AudioFormat kSampleFormat = SDL_AUDIO_S16;
     static constexpr int kChannels = 2;
-    static constexpr uint32 kBufferSize = 512; // TODO: make this configurable
+    static constexpr uint32 kBufferSize = 44100 / 60 / 2; // TODO: make this configurable
 
     if (!m_audioSystem.Init(kSampleRate, kSampleFormat, kChannels, kBufferSize)) {
         devlog::error<grp::base>("Unable to create audio stream: {}", SDL_GetError());
@@ -971,18 +987,25 @@ void App::RunEmulator() {
         inputContext.SetTriggerHandler(
             actions::general::ToggleWindowedVideoOutput,
             [&](void *, const input::InputElement &) { m_context.settings.video.displayVideoOutputInWindow ^= true; });
+        inputContext.SetTriggerHandler(actions::general::ToggleFullScreen, [&](void *, const input::InputElement &) {
+            m_context.settings.video.fullScreen = !m_context.settings.video.fullScreen;
+            m_context.settings.MakeDirty();
+        });
     }
 
     // Audio
     {
         inputContext.SetTriggerHandler(actions::audio::ToggleMute, [&](void *, const input::InputElement &) {
             m_context.settings.audio.mute = !m_context.settings.audio.mute;
+            m_context.settings.MakeDirty();
         });
         inputContext.SetTriggerHandler(actions::audio::IncreaseVolume, [&](void *, const input::InputElement &) {
             m_context.settings.audio.volume = std::min(m_context.settings.audio.volume + 0.1f, 1.0f);
+            m_context.settings.MakeDirty();
         });
         inputContext.SetTriggerHandler(actions::audio::DecreaseVolume, [&](void *, const input::InputElement &) {
             m_context.settings.audio.volume = std::max(m_context.settings.audio.volume - 0.1f, 0.0f);
+            m_context.settings.MakeDirty();
         });
     }
 
@@ -1302,6 +1325,12 @@ void App::RunEmulator() {
                     inputContext.ProcessPrimitive(input::SDL3ScancodeToKeyboardKey(evt.key.scancode),
                                                   input::SDL3ToKeyModifier(evt.key.mod), evt.key.down);
                 }
+
+                // Leave full screen when pressing Esc while not focused on ImGui windows
+                if (!io.WantCaptureKeyboard && evt.key.scancode == SDL_SCANCODE_ESCAPE && evt.key.down) {
+                    m_context.settings.video.fullScreen = false;
+                    m_context.settings.MakeDirty();
+                }
                 break;
 
             case SDL_EVENT_MOUSE_ADDED: [[fallthrough]];
@@ -1538,8 +1567,15 @@ void App::RunEmulator() {
         if (mouseMoved || mouseDown || io.WantCaptureMouse) {
             m_mouseHideTime = clk::now();
         }
-        if (clk::now() >= m_mouseHideTime + 2s) {
+        const bool hideMouse = clk::now() >= m_mouseHideTime + 2s;
+        if (hideMouse) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_None);
+        }
+
+        // Wait for frame update from emulator core if in full screen mode and not paused
+        const bool fullScreen = m_context.settings.video.fullScreen;
+        if (fullScreen && !paused) {
+            screen.frameReadyEvent.Wait(true);
         }
 
         // ---------------------------------------------------------------------
@@ -1550,302 +1586,343 @@ void App::RunEmulator() {
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        if (ImGui::BeginMainMenuBar()) {
-            ImGui::PopStyleVar();
-            if (ImGui::BeginMenu("File")) {
-                // CD drive
-                if (ImGui::MenuItem("Load disc image",
-                                    input::ToShortcut(inputContext, actions::cd_drive::LoadDisc).c_str())) {
-                    OpenLoadDiscDialog();
-                }
-                if (ImGui::MenuItem("Open/close tray",
-                                    input::ToShortcut(inputContext, actions::cd_drive::OpenCloseTray).c_str())) {
-                    m_context.EnqueueEvent(events::emu::OpenCloseTray());
-                }
-                if (ImGui::MenuItem("Eject disc",
-                                    input::ToShortcut(inputContext, actions::cd_drive::EjectDisc).c_str())) {
-                    m_context.EnqueueEvent(events::emu::EjectDisc());
-                }
+        auto *viewport = ImGui::GetMainViewport();
 
-                ImGui::Separator();
-
-                if (ImGui::MenuItem("Open profile directory")) {
-                    SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root)).c_str());
-                }
-                if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
-                                    !m_context.state.loadedDiscImagePath.empty())) {
-                    auto path =
-                        m_context.profile.GetPath(ProfilePath::SaveStates) / ToString(m_context.saturn.GetDiscHash());
-
-                    SDL_OpenURL(fmt::format("file:///{}", path).c_str());
-                }
-
-                ImGui::Separator();
-
-                ImGui::MenuItem("Backup memory manager", nullptr, &m_bupMgrWindow.Open);
-
-                ImGui::Separator();
-
-                if (ImGui::MenuItem("Exit", "Alt+F4")) {
-                    SDL_Event quitEvent{.type = SDL_EVENT_QUIT};
-                    SDL_PushEvent(&quitEvent);
-                }
-                ImGui::EndMenu();
+        const bool drawMainMenu = [&] {
+            // Always draw main menu bar in windowed mode
+            if (!fullScreen) {
+                return true;
             }
-            if (ImGui::BeginMenu("View")) {
-                auto &videoSettings = m_context.settings.video;
-                ImGui::MenuItem("Force integer scaling", nullptr, &videoSettings.forceIntegerScaling);
-                ImGui::MenuItem("Force aspect ratio", nullptr, &videoSettings.forceAspectRatio);
-                if (ImGui::SmallButton("4:3")) {
-                    videoSettings.forcedAspect = 4.0 / 3.0;
-                }
-                ImGui::SameLine();
-                if (ImGui::SmallButton("16:9")) {
-                    videoSettings.forcedAspect = 16.0 / 9.0;
-                }
 
-                ImGui::Separator();
+            // -- Full screen mode --
 
-                ImGui::MenuItem("Auto-fit window to screen", nullptr, &videoSettings.autoResizeWindow);
-                if (ImGui::MenuItem("Fit window to screen", nullptr, nullptr,
-                                    !videoSettings.displayVideoOutputInWindow)) {
-                    fitWindowToScreenNow = true;
-                }
-
-                ImGui::Separator();
-
-                if (ImGui::MenuItem(
-                        "Windowed video output",
-                        input::ToShortcut(inputContext, actions::general::ToggleWindowedVideoOutput).c_str(),
-                        &videoSettings.displayVideoOutputInWindow)) {
-                    fitWindowToScreenNow = true;
-                }
-                ImGui::EndMenu();
+            // Always show main menu bar if some ImGui element is focused
+            if (io.NavActive || ImGui::IsAnyItemFocused()) {
+                return true;
             }
-            if (ImGui::BeginMenu("System")) {
-                ImGui::MenuItem("System state", nullptr, &m_systemStateWindow.Open);
 
-                ImGui::Separator();
-
-                // Resets
-                {
-                    if (ImGui::MenuItem("Soft reset",
-                                        input::ToShortcut(inputContext, actions::sys::SoftReset).c_str())) {
-                        m_context.EnqueueEvent(events::emu::SoftReset());
-                    }
-                    if (ImGui::MenuItem("Hard reset",
-                                        input::ToShortcut(inputContext, actions::sys::HardReset).c_str())) {
-                        m_context.EnqueueEvent(events::emu::HardReset());
-                    }
-                    // TODO: Let's not make it that easy to accidentally wipe system settings
-                    /*if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
-                        m_context.EnqueueEvent(events::emu::FactoryReset());
-                    }*/
-                }
-
-                ImGui::Separator();
-
-                // Video standard and region
-                {
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted("Video standard:");
-                    ImGui::SameLine();
-                    ui::widgets::VideoStandardSelector(m_context);
-
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted("Region");
-                    ImGui::SameLine();
-                    ImGui::TextDisabled("(?)");
-                    if (ImGui::BeginItemTooltip()) {
-                        ImGui::TextUnformatted("Changing this option will cause a hard reset");
-                        ImGui::EndTooltip();
-                    }
-                    ImGui::SameLine();
-                    ui::widgets::RegionSelector(m_context);
-                }
-
-                ImGui::Separator();
-
-                // Cartridge slot
-                {
-                    ImGui::BeginDisabled();
-                    ImGui::TextUnformatted("Cartridge port: ");
-                    ImGui::SameLine(0, 0);
-                    ui::widgets::CartridgeInfo(m_context);
-                    ImGui::EndDisabled();
-
-                    if (ImGui::MenuItem("Insert backup RAM...")) {
-                        OpenBackupMemoryCartFileDialog();
-                    }
-                    if (ImGui::MenuItem("Insert 8 Mbit DRAM")) {
-                        m_context.EnqueueEvent(events::emu::Insert8MbitDRAMCartridge());
-                    }
-                    if (ImGui::MenuItem("Insert 32 Mbit DRAM")) {
-                        m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge());
-                    }
-                    if (ImGui::MenuItem("Insert 16 Mbit ROM...")) {
-                        OpenROMCartFileDialog();
-                    }
-
-                    if (ImGui::MenuItem("Remove cartridge")) {
-                        m_context.EnqueueEvent(events::emu::RemoveCartridge());
-                    }
-                }
-
-                // ImGui::Separator();
-
-                // Peripherals
-                {
-                    // TODO
-                }
-
-                ImGui::EndMenu();
+            // Hide main menu bar if mouse is hidden
+            if (hideMouse) {
+                return false;
             }
-            if (ImGui::BeginMenu("Emulation")) {
-                bool rewindEnabled = m_context.settings.general.enableRewindBuffer;
 
-                if (ImGui::MenuItem("Pause/resume",
-                                    input::ToShortcut(inputContext, actions::emu::PauseResume).c_str())) {
-                    paused = !paused;
-                    m_context.EnqueueEvent(events::emu::SetPaused(paused));
-                }
-                if (ImGui::MenuItem("Forward frame step",
-                                    input::ToShortcut(inputContext, actions::emu::ForwardFrameStep).c_str())) {
-                    paused = true;
-                    m_context.EnqueueEvent(events::emu::ForwardFrameStep());
-                }
-                if (ImGui::MenuItem("Reverse frame step",
-                                    input::ToShortcut(inputContext, actions::emu::ReverseFrameStep).c_str(), nullptr,
-                                    rewindEnabled)) {
-                    if (rewindEnabled) {
-                        paused = true;
-                        m_context.EnqueueEvent(events::emu::ReverseFrameStep());
+            const float mousePosY = io.MousePos.y;
+            const float vpTopQuarter =
+                viewport->Pos.y + std::min(viewport->Size.y * 0.25f, 120.0f * m_context.displayScale);
+
+            // Show menu bar if mouse is in the top quarter of the screen (minimum of 120 scaled pixels) and visible
+            return mousePosY <= vpTopQuarter;
+        }();
+
+        if (drawMainMenu) {
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            if (ImGui::BeginMainMenuBar()) {
+                ImGui::PopStyleVar();
+                if (ImGui::BeginMenu("File")) {
+                    // CD drive
+                    if (ImGui::MenuItem("Load disc image",
+                                        input::ToShortcut(inputContext, actions::cd_drive::LoadDisc).c_str())) {
+                        OpenLoadDiscDialog();
                     }
-                }
-                if (ImGui::MenuItem("Rewind buffer",
-                                    input::ToShortcut(inputContext, actions::emu::ToggleRewindBuffer).c_str(),
-                                    &rewindEnabled)) {
-                    ToggleRewindBuffer();
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Settings")) {
-                ImGui::MenuItem("Settings", input::ToShortcut(inputContext, actions::general::OpenSettings).c_str(),
-                                &m_settingsWindow.Open);
-                ImGui::Separator();
-                if (ImGui::MenuItem("General")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::General);
-                }
-                if (ImGui::MenuItem("Hotkeys")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::Hotkeys);
-                }
-                if (ImGui::MenuItem("System")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::System);
-                }
-                if (ImGui::MenuItem("IPL")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
-                }
-                if (ImGui::MenuItem("Input")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::Input);
-                }
-                if (ImGui::MenuItem("Video")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::Video);
-                }
-                if (ImGui::MenuItem("Audio")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::Audio);
-                }
-                if (ImGui::MenuItem("Cartridge")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::Cartridge);
-                }
-                if (ImGui::MenuItem("CD Block")) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::CDBlock);
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Debug")) {
-                bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
-                if (ImGui::MenuItem("Enable tracing",
-                                    input::ToShortcut(inputContext, actions::dbg::ToggleDebugTrace).c_str(),
-                                    &debugTrace)) {
-                    m_context.EnqueueEvent(events::emu::SetDebugTrace(debugTrace));
-                }
-                ImGui::Separator();
-                if (ImGui::MenuItem("Open memory viewer", nullptr)) {
-                    OpenMemoryViewer();
-                }
-                if (ImGui::BeginMenu("Memory viewers")) {
-                    for (auto &memView : m_memoryViewerWindows) {
-                        ImGui::MenuItem(fmt::format("Memory viewer #{}", memView.Index() + 1).c_str(), nullptr,
-                                        &memView.Open);
+                    if (ImGui::MenuItem("Open/close tray",
+                                        input::ToShortcut(inputContext, actions::cd_drive::OpenCloseTray).c_str())) {
+                        m_context.EnqueueEvent(events::emu::OpenCloseTray());
+                    }
+                    if (ImGui::MenuItem("Eject disc",
+                                        input::ToShortcut(inputContext, actions::cd_drive::EjectDisc).c_str())) {
+                        m_context.EnqueueEvent(events::emu::EjectDisc());
+                    }
+
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem("Open profile directory")) {
+                        SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root)).c_str());
+                    }
+                    if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
+                                        !m_context.state.loadedDiscImagePath.empty())) {
+                        auto path = m_context.profile.GetPath(ProfilePath::SaveStates) /
+                                    ToString(m_context.saturn.GetDiscHash());
+
+                        SDL_OpenURL(fmt::format("file:///{}", path).c_str());
+                    }
+
+                    ImGui::Separator();
+
+                    ImGui::MenuItem("Backup memory manager", nullptr, &m_bupMgrWindow.Open);
+
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem("Exit", "Alt+F4")) {
+                        SDL_Event quitEvent{.type = SDL_EVENT_QUIT};
+                        SDL_PushEvent(&quitEvent);
                     }
                     ImGui::EndMenu();
                 }
-                if (ImGui::MenuItem("Dump all memory",
-                                    input::ToShortcut(inputContext, actions::dbg::DumpMemory).c_str())) {
-                    m_context.EnqueueEvent(events::emu::DumpMemory());
-                }
-                ImGui::Separator();
+                if (ImGui::BeginMenu("View")) {
+                    auto &videoSettings = m_context.settings.video;
+                    ImGui::MenuItem("Force integer scaling", nullptr, &videoSettings.forceIntegerScaling);
+                    ImGui::MenuItem("Force aspect ratio", nullptr, &videoSettings.forceAspectRatio);
+                    if (ImGui::SmallButton("4:3")) {
+                        videoSettings.forcedAspect = 4.0 / 3.0;
+                        m_context.settings.MakeDirty();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("16:9")) {
+                        videoSettings.forcedAspect = 16.0 / 9.0;
+                        m_context.settings.MakeDirty();
+                    }
 
-                auto sh2Menu = [&](const char *name, ui::SH2WindowSet &set) {
-                    if (ImGui::BeginMenu(name)) {
-                        ImGui::MenuItem("[WIP] Debugger", nullptr, &set.debugger.Open);
-                        ImGui::MenuItem("Interrupts", nullptr, &set.interrupts.Open);
-                        ImGui::MenuItem("Interrupt trace", nullptr, &set.interruptTrace.Open);
-                        ImGui::MenuItem("Cache", nullptr, &set.cache.Open);
-                        ImGui::MenuItem("Division unit (DIVU)", nullptr, &set.divisionUnit.Open);
-                        ImGui::MenuItem("Timers (FRT and WDT)", nullptr, &set.timers.Open);
-                        ImGui::MenuItem("DMA Controller (DMAC)", nullptr, &set.dmaController.Open);
-                        ImGui::MenuItem("DMA Controller trace", nullptr, &set.dmaControllerTrace.Open);
+                    bool fullScreen = m_context.settings.video.fullScreen.Get();
+                    if (ImGui::MenuItem("Full screen",
+                                        input::ToShortcut(inputContext, actions::general::ToggleFullScreen).c_str(),
+                                        &fullScreen)) {
+                        videoSettings.fullScreen = fullScreen;
+                        m_context.settings.MakeDirty();
+                    }
+
+                    ImGui::Separator();
+
+                    ImGui::MenuItem("Auto-fit window to screen", nullptr, &videoSettings.autoResizeWindow);
+                    if (ImGui::MenuItem("Fit window to screen", nullptr, nullptr,
+                                        !videoSettings.displayVideoOutputInWindow)) {
+                        fitWindowToScreenNow = true;
+                    }
+
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem(
+                            "Windowed video output",
+                            input::ToShortcut(inputContext, actions::general::ToggleWindowedVideoOutput).c_str(),
+                            &videoSettings.displayVideoOutputInWindow)) {
+                        fitWindowToScreenNow = true;
+                        m_context.settings.MakeDirty();
+                    }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("System")) {
+                    ImGui::MenuItem("System state", nullptr, &m_systemStateWindow.Open);
+
+                    ImGui::Separator();
+
+                    // Resets
+                    {
+                        if (ImGui::MenuItem("Soft reset",
+                                            input::ToShortcut(inputContext, actions::sys::SoftReset).c_str())) {
+                            m_context.EnqueueEvent(events::emu::SoftReset());
+                        }
+                        if (ImGui::MenuItem("Hard reset",
+                                            input::ToShortcut(inputContext, actions::sys::HardReset).c_str())) {
+                            m_context.EnqueueEvent(events::emu::HardReset());
+                        }
+                        // TODO: Let's not make it that easy to accidentally wipe system settings
+                        /*if (ImGui::MenuItem("Factory reset", "Ctrl+Shift+R")) {
+                            m_context.EnqueueEvent(events::emu::FactoryReset());
+                        }*/
+                    }
+
+                    ImGui::Separator();
+
+                    // Video standard and region
+                    {
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted("Video standard:");
+                        ImGui::SameLine();
+                        ui::widgets::VideoStandardSelector(m_context);
+
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextUnformatted("Region");
+                        ImGui::SameLine();
+                        ImGui::TextDisabled("(?)");
+                        if (ImGui::BeginItemTooltip()) {
+                            ImGui::TextUnformatted("Changing this option will cause a hard reset");
+                            ImGui::EndTooltip();
+                        }
+                        ImGui::SameLine();
+                        ui::widgets::RegionSelector(m_context);
+                    }
+
+                    ImGui::Separator();
+
+                    // Cartridge slot
+                    {
+                        ImGui::BeginDisabled();
+                        ImGui::TextUnformatted("Cartridge port: ");
+                        ImGui::SameLine(0, 0);
+                        ui::widgets::CartridgeInfo(m_context);
+                        ImGui::EndDisabled();
+
+                        if (ImGui::MenuItem("Insert backup RAM...")) {
+                            OpenBackupMemoryCartFileDialog();
+                        }
+                        if (ImGui::MenuItem("Insert 8 Mbit DRAM")) {
+                            m_context.EnqueueEvent(events::emu::Insert8MbitDRAMCartridge());
+                        }
+                        if (ImGui::MenuItem("Insert 32 Mbit DRAM")) {
+                            m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge());
+                        }
+                        if (ImGui::MenuItem("Insert 16 Mbit ROM...")) {
+                            OpenROMCartFileDialog();
+                        }
+
+                        if (ImGui::MenuItem("Remove cartridge")) {
+                            m_context.EnqueueEvent(events::emu::RemoveCartridge());
+                        }
+                    }
+
+                    // ImGui::Separator();
+
+                    // Peripherals
+                    {
+                        // TODO
+                    }
+
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Emulation")) {
+                    bool rewindEnabled = m_context.settings.general.enableRewindBuffer;
+
+                    if (ImGui::MenuItem("Pause/resume",
+                                        input::ToShortcut(inputContext, actions::emu::PauseResume).c_str())) {
+                        paused = !paused;
+                        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+                    }
+                    if (ImGui::MenuItem("Forward frame step",
+                                        input::ToShortcut(inputContext, actions::emu::ForwardFrameStep).c_str())) {
+                        paused = true;
+                        m_context.EnqueueEvent(events::emu::ForwardFrameStep());
+                    }
+                    if (ImGui::MenuItem("Reverse frame step",
+                                        input::ToShortcut(inputContext, actions::emu::ReverseFrameStep).c_str(),
+                                        nullptr, rewindEnabled)) {
+                        if (rewindEnabled) {
+                            paused = true;
+                            m_context.EnqueueEvent(events::emu::ReverseFrameStep());
+                        }
+                    }
+                    if (ImGui::MenuItem("Rewind buffer",
+                                        input::ToShortcut(inputContext, actions::emu::ToggleRewindBuffer).c_str(),
+                                        &rewindEnabled)) {
+                        ToggleRewindBuffer();
+                    }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Settings")) {
+                    ImGui::MenuItem("Settings", input::ToShortcut(inputContext, actions::general::OpenSettings).c_str(),
+                                    &m_settingsWindow.Open);
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("General")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::General);
+                    }
+                    if (ImGui::MenuItem("Hotkeys")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::Hotkeys);
+                    }
+                    if (ImGui::MenuItem("System")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::System);
+                    }
+                    if (ImGui::MenuItem("IPL")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
+                    }
+                    if (ImGui::MenuItem("Input")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::Input);
+                    }
+                    if (ImGui::MenuItem("Video")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::Video);
+                    }
+                    if (ImGui::MenuItem("Audio")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::Audio);
+                    }
+                    if (ImGui::MenuItem("Cartridge")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::Cartridge);
+                    }
+                    if (ImGui::MenuItem("CD Block")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::CDBlock);
+                    }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Debug")) {
+                    bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
+                    if (ImGui::MenuItem("Enable tracing",
+                                        input::ToShortcut(inputContext, actions::dbg::ToggleDebugTrace).c_str(),
+                                        &debugTrace)) {
+                        m_context.EnqueueEvent(events::emu::SetDebugTrace(debugTrace));
+                    }
+                    ImGui::Separator();
+                    if (ImGui::MenuItem("Open memory viewer", nullptr)) {
+                        OpenMemoryViewer();
+                    }
+                    if (ImGui::BeginMenu("Memory viewers")) {
+                        for (auto &memView : m_memoryViewerWindows) {
+                            ImGui::MenuItem(fmt::format("Memory viewer #{}", memView.Index() + 1).c_str(), nullptr,
+                                            &memView.Open);
+                        }
                         ImGui::EndMenu();
                     }
-                };
-                sh2Menu("Master SH2", m_masterSH2WindowSet);
-                sh2Menu("Slave SH2", m_slaveSH2WindowSet);
+                    if (ImGui::MenuItem("Dump all memory",
+                                        input::ToShortcut(inputContext, actions::dbg::DumpMemory).c_str())) {
+                        m_context.EnqueueEvent(events::emu::DumpMemory());
+                    }
+                    ImGui::Separator();
 
-                if (ImGui::BeginMenu("SCU")) {
-                    ImGui::MenuItem("Registers", nullptr, &m_scuWindowSet.regs.Open);
-                    ImGui::MenuItem("DSP", nullptr, &m_scuWindowSet.dsp.Open);
-                    ImGui::MenuItem("DMA", nullptr, &m_scuWindowSet.dma.Open);
-                    ImGui::MenuItem("DMA trace", nullptr, &m_scuWindowSet.dmaTrace.Open);
-                    ImGui::MenuItem("Interrupt trace", nullptr, &m_scuWindowSet.intrTrace.Open);
-                    ImGui::EndMenu();
-                }
-
-                if (ImGui::BeginMenu("VDP")) {
-                    auto &vdp = m_context.saturn.VDP;
-                    auto layerMenuItem = [&](const char *name, vdp::VDP::Layer layer) {
-                        const bool enabled = vdp.IsLayerEnabled(layer);
-                        if (ImGui::MenuItem(name, nullptr, enabled)) {
-                            vdp.SetLayerEnabled(layer, !enabled);
+                    auto sh2Menu = [&](const char *name, ui::SH2WindowSet &set) {
+                        if (ImGui::BeginMenu(name)) {
+                            ImGui::MenuItem("[WIP] Debugger", nullptr, &set.debugger.Open);
+                            ImGui::MenuItem("Interrupts", nullptr, &set.interrupts.Open);
+                            ImGui::MenuItem("Interrupt trace", nullptr, &set.interruptTrace.Open);
+                            ImGui::MenuItem("Cache", nullptr, &set.cache.Open);
+                            ImGui::MenuItem("Division unit (DIVU)", nullptr, &set.divisionUnit.Open);
+                            ImGui::MenuItem("Timers (FRT and WDT)", nullptr, &set.timers.Open);
+                            ImGui::MenuItem("DMA Controller (DMAC)", nullptr, &set.dmaController.Open);
+                            ImGui::MenuItem("DMA Controller trace", nullptr, &set.dmaControllerTrace.Open);
+                            ImGui::EndMenu();
                         }
                     };
+                    sh2Menu("Master SH2", m_masterSH2WindowSet);
+                    sh2Menu("Slave SH2", m_slaveSH2WindowSet);
 
-                    ImGui::MenuItem("Layers", nullptr, &m_vdpWindowSet.vdp2Layers.Open);
-                    ImGui::Indent();
-                    layerMenuItem("Sprite", vdp::VDP::Layer::Sprite);
-                    layerMenuItem("RBG0", vdp::VDP::Layer::RBG0);
-                    layerMenuItem("NBG0/RBG1", vdp::VDP::Layer::NBG0_RBG1);
-                    layerMenuItem("NBG1/EXBG", vdp::VDP::Layer::NBG1_EXBG);
-                    layerMenuItem("NBG2", vdp::VDP::Layer::NBG2);
-                    layerMenuItem("NBG3", vdp::VDP::Layer::NBG3);
-                    ImGui::Unindent();
+                    if (ImGui::BeginMenu("SCU")) {
+                        ImGui::MenuItem("Registers", nullptr, &m_scuWindowSet.regs.Open);
+                        ImGui::MenuItem("DSP", nullptr, &m_scuWindowSet.dsp.Open);
+                        ImGui::MenuItem("DMA", nullptr, &m_scuWindowSet.dma.Open);
+                        ImGui::MenuItem("DMA trace", nullptr, &m_scuWindowSet.dmaTrace.Open);
+                        ImGui::MenuItem("Interrupt trace", nullptr, &m_scuWindowSet.intrTrace.Open);
+                        ImGui::EndMenu();
+                    }
+
+                    if (ImGui::BeginMenu("VDP")) {
+                        auto &vdp = m_context.saturn.VDP;
+                        auto layerMenuItem = [&](const char *name, vdp::VDP::Layer layer) {
+                            const bool enabled = vdp.IsLayerEnabled(layer);
+                            if (ImGui::MenuItem(name, nullptr, enabled)) {
+                                vdp.SetLayerEnabled(layer, !enabled);
+                            }
+                        };
+
+                        ImGui::MenuItem("Layers", nullptr, &m_vdpWindowSet.vdp2Layers.Open);
+                        ImGui::Indent();
+                        layerMenuItem("Sprite", vdp::VDP::Layer::Sprite);
+                        layerMenuItem("RBG0", vdp::VDP::Layer::RBG0);
+                        layerMenuItem("NBG0/RBG1", vdp::VDP::Layer::NBG0_RBG1);
+                        layerMenuItem("NBG1/EXBG", vdp::VDP::Layer::NBG1_EXBG);
+                        layerMenuItem("NBG2", vdp::VDP::Layer::NBG2);
+                        layerMenuItem("NBG3", vdp::VDP::Layer::NBG3);
+                        ImGui::Unindent();
+                        ImGui::EndMenu();
+                    }
+                    ImGui::MenuItem("Debug output", nullptr, &m_debugOutputWindow.Open);
                     ImGui::EndMenu();
                 }
-                ImGui::MenuItem("Debug output", nullptr, &m_debugOutputWindow.Open);
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Help")) {
+                if (ImGui::BeginMenu("Help")) {
 #if Ymir_ENABLE_IMGUI_DEMO
-                ImGui::MenuItem("ImGui demo window", nullptr, &showImGuiDemoWindow);
-                ImGui::Separator();
+                    ImGui::MenuItem("ImGui demo window", nullptr, &showImGuiDemoWindow);
+                    ImGui::Separator();
 #endif
-                ImGui::MenuItem("About", nullptr, &m_aboutWindow.Open);
-                ImGui::EndMenu();
+                    ImGui::MenuItem("About", nullptr, &m_aboutWindow.Open);
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMainMenuBar();
+            } else {
+                ImGui::PopStyleVar();
             }
-            ImGui::EndMainMenuBar();
-        } else {
-            ImGui::PopStyleVar();
         }
 
         {
@@ -1916,7 +1993,8 @@ void App::RunEmulator() {
 
                 const float mousePosY = io.MousePos.y;
                 const float vpBottomQuarter =
-                    viewport->Pos.y + std::min(viewport->Size.y * 0.75f, viewport->Size.y - 120.0f);
+                    viewport->Pos.y +
+                    std::min(viewport->Size.y * 0.75f, viewport->Size.y - 120.0f * m_context.displayScale);
                 if ((mouseMoved && mousePosY >= vpBottomQuarter) || m_context.rewinding || paused) {
                     m_rewindBarFadeTimeBase = now;
                 }
@@ -1944,7 +2022,8 @@ void App::RunEmulator() {
         ImGui::Render();
 
         // Clear screen
-        SDL_SetRenderDrawColorFloat(renderer, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
+        const ImVec4 bgClearColor = fullScreen ? ImVec4(0, 0, 0, 1.0f) : clearColor;
+        SDL_SetRenderDrawColorFloat(renderer, bgClearColor.x, bgClearColor.y, bgClearColor.z, bgClearColor.w);
         SDL_RenderClear(renderer);
 
         // Draw Saturn screen
@@ -1958,7 +2037,7 @@ void App::RunEmulator() {
             const bool fitWindowToScreen =
                 (videoSettings.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
 
-            const float menuBarHeight = ImGui::GetFrameHeight();
+            const float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
 
             // Get window size
             int ww, wh;

@@ -139,6 +139,7 @@ public:
     struct Hotkeys {
         input::InputBind openSettings{actions::general::OpenSettings};
         input::InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
+        input::InputBind toggleFullScreen{actions::general::ToggleFullScreen};
 
         input::InputBind toggleMute{actions::audio::ToggleMute};
         input::InputBind increaseVolume{actions::audio::IncreaseVolume};
@@ -239,6 +240,7 @@ public:
         double forcedAspect;
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;
+        util::Observable<bool> fullScreen;
     } video;
 
     struct Audio {

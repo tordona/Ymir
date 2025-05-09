@@ -370,6 +370,7 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
 
     mapInput(m_actionInputs, hotkeys.openSettings);
     mapInput(m_actionInputs, hotkeys.toggleWindowedVideoOutput);
+    mapInput(m_actionInputs, hotkeys.toggleFullScreen);
 
     mapInput(m_actionInputs, hotkeys.toggleMute);
     mapInput(m_actionInputs, hotkeys.increaseVolume);
@@ -497,6 +498,7 @@ void Settings::ResetToDefaults() {
     video.forcedAspect = 4.0 / 3.0;
     video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
+    video.fullScreen = false;
 
     audio.volume = 0.8;
     audio.mute = false;
@@ -586,6 +588,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     if (auto tblHotkeys = data["Hotkeys"]) {
         Parse(tblHotkeys, "OpenSettings", hotkeys.openSettings);
         Parse(tblHotkeys, "ToggleWindowedVideoOutput", hotkeys.toggleWindowedVideoOutput);
+        Parse(tblHotkeys, "ToggleFullScreen", hotkeys.toggleFullScreen);
 
         Parse(tblHotkeys, "ToggleMute", hotkeys.toggleMute);
         Parse(tblHotkeys, "IncreaseVolume", hotkeys.increaseVolume);
@@ -687,6 +690,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
 
         Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
+        Parse(tblVideo, "FullScreen", video.fullScreen);
 
         Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
     }
@@ -775,6 +779,7 @@ SettingsSaveResult Settings::Save() {
         {"Hotkeys", toml::table{{
             {"OpenSettings", ToTOML(hotkeys.openSettings)},
             {"ToggleWindowedVideoOutput", ToTOML(hotkeys.toggleWindowedVideoOutput)},
+            {"ToggleFullScreen", ToTOML(hotkeys.toggleFullScreen)},
             
             {"ToggleMute", ToTOML(hotkeys.toggleMute)},
             {"IncreaseVolume", ToTOML(hotkeys.increaseVolume)},
@@ -887,6 +892,7 @@ SettingsSaveResult Settings::Save() {
             {"ForcedAspect", video.forcedAspect},
             {"AutoResizeWindow", video.autoResizeWindow},
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
+            {"FullScreen", video.fullScreen.Get()},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
         }}},
 
@@ -1130,6 +1136,7 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
 
     rebind(hotkeys.openSettings, {KeyCombo{Mod::None, Key::F10}});
     rebind(hotkeys.toggleWindowedVideoOutput, {KeyCombo{Mod::None, Key::F9}});
+    rebind(hotkeys.toggleFullScreen, {KeyCombo{Mod::Alt, Key::Return}});
 
     rebind(hotkeys.toggleMute, {KeyCombo{Mod::Control, Key::M}});
     rebind(hotkeys.increaseVolume, {KeyCombo{Mod::Control, Key::EqualsPlus}});

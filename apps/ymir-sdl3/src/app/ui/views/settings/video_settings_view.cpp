@@ -53,6 +53,11 @@ void VideoSettingsView::Display() {
         m_context.EnqueueEvent(events::gui::FitWindowToScreen());
     }
 
+    bool fullScreen = settings.fullScreen.Get();
+    if (MakeDirty(ImGui::Checkbox("Full screen", &fullScreen))) {
+        settings.fullScreen = fullScreen;
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);

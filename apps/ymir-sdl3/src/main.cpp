@@ -14,6 +14,8 @@ int main(int argc, char **argv) {
                           cxxopts::value(progOpts.gameDiscPath));
     options.add_options()("p,profile", "Path to profile directory", cxxopts::value(progOpts.profilePath));
     options.add_options()("h,help", "Display help text", cxxopts::value(showHelp)->default_value("false"));
+    options.add_options()("f,fullscreen", "Start in fullscreen mode",
+                          cxxopts::value(progOpts.fullScreen)->default_value("false"));
     options.parse_positional({"disc"});
 
     try {
