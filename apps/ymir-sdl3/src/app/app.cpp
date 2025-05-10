@@ -1306,17 +1306,6 @@ void App::RunEmulator() {
 
     SDL_ShowWindow(screen.window);
 
-    std::unordered_map<SDL_JoystickID, SDL_Gamepad *> gamepads{};
-    std::unordered_map<SDL_JoystickID, int> gamepadPlayerIndexes{};
-
-    auto getGamepadPlayerIndex = [&](SDL_JoystickID id) {
-        if (gamepadPlayerIndexes.contains(id)) {
-            return gamepadPlayerIndexes.at(id);
-        } else {
-            return -1;
-        }
-    };
-
     std::array<GUIEvent, 64> evts{};
 
 #if Ymir_ENABLE_IMGUI_DEMO
@@ -1393,23 +1382,15 @@ void App::RunEmulator() {
 
             case SDL_EVENT_GAMEPAD_ADDED: //
             {
-                SDL_Gamepad *gamepad = SDL_OpenGamepad(evt.gdevice.which);
-                if (gamepad != nullptr) {
-                    const int playerIndex = SDL_GetGamepadPlayerIndex(gamepad);
-                    gamepadPlayerIndexes[evt.gdevice.which] = playerIndex;
-                    gamepads[evt.gdevice.which] = gamepad;
-                    devlog::debug<grp::base>("Gamepad {} added -> player index {}", evt.gdevice.which, playerIndex);
-                    inputContext.ConnectGamepad(playerIndex);
-                }
+                const int playerIndex = SDL_GetGamepadPlayerIndexForID(evt.gdevice.which);
+                devlog::debug<grp::base>("Gamepad {} added -> player index {}", evt.gdevice.which, playerIndex);
+                inputContext.ConnectGamepad(playerIndex);
                 break;
             }
             case SDL_EVENT_GAMEPAD_REMOVED: //
             {
-                const int playerIndex = gamepadPlayerIndexes[evt.gdevice.which];
+                const int playerIndex = SDL_GetGamepadPlayerIndexForID(evt.gdevice.which);
                 devlog::debug<grp::base>("Gamepad {} removed -> player index {}", evt.gdevice.which, playerIndex);
-                gamepadPlayerIndexes.erase(evt.gdevice.which);
-                SDL_CloseGamepad(gamepads.at(evt.gdevice.which));
-                gamepads.erase(evt.gdevice.which);
                 inputContext.DisconnectGamepad(playerIndex);
                 break;
             }
@@ -1422,7 +1403,7 @@ void App::RunEmulator() {
                 break;
             case SDL_EVENT_GAMEPAD_AXIS_MOTION: //
             {
-                const int playerIndex = getGamepadPlayerIndex(evt.gaxis.which);
+                const int playerIndex = SDL_GetGamepadPlayerIndexForID(evt.gaxis.which);
                 const float value = evt.gaxis.value < 0 ? evt.gaxis.value / 32768.0f : evt.gaxis.value / 32767.0f;
                 inputContext.ProcessPrimitive(playerIndex, input::SDL3ToGamepadAxis1D((SDL_GamepadAxis)evt.gaxis.axis),
                                               value);
@@ -1431,7 +1412,7 @@ void App::RunEmulator() {
             case SDL_EVENT_GAMEPAD_BUTTON_DOWN: [[fallthrough]];
             case SDL_EVENT_GAMEPAD_BUTTON_UP: //
             {
-                const int playerIndex = getGamepadPlayerIndex(evt.gbutton.which);
+                const int playerIndex = SDL_GetGamepadPlayerIndexForID(evt.gbutton.which);
                 inputContext.ProcessPrimitive(
                     playerIndex, input::SDL3ToGamepadButton((SDL_GamepadButton)evt.gbutton.button), evt.gbutton.down);
                 break;
