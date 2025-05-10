@@ -18,7 +18,7 @@ jobs:
         c_compiler: [clang] # [clang, cl]
         include:
           - c_compiler: clang
-            cpp_compiler: clang
+            cpp_compiler: clang++
 
     steps:
       - uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
         c_compiler: [clang] # [clang, cl]
         include:
           - c_compiler: clang
-            cpp_compiler: clang
+            cpp_compiler: clang++
 
     steps:
       - uses: actions/checkout@v4
@@ -72,11 +72,6 @@ jobs:
         shell: bash
         run: |
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
-      - name: Configure msvc
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64_arm64
 
       - name: Configure CMake
         env:
