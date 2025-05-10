@@ -56,14 +56,13 @@ jobs:
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
       - name: Configure CMake
-        env:
-          CFLAGS: "--target=arm64-pc-windows-gnullvm"
-          CXXFLAGS: "--target=arm64-pc-windows-gnullvm"
         run: >
           cmake -B ${{ steps.strings.outputs.build-output-dir }}
           -DCMAKE_CXX_COMPILER="C:\Program Files\LLVM\bin\clang++.exe"
           -DCMAKE_C_COMPILER="C:\Program Files\LLVM\bin\clang.exe"
           -DCMAKE_LINKER="C:\Program Files\LLVM\bin\lld-link.exe"
+          -DCMAKE_CXX_FLAGS="--target=arm64-pc-windows-gnullvm"
+          -DCMAKE_C_FLAGS="--target=arm64-pc-windows-gnullvm"
           -DCMAKE_BUILD_TYPE=Debug
           -DBUILD_SHARED_LIBS=OFF
           -DYmir_ENABLE_DEVLOG=OFF
