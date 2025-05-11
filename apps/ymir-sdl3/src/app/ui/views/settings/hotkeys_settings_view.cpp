@@ -63,6 +63,7 @@ void HotkeysSettingsView::Display() {
         drawRow(hotkeys.resetButton);
 
         drawRow(hotkeys.turboSpeed);
+        drawRow(hotkeys.turboSpeedHold);
         drawRow(hotkeys.pauseResume);
         drawRow(hotkeys.fwdFrameStep);
         drawRow(hotkeys.revFrameStep);

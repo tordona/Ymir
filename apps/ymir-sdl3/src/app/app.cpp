@@ -1215,6 +1215,10 @@ void App::RunEmulator() {
                                               ToggleRewindBuffer();
                                           }
                                       });
+
+        inputContext.SetTriggerHandler(actions::emu::TurboSpeedHold, [&](void *, const input::InputElement &) {
+            m_audioSystem.SetSync(!m_audioSystem.IsSync());
+        });
     }
 
     // Debugger

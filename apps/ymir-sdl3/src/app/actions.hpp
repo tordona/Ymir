@@ -90,6 +90,8 @@ namespace emu {
         input::Action::RepeatableTrigger(0xE02004, "Emulation", "Reverse frame step");
     inline constexpr auto Rewind = input::Action::Button(0xE02005, "Emulation", "Rewind");
 
+    inline constexpr auto TurboSpeedHold = input::Action::Trigger(0xE020F0, "Emulation", "Turbo speed (hold)");
+
     inline constexpr auto ToggleRewindBuffer = input::Action::Trigger(0xE02100, "Emulation", "Toggle rewind buffer");
 
 } // namespace emu

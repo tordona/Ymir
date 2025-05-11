@@ -391,6 +391,8 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.rewind);
     mapInput(m_actionInputs, hotkeys.toggleRewindBuffer);
 
+    mapInput(m_actionInputs, hotkeys.turboSpeedHold);
+
     mapInput(m_actionInputs, hotkeys.toggleDebugTrace);
     mapInput(m_actionInputs, hotkeys.dumpMemory);
 
@@ -610,6 +612,8 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblHotkeys, "Rewind", hotkeys.rewind);
         Parse(tblHotkeys, "ToggleRewindBuffer", hotkeys.toggleRewindBuffer);
 
+        Parse(tblHotkeys, "TurboSpeedHold", hotkeys.turboSpeedHold);
+
         Parse(tblHotkeys, "ToggleDebugTrace", hotkeys.toggleDebugTrace);
         Parse(tblHotkeys, "DumpMemory", hotkeys.dumpMemory);
 
@@ -801,6 +805,8 @@ SettingsSaveResult Settings::Save() {
             {"ReverseFrameStep", ToTOML(hotkeys.revFrameStep)},
             {"Rewind", ToTOML(hotkeys.rewind)},
             {"ToggleRewindBuffer", ToTOML(hotkeys.toggleRewindBuffer)},
+
+            {"TurboSpeedHold", ToTOML(hotkeys.turboSpeedHold)},
 
             {"ToggleDebugTrace", ToTOML(hotkeys.toggleDebugTrace)},
             {"DumpMemory", ToTOML(hotkeys.dumpMemory)},
@@ -1159,6 +1165,8 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     rebind(hotkeys.revFrameStep, {KeyCombo{Mod::None, Key::LeftBracket}});
     rebind(hotkeys.rewind, {KeyCombo{Mod::None, Key::Backspace}});
     rebind(hotkeys.toggleRewindBuffer, {KeyCombo{Mod::None, Key::F8}});
+
+    rebind(hotkeys.turboSpeedHold, {KeyCombo{Mod::None, Key::GraveAccent}});
 
     rebind(hotkeys.toggleDebugTrace, {KeyCombo{Mod::None, Key::F11}});
     rebind(hotkeys.dumpMemory, {KeyCombo{Mod::Control, Key::F11}});

@@ -1,4 +1,5 @@
 #pragma once
+#pragma once
 
 #include <ymir/core/configuration.hpp>
 
@@ -159,6 +160,8 @@ public:
         input::InputBind revFrameStep{actions::emu::ReverseFrameStep};
         input::InputBind rewind{actions::emu::Rewind};
         input::InputBind toggleRewindBuffer{actions::emu::ToggleRewindBuffer};
+
+        input::InputBind turboSpeedHold{actions::emu::TurboSpeedHold};
 
         input::InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};
         input::InputBind dumpMemory{actions::dbg::DumpMemory};
