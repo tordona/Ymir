@@ -63,7 +63,10 @@ void IPLSettingsView::Display() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Rescan")) {
-        m_context.romManager.ScanIPLROMs(iplRomsPath);
+        {
+            std::unique_lock lock{m_context.locks.romManager};
+            m_context.romManager.ScanIPLROMs(iplRomsPath);
+        }
         if (m_context.iplRomPath.empty() && !m_context.romManager.GetIPLROMs().empty()) {
             m_context.EnqueueEvent(events::gui::ReloadIPLROM());
         }

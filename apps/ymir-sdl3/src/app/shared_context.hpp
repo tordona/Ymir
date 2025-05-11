@@ -79,12 +79,13 @@ struct SharedContext {
     RewindBuffer rewindBuffer;
     bool rewinding = false;
 
-    // Certain GUI interactions requires synchronization with the emulator thread, specifically when dealing with
-    // dynamic objects:
+    // Certain GUI interactions requires synchronization with the emulator thread, especially when dealing with
+    // dynamically allocated objects:
     // - Cartridges
     // - Discs
     // - Peripherals
     // - Save states
+    // - ROM manager
     // These locks must be held by the emulator thread whenever the object instances are to be replaced.
     // The GUI must hold these locks when accessing these objects to ensure the emulator thread doesn't destroy them.
     struct Locks {
@@ -92,6 +93,7 @@ struct SharedContext {
         std::mutex disc;
         std::mutex peripherals;
         std::array<std::mutex, 10> saveStates;
+        std::mutex romManager;
     } locks;
 
     struct State {

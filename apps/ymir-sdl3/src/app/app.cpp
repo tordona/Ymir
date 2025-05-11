@@ -2376,7 +2376,11 @@ void App::ReadPeripheral(ymir::peripheral::PeripheralReport &report) {
 void App::ScanIPLROMs() {
     auto iplRomsPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
     devlog::info<grp::base>("Scanning for IPL ROMs in {}...", iplRomsPath);
-    m_context.romManager.ScanIPLROMs(iplRomsPath);
+
+    {
+        std::unique_lock lock{m_context.locks.romManager};
+        m_context.romManager.ScanIPLROMs(iplRomsPath);
+    }
 
     if constexpr (devlog::info_enabled<grp::base>) {
         int numKnown = 0;
@@ -2484,7 +2488,11 @@ std::filesystem::path App::GetIPLROMPath() {
 void App::ScanROMCarts() {
     auto romCartsPath = m_context.profile.GetPath(ProfilePath::ROMCartImages);
     devlog::info<grp::base>("Scanning for cartridge ROMs in {}...", romCartsPath);
-    m_context.romManager.ScanROMCarts(romCartsPath);
+
+    {
+        std::unique_lock lock{m_context.locks.romManager};
+        m_context.romManager.ScanROMCarts(romCartsPath);
+    }
 
     if constexpr (devlog::info_enabled<grp::base>) {
         int numKnown = 0;

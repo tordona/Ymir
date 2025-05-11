@@ -444,8 +444,44 @@ EmuEvent EnableThreadedSCSP(bool enable) {
 EmuEvent LoadState(uint32 slot) {
     return RunFunction([=](SharedContext &ctx) {
         if (slot < ctx.saveStates.size() && ctx.saveStates[slot]) {
-            if (!ctx.saturn.LoadState(*ctx.saveStates[slot])) {
-                // TODO: notify failure to load save state
+            auto &state = *ctx.saveStates[slot];
+            // If the IPL ROM is mismatched, load it if possible
+            if (state.system.iplRomHash != ctx.saturn.GetIPLHash()) {
+                devlog::warn<grp::base>("Save state IPL ROM hash mismatch; attempting to load IPL ROM with hash {}",
+                                        ToString(state.system.iplRomHash));
+
+                std::unique_lock lock{ctx.locks.romManager};
+                for (auto &[path, info] : ctx.romManager.GetIPLROMs()) {
+                    if (info.hash == state.system.iplRomHash) {
+                        auto result = util::LoadIPLROM(path, ctx.saturn);
+                        if (result.succeeded) {
+                            devlog::info<grp::base>("IPL ROM matching save state loaded successfully from {}", path);
+                            ctx.iplRomPath = path;
+                        } else {
+                            // If the IPL ROM doesn't exist of fails to load, we'll let it slide unless an SH-2 is in
+                            // the IPL ROM area
+                            devlog::warn<grp::base>("Failed to load IPL ROM from {} matching save state: {}", path,
+                                                    result.errorMessage);
+                            if (state.msh2.PC < 0x100000) {
+                                devlog::warn<grp::base>("Not loading save state with a mismatched IPL ROM and the MSH2 "
+                                                        "in IPL area ({:08X})",
+                                                        state.msh2.PC);
+                                return;
+                            }
+                            if (state.system.slaveSH2Enabled && state.ssh2.PC < 0x100000) {
+                                devlog::warn<grp::base>("Not loading save state with a mismatched IPL ROM and the SSH2 "
+                                                        "in IPL area ({:08X})",
+                                                        state.ssh2.PC);
+                                return;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if (!ctx.saturn.LoadState(state)) {
+                devlog::warn<grp::base>("Failed to load save state");
             }
         }
     });
