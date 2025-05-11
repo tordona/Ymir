@@ -1308,15 +1308,32 @@ void App::RunEmulator() {
 
     SDL_ShowWindow(screen.window);
 
-    // Track connected gamepads
+    // Track connected gamepads and player indices
+    // NOTE: SDL3 has a bug with Windows raw input where new controllers are always assigned to player index 0.
+    // We'll manage player indices manually instead.
     std::unordered_map<SDL_JoystickID, SDL_Gamepad *> gamepads{};
     std::unordered_map<SDL_JoystickID, int> gamepadPlayerIndexes{};
+    std::set<int> freePlayerIndices;
     auto getGamepadPlayerIndex = [&](SDL_JoystickID id) {
         if (gamepadPlayerIndexes.contains(id)) {
             return gamepadPlayerIndexes.at(id);
         } else {
             return -1;
         }
+    };
+    auto getFreePlayerIndex = [&]() -> int {
+        if (freePlayerIndices.empty()) {
+            return gamepadPlayerIndexes.size();
+        } else {
+            auto first = freePlayerIndices.begin();
+            int index = *first;
+            freePlayerIndices.erase(first);
+            return index;
+        }
+    };
+    auto addFreePlayerIndex = [&](int free) {
+        // This should always succeed
+        assert(freePlayerIndices.insert(free).second);
     };
 
     std::array<GUIEvent, 64> evts{};
@@ -1431,7 +1448,8 @@ void App::RunEmulator() {
             {
                 SDL_Gamepad *gamepad = SDL_OpenGamepad(evt.gdevice.which);
                 if (gamepad != nullptr) {
-                    const int playerIndex = SDL_GetGamepadPlayerIndex(gamepad);
+                    // const int playerIndex = SDL_GetGamepadPlayerIndex(gamepad);
+                    const int playerIndex = getFreePlayerIndex();
                     gamepadPlayerIndexes[evt.gdevice.which] = playerIndex;
                     gamepads[evt.gdevice.which] = gamepad;
                     devlog::debug<grp::base>("Gamepad {} added -> player index {}", evt.gdevice.which, playerIndex);
@@ -1443,8 +1461,9 @@ void App::RunEmulator() {
             {
                 const int playerIndex = gamepadPlayerIndexes[evt.gdevice.which];
                 devlog::debug<grp::base>("Gamepad {} removed -> player index {}", evt.gdevice.which, playerIndex);
-                gamepadPlayerIndexes.erase(evt.gdevice.which);
                 SDL_CloseGamepad(gamepads.at(evt.gdevice.which));
+                gamepadPlayerIndexes.erase(evt.gdevice.which);
+                addFreePlayerIndex(playerIndex);
                 gamepads.erase(evt.gdevice.which);
                 inputContext.DisconnectGamepad(playerIndex);
                 break;
