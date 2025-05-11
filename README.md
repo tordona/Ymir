@@ -25,6 +25,7 @@ A work-in-progress Sega Saturn emulator.
 - Integrated backup memory manager to import and export saves, and transfer between internal and cartridge RAM
 - Save states
 - Rewinding (up to one minute at 60 fps), turbo speed, frame step (forwards and backwards)
+- Full screen mode with VRR support and low input lag
 - A work-in-progress feature-rich debugger
 
 
