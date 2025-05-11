@@ -64,7 +64,6 @@ void SCU::Reset(bool hard) {
     m_intrMask.u32 = 0;
     m_intrStatus.u32 = 0;
     m_abusIntrAck = false;
-    // m_intrPending = false;
 
     if (hard) {
         for (auto &ch : m_dmaChannels) {
@@ -367,7 +366,6 @@ void SCU::SaveState(state::SCUState &state) const {
     state.intrMask = m_intrMask.u32;
     state.intrStatus = m_intrStatus.u32;
     state.abusIntrAck = m_abusIntrAck;
-    // state.intrPending = m_intrPending;
 
     state.timer0Compare = m_timer0Compare;
     state.timer0Counter = m_timer0Counter;
@@ -436,7 +434,6 @@ void SCU::LoadState(const state::SCUState &state) {
     m_intrMask.u32 = state.intrMask & 0x0000BFFF;
     m_intrStatus.u32 = state.intrStatus & 0xFFFFBFFF;
     m_abusIntrAck = state.abusIntrAck;
-    // m_intrPending = state.intrPending;
 
     m_timer0Compare = state.timer0Compare;
     m_timer0Counter = state.timer0Counter;
@@ -1197,13 +1194,6 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
     //   30   5E     1  A-Bus   External Interrupt 0E
     //   31   5F     1  A-Bus   External Interrupt 0F
 
-    // Don't send any additional interrupts if the master SH2 hasn't acknowledged the last one
-    /*if constexpr (!acknowledge) {
-        if (m_intrPending) {
-            return;
-        }
-    }*/
-
     static constexpr uint32 kInternalLevels[] = {0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8, //
                                                  0x8, 0x6, 0x6, 0x5, 0x3, 0x2, 0x0, 0x0, //
                                                  0x0};
@@ -1236,8 +1226,6 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                 TraceAcknowledgeInterrupt(m_tracer, externalIndex + 16);
             }
             UpdateInterruptLevel<false>();
-
-            // m_intrPending = false;
         } else {
             if (internalLevel >= externalLevel) {
                 m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
@@ -1252,29 +1240,21 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                 } else {
                     m_cbExternalSlaveInterrupt(0, 0);
                 }
-
-                // m_intrPending = true;
             } else if (m_abusIntrAck) {
                 devlog::trace<grp::base>("Raising external interrupt {:X}, level {:X}", externalIndex, externalLevel);
                 TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
                 m_abusIntrAck = false;
                 m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
                 m_cbExternalSlaveInterrupt(0, 0);
-
-                // m_intrPending = true;
             } else {
                 devlog::trace<grp::base>("Lowering interrupt signal");
                 m_cbExternalMasterInterrupt(0, 0);
                 m_cbExternalSlaveInterrupt(0, 0);
-
-                // m_intrPending = false;
             }
         }
     } else {
         m_cbExternalMasterInterrupt(0, 0);
         m_cbExternalSlaveInterrupt(0, 0);
-
-        // m_intrPending = false;
     }
 }
 

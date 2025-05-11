@@ -4,34 +4,12 @@
 
 namespace ymir::state {
 
-namespace v1 {
+struct SCSPTimer {
+    uint8 incrementInterval;
+    uint8 reload;
 
-    struct SCSPTimer {
-        uint8 incrementInterval;
-        uint8 reload;
-
-        bool doReload;
-        uint8 counter;
-    };
-
-} // namespace v1
-
-namespace v2 {
-
-    using v1::SCSPTimer;
-
-} // namespace v2
-
-namespace v3 {
-
-    using v2::SCSPTimer;
-
-} // namespace v3
-
-inline namespace v4 {
-
-    using v3::SCSPTimer;
-
-} // namespace v4
+    bool doReload;
+    uint8 counter;
+};
 
 } // namespace ymir::state

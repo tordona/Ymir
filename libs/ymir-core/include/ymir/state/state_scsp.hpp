@@ -13,274 +13,60 @@
 
 namespace ymir::state {
 
-namespace v1 {
+// Version history:
+// v3:
+// - New fields
+//   - KYONEX = false
 
-    struct SCSPState {
-        alignas(16) std::array<uint8, m68k::kM68KWRAMSize> WRAM;
+struct SCSPState {
 
-        alignas(16) std::array<uint8, 2048 * 75> cddaBuffer;
-        uint32 cddaReadPos;
-        uint32 cddaWritePos;
-        bool cddaReady;
+    alignas(16) std::array<uint8, m68k::kM68KWRAMSize> WRAM;
 
-        M68KState m68k;
-        uint64 m68kSpilloverCycles;
-        bool m68kEnabled;
+    alignas(16) std::array<uint8, 2048 * 75> cddaBuffer;
+    uint32 cddaReadPos;
+    uint32 cddaWritePos;
+    bool cddaReady;
 
-        alignas(16) std::array<SCSPSlotState, 32> slots;
+    M68KState m68k;
+    uint64 m68kSpilloverCycles;
+    bool m68kEnabled;
 
-        uint32 MVOL;
-        bool DAC18B;
-        bool MEM4MB;
-        uint8 MSLC;
+    alignas(16) std::array<SCSPSlotState, 32> slots;
 
-        std::array<SCSPTimer, 3> timers;
+    bool KYONEX;
 
-        uint16 MCIEB;
-        uint16 MCIPD;
-        uint16 SCIEB;
-        uint16 SCIPD;
+    uint32 MVOL;
+    bool DAC18B;
+    bool MEM4MB;
+    uint8 MSLC;
 
-        bool DEXE;
-        bool DDIR;
-        bool DGATE;
-        uint32 DMEA;
-        uint16 DRGA;
-        uint16 DTLG;
+    std::array<SCSPTimer, 3> timers;
 
-        alignas(16) std::array<uint16, 64> SOUS;
-        uint32 soundStackIndex;
+    uint16 MCIEB;
+    uint16 MCIPD;
+    uint16 SCIEB;
+    uint16 SCIPD;
 
-        SCSPDSP dsp;
+    bool DEXE;
+    bool DDIR;
+    bool DGATE;
+    uint32 DMEA;
+    uint16 DRGA;
+    uint16 DTLG;
 
-        uint64 m68kCycles;
-        uint64 sampleCycles;
-        uint64 sampleCounter;
+    alignas(16) std::array<uint16, 64> SOUS;
+    uint32 soundStackIndex;
 
-        uint16 egCycle;
-        bool egStep;
+    SCSPDSP dsp;
 
-        uint32 lfsr;
-    };
+    uint64 m68kCycles;
+    uint64 sampleCycles;
+    uint64 sampleCounter;
 
-} // namespace v1
+    uint16 egCycle;
+    bool egStep;
 
-namespace v2 {
-
-    using v1::SCSPState;
-
-} // namespace v2
-
-namespace v3 {
-
-    struct SCSPState {
-        alignas(16) std::array<uint8, m68k::kM68KWRAMSize> WRAM;
-
-        alignas(16) std::array<uint8, 2048 * 75> cddaBuffer;
-        uint32 cddaReadPos;
-        uint32 cddaWritePos;
-        bool cddaReady;
-
-        M68KState m68k;
-        uint64 m68kSpilloverCycles;
-        bool m68kEnabled;
-
-        alignas(16) std::array<SCSPSlotState, 32> slots;
-
-        bool KYONEX;
-
-        uint32 MVOL;
-        bool DAC18B;
-        bool MEM4MB;
-        uint8 MSLC;
-
-        std::array<SCSPTimer, 3> timers;
-
-        uint16 MCIEB;
-        uint16 MCIPD;
-        uint16 SCIEB;
-        uint16 SCIPD;
-
-        bool DEXE;
-        bool DDIR;
-        bool DGATE;
-        uint32 DMEA;
-        uint16 DRGA;
-        uint16 DTLG;
-
-        alignas(16) std::array<uint16, 64> SOUS;
-        uint32 soundStackIndex;
-
-        SCSPDSP dsp;
-
-        uint64 m68kCycles;
-        uint64 sampleCycles;
-        uint64 sampleCounter;
-
-        uint16 egCycle;
-        bool egStep;
-
-        uint32 lfsr;
-
-        void Upgrade(const v2::SCSPState &state) {
-            WRAM = state.WRAM;
-
-            cddaBuffer = state.cddaBuffer;
-            cddaReadPos = state.cddaReadPos;
-            cddaWritePos = state.cddaWritePos;
-            cddaReady = state.cddaReady;
-
-            m68k = state.m68k;
-            m68kSpilloverCycles = state.m68kSpilloverCycles;
-            m68kEnabled = state.m68kEnabled;
-
-            for (size_t i = 0; i < slots.size(); i++) {
-                slots[i].Upgrade(state.slots[i]);
-            }
-
-            KYONEX = false;
-
-            MVOL = state.MVOL;
-            DAC18B = state.DAC18B;
-            MEM4MB = state.MEM4MB;
-            MSLC = state.MSLC;
-
-            timers = state.timers;
-
-            MCIEB = state.MCIEB;
-            MCIPD = state.MCIPD;
-            SCIEB = state.SCIEB;
-            SCIPD = state.SCIPD;
-
-            DEXE = state.DEXE;
-            DDIR = state.DDIR;
-            DGATE = state.DGATE;
-            DMEA = state.DMEA;
-            DRGA = state.DRGA;
-            DTLG = state.DTLG;
-
-            SOUS = state.SOUS;
-            soundStackIndex = state.soundStackIndex;
-
-            dsp = state.dsp;
-
-            m68kCycles = state.m68kCycles;
-            sampleCycles = state.sampleCycles;
-            sampleCounter = state.sampleCounter;
-
-            egCycle = state.egCycle;
-            egStep = state.egStep;
-
-            lfsr = state.lfsr;
-        }
-    };
-
-} // namespace v3
-
-inline namespace v4 {
-
-    struct SCSPState {
-        alignas(16) std::array<uint8, m68k::kM68KWRAMSize> WRAM;
-
-        alignas(16) std::array<uint8, 2048 * 75> cddaBuffer;
-        uint32 cddaReadPos;
-        uint32 cddaWritePos;
-        bool cddaReady;
-
-        M68KState m68k;
-        uint64 m68kSpilloverCycles;
-        bool m68kEnabled;
-
-        alignas(16) std::array<SCSPSlotState, 32> slots;
-
-        bool KYONEX;
-
-        uint32 MVOL;
-        bool DAC18B;
-        bool MEM4MB;
-        uint8 MSLC;
-
-        std::array<SCSPTimer, 3> timers;
-
-        uint16 MCIEB;
-        uint16 MCIPD;
-        uint16 SCIEB;
-        uint16 SCIPD;
-
-        bool DEXE;
-        bool DDIR;
-        bool DGATE;
-        uint32 DMEA;
-        uint16 DRGA;
-        uint16 DTLG;
-
-        alignas(16) std::array<uint16, 64> SOUS;
-        uint32 soundStackIndex;
-
-        SCSPDSP dsp;
-
-        uint64 m68kCycles;
-        uint64 sampleCycles;
-        uint64 sampleCounter;
-
-        uint16 egCycle;
-        bool egStep;
-
-        uint32 lfsr;
-
-        void Upgrade(const v3::SCSPState &state) {
-            WRAM = state.WRAM;
-
-            cddaBuffer = state.cddaBuffer;
-            cddaReadPos = state.cddaReadPos;
-            cddaWritePos = state.cddaWritePos;
-            cddaReady = state.cddaReady;
-
-            m68k = state.m68k;
-            m68kSpilloverCycles = state.m68kSpilloverCycles;
-            m68kEnabled = state.m68kEnabled;
-
-            for (size_t i = 0; i < slots.size(); i++) {
-                slots[i].Upgrade(state.slots[i]);
-            }
-
-            KYONEX = state.KYONEX;
-
-            MVOL = state.MVOL;
-            DAC18B = state.DAC18B;
-            MEM4MB = state.MEM4MB;
-            MSLC = state.MSLC;
-
-            timers = state.timers;
-
-            MCIEB = state.MCIEB;
-            MCIPD = state.MCIPD;
-            SCIEB = state.SCIEB;
-            SCIPD = state.SCIPD;
-
-            DEXE = state.DEXE;
-            DDIR = state.DDIR;
-            DGATE = state.DGATE;
-            DMEA = state.DMEA;
-            DRGA = state.DRGA;
-            DTLG = state.DTLG;
-
-            SOUS = state.SOUS;
-            soundStackIndex = state.soundStackIndex;
-
-            dsp = state.dsp;
-
-            m68kCycles = state.m68kCycles;
-            sampleCycles = state.sampleCycles;
-            sampleCounter = state.sampleCounter;
-
-            egCycle = state.egCycle;
-            egStep = state.egStep;
-
-            lfsr = state.lfsr;
-        }
-    };
-
-} // namespace v4
+    uint32 lfsr;
+};
 
 } // namespace ymir::state
