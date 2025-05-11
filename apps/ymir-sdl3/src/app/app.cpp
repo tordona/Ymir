@@ -2082,11 +2082,11 @@ void App::RunEmulator() {
             DrawWindows();
             DrawGenericModal();
 
+            auto *viewport = ImGui::GetMainViewport();
+
             // Draw rewind buffer bar widget
             if (m_context.rewindBuffer.IsRunning()) {
                 const auto now = clk::now();
-
-                auto *viewport = ImGui::GetMainViewport();
 
                 const float mousePosY = io.MousePos.y;
                 const float vpBottomQuarter =
@@ -2109,6 +2109,65 @@ void App::RunEmulator() {
                 ui::widgets::RewindBar(m_context, alpha);
 
                 // TODO: add mouse interactions
+            }
+
+            {
+                static constexpr float kBaseSize = 50.0f;
+                static constexpr float kBasePadding = 30.0f;
+                static constexpr float kBaseRounding = 0;
+                static constexpr sint64 kBlinkInterval = 700;
+                const float size = kBaseSize * m_context.displayScale;
+                const float padding = kBasePadding * m_context.displayScale;
+                const float rounding = kBaseRounding * m_context.displayScale;
+
+                auto *drawList = ImGui::GetBackgroundDrawList();
+
+                // Draw pause/fast forward/rewind indicators on top-right of viewport
+                const ImVec2 tl{viewport->WorkPos.x + viewport->WorkSize.x - padding - size,
+                                viewport->WorkPos.y + padding};
+                const ImVec2 br{tl.x + size, tl.y + size};
+
+                const sint64 currMillis =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(clk::now().time_since_epoch()).count();
+                const double phase =
+                    (double)(currMillis % kBlinkInterval) / (double)kBlinkInterval * std::numbers::pi * 2.0;
+                const double alpha = std::sin(phase) * 0.2 + 0.7;
+                const uint32 alphaU32 = std::clamp((uint32)(alpha * 255.0), 0u, 255u);
+                const uint32 color = 0xFFFFFF | (alphaU32 << 24u);
+
+                if (paused) {
+                    drawList->AddRectFilled(ImVec2(tl.x + size * 0.2f, tl.y), ImVec2(tl.x + size * 0.4f, br.y), color,
+                                            rounding);
+                    drawList->AddRectFilled(ImVec2(tl.x + size * 0.6f, tl.y), ImVec2(tl.x + size * 0.8f, br.y), color,
+                                            rounding);
+                } else {
+                    const bool rev = m_context.rewindBuffer.IsRunning() && m_context.rewinding;
+                    if (!m_audioSystem.IsSync()) {
+                        // Fast-forward/rewind
+                        ImVec2 p1{tl.x, tl.y};
+                        ImVec2 p2{tl.x + size * 0.5f, (tl.y + br.y) * 0.5f};
+                        ImVec2 p3{tl.x, br.y};
+                        if (rev) {
+                            p1 = {tl.x + size * 0.5f, br.y};
+                            p2 = {tl.x, (tl.y + br.y) * 0.5f};
+                            p3 = {tl.x + size * 0.5f, tl.y};
+                        } else {
+                            p1 = {tl.x, tl.y};
+                            p2 = {tl.x + size * 0.5f, (tl.y + br.y) * 0.5f};
+                            p3 = {tl.x, br.y};
+                        }
+
+                        drawList->AddTriangleFilled(p1, p2, p3, color);
+                        drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f, p1.y), ImVec2(p2.x + size * 0.5f, p2.y),
+                                                    ImVec2(p3.x + size * 0.5f, p3.y), color);
+                    } else if (rev) {
+                        const ImVec2 p1 = {tl.x + size * 0.75f, br.y};
+                        const ImVec2 p2 = {tl.x + size * 0.25f, (tl.y + br.y) * 0.5f};
+                        const ImVec2 p3 = {tl.x + size * 0.75f, tl.y};
+
+                        drawList->AddTriangleFilled(p1, p2, p3, color);
+                    }
+                }
             }
         }
         ImGui::End();
