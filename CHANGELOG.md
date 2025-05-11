@@ -5,7 +5,7 @@
 ### New features and improvements
 
 - Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95. (#71)
-- Cartridge: Added option to automatically load cartridges required for some games. (#98)
+- Cartridge: Added option to automatically load cartridges required by some games. (#98)
 - Input: Categorize some actions as "triggers" (one-shot actions, optionally repeatable) to differentiate them from "buttons" (a binary state). This allows frame step to be repeated by holding the keyboard key bound to it.
 - Input: Added a "Turbo speed (hold)" input bind that toggles turbo on and off. (#103)
 - Save states: Automatically load IPL ROM matching the one used in a save state.
