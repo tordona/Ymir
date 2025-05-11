@@ -113,8 +113,8 @@ struct Slot {
     // --- Loop Control Register ---
 
     uint32 startAddress;     // (R/W) SA - Start Address
-    uint32 loopStartAddress; // (R/W) LSA - Loop Start Address
-    uint32 loopEndAddress;   // (R/W) LEA - Loop End Address
+    uint16 loopStartAddress; // (R/W) LSA - Loop Start Address
+    uint16 loopEndAddress;   // (R/W) LEA - Loop End Address
     bool pcm8Bit;            // (R/W) PCM8B - Wave format (true=8-bit PCM, false=16-bit PCM)
     bool keyOnBit;           // (R/W) KYONB - Key On Bit
 

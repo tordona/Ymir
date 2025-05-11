@@ -808,53 +808,40 @@ void Slot::IncrementSampleCounter() {
         currSample -= currPhase >> 14u;
     } else {
         currSample += currPhase >> 14u;
-        if (!crossedLoopStart && currSample >= loopStartAddress) {
+    }
+
+    if (!crossedLoopStart) {
+        const uint16 nextSample = currSample + 1;
+        if (nextSample > loopStartAddress) {
             crossedLoopStart = true;
+            if (loopControl == LoopControl::Reverse) {
+                currSample -= loopStartAddress + loopEndAddress;
+                reverse = true;
+            }
             if (loopStartLink && egState == EGState::Attack) {
                 egState = EGState::Decay1;
             }
         }
-    }
+    } else {
+        const uint16 nextSample = static_cast<uint16>((reverse ? ~currSample : currSample) + 1);
+        const uint16 loopPoint = reverse ? loopStartAddress : loopEndAddress;
+        const bool crossedLoop = nextSample > loopPoint;
 
-    // TODO: rework this
-    switch (loopControl) {
-    case LoopControl::Off:
-        if (loopEndAddress != 0xFFFF && currSample >= loopEndAddress) {
-            active = false;
-        }
-        break;
-    case LoopControl::Normal:
-        if (loopEndAddress != 0xFFFF && currSample >= loopEndAddress) {
-            currSample -= loopEndAddress - loopStartAddress;
-        }
-        break;
-    case LoopControl::Reverse:
-        if (reverse) {
-            if (currSample <= loopStartAddress) {
-                currSample += loopEndAddress - loopStartAddress;
-            }
-        } else {
-            if (currSample >= loopStartAddress) {
-                reverse = true;
-                currSample = loopEndAddress - currSample + loopStartAddress;
+        if (reverse != crossedLoop) {
+            switch (loopControl) {
+            case LoopControl::Off: active = false; break;
+            case LoopControl::Normal: [[fallthrough]];
+            case LoopControl::Reverse: currSample += loopStartAddress - loopEndAddress; break;
+            case LoopControl::Alternate:
+                reverse ^= true;
+                if (reverse) {
+                    currSample -= loopEndAddress * 2u;
+                } else {
+                    currSample += loopStartAddress * 2u;
+                }
+                break;
             }
         }
-        break;
-    case LoopControl::Alternate:
-        if (reverse) {
-            if (currSample <= loopStartAddress) {
-                // Reflect over the start end address
-                currSample += (loopStartAddress - currSample) * 2;
-                reverse = false;
-            }
-        } else {
-            if (currSample >= loopEndAddress) {
-                // Reflect over the loop end address
-                currSample -= (currSample - loopEndAddress) * 2;
-                reverse = true;
-            }
-        }
-        break;
     }
 }
 

@@ -8,6 +8,7 @@
 - Cartridge: Added option to automatically load cartridges required by some games. (#98)
 - Input: Categorize some actions as "triggers" (one-shot actions, optionally repeatable) to differentiate them from "buttons" (a binary state). This allows frame step to be repeated by holding the keyboard key bound to it.
 - Input: Added a "Turbo speed (hold)" input bind that toggles turbo on and off. (#103)
+- System: Automatically switch to PAL or NTSC based on auto-selected region.
 - Save states: Automatically load IPL ROM matching the one used in a save state.
 - Debugger: Added VDP2 layer toggles to Debug menu and in a new window.
 - App: Allow customizing all profile paths. (#74)
@@ -26,7 +27,7 @@
 - VDP2: Apply mid-frame scroll effects properly. (#72)
 - VDP2: Use the MSB from the final color value instead of the raw sprite data MSB, which fixes background priority bugs on Dragon Ball Z - Shinbutouden (#69)
 - SCSP: More accuracy improvements and bug fixes (thanks to @celeriyacon)
-- SCU: Fix repeated indirect DMA transfers when the write address update flag is enabled. (#84)
+- SCU: Fix repeated indirect DMA transfers when the write address update flag is enabled. Fixes a crash when going in-game on Shinobi X. (#84)
 - Input: Assigning keys to connected controllers will no longer unbind keys from disconnected controllers.
 - Rewind: Fix rare crash due to a race condition when resetting the rewind buffer.
 - App: Fix handling of UTF-8 paths. (#88)

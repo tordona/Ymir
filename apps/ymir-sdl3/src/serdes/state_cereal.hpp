@@ -330,7 +330,17 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
-    ar(s.SA, s.LSA, s.LEA, s.PCM8B, s.KYONB);
+    ar(s.SA);
+    if (version >= 4) {
+        ar(s.LSA, s.LEA);
+    } else {
+        uint32 tmp{};
+        ar(tmp);
+        s.LSA = tmp;
+        ar(tmp);
+        s.LEA = tmp;
+    }
+    ar(s.PCM8B, s.KYONB);
     if (version >= 3) {
         ar(s.SBCTL);
     } else {

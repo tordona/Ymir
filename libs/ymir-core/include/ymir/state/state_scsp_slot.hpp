@@ -14,6 +14,8 @@ namespace ymir::state {
 // - Removed fields
 //   - uint16 extra10
 //   - uint32 currAddress
+// - Changed fields
+//   - LSA and LEA changed from uint32 to uint16
 // v3:
 // - New fields
 //   - SBCTL = 0
@@ -28,8 +30,8 @@ namespace ymir::state {
 
 struct SCSPSlotState {
     uint32 SA;
-    uint32 LSA;
-    uint32 LEA;
+    uint16 LSA;
+    uint16 LEA;
     bool PCM8B;
     bool KYONB;
     uint16 SBCTL;
