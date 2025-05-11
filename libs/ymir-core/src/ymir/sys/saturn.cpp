@@ -214,6 +214,19 @@ void Saturn::AutodetectRegion(media::AreaCode areaCodes) {
     // Apply configuration and hard reset system if changed
     SMPC.SetAreaCode(selectedAreaCode);
     if (selectedAreaCode != currAreaCode) {
+        // Also change PAL/NTSC setting accordingly
+        switch (selectedAreaCode) {
+        case 0x1: [[fallthrough]];
+        case 0x2: [[fallthrough]];
+        case 0x4: [[fallthrough]];
+        case 0x5: [[fallthrough]];
+        case 0x6: SetVideoStandard(core::config::sys::VideoStandard::NTSC); break;
+
+        case 0xA: [[fallthrough]];
+        case 0xC: [[fallthrough]];
+        case 0xD: SetVideoStandard(core::config::sys::VideoStandard::PAL); break;
+        }
+
         Reset(true);
     }
 }
