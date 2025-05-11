@@ -355,7 +355,7 @@ void SCU::SaveState(state::SCUState &state) const {
     {
         const cart::ROMCartridge *cart = m_cartSlot.GetCartridge().As<cart::CartType::ROM>();
         assert(cart != nullptr);
-        static constexpr size_t size = cart::ROMCartridge::kRomSize;
+        static constexpr size_t size = cart::kROMCartSize;
         state.cartType = state::SCUState::CartType::ROM;
         state.cartData.resize(size);
         cart->DumpROM(std::span<uint8, size>(state.cartData.begin(), size));

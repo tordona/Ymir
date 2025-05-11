@@ -267,6 +267,8 @@ public:
         struct ROM {
             std::filesystem::path imagePath;
         } rom;
+
+        bool autoLoadGameCarts;
     } cartridge;
 
     // ---------------------------------------------------------------------------------------------

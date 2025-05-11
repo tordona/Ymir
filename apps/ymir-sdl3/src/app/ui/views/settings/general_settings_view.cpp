@@ -123,7 +123,7 @@ void GeneralSettingsView::Display() {
         };
 
         drawRow("IPL ROM images", ProfilePath::IPLROMImages);
-        drawRow("Cartridge ROM images", ProfilePath::CartROMImages);
+        drawRow("Cartridge ROM images", ProfilePath::ROMCartImages);
         drawRow("Backup memory", ProfilePath::BackupMemory);
         drawRow("Exported backup files", ProfilePath::ExportedBackups);
         drawRow("Persistent state", ProfilePath::PersistentState);

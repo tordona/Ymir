@@ -94,6 +94,8 @@
 
 #include <ymir/ymir.hpp>
 
+#include <ymir/db/game_db.hpp>
+
 #include <ymir/util/process.hpp>
 #include <ymir/util/scope_guard.hpp>
 #include <ymir/util/thread_name.hpp>
@@ -108,6 +110,8 @@
 #include <app/ui/widgets/system_widgets.hpp>
 
 #include <serdes/state_cereal.hpp>
+
+#include <util/file_loader.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
@@ -212,7 +216,6 @@ int App::Run(const CommandLineOptions &options) {
     m_context.saturn.UsePreferredRegion();
 
     m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
-    m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
 
     EnableRewindBuffer(m_context.settings.general.enableRewindBuffer);
 
@@ -223,6 +226,9 @@ int App::Run(const CommandLineOptions &options) {
     // Load disc image if provided
     if (!options.gameDiscPath.empty()) {
         LoadDiscImage(options.gameDiscPath);
+        // also inserts the game-specific cartridges or the one configured by the user in Settings > Cartridge
+    } else {
+        m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
     }
 
     // Load IPL ROM
@@ -233,7 +239,7 @@ int App::Run(const CommandLineOptions &options) {
         using namespace std::chrono_literals;
         static constexpr auto kScanInterval = 400ms;
 
-        if (m_context.iplRomManager.GetROMs().empty()) {
+        if (m_context.romManager.GetIPLROMs().empty()) {
             struct ROMSelectResult {
                 bool fileSelected = false;
                 std::filesystem::path path;
@@ -243,7 +249,7 @@ int App::Run(const CommandLineOptions &options) {
             };
 
             OpenGenericModal("Welcome", [=, this, nextScanDeadline = clk::now() + kScanInterval,
-                                         lastROMCount = m_context.iplRomManager.GetROMs().size(),
+                                         lastROMCount = m_context.romManager.GetIPLROMs().size(),
                                          romSelectResult = ROMSelectResult{}]() mutable {
                 bool doSelectRom = false;
                 bool doOpenSettings = false;
@@ -356,7 +362,7 @@ int App::Run(const CommandLineOptions &options) {
                     ScanIPLROMs();
 
                     // Don't load until files stop being added to the directory
-                    auto romCount = m_context.iplRomManager.GetROMs().size();
+                    auto romCount = m_context.romManager.GetIPLROMs().size();
                     if (romCount != lastROMCount) {
                         lastROMCount = romCount;
                     } else {
@@ -1532,6 +1538,7 @@ void App::RunEmulator() {
             using EvtType = GUIEvent::Type;
             switch (evt.type) {
             case EvtType::LoadDisc: OpenLoadDiscDialog(); break;
+            case EvtType::LoadRecommendedGameCartridge: LoadRecommendedCartridge(); break;
             case EvtType::OpenBackupMemoryCartFileDialog: OpenBackupMemoryCartFileDialog(); break;
             case EvtType::OpenROMCartFileDialog: OpenROMCartFileDialog(); break;
             case EvtType::OpenPeripheralBindsEditor:
@@ -2369,12 +2376,12 @@ void App::ReadPeripheral(ymir::peripheral::PeripheralReport &report) {
 void App::ScanIPLROMs() {
     auto iplRomsPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
     devlog::info<grp::base>("Scanning for IPL ROMs in {}...", iplRomsPath);
-    m_context.iplRomManager.Scan(iplRomsPath);
+    m_context.romManager.ScanIPLROMs(iplRomsPath);
 
     if constexpr (devlog::info_enabled<grp::base>) {
         int numKnown = 0;
         int numUnknown = 0;
-        for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
+        for (auto &[path, info] : m_context.romManager.GetIPLROMs()) {
             if (info.info != nullptr) {
                 ++numKnown;
             } else {
@@ -2446,7 +2453,7 @@ std::filesystem::path App::GetIPLROMPath() {
     // Keep a region-free fallback in case there isn't a perfect match
     std::filesystem::path regionFreeMatch = "";
     std::filesystem::path firstMatch = "";
-    for (auto &[path, info] : m_context.iplRomManager.GetROMs()) {
+    for (auto &[path, info] : m_context.romManager.GetIPLROMs()) {
         if (info.info == nullptr) {
             continue;
         }
@@ -2472,6 +2479,65 @@ std::filesystem::path App::GetIPLROMPath() {
 
     // Return whatever is available
     return firstMatch;
+}
+
+void App::ScanROMCarts() {
+    auto romCartsPath = m_context.profile.GetPath(ProfilePath::ROMCartImages);
+    devlog::info<grp::base>("Scanning for cartridge ROMs in {}...", romCartsPath);
+    m_context.romManager.ScanROMCarts(romCartsPath);
+
+    if constexpr (devlog::info_enabled<grp::base>) {
+        int numKnown = 0;
+        int numUnknown = 0;
+        for (auto &[path, info] : m_context.romManager.GetROMCarts()) {
+            if (info.info != nullptr) {
+                ++numKnown;
+            } else {
+                ++numUnknown;
+                fmt::println("{} - {}", path, ymir::ToString(info.hash));
+            }
+        }
+        devlog::info<grp::base>("Found {} images - {} known, {} unknown", numKnown + numUnknown, numKnown, numUnknown);
+    }
+}
+
+void App::LoadRecommendedCartridge() {
+    const ymir::db::GameInfo *info;
+    {
+        std::unique_lock lock{m_context.locks.disc};
+        const auto &disc = m_context.saturn.CDBlock.GetDisc();
+        info = ymir::db::GetGameInfo(disc.header.productNumber);
+    }
+    if (info == nullptr) {
+        m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
+        return;
+    }
+
+    devlog::info<grp::base>("Loading recommended game cartridge...");
+
+    std::unique_lock lock{m_context.locks.cart};
+    using Cart = ymir::db::Cartridge;
+    switch (info->cartridge) {
+    case Cart::None: break;
+    case Cart::DRAM8Mbit: m_context.EnqueueEvent(events::emu::Insert8MbitDRAMCartridge()); break;
+    case Cart::DRAM32Mbit: m_context.EnqueueEvent(events::emu::Insert32MbitDRAMCartridge()); break;
+    case Cart::ROM_KOF95: [[fallthrough]];
+    case Cart::ROM_Ultraman: //
+    {
+        ScanROMCarts();
+        const auto expectedHash =
+            info->cartridge == Cart::ROM_KOF95 ? ymir::db::kKOF95ROMInfo.hash : ymir::db::kUltramanROMInfo.hash;
+        for (auto &[path, info] : m_context.romManager.GetROMCarts()) {
+            if (info.hash == expectedHash) {
+                m_context.EnqueueEvent(events::emu::InsertROMCartridge(path));
+                break;
+            }
+        }
+        break;
+    }
+    }
+
+    // TODO: notify user
 }
 
 void App::LoadSaveStates() {
@@ -2642,6 +2708,12 @@ bool App::LoadDiscImage(std::filesystem::path path) {
         std::unique_lock lock{m_context.locks.disc};
         m_context.saturn.LoadDisc(std::move(disc));
         m_context.state.loadedDiscImagePath = path;
+    }
+
+    if (m_context.settings.cartridge.autoLoadGameCarts) {
+        LoadRecommendedCartridge();
+    } else {
+        m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
     }
 
     m_context.rewindBuffer.Reset();

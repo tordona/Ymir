@@ -84,6 +84,9 @@ private:
     util::IPLROMLoadResult LoadIPLROM();
     std::filesystem::path GetIPLROMPath();
 
+    void ScanROMCarts();
+    void LoadRecommendedCartridge();
+
     void LoadSaveStates();
     void PersistSaveState(uint32 slot);
     void WriteSaveStateMeta();

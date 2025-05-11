@@ -47,6 +47,7 @@ struct PeripheralBindsParams {
 struct GUIEvent {
     enum class Type {
         LoadDisc,
+        LoadRecommendedGameCartridge,
         OpenBackupMemoryCartFileDialog,
         OpenROMCartFileDialog,
         OpenPeripheralBindsEditor,

@@ -10,6 +10,10 @@ inline GUIEvent LoadDisc() {
     return {.type = GUIEvent::Type::LoadDisc};
 }
 
+inline GUIEvent LoadRecommendedGameCartridge() {
+    return {.type = GUIEvent::Type::LoadRecommendedGameCartridge};
+}
+
 inline GUIEvent OpenBackupMemoryCartFileDialog() {
     return {.type = GUIEvent::Type::OpenBackupMemoryCartFileDialog};
 }

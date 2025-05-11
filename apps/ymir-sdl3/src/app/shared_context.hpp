@@ -2,9 +2,9 @@
 
 #include <ymir/ymir.hpp>
 
-#include <app/ipl_rom_manager.hpp>
 #include <app/profile.hpp>
 #include <app/rewind_buffer.hpp>
+#include <app/rom_manager.hpp>
 #include <app/settings.hpp>
 
 #include <app/input/input_context.hpp>
@@ -70,7 +70,7 @@ struct SharedContext {
     Profile profile;
     Settings settings{*this};
 
-    IPLROMManager iplRomManager;
+    ROMManager romManager;
     std::filesystem::path iplRomPath;
 
     std::array<std::unique_ptr<ymir::state::State>, 10> saveStates;

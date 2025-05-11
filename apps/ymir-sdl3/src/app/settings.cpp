@@ -508,6 +508,7 @@ void Settings::ResetToDefaults() {
     cartridge.backupRAM.capacity = Settings::Cartridge::BackupRAM::Capacity::_32Mbit;
     cartridge.dram.capacity = Settings::Cartridge::DRAM::Capacity::_32Mbit;
     cartridge.rom.imagePath = "";
+    cartridge.autoLoadGameCarts = true;
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
@@ -552,7 +553,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
             };
 
             parse("IPLROMImages", ProfilePath::IPLROMImages);
-            parse("CartROMImages", ProfilePath::CartROMImages);
+            parse("ROMCartImages", ProfilePath::ROMCartImages);
             parse("BackupMemory", ProfilePath::BackupMemory);
             parse("ExportedBackups", ProfilePath::ExportedBackups);
             parse("PersistentState", ProfilePath::PersistentState);
@@ -714,6 +715,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         if (auto tblROM = tblCart["ROM"]) {
             Parse(tblROM, "ImagePath", cartridge.rom.imagePath);
         }
+        Parse(tblCart, "AutoLoadGameCarts", cartridge.autoLoadGameCarts);
     }
 
     if (auto tblCDBlock = data["CDBlock"]) {
@@ -745,7 +747,7 @@ SettingsSaveResult Settings::Save() {
 
             {"PathOverrides", toml::table{{
                 {"IPLROMImages", m_context.profile.GetPathOverride(ProfilePath::IPLROMImages).native()},
-                {"CartROMImages", m_context.profile.GetPathOverride(ProfilePath::CartROMImages).native()},
+                {"ROMCartImages", m_context.profile.GetPathOverride(ProfilePath::ROMCartImages).native()},
                 {"BackupMemory", m_context.profile.GetPathOverride(ProfilePath::BackupMemory).native()},
                 {"ExportedBackups", m_context.profile.GetPathOverride(ProfilePath::ExportedBackups).native()},
                 {"PersistentState", m_context.profile.GetPathOverride(ProfilePath::PersistentState).native()},
@@ -915,6 +917,7 @@ SettingsSaveResult Settings::Save() {
             {"ROM", toml::table{{
                 {"ImagePath", cartridge.rom.imagePath.native()},
             }}},
+            {"AutoLoadGameCarts", cartridge.autoLoadGameCarts},
         }}},
 
         {"CDBlock", toml::table{{

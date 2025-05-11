@@ -2,6 +2,8 @@
 
 #include <ymir/sys/backup_ram.hpp>
 
+#include <ymir/db/game_db.hpp>
+
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/common_widgets.hpp>
 
@@ -14,6 +16,8 @@
 #include <misc/cpp/imgui_stdlib.h>
 
 #include <fmt/std.h>
+
+#include <SDL3/SDL_misc.h>
 
 using namespace ymir;
 
@@ -47,6 +51,25 @@ void CartridgeSettingsView::Display() {
     ImGui::TextUnformatted("Current cartridge: ");
     ImGui::SameLine(0, 0);
     widgets::CartridgeInfo(m_context);
+
+    MakeDirty(ImGui::Checkbox("Automatically switch to recommended cartridges", &settings.autoLoadGameCarts));
+    widgets::ExplanationTooltip(
+        fmt::format("Certain games require specific cartridges to work:\n"
+                    "- The King of Fighters '95 and Ultraman need their respective ROM cartridges\n"
+                    "- Some other games need a DRAM cartridge to start up\n"
+                    "\n"
+                    "With this option enabled, the correct cartridge is automatically inserted when a game with these "
+                    "requirements is loaded.\n"
+                    "\n"
+                    "For ROM cartridges, make sure you add the required files to {}.",
+                    m_context.profile.GetPath(ProfilePath::ROMCartImages))
+            .c_str(),
+        m_context.displayScale);
+
+    if (ImGui::Button("Open ROM cartridge images directory")) {
+        SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::ROMCartImages)).c_str());
+    }
+
     ImGui::Separator();
 
     ImGui::AlignTextToFramePadding();
@@ -64,6 +87,60 @@ void CartridgeSettingsView::Display() {
     ImGui::SameLine();
     if (ImGui::Button("Insert")) {
         m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
+    }
+
+    const db::GameInfo *gameInfo = nullptr;
+    {
+        std::unique_lock lock{m_context.locks.disc};
+        const auto &disc = m_context.saturn.CDBlock.GetDisc();
+        if (!disc.sessions.empty()) {
+            gameInfo = db::GetGameInfo(disc.header.productNumber);
+        }
+    }
+    if (gameInfo != nullptr) {
+        cart::CartType wantedCartType;
+        switch (gameInfo->cartridge) {
+        case db::Cartridge::DRAM8Mbit: wantedCartType = cart::CartType::DRAM8Mbit; break;
+        case db::Cartridge::DRAM32Mbit: wantedCartType = cart::CartType::DRAM32Mbit; break;
+        case db::Cartridge::ROM_KOF95: wantedCartType = cart::CartType::ROM; break;
+        case db::Cartridge::ROM_Ultraman: wantedCartType = cart::CartType::ROM; break;
+        default: wantedCartType = cart::CartType::None; break;
+        }
+
+        cart::CartType currCartType;
+        {
+            std::unique_lock lock{m_context.locks.cart};
+            currCartType = m_context.saturn.GetCartridge().GetType();
+        }
+
+        if (wantedCartType != cart::CartType::None && currCartType != wantedCartType) {
+            ImGui::AlignTextToFramePadding();
+
+            static constexpr ImVec4 kColor{1.00f, 0.71f, 0.25f, 1.00f};
+
+            switch (gameInfo->cartridge) {
+            case db::Cartridge::DRAM8Mbit:
+                ImGui::TextColored(kColor, "The currently loaded game requires an 8 Mbit DRAM cartridge.");
+                break;
+            case db::Cartridge::DRAM32Mbit:
+                ImGui::TextColored(kColor, "The currently loaded game requires a 32 Mbit DRAM cartridge.");
+                break;
+            case db::Cartridge::ROM_KOF95:
+                ImGui::TextColored(kColor,
+                                   "The currently loaded game requires the King of Fighters '95 ROM cartridge.");
+                break;
+            case db::Cartridge::ROM_Ultraman:
+                ImGui::TextColored(kColor, "The currently loaded game requires the Ultraman ROM cartridge.");
+                break;
+            default: break;
+            }
+
+            ImGui::SameLine();
+
+            if (MakeDirty(ImGui::Button("Insert##recommended_cart"))) {
+                m_context.EnqueueEvent(events::gui::LoadRecommendedGameCartridge());
+            }
+        }
     }
 
     switch (settings.type) {
@@ -180,7 +257,7 @@ void CartridgeSettingsView::DrawROMSettings() {
         m_context.EnqueueEvent(events::gui::OpenFile({
             .dialogTitle = "Load ROM cartridge image",
             .defaultPath =
-                settings.imagePath.empty() ? m_context.profile.GetPath(ProfilePath::CartROMImages) : settings.imagePath,
+                settings.imagePath.empty() ? m_context.profile.GetPath(ProfilePath::ROMCartImages) : settings.imagePath,
             .filters = {{"ROM cartridge image files (*.bin, *.ic1)", "bin;ic1"}, {"All files (*.*)", "*"}},
             .userdata = this,
             .callback = util::WrapSingleSelectionCallback<&CartridgeSettingsView::ProcessLoadROMImage,
@@ -204,7 +281,8 @@ void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
     // TODO: rework this entire process
     // - everything here should be done by the emulator event
     // - it should also reuse the current backup cartridge and ask the bup::BackupMemory to LoadFrom/CreateFrom
-    //   - CreateFrom should temporarily disconnect the file in order to modify its size if it's trying to change the
+    //   - CreateFrom should temporarily disconnect the file in order to modify its size if it's trying to change
+    //   the
     //     file it has already loaded
 
     std::error_code error{};
@@ -285,10 +363,9 @@ void CartridgeSettingsView::LoadROMImage(std::filesystem::path file) {
     }
 
     // Check that the image is not larger than the ROM cartridge capacity
-    if (size > cart::ROMCartridge::kRomSize) {
-        m_context.EnqueueEvent(
-            events::gui::ShowError(fmt::format("Could not load ROM cartridge image: file is too large ({} > {} bytes)",
-                                               size, cart::ROMCartridge::kRomSize)));
+    if (size > cart::kROMCartSize) {
+        m_context.EnqueueEvent(events::gui::ShowError(fmt::format(
+            "Could not load ROM cartridge image: file is too large ({} > {} bytes)", size, cart::kROMCartSize)));
         return;
     }
 

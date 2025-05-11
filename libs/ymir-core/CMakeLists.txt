@@ -10,7 +10,9 @@ add_library(ymir-core
     include/ymir/core/scheduler_defs.hpp
     include/ymir/core/types.hpp
 
+    include/ymir/db/game_db.hpp
     include/ymir/db/ipl_db.hpp
+    include/ymir/db/rom_cart_db.hpp
 
     include/ymir/debug/scu_tracer_base.hpp
     include/ymir/debug/sh2_tracer_base.hpp
@@ -161,7 +163,9 @@ add_library(ymir-core
     src/ymir/core/configuration.cpp
     src/ymir/core/hash.cpp
 
+    src/ymir/db/game_db.cpp
     src/ymir/db/ipl_db.cpp
+    src/ymir/db/rom_cart_db.cpp
 
     src/ymir/hw/cart/cart_impl_bup.cpp
     src/ymir/hw/cart/cart_slot.cpp

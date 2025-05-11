@@ -2,19 +2,6 @@
 
 #include <unordered_map>
 
-template <>
-struct std::hash<ymir::XXH128Hash> {
-    size_t operator()(const ymir::XXH128Hash &e) const noexcept {
-        uint64_t low = 0;
-        uint64_t high = 0;
-        for (size_t i = 0; i < 8; i++) {
-            low |= static_cast<uint64_t>(e[i]) << (i * 8ull);
-            high |= static_cast<uint64_t>(e[i + 8]) << (i * 8ull);
-        }
-        return std::hash<uint64_t>{}(low) ^ std::hash<uint64_t>{}(high);
-    }
-};
-
 namespace ymir::db {
 
 // clang-format off

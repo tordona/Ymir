@@ -253,10 +253,9 @@ EmuEvent InsertROMCartridge(std::filesystem::path path) {
         }
 
         // Check that the image is not larger than the ROM cartridge capacity
-        if (rom.size() > cart::ROMCartridge::kRomSize) {
-            ctx.EnqueueEvent(
-                events::gui::ShowError(fmt::format("Could not load ROM cartridge image: file is too large ({} > {})",
-                                                   rom.size(), cart::ROMCartridge::kRomSize)));
+        if (rom.size() > cart::kROMCartSize) {
+            ctx.EnqueueEvent(events::gui::ShowError(fmt::format(
+                "Could not load ROM cartridge image: file is too large ({} > {})", rom.size(), cart::kROMCartSize)));
             return;
         }
 
@@ -367,10 +366,10 @@ EmuEvent InsertCartridgeFromSettings() {
             }
 
             // Check that the image is not larger than the ROM cartridge capacity
-            if (rom.size() > cart::ROMCartridge::kRomSize) {
+            if (rom.size() > cart::kROMCartSize) {
                 ctx.EnqueueEvent(events::gui::ShowError(
                     fmt::format("Could not load ROM cartridge image: file is too large ({} > {})", rom.size(),
-                                cart::ROMCartridge::kRomSize)));
+                                cart::kROMCartSize)));
                 return;
             }
 
