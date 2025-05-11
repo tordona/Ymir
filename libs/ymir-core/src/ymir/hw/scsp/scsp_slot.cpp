@@ -820,13 +820,22 @@ void Slot::IncrementSampleCounter() {
         }
     } else {
         const uint16 nextSample = (reverse ? ~currSample : currSample) + 1;
-        const uint16 loopPoint = reverse ? loopStartAddress : loopEndAddress;
+        const uint16 loopPoint =
+            (reverse && (loopControl == LoopControl::Reverse || loopControl == LoopControl::Alternate))
+                ? loopStartAddress
+                : loopEndAddress;
         const bool crossedLoop = nextSample > loopPoint;
 
         if (reverse != crossedLoop) {
             switch (loopControl) {
             case LoopControl::Off: active = false; break;
-            case LoopControl::Normal: [[fallthrough]];
+            case LoopControl::Normal:
+                if (reverse) {
+                    currSample += loopEndAddress - loopStartAddress;
+                } else {
+                    currSample += loopStartAddress - loopEndAddress;
+                }
+                break;
             case LoopControl::Reverse: currSample += loopStartAddress - loopEndAddress; break;
             case LoopControl::Alternate:
                 reverse ^= true;
