@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: [ "v*" ]
+    tags: ["v*"]
 
 jobs:
   build-windows:
@@ -16,7 +16,7 @@ jobs:
         build_type: [Release]
         # Notes about compilers:
         # - MSVC (cl) produces much slower code and takes a long time to complete the LTO step
-        c_compiler: [clang]  # [clang, cl]
+        c_compiler: [clang] # [clang, cl]
         subsystem:
           - name: Console
             enable_devlog_option: "ON"
@@ -34,84 +34,83 @@ jobs:
             cpp_compiler: clang
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "ymir-artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-        echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+      - name: Set reusable strings
+        id: strings
+        shell: bash
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
-    - name: Configure MSVC
-      if: ${{ matrix.c_compiler == 'cl' }}
-      uses: TheMrMilchmann/setup-msvc-dev@v3
-      with:
-        arch: x64
+      - name: Configure MSVC
+        if: ${{ matrix.c_compiler == 'cl' }}
+        uses: TheMrMilchmann/setup-msvc-dev@v3
+        with:
+          arch: x64
 
-    - name: Configure CMake
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DBUILD_SHARED_LIBS=OFF
-        -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
-        -DYmir_ENABLE_IPO=ON
-        -DYmir_ENABLE_DEVLOG=${{ matrix.subsystem.enable_devlog_option }}
-        -DYmir_ENABLE_IMGUI_DEMO=OFF
-        -DYmir_ENABLE_SANDBOX=OFF
-        -DYmir_ENABLE_YMDASM=${{ matrix.subsystem.build_ymdasm_option }}
-        -S ${{ github.workspace }}
-        -G Ninja
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ steps.strings.outputs.build-output-dir }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DBUILD_SHARED_LIBS=OFF
+          -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
+          -DYmir_ENABLE_IPO=ON
+          -DYmir_ENABLE_DEVLOG=${{ matrix.subsystem.enable_devlog_option }}
+          -DYmir_ENABLE_IMGUI_DEMO=OFF
+          -DYmir_ENABLE_SANDBOX=OFF
+          -DYmir_ENABLE_YMDASM=${{ matrix.subsystem.build_ymdasm_option }}
+          -S ${{ github.workspace }}
+          -G Ninja
 
-    - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
+      - name: Build
+        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
 
-    ## FIXME: Catch2 integration still isn't working
-    #- name: Test
-    #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
-    #  run: ctest --build-config ${{ matrix.build_type }}
+      ## FIXME: Catch2 integration still isn't working
+      #- name: Test
+      #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      #  run: ctest --build-config ${{ matrix.build_type }}
 
-    - name: Package Ymir artifact
-      run: |
-        md licenses
-        Copy-Item -Path ".\apps\ymir-sdl3\res\licenses\*"     -Destination ".\licenses\"  -Recurse
-        Copy-Item -Path ".\vendor\Catch2\LICENSE.txt"         -Destination ".\licenses\Catch2-LICENSE.txt"
-        Copy-Item -Path ".\vendor\cereal\LICENSE"             -Destination ".\licenses\cereal-LICENSE"
-        Copy-Item -Path ".\vendor\concurrentqueue\LICENSE.md" -Destination ".\licenses\concurrentqueue-LICENSE.md"
-        Copy-Item -Path ".\vendor\cxxopts\LICENSE"            -Destination ".\licenses\cxxopts-LICENSE"
-        Copy-Item -Path ".\vendor\fmt\LICENSE"                -Destination ".\licenses\fmt-LICENSE"
-        Copy-Item -Path ".\vendor\imgui\imgui\LICENSE.txt"    -Destination ".\licenses\imgui-LICENSE.txt"
-        Copy-Item -Path ".\vendor\lz4\lz4\LICENSE"            -Destination ".\licenses\lz4-LICENSE"
-        Copy-Item -Path ".\vendor\mio\LICENSE"                -Destination ".\licenses\mio-LICENSE"
-        Copy-Item -Path ".\vendor\SDL\LICENSE.txt"            -Destination ".\licenses\SDL-LICENSE.txt"
-        Copy-Item -Path ".\vendor\tomlplusplus\LICENSE"       -Destination ".\licenses\tomlplusplus-LICENSE"
-        Copy-Item -Path ".\vendor\xxHash\xxHash\LICENSE"      -Destination ".\licenses\xxHash-LICENSE"
-        Copy-Item -Path ".\LICENSE"                           -Destination ".\licenses\Ymir-LICENSE"
-        Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
+      - name: Package Ymir artifact
+        run: |
+          md licenses
+          Copy-Item -Path ".\apps\ymir-sdl3\res\licenses\*"     -Destination ".\licenses\"  -Recurse
+          Copy-Item -Path ".\vendor\Catch2\LICENSE.txt"         -Destination ".\licenses\Catch2-LICENSE.txt"
+          Copy-Item -Path ".\vendor\cereal\LICENSE"             -Destination ".\licenses\cereal-LICENSE"
+          Copy-Item -Path ".\vendor\concurrentqueue\LICENSE.md" -Destination ".\licenses\concurrentqueue-LICENSE.md"
+          Copy-Item -Path ".\vendor\cxxopts\LICENSE"            -Destination ".\licenses\cxxopts-LICENSE"
+          Copy-Item -Path ".\vendor\fmt\LICENSE"                -Destination ".\licenses\fmt-LICENSE"
+          Copy-Item -Path ".\vendor\imgui\imgui\LICENSE.txt"    -Destination ".\licenses\imgui-LICENSE.txt"
+          Copy-Item -Path ".\vendor\lz4\lz4\LICENSE"            -Destination ".\licenses\lz4-LICENSE"
+          Copy-Item -Path ".\vendor\mio\LICENSE"                -Destination ".\licenses\mio-LICENSE"
+          Copy-Item -Path ".\vendor\SDL\LICENSE.txt"            -Destination ".\licenses\SDL-LICENSE.txt"
+          Copy-Item -Path ".\vendor\tomlplusplus\LICENSE"       -Destination ".\licenses\tomlplusplus-LICENSE"
+          Copy-Item -Path ".\vendor\xxHash\xxHash\LICENSE"      -Destination ".\licenses\xxHash-LICENSE"
+          Copy-Item -Path ".\LICENSE"                           -Destination ".\licenses\Ymir-LICENSE"
+          Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
 
-    - name: Upload Ymir artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ steps.strings.outputs.ymir-artifact-name }}
-        path: ${{ steps.strings.outputs.ymir-artifact-name }}.zip
-    
-    - name: Package ymdasm artifact
-      if: ${{ matrix.subsystem.name == 'Console' }}
-      run: |
-        Compress-Archive -Path "build/apps/ymdasm/ymdasm.exe" -DestinationPath "${{ steps.strings.outputs.ymdasm-artifact-name }}.zip"
+      - name: Upload Ymir artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.strings.outputs.ymir-artifact-name }}
+          path: ${{ steps.strings.outputs.ymir-artifact-name }}.zip
 
-    - name: Upload ymdasm artifact
-      if: ${{ matrix.subsystem.name == 'Console' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
-        path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.zip
+      - name: Package ymdasm artifact
+        if: ${{ matrix.subsystem.name == 'Console' }}
+        run: |
+          Compress-Archive -Path "build/apps/ymdasm/ymdasm.exe" -DestinationPath "${{ steps.strings.outputs.ymdasm-artifact-name }}.zip"
 
+      - name: Upload ymdasm artifact
+        if: ${{ matrix.subsystem.name == 'Console' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
+          path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.zip
 
   build-linux:
     name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
@@ -124,7 +123,7 @@ jobs:
         build_type: [Release]
         # Notes about compilers:
         # - GCC (gcc) gets stuck building sh2.cpp (didn't finish after 12+ hours)
-        c_compiler: [clang]  # [clang, gcc]
+        c_compiler: [clang] # [clang, gcc]
         x86_simd_ext:
           - name: "SSE2"
             enable_avx2_option: "OFF"
@@ -135,114 +134,198 @@ jobs:
             cpp_compiler: clang++
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        echo "ymir-artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-        echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+      - name: Set reusable strings
+        id: strings
+        shell: bash
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
-    - name: Install SDL3 Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install build-essential git make pkg-config \
-          cmake ninja-build gnome-desktop-testing \
-          libasound2-dev libpulse-dev libaudio-dev \
-          libjack-dev libsndio-dev libx11-dev \
-          libxext-dev libxrandr-dev libxcursor-dev \
-          libxfixes-dev libxi-dev libxss-dev \
-          libxtst-dev libxkbcommon-dev libdrm-dev \
-          libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev \
-          libudev-dev
+      - name: Install SDL3 Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install build-essential git make pkg-config \
+            cmake ninja-build gnome-desktop-testing \
+            libasound2-dev libpulse-dev libaudio-dev \
+            libjack-dev libsndio-dev libx11-dev \
+            libxext-dev libxrandr-dev libxcursor-dev \
+            libxfixes-dev libxi-dev libxss-dev \
+            libxtst-dev libxkbcommon-dev libdrm-dev \
+            libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+            libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev \
+            libudev-dev
 
-    - name: Configure CMake
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DBUILD_SHARED_LIBS=OFF
-        -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
-        -DYmir_ENABLE_IPO=ON
-        -DYmir_ENABLE_DEVLOG=OFF
-        -DYmir_ENABLE_IMGUI_DEMO=OFF
-        -DYmir_ENABLE_SANDBOX=OFF
-        -DYmir_ENABLE_YMDASM=ON
-        -S ${{ github.workspace }}
-        -G Ninja
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ steps.strings.outputs.build-output-dir }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DBUILD_SHARED_LIBS=OFF
+          -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
+          -DYmir_ENABLE_IPO=ON
+          -DYmir_ENABLE_DEVLOG=OFF
+          -DYmir_ENABLE_IMGUI_DEMO=OFF
+          -DYmir_ENABLE_SANDBOX=OFF
+          -DYmir_ENABLE_YMDASM=ON
+          -S ${{ github.workspace }}
+          -G Ninja
 
-    - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
+      - name: Build
+        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }} --parallel
 
-    ## FIXME: Catch2 integration still isn't working
-    #- name: Test
-    #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
-    #  run: ctest --build-config ${{ matrix.build_type }}
+      ## FIXME: Catch2 integration still isn't working
+      #- name: Test
+      #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      #  run: ctest --build-config ${{ matrix.build_type }}
 
-    - name: Package artifacts
-      run: |
-        mkdir licenses
-        cp -Rf apps/ymir-sdl3/res/licenses/* ./licenses/
-        cp -f vendor/Catch2/LICENSE.txt licenses/Catch2-LICENSE.txt
-        cp -f vendor/cereal/LICENSE licenses/cereal-LICENSE
-        cp -f vendor/concurrentqueue/LICENSE.md licenses/concurrentqueue-LICENSE.md
-        cp -f vendor/cxxopts/LICENSE licenses/cxxopts-LICENSE
-        cp -f vendor/fmt/LICENSE licenses/fmt-LICENSE
-        cp -f vendor/imgui/imgui/LICENSE.txt licenses/imgui-LICENSE.txt
-        cp -f vendor/lz4/lz4/LICENSE licenses/lz4-LICENSE
-        cp -f vendor/mio/LICENSE licenses/mio-LICENSE
-        cp -f vendor/SDL/LICENSE.txt licenses/SDL-LICENSE.txt
-        cp -f vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
-        cp -f vendor/xxHash/xxHash/LICENSE licenses/xxHash-LICENSE
-        cp -f LICENSE licenses/Ymir-LICENSE
-        tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
-        tar cJvfh ${{ steps.strings.outputs.ymdasm-artifact-name }}.tar.xz -C build/apps/ymdasm ymdasm
+      - name: Package artifacts
+        run: |
+          mkdir licenses
+          cp -Rf apps/ymir-sdl3/res/licenses/* ./licenses/
+          cp -f vendor/Catch2/LICENSE.txt licenses/Catch2-LICENSE.txt
+          cp -f vendor/cereal/LICENSE licenses/cereal-LICENSE
+          cp -f vendor/concurrentqueue/LICENSE.md licenses/concurrentqueue-LICENSE.md
+          cp -f vendor/cxxopts/LICENSE licenses/cxxopts-LICENSE
+          cp -f vendor/fmt/LICENSE licenses/fmt-LICENSE
+          cp -f vendor/imgui/imgui/LICENSE.txt licenses/imgui-LICENSE.txt
+          cp -f vendor/lz4/lz4/LICENSE licenses/lz4-LICENSE
+          cp -f vendor/mio/LICENSE licenses/mio-LICENSE
+          cp -f vendor/SDL/LICENSE.txt licenses/SDL-LICENSE.txt
+          cp -f vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
+          cp -f vendor/xxHash/xxHash/LICENSE licenses/xxHash-LICENSE
+          cp -f LICENSE licenses/Ymir-LICENSE
+          tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
+          tar cJvfh ${{ steps.strings.outputs.ymdasm-artifact-name }}.tar.xz -C build/apps/ymdasm ymdasm
 
-    - name: Upload Ymir artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ steps.strings.outputs.ymir-artifact-name }}
-        path: ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz
+      - name: Upload Ymir artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.strings.outputs.ymir-artifact-name }}
+          path: ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz
 
-    - name: Upload ymdasm artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
-        path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.tar.xz
+      - name: Upload ymdasm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
+          path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.tar.xz
+
+  build-macos:
+    name: macos-${{ matrix.arch.isa_name }}
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        build_type: [Release]
+        arch:
+          - name: "arm64"
+            isa_name: "a64"
+          - name: "x86_64"
+            isa_name: "x64"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set reusable strings
+        id: strings
+        shell: bash
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-macos-${{ matrix.arch.isa_name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-macos-${{ matrix.arch.isa_name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure CMake
+        run: >
+          cmake -B ${{ steps.strings.outputs.build-output-dir }}
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DBUILD_SHARED_LIBS=OFF
+          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch.name }}
+          -DYmir_ENABLE_IPO=ON
+          -DYmir_ENABLE_DEVLOG=OFF
+          -DYmir_ENABLE_IMGUI_DEMO=OFF
+          -DYmir_ENABLE_SANDBOX=OFF
+          -DYmir_ENABLE_YMDASM=ON
+          -S ${{ github.workspace }}
+          -G Ninja
+
+      - name: Build
+        run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel
+
+      ## FIXME: Catch2 integration still isn't working
+      #- name: Test
+      #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      #  run: ctest --build-config ${{ matrix.build_type }}
+
+      - name: Package artifacts
+        run: |
+          mkdir licenses
+          cp -Rf apps/ymir-sdl3/res/licenses/* ./licenses/
+          cp -f vendor/Catch2/LICENSE.txt licenses/Catch2-LICENSE.txt
+          cp -f vendor/cereal/LICENSE licenses/cereal-LICENSE
+          cp -f vendor/concurrentqueue/LICENSE.md licenses/concurrentqueue-LICENSE.md
+          cp -f vendor/cxxopts/LICENSE licenses/cxxopts-LICENSE
+          cp -f vendor/fmt/LICENSE licenses/fmt-LICENSE
+          cp -f vendor/imgui/imgui/LICENSE.txt licenses/imgui-LICENSE.txt
+          cp -f vendor/lz4/lz4/LICENSE licenses/lz4-LICENSE
+          cp -f vendor/mio/LICENSE licenses/mio-LICENSE
+          cp -f vendor/SDL/LICENSE.txt licenses/SDL-LICENSE.txt
+          cp -f vendor/tomlplusplus/LICENSE licenses/tomlplusplus-LICENSE
+          cp -f vendor/xxHash/xxHash/LICENSE licenses/xxHash-LICENSE
+          cp -f LICENSE licenses/Ymir-LICENSE
+          zip -r ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip licenses
+          cd ${{ github.workspace }}/build/apps/ymir-sdl3/
+          zip ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip ymir-sdl3
+          cd ${{ github.workspace }}/build/apps/ymdasm/
+          zip ${{ github.workspace }}/${{ steps.strings.outputs.ymdasm-artifact-name }}.zip ymdasm
+
+      - name: Upload Ymir artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.strings.outputs.ymir-artifact-name }}
+          path: ${{ steps.strings.outputs.ymir-artifact-name }}.zip
+
+      - name: Upload ymdasm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.strings.outputs.ymdasm-artifact-name }}
+          path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.zip
 
   release:
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag'
-    needs: [build-windows, build-linux]
+    needs: [build-windows, build-linux, build-macos]
 
     permissions:
       contents: write
 
     steps:
-    - name: Download Ymir artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: ymir
-        pattern: ymir-*
-        merge-multiple: true
+      - name: Download Ymir artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ymir
+          pattern: ymir-*
+          merge-multiple: true
 
-    - name: Download ymdasm artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: ymdasm
-        pattern: ymdasm-*
-        merge-multiple: true
+      - name: Download ymdasm artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ymdasm
+          pattern: ymdasm-*
+          merge-multiple: true
 
-    - name: Release
-      uses: softprops/action-gh-release@v2
-      with:
-        draft: true
-        files: |
-          ymir/*
-          ymdasm/*
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            ymir/*
+            ymdasm/*
