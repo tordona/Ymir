@@ -684,16 +684,15 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         return;
     }
 
-    sint32 modulation = 0;
+    slot.modulation = 0;
     if (slot.modLevel >= 5) {
         const sint16 xd = m_soundStack[(m_soundStackIndex - 1 + slot.modXSelect) & 63];
         const sint16 yd = m_soundStack[(m_soundStackIndex - 1 + slot.modYSelect) & 63];
-        const sint32 zd = (xd + yd) / 2;
-        modulation = (zd << 5) >> (20 - slot.modLevel);
+        const sint32 zd = (xd + yd) & 0x3FFFFE;
+        slot.modulation = (zd << 5) >> (16 - slot.modLevel);
     }
 
     slot.IncrementSampleCounter();
-    slot.IncrementAddress(modulation);
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
@@ -711,13 +710,16 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
         mask &= (slot.loopEndAddress & 0x400) - 1;
     }
 
-    // TODO: check behavior on loop boundaries
     switch (slot.soundSource) {
     case Slot::SoundSource::SoundRAM: //
     {
-        const sint32 inc = slot.reverse ? -1 : +1;
-        const sint32 addrInc1 = (slot.addressInc + 0) & 0xFFFF & mask;
-        const sint32 addrInc2 = (slot.addressInc + (slot.reverse ? -1 : +1)) & 0xFFFF & mask;
+        const uint16 currSmp = slot.reverse ? ~slot.currSample : slot.currSample;
+        const sint32 currPhase = slot.reverse ? ~slot.currPhase : slot.currPhase;
+        const uint16 nextSmp = currSmp + 1;
+        const sint32 modInt = bit::sign_extend<11>(slot.modulation >> 5);
+        const sint32 phase = ((currPhase >> 8) & 0x3F) + ((slot.modulation & 0x1F) << 1);
+        const sint32 addrInc1 = (currSmp + modInt + (phase >> 6)) & mask;
+        const sint32 addrInc2 = (nextSmp + modInt + (phase >> 6)) & mask;
         if (slot.pcm8Bit) {
             const uint32 address1 = slot.startAddress + addrInc1 * sizeof(uint8);
             const uint32 address2 = slot.startAddress + addrInc2 * sizeof(uint8);
@@ -748,9 +750,13 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
     if (slot.soundSource == Slot::SoundSource::SoundRAM) {
         switch (m_interpMode) {
         case core::config::audio::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
-        case core::config::audio::SampleInterpolationMode::Linear:
-            slot.output = slot.sample1 + (slot.sample2 - slot.sample1) * ((slot.currPhase >> 8u) & 0x3F) / 0x40;
+        case core::config::audio::SampleInterpolationMode::Linear: //
+        {
+            const sint32 currPhase = slot.reverse ? ~slot.currPhase : slot.currPhase;
+            const sint32 phase = ((currPhase >> 8) & 0x3F) + ((slot.modulation & 0x1F) << 1);
+            slot.output = slot.sample1 + (((slot.sample2 - slot.sample1) * (phase & 0x3F)) >> 6);
             break;
+        }
         }
     } else {
         slot.output = slot.sample1;

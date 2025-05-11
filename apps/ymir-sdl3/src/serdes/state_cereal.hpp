@@ -385,7 +385,6 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
     if (version < 4) {
         uint32 currAddress{};
         ar(currAddress);
-        s.addressInc = currAddress - s.SA;
     }
     ar(s.currSample, s.currPhase);
     if (version < 3) {
@@ -395,7 +394,9 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
         ar(s.nextPhase);
     }
     if (version >= 4) {
-        ar(s.addressInc);
+        ar(s.modulation);
+    } else {
+        s.modulation = 0;
     }
     ar(s.reverse, s.crossedLoopStart);
     ar(s.lfoCycles, s.lfoStep);

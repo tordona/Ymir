@@ -73,7 +73,7 @@ void Slot::Reset() {
     currSample = 0;
     currPhase = 0;
     nextPhase = 0;
-    addressInc = 0;
+    modulation = 0;
     reverse = false;
     crossedLoopStart = false;
 
@@ -109,7 +109,7 @@ bool Slot::TriggerKey() {
             sampleCount = 0;
             currSample = 0;
             nextPhase = 0;
-            addressInc = 0;
+            modulation = 0;
             reverse = false;
             crossedLoopStart = false;
 
@@ -591,7 +591,7 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     state.currSample = currSample;
     state.currPhase = currPhase;
     state.nextPhase = nextPhase;
-    state.addressInc = addressInc;
+    state.modulation = modulation;
     state.reverse = reverse;
     state.crossedLoopStart = crossedLoopStart;
 
@@ -741,7 +741,7 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     currSample = state.currSample;
     currPhase = state.currPhase;
     nextPhase = state.nextPhase;
-    addressInc = state.addressInc;
+    modulation = state.modulation;
     reverse = state.reverse;
     crossedLoopStart = state.crossedLoopStart;
 
@@ -804,11 +804,7 @@ void Slot::IncrementPhase(sint32 pitchLFO) {
 }
 
 void Slot::IncrementSampleCounter() {
-    if (reverse) {
-        currSample -= currPhase >> 14u;
-    } else {
-        currSample += currPhase >> 14u;
-    }
+    currSample += currPhase >> 14u;
 
     if (!crossedLoopStart) {
         const uint16 nextSample = currSample + 1;
@@ -823,7 +819,7 @@ void Slot::IncrementSampleCounter() {
             }
         }
     } else {
-        const uint16 nextSample = static_cast<uint16>((reverse ? ~currSample : currSample) + 1);
+        const uint16 nextSample = (reverse ? ~currSample : currSample) + 1;
         const uint16 loopPoint = reverse ? loopStartAddress : loopEndAddress;
         const bool crossedLoop = nextSample > loopPoint;
 
@@ -843,10 +839,6 @@ void Slot::IncrementSampleCounter() {
             }
         }
     }
-}
-
-void Slot::IncrementAddress(sint32 modulation) {
-    addressInc = currSample + modulation;
 }
 
 } // namespace ymir::scsp

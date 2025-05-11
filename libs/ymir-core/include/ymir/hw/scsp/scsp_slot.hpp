@@ -280,7 +280,7 @@ struct Slot {
     uint32 currSample;
     uint32 currPhase;
     uint32 nextPhase;
-    uint16 addressInc;
+    sint32 modulation;
     bool reverse;
     bool crossedLoopStart;
 
@@ -302,7 +302,6 @@ struct Slot {
 
     void IncrementPhase(sint32 pitchLFO);
     void IncrementSampleCounter();
-    void IncrementAddress(sint32 modulation);
 };
 
 } // namespace ymir::scsp

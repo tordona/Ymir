@@ -10,7 +10,7 @@ namespace ymir::state {
 // v4:
 // - New fields
 //   - MM = bit 15 of extra10 if available, otherwise false
-//   - addressInc = currAddress - SA
+//   - modulation = 0
 // - Removed fields
 //   - uint16 extra10
 //   - uint32 currAddress
@@ -95,7 +95,7 @@ struct SCSPSlotState {
     uint32 currSample;
     uint32 currPhase;
     uint32 nextPhase;
-    uint16 addressInc;
+    sint32 modulation;
     bool reverse;
     bool crossedLoopStart;
 
