@@ -684,14 +684,6 @@ FORCE_INLINE void SCSP::SlotProcessStep2(Slot &slot) {
         return;
     }
 
-    slot.modulation = 0;
-    if (slot.modLevel >= 5) {
-        const sint16 xd = m_soundStack[(m_soundStackIndex - 1 + slot.modXSelect) & 63];
-        const sint16 yd = m_soundStack[(m_soundStackIndex - 1 + slot.modYSelect) & 63];
-        const sint32 zd = (xd + yd) & 0x3FFFFE;
-        slot.modulation = (zd << 5) >> (16 - slot.modLevel);
-    }
-
     slot.IncrementSampleCounter();
 }
 
@@ -700,6 +692,14 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
 
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         return;
+    }
+
+    slot.modulation = 0;
+    if (slot.modLevel >= 5) {
+        const sint16 xd = m_soundStack[(m_soundStackIndex - 2 + slot.modXSelect) & 63];
+        const sint16 yd = m_soundStack[(m_soundStackIndex - 2 + slot.modYSelect) & 63];
+        const sint32 zd = (xd + yd) & 0x3FFFFE;
+        slot.modulation = bit::sign_extend<16>((zd << 5) >> (16 - slot.modLevel));
     }
 
     uint32 mask = ~0u;
