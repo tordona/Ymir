@@ -665,7 +665,7 @@ struct LineBackScreenParams {
         perLine = false;
         baseAddress = 0;
         colorCalcEnable = false;
-        colorCalcRatio = 31;
+        colorCalcRatio = 0;
         shadowEnable = false;
     }
 

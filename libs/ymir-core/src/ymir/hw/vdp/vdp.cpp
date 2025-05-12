@@ -3407,7 +3407,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 case PriorityLessThanOrEqual: return pixel.priority <= spriteParams.colorCalcValue;
                 case PriorityEqual: return pixel.priority == spriteParams.colorCalcValue;
                 case PriorityGreaterThanOrEqual: return pixel.priority >= spriteParams.colorCalcValue;
-                case MsbEqualsOne: return pixel.color.msb != 0;
+                case MsbEqualsOne: return pixel.color.msb == 1;
                 default: util::unreachable();
                 }
             } else if (layer == LYR_Back) {
