@@ -1,37 +1,37 @@
 [submodule "vendor/fmt"]
 	path = vendor/fmt
-	url = git@github.com:fmtlib/fmt.git
+	url = https://github.com/fmtlib/fmt.git
 [submodule "vendor/SDL"]
 	path = vendor/SDL
-	url = git@github.com:libsdl-org/SDL.git
+	url = https://github.com/libsdl-org/SDL.git
 [submodule "vendor/mio"]
 	path = vendor/mio
-	url = git@github.com:StrikerX3/mio.git
+	url = https://github.com/StrikerX3/mio.git
 [submodule "vendor/cxxopts"]
 	path = vendor/cxxopts
-	url = git@github.com:jarro2783/cxxopts.git
+	url = https://github.com/jarro2783/cxxopts.git
 [submodule "vendor/Catch2"]
 	path = vendor/Catch2
-	url = git@github.com:catchorg/Catch2.git
+	url = https://github.com/catchorg/Catch2.git
 [submodule "vendor/concurrentqueue"]
 	path = vendor/concurrentqueue
-	url = git@github.com:cameron314/concurrentqueue.git
+	url = https://github.com/cameron314/concurrentqueue.git
 [submodule "vendor/imgui/imgui"]
 	path = vendor/imgui/imgui
-	url = git@github.com:ocornut/imgui.git
+	url = https://github.com/ocornut/imgui.git
 	branch = docking
 [submodule "vendor/tomlplusplus"]
 	path = vendor/tomlplusplus
-	url = git@github.com:marzer/tomlplusplus.git
+	url = https://github.com/marzer/tomlplusplus.git
 [submodule "vendor/xxHash/xxHash"]
 	path = vendor/xxHash/xxHash
 	url = https://github.com/Cyan4973/xxHash
 [submodule "vendor/cereal"]
 	path = vendor/cereal
-	url = git@github.com:USCiLab/cereal.git
+	url = https://github.com/USCiLab/cereal.git
 [submodule "vendor/lz4/lz4"]
 	path = vendor/lz4/lz4
-	url = git@github.com:lz4/lz4.git
+	url = https://github.com/lz4/lz4.git
 [submodule "vendor/stb/stb"]
 	path = vendor/stb/stb
-	url = git@github.com:nothings/stb.git
+	url = https://github.com/nothings/stb.git
