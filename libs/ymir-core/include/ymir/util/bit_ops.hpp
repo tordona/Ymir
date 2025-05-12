@@ -7,6 +7,8 @@
 
 #include "inline.hpp"
 
+#include <ymir/core/types.hpp>
+
 #include <array>
 #include <bit>
 #include <climits>
@@ -249,6 +251,23 @@ template <std::unsigned_integral T>
 [[nodiscard]] FORCE_INLINE constexpr T byte_swap(T value) noexcept {
     return detail::byte_swap_impl<T>(value, std::make_index_sequence<sizeof(T)>{});
 }
+
+#if defined(__clang__) || defined(__GNUC__)
+template <>
+[[nodiscard]] FORCE_INLINE constexpr uint64 byte_swap<uint64>(uint64 value) noexcept {
+    return __builtin_bswap64(value);
+}
+
+template <>
+[[nodiscard]] FORCE_INLINE constexpr uint32 byte_swap<uint32>(uint32 value) noexcept {
+    return __builtin_bswap32(value);
+}
+
+template <>
+[[nodiscard]] FORCE_INLINE constexpr uint16 byte_swap<uint16>(uint16 value) noexcept {
+    return __builtin_bswap16(value);
+}
+#endif
 
 /// @brief Swaps the bytes of `value` if `endianness` doesn't match the native endianness.
 ///
