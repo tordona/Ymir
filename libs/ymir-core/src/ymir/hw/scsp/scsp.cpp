@@ -713,13 +713,21 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
     switch (slot.soundSource) {
     case Slot::SoundSource::SoundRAM: //
     {
+        auto &nextSlot = m_slots[(slot.index + 1) & 0x1F];
+
         const uint16 currSmp = slot.reverse ? ~slot.currSample : slot.currSample;
-        const sint32 currPhase = slot.reverse ? ~slot.currPhase : slot.currPhase;
         const uint16 nextSmp = currSmp + 1;
+
+        const sint32 thisSlotPhase = slot.reverse ? ~slot.currPhase : slot.currPhase;
+        const sint32 thisSlotModPhase = ((thisSlotPhase >> 8) & 0x3F) + ((slot.modulation & 0x1F) << 1);
+        const sint32 nextSlotPhase = nextSlot.reverse ? ~nextSlot.currPhase : nextSlot.currPhase;
+        const sint32 nextSlotModPhase = ((nextSlotPhase >> 8) & 0x3F) + ((slot.modulation & 0x1F) << 1);
+
         const sint32 modInt = bit::sign_extend<11>(slot.modulation >> 5);
-        const sint32 phase = ((currPhase >> 8) & 0x3F) + ((slot.modulation & 0x1F) << 1);
-        const sint32 addrInc1 = bit::sign_extend<17>((currSmp + modInt + (phase >> 6)) & mask);
-        const sint32 addrInc2 = bit::sign_extend<17>((nextSmp + modInt + (phase >> 6)) & mask);
+
+        const sint32 addrInc1 = bit::sign_extend<17>((currSmp + modInt + (thisSlotModPhase >> 6)) & mask);
+        const sint32 addrInc2 = bit::sign_extend<17>((nextSmp + modInt + (nextSlotModPhase >> 6)) & mask);
+
         if (slot.pcm8Bit) {
             const uint32 address1 = slot.startAddress + addrInc1 * sizeof(uint8);
             const uint32 address2 = slot.startAddress + addrInc2 * sizeof(uint8);
