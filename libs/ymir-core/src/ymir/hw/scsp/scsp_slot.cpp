@@ -797,6 +797,10 @@ void Slot::IncrementLFO() {
 }
 
 void Slot::IncrementPhase(sint32 pitchLFO) {
+    if (!active) {
+        currPhase = 0;
+        return;
+    }
     currPhase = nextPhase;
     // NOTE: freqNumSwitch already has ^ 0x400u
     const uint32 phaseInc = ((freqNumSwitch + pitchLFO) << (octave ^ 8u)) >> 4u;
@@ -828,7 +832,11 @@ void Slot::IncrementSampleCounter() {
 
         if (reverse != crossedLoop) {
             switch (loopControl) {
-            case LoopControl::Off: active = false; break;
+            case LoopControl::Off:
+                active = false;
+                reverse = false;
+                crossedLoopStart = false;
+                break;
             case LoopControl::Normal:
                 if (reverse) {
                     currSample += loopEndAddress - loopStartAddress;
