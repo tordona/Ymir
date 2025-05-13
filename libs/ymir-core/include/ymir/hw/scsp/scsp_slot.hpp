@@ -276,6 +276,8 @@ struct Slot {
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
     uint16 egLevel;
 
+    bool egAttackBug; // Is the EG stuck in attack phase?
+
     uint32 sampleCount;
     uint32 currSample;
     uint32 currPhase;
@@ -295,6 +297,8 @@ struct Slot {
 
     uint32 CalcEffectiveRate(uint8 rate) const;
 
+    void CheckAttackBug();
+
     uint8 GetCurrentEGRate() const;
     uint16 GetEGLevel() const;
 
@@ -302,6 +306,7 @@ struct Slot {
 
     void IncrementPhase(sint32 pitchLFO);
     void IncrementSampleCounter();
+    void IncrementEG(uint64 sampleCounter);
 };
 
 } // namespace ymir::scsp

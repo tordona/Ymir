@@ -324,7 +324,12 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     ar(s.SOUS, s.soundStackIndex);
     ar(s.dsp);
     ar(s.m68kCycles, s.sampleCycles, s.sampleCounter);
-    ar(s.egCycle, s.egStep);
+    if (version < 4) {
+        uint16 egCycle{};
+        ar(egCycle);
+        bool egStep{};
+        ar(egStep);
+    }
     ar(s.lfsr);
 }
 
@@ -381,6 +386,11 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
     ar(s.active);
     ar(s.egState);
     ar(s.egLevel);
+    if (version >= 4) {
+        ar(s.egAttackBug);
+    } else {
+        s.egAttackBug = false;
+    }
     ar(s.sampleCount);
     if (version < 4) {
         uint32 currAddress{};

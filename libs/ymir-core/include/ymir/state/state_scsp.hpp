@@ -15,6 +15,10 @@ namespace ymir::state {
 
 // Version history:
 // v3:
+// - Removed fields
+//   - uint16 egCycle
+//   - bool egStep
+// v3:
 // - New fields
 //   - KYONEX = false
 
@@ -62,9 +66,6 @@ struct SCSPState {
     uint64 m68kCycles;
     uint64 sampleCycles;
     uint64 sampleCounter;
-
-    uint16 egCycle;
-    bool egStep;
 
     uint32 lfsr;
 };

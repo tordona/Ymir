@@ -11,6 +11,7 @@ namespace ymir::state {
 // - New fields
 //   - MM = bit 15 of extra10 if available, otherwise false
 //   - modulation = 0
+//   - egAttackBug = false
 // - Removed fields
 //   - uint16 extra10
 //   - uint32 currAddress
@@ -90,6 +91,8 @@ struct SCSPSlotState {
     EGState egState;
 
     uint16 egLevel;
+
+    bool egAttackBug;
 
     uint32 sampleCount;
     uint32 currSample;
