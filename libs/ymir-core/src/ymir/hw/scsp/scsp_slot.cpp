@@ -824,9 +824,6 @@ void Slot::IncrementSampleCounter() {
                 currSample -= loopStartAddress + loopEndAddress;
                 reverse = true;
             }
-            if (loopStartLink && egState == EGState::Attack) {
-                egState = EGState::Decay1;
-            }
         }
     } else {
         const uint16 nextSample = (reverse ? ~currSample : currSample) + 1;
@@ -933,24 +930,24 @@ void Slot::IncrementEG(uint64 sampleCounter) {
     }
 
     switch (egState) {
-    case Slot::EGState::Attack:
+    case EGState::Attack:
         if (!egAttackBug) {
             const uint32 currLevel = egLevel;
             if (inc > 0 && egLevel > 0 && currRate > 0) {
                 egLevel += static_cast<sint32>(~currLevel * inc) >> 4;
             }
-            if (currLevel == 0 && !loopStartLink) {
-                egState = Slot::EGState::Decay1;
+            if (loopStartLink ? crossedLoopStart : currLevel == 0) {
+                egState = EGState::Decay1;
             }
         }
         break;
-    case Slot::EGState::Decay1:
+    case EGState::Decay1:
         if ((egLevel >> 5u) == decayLevel) {
-            egState = Slot::EGState::Decay2;
+            egState = EGState::Decay2;
         }
         [[fallthrough]];
-    case Slot::EGState::Decay2: [[fallthrough]];
-    case Slot::EGState::Release:
+    case EGState::Decay2: [[fallthrough]];
+    case EGState::Release:
         if (currRate > 0) {
             egLevel = std::min<uint16>(egLevel + inc, 0x3FF);
             if (egLevel == 0x3FF) {
