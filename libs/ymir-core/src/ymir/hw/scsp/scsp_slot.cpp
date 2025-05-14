@@ -922,10 +922,6 @@ void Slot::IncrementEG(uint64 sampleCounter) {
     };
 
     const uint8 currRate = GetCurrentEGRate();
-    if (currRate == 0) {
-        return;
-    }
-
     const uint32 rate = CalcEffectiveRate(currRate);
     const uint32 shift = kCounterShiftTable[rate];
     const uint32 egCycle = sampleCounter >> 1;
@@ -940,7 +936,7 @@ void Slot::IncrementEG(uint64 sampleCounter) {
     case Slot::EGState::Attack:
         if (!egAttackBug) {
             const uint32 currLevel = egLevel;
-            if (inc > 0 && egLevel > 0) {
+            if (inc > 0 && egLevel > 0 && currRate > 0) {
                 egLevel += static_cast<sint32>(~currLevel * inc) >> 4;
             }
             if (currLevel == 0 && !loopStartLink) {
@@ -955,10 +951,13 @@ void Slot::IncrementEG(uint64 sampleCounter) {
         [[fallthrough]];
     case Slot::EGState::Decay2: [[fallthrough]];
     case Slot::EGState::Release:
-        egLevel = std::min<uint16>(egLevel + inc, 0x3FF);
-        if (egLevel == 0x3FF) {
-            active = false;
+        if (currRate > 0) {
+            egLevel = std::min<uint16>(egLevel + inc, 0x3FF);
+            if (egLevel == 0x3FF) {
+                active = false;
+            }
         }
+        break;
     }
 }
 
