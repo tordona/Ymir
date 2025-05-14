@@ -1,5 +1,6 @@
 #include <ymir/hw/scsp/scsp_slot.hpp>
 
+#include <ymir/util/bit_ops.hpp>
 #include <ymir/util/data_ops.hpp>
 
 #include <algorithm>

@@ -4,6 +4,7 @@
 #include <ymir/util/data_ops.hpp>
 #include <ymir/util/inline.hpp>
 
+#include <algorithm>
 #include <bit>
 
 namespace ymir::scsp {
