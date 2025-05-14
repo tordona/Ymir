@@ -79,17 +79,14 @@ void DSP::Reset() {
 
 void DSP::UpdateProgramLength(uint8 writeIndex) {
     const bool wroteNOP = program[writeIndex].u64 == 0;
-    bool updated = false;
     if (wroteNOP && writeIndex == m_programLength - 1) {
-        // If writing a NOP to the last instruction, shrink the program and recalculate
+        // If writing a NOP to the last instruction, shrink the program
         while (m_programLength > 0 && program[m_programLength - 1].u64 == 0) {
             --m_programLength;
         }
-        updated = true;
     } else if (!wroteNOP && writeIndex >= m_programLength) {
         // If writing anything other than a NOP past the current program length, increase program length
         m_programLength = writeIndex + 1;
-        updated = true;
     }
 }
 

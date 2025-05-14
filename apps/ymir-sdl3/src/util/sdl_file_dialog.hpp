@@ -92,7 +92,6 @@ void WrapMultiSelectionCallback(void *userdata, const char *const *filelist, int
     } else {
         std::vector<std::filesystem::path> files{};
         while (*filelist != nullptr) {
-            const char *file = *filelist;
             std::string fileStr = *filelist;
             const std::u8string u8File{fileStr.begin(), fileStr.end()};
             files.push_back(u8File);

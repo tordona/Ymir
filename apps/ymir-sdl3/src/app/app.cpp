@@ -471,8 +471,8 @@ void App::RunEmulator() {
             static constexpr double kNTSCFrameInterval = sys::kNTSCClocksPerFrame / sys::kNTSCClock;
             static constexpr double kPALFrameInterval = sys::kPALClocksPerFrame / sys::kPALClock;
 
-            static constexpr double kNTSCFrameRate = 1.0 / kNTSCFrameInterval;
-            static constexpr double kPALFrameRate = 1.0 / kPALFrameInterval;
+            // static constexpr double kNTSCFrameRate = 1.0 / kNTSCFrameInterval;
+            // static constexpr double kPALFrameRate = 1.0 / kPALFrameInterval;
 
             if (standard == core::config::sys::VideoStandard::PAL) {
                 screen.frameInterval =
