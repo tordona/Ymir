@@ -295,6 +295,8 @@ struct Slot {
     sint16 sample2;
     sint16 output;
 
+    sint32 finalLevel;
+
     uint32 CalcEffectiveRate(uint8 rate) const;
 
     void CheckAttackBug();

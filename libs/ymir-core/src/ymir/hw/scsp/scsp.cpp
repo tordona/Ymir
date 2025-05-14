@@ -803,8 +803,8 @@ FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
     if (!slot.soundDirect) {
         const sint32 envLevel = slot.GetEGLevel();
         const sint32 totalLevel = slot.totalLevel << 2u;
-        const sint32 level = std::min<sint32>(slot.alfoOutput + envLevel + totalLevel, 0x3FF);
-        slot.output = (slot.output * ((level & 0x3F) ^ 0x7F)) >> ((level >> 6) + 7);
+        slot.finalLevel = std::min<sint32>(slot.alfoOutput + envLevel + totalLevel, 0x3FF);
+        slot.output = (slot.output * ((slot.finalLevel & 0x3F) ^ 0x7F)) >> ((slot.finalLevel >> 6) + 7);
     }
 
     // Advance envelope generator

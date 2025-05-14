@@ -416,6 +416,11 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
         s.alfoOutput = 0;
     }
     ar(s.sample1, s.sample2, s.output);
+    if (version >= 4) {
+        ar(s.finalLevel);
+    } else {
+        s.finalLevel = 0;
+    }
 }
 
 template <class Archive>

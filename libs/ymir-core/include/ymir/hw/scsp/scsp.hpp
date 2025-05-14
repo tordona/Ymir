@@ -618,7 +618,7 @@ private:
     uint16 ReadSlotStatus() const {
         uint16 value = 0;
         const Slot &slot = m_slots[m_monitorSlotCall];
-        bit::deposit_into<0, 4>(value, slot.egLevel >> 5u);
+        bit::deposit_into<0, 4>(value, slot.finalLevel >> 5u);
         bit::deposit_into<5, 6>(value, static_cast<uint8>(slot.egState));
         bit::deposit_into<7, 10>(value, slot.currSample >> 12u);
         if constexpr (peek) {
