@@ -951,7 +951,7 @@ void Slot::IncrementEG(uint64 sampleCounter) {
         break;
     }
 
-    if (currLevel >= 0x3C0) {
+    if (currLevel >= 0x3C0 && !egBypass) {
         active = false;
         reverse = false;
         crossedLoopStart = false;

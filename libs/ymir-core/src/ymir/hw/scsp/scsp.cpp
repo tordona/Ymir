@@ -794,7 +794,7 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
-    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active && !slot.egBypass) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
         slot.output = slot.sampleXOR;
     } else if (!slot.soundDirect) {
         const sint32 envLevel = slot.GetEGLevel();
