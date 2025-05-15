@@ -70,6 +70,8 @@ struct WatchdogTimer {
     // addr r/w  access   init      code    name
     // 080  R    8        18        WTCSR   Watchdog Timer Control/Status Register
     // 080  W    8        18        WTCSR   Watchdog Timer Control/Status Register
+    // 088  R    8        18        WTCSR   Watchdog Timer Control/Status Register
+    // 088  W    8        18        WTCSR   Watchdog Timer Control/Status Register
     //
     //   bits   r/w  code     description
     //      7   R/W  OVF      Overflow Flag
@@ -130,6 +132,8 @@ struct WatchdogTimer {
 
     // 081  R    8        00        WTCNT   Watchdog Timer Counter
     // 080  W    8        00        WTCNT   Watchdog Timer Counter
+    // 089  R    8        00        WTCNT   Watchdog Timer Counter
+    // 088  W    8        00        WTCNT   Watchdog Timer Counter
     //
     //   bits   r/w  code     description
     //    7-0   R/W  WTCNT    Watchdog timer counter
@@ -145,6 +149,8 @@ struct WatchdogTimer {
 
     // 083  R    8        1F        RSTCSR  Reset Control/Status Register
     // 082  W    8        1F        RSTCSR  Reset Control/Status Register
+    // 08B  R    8        1F        RSTCSR  Reset Control/Status Register
+    // 08A  W    8        1F        RSTCSR  Reset Control/Status Register
     //
     //   bits   r/w  code     description
     //      7   R/W  WOVF     Watchdog Timer Overflow Flag

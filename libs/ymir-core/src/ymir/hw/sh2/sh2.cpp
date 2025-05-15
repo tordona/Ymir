@@ -947,6 +947,9 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         case 0x80: WDT.WriteWTCSR<poke>(value); break;
         case 0x81: WDT.WriteWTCNT(value); break;
         case 0x83: WDT.WriteRSTCSR<poke>(value); break;
+        case 0x88: WDT.WriteWTCSR<poke>(value); break;
+        case 0x89: WDT.WriteWTCNT(value); break;
+        case 0x8B: WDT.WriteRSTCSR<poke>(value); break;
 
         case 0x93: m_cache.WriteCCR<poke>(value); break;
         case 0x94: m_cache.WriteCCR<poke>(value); break;
@@ -1083,6 +1086,21 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
         }
         break;
     case 0x82:
+        if ((value >> 8u) == 0x5A) {
+            WDT.WriteRSTE_RSTS(value);
+        } else if ((value >> 8u) == 0xA5) {
+            WDT.WriteWOVF<poke>(value);
+        }
+        break;
+
+    case 0x88:
+        if ((value >> 8u) == 0x5A) {
+            WDT.WriteWTCNT(value);
+        } else if ((value >> 8u) == 0xA5) {
+            WDT.WriteWTCSR<poke>(value);
+        }
+        break;
+    case 0x8A:
         if ((value >> 8u) == 0x5A) {
             WDT.WriteRSTE_RSTS(value);
         } else if ((value >> 8u) == 0xA5) {
