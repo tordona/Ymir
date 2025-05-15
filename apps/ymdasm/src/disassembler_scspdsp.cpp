@@ -290,9 +290,9 @@ struct SCSPDSPDisassembler {
             disasm.Align(251);
             disasm.OperandWrite("ADRS_REG").Operator("<-");
             if (instr.SHFT0 & instr.SHFT1) {
-                disasm.OperandRead("INPUTS").BitRange(27, 16);
-            } else {
                 disasm.OperandRead("SFT").BitRange(23, 12);
+            } else {
+                disasm.OperandRead("INPUTS").BitRange(27, 16);
             }
         }
 

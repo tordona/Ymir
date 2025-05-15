@@ -201,9 +201,9 @@ void DSP::Run() {
 
         if (instr.ADRL) {
             if (instr.SHFT0 & instr.SHFT1) {
-                ADRS_REG = (inputs >> 16) & 0xFFF;
-            } else {
                 ADRS_REG = shifterOut >> 12;
+            } else {
+                ADRS_REG = (inputs >> 16) & 0xFFF;
             }
         }
     }
