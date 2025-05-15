@@ -308,10 +308,14 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint8 reverse(uint8 value) noexcept {
+#if defined(__clang__) || defined(__GNUC__)
+    return __builtin_bitreverse8(value);
+#else
     value = (value << 4u) | (value >> 4u);
     value = ((value & 0x33u) << 2u) | ((value >> 2u) & 0x33u);
     value = ((value & 0x55u) << 1u) | ((value >> 1u) & 0x55u);
     return value;
+#endif
 }
 
 /// @brief Reverses the bits of `value`.
@@ -319,11 +323,15 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint16 reverse(uint16 value) noexcept {
+#if defined(__clang__) || defined(__GNUC__)
+    return __builtin_bitreverse16(value);
+#else
     value = (value << 8u) | (value >> 8u);
     value = ((value & 0x0F0Fu) << 4u) | ((value >> 4u) & 0x0F0Fu);
     value = ((value & 0x3333u) << 2u) | ((value >> 2u) & 0x3333u);
     value = ((value & 0x5555u) << 1u) | ((value >> 1u) & 0x5555u);
     return value;
+#endif
 }
 
 /// @brief Reverses the bits of `value`.
@@ -331,12 +339,16 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint32 reverse(uint32 value) noexcept {
+#if defined(__clang__) || defined(__GNUC__)
+    return __builtin_bitreverse32(value);
+#else
     value = (value << 16u) | (value >> 16u);
     value = ((value & 0x00FF00FFu) << 8u) | ((value >> 8u) & 0x00FF00FFu);
     value = ((value & 0x0F0F0F0Fu) << 4u) | ((value >> 4u) & 0x0F0F0F0Fu);
     value = ((value & 0x33333333u) << 2u) | ((value >> 2u) & 0x33333333u);
     value = ((value & 0x55555555u) << 1u) | ((value >> 1u) & 0x55555555u);
     return value;
+#endif
 }
 
 /// @brief Reverses the bits of `value`.
@@ -344,6 +356,9 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint64 reverse(uint64 value) noexcept {
+#if defined(__clang__) || defined(__GNUC__)
+    return __builtin_bitreverse64(value);
+#else
     value = (value << 32ull) | (value >> 32ull);
     value = ((value & 0x0000FFFF0000FFFFull) << 16ull) | ((value >> 16ull) & 0x0000FFFF0000FFFFull);
     value = ((value & 0x00FF00FF00FF00FFull) << 8ull) | ((value >> 8ull) & 0x00FF00FF00FF00FFull);
@@ -351,6 +366,7 @@ template <std::unsigned_integral T>
     value = ((value & 0x3333333333333333ull) << 2ull) | ((value >> 2ull) & 0x3333333333333333ull);
     value = ((value & 0x5555555555555555ull) << 1ull) | ((value >> 1ull) & 0x5555555555555555ull);
     return value;
+#endif
 }
 
 } // namespace bit
