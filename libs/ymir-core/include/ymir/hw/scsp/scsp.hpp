@@ -876,6 +876,8 @@ private:
             m_dsp.ringBufferLeadAddress = bit::extract<0, 6>(value);
         }
         util::SplitWriteWord<lowerByte, upperByte, 7, 8>(m_dsp.ringBufferLength, value);
+        // HACK: this fixes address wrapping
+        m_dsp.ResetMDEC_CT();
     }
 
     // -------------------------------------------------------------------------
