@@ -94,7 +94,7 @@ template <std::size_t start, std::size_t end = start, std::integral T>
     using UT = std::make_unsigned_t<T>;
 
     constexpr std::size_t length = end - start;
-    constexpr UT mask = static_cast<UT>(~(~0 << length << 1));
+    constexpr UT mask = static_cast<UT>(~(~UT{0} << length << 1));
     return (value >> start) & mask;
 }
 
@@ -135,7 +135,7 @@ template <std::size_t start, std::size_t end = start, std::integral T, std::inte
     using UT = std::make_unsigned_t<T>;
 
     constexpr std::size_t length = end - start;
-    constexpr UT mask = static_cast<UT>(~(~0 << length << 1));
+    constexpr UT mask = static_cast<UT>(~(~UT{0} << length << 1));
     base &= ~(mask << start);
     base |= (value & mask) << start;
     return base;
