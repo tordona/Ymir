@@ -864,10 +864,6 @@ void Slot::IncrementSampleCounter() {
 }
 
 void Slot::IncrementEG(uint64 sampleCounter) {
-    if ((sampleCounter & 1) == 1) {
-        return;
-    }
-
     static constexpr uint32 kCounterShiftTable[] = {11, 11, 11, 11, // 0-3    (0x00-0x03)
                                                     10, 10, 10, 10, // 4-7    (0x04-0x07)
                                                     9,  9,  9,  9,  // 8-11   (0x08-0x0B)
@@ -925,16 +921,16 @@ void Slot::IncrementEG(uint64 sampleCounter) {
     const uint32 shift = kCounterShiftTable[rate];
     const uint32 egCycle = sampleCounter >> 1;
     uint32 inc{};
-    if (egCycle & ((1 << shift) - 1)) {
+    if ((sampleCounter & 1) == 1 || (egCycle & ((1 << shift) - 1)) != 0) {
         inc = 0;
     } else {
         inc = kIncrementTable[rate][(egCycle >> shift) & 7];
     }
 
+    const uint32 currLevel = egLevel;
+
     switch (egState) {
     case EGState::Attack: //
-    {
-        const uint32 currLevel = egLevel;
         if (!egAttackBug && inc > 0 && egLevel > 0 && currRate > 0) {
             egLevel += static_cast<sint32>(~currLevel * inc) >> 4;
         }
@@ -942,7 +938,6 @@ void Slot::IncrementEG(uint64 sampleCounter) {
             egState = EGState::Decay1;
         }
         break;
-    }
     case EGState::Decay1:
         if ((egLevel >> 5u) == decayLevel) {
             egState = EGState::Decay2;
@@ -955,7 +950,8 @@ void Slot::IncrementEG(uint64 sampleCounter) {
         }
         break;
     }
-    if (egLevel >= 0x3C0) {
+
+    if (currLevel >= 0x3C0) {
         active = false;
         reverse = false;
         crossedLoopStart = false;

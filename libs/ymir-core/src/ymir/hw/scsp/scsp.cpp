@@ -607,6 +607,9 @@ FORCE_INLINE void SCSP::UpdateTimers() {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep1(Slot &slot) {
+    // Advance envelope generator
+    slot.IncrementEG(m_sampleCounter);
+
     if (m_kyonex && slot.TriggerKey()) {
         static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
         devlog::trace<grp::kyonex>(
@@ -736,10 +739,6 @@ FORCE_INLINE void SCSP::SlotProcessStep3(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
-    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
-        return;
-    }
-
     if (slot.soundSource == Slot::SoundSource::SoundRAM) {
         switch (m_interpMode) {
         case core::config::audio::SampleInterpolationMode::NearestNeighbor: slot.output = slot.sample1; break;
@@ -795,20 +794,14 @@ FORCE_INLINE void SCSP::SlotProcessStep4(Slot &slot) {
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep5(Slot &slot) {
-    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
+    if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active && !slot.egBypass) {
         slot.output = slot.sampleXOR;
-        return;
-    }
-
-    if (!slot.soundDirect) {
+    } else if (!slot.soundDirect) {
         const sint32 envLevel = slot.GetEGLevel();
         const sint32 totalLevel = slot.totalLevel << 2u;
         slot.finalLevel = std::min<sint32>(slot.alfoOutput + envLevel + totalLevel, 0x3FF);
         slot.output = (slot.output * ((slot.finalLevel & 0x3F) ^ 0x7F)) >> ((slot.finalLevel >> 6) + 7);
     }
-
-    // Advance envelope generator
-    slot.IncrementEG(m_sampleCounter);
 }
 
 FORCE_INLINE void SCSP::SlotProcessStep6(Slot &slot) {
