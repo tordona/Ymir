@@ -276,12 +276,15 @@ struct Slot {
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
     uint16 egLevel;
 
+    uint16 currEGLevel;
+
     bool egAttackBug; // Is the EG stuck in attack phase?
 
-    uint32 sampleCount;
     uint32 currSample;
     uint32 currPhase;
     uint32 nextPhase;
+    sint16 modXSample;
+    sint16 modYSample;
     sint32 modulation;
     bool reverse;
     bool crossedLoopStart;

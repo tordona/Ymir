@@ -412,6 +412,7 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     //   - SCILV = {0,0,0}
     //     (unfortunately the data is missing, so old save states will never restore properly)
     //   - reuseSCILV = true if version < 6, false otherwise; not stored in save state binary
+    //   - out = {0,0}
     //   - uint8[1024] midiInputBuffer
     //   - uint32 midiInputReadPos
     //   - uint32 midiInputWritePos
@@ -519,7 +520,7 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     }
     ar(s.DEXE, s.DDIR, s.DGATE, s.DMEA, s.DRGA, s.DTLG);
     ar(s.SOUS, s.soundStackIndex);
-    ar(s.dsp);
+    serialize(ar, s.dsp, version);
     ar(s.m68kCycles);
     if (version < 6) {
         uint64 sampleCycles{};
@@ -533,6 +534,11 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
         ar(egStep);
     }
     ar(s.lfsr);
+    if (version >= 6) {
+        ar(s.out);
+    } else {
+        s.out.fill(0);
+    }
     if (version >= 6) {
         ar(s.midiInputBuffer);
         ar(s.midiInputReadPos);
@@ -556,6 +562,11 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
+    // v6:
+    // - New fields
+    //   - currEGLevel = egLevel
+    // - Removed fields
+    //   - uint32 sampleCount
     // v4:
     // - New fields
     //   - MM = bit 15 of extra10 if available, otherwise false
@@ -630,12 +641,20 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
     ar(s.active);
     ar(s.egState);
     ar(s.egLevel);
+    if (version >= 6) {
+        ar(s.currEGLevel);
+    } else {
+        s.currEGLevel = s.egLevel;
+    }
     if (version >= 4) {
         ar(s.egAttackBug);
     } else {
         s.egAttackBug = false;
     }
-    ar(s.sampleCount);
+    if (version < 6) {
+        uint32 sampleCount{};
+        ar(sampleCount);
+    }
     if (version < 4) {
         uint32 currAddress{};
         ar(currAddress);
@@ -668,9 +687,34 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, SCSPDSP &s) {
-    ar(s.MPRO, s.TEMP, s.MEMS, s.COEF, s.MADRS, s.MIXS, s.EFREG, s.EXTS);
+void serialize(Archive &ar, SCSPDSP &s, const uint32 version) {
+    // v6:
+    // - New fields
+    //   - PC = 0x68
+    //   - MIXSGen = 0
+    //   - MIXStackNull = 0xFFFF
+    // - Changed fields
+    //   - MIXS increased from 16 to 16*2 entries
+
+    ar(s.MPRO, s.TEMP, s.MEMS, s.COEF, s.MADRS);
+    if (version >= 6) {
+        ar(s.MIXS, s.MIXSGen, s.MIXSNull);
+    } else {
+        std::array<sint32, 16> MIXS{};
+        ar(MIXS);
+        std::copy_n(MIXS.begin(), MIXS.size(), s.MIXS.begin());
+        std::fill(s.MIXS.begin() + MIXS.size(), s.MIXS.end(), 0);
+
+        s.MIXSGen = 0;
+        s.MIXSNull = 0xFFFF;
+    }
+    ar(s.EFREG, s.EXTS);
     ar(s.RBP, s.RBL);
+    if (version >= 6) {
+        ar(s.PC);
+    } else {
+        s.PC = 0x68;
+    }
     ar(s.INPUTS);
     ar(s.SFT_REG, s.FRC_REG, s.Y_REG, s.ADRS_REG);
     ar(s.MDEC_CT);

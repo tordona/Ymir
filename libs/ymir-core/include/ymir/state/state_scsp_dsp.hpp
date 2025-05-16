@@ -12,13 +12,17 @@ struct SCSPDSP {
     alignas(16) std::array<uint32, 32> MEMS;
     alignas(16) std::array<uint16, 64> COEF;
     alignas(16) std::array<uint16, 32> MADRS;
-    alignas(16) std::array<sint32, 16> MIXS;
+    alignas(16) std::array<sint32, 16 * 2> MIXS;
     alignas(16) std::array<sint16, 16> EFREG;
     alignas(16) std::array<sint16, 2> EXTS;
+
+    uint8 MIXSGen;
+    uint16 MIXSNull;
 
     uint8 RBP;
     uint8 RBL;
 
+    uint8 PC;
     uint32 INPUTS;
 
     uint32 SFT_REG;

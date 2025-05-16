@@ -361,7 +361,7 @@ private:
         } else if (AddressInRange<0xE80, 0xEBF>(address)) {
             // DSP MIXS
             const uint32 offset = (address >> 1u) & 0x1;
-            const uint32 index = (address >> 2u) & 0xF;
+            const uint32 index = m_dsp.GetMIXSIndex((address >> 2u) & 0xF);
             if (offset == 0) {
                 return read16(bit::extract<0, 3>(m_dsp.mixStack[index]));
             } else {
@@ -500,7 +500,6 @@ private:
             const uint32 index = (address >> 3u) & 0x7F;
             const uint32 subindex = ((address >> 1u) & 0x3) ^ 3;
             write16(m_dsp.program[index].u16[subindex], value16);
-            m_dsp.UpdateProgramLength(index);
             return;
         } else if (AddressInRange<0xC00, 0xDFF>(address)) {
             // DSP TEMP
@@ -532,8 +531,8 @@ private:
             return;
         } else if (AddressInRange<0xE80, 0xEBF>(address)) {
             // DSP MIXS
-            const uint32 offset = (address >> 1u) & 1;
-            const uint32 index = (address >> 2u) & 0xF;
+            const uint32 offset = (address >> 1u) & 0x1;
+            const uint32 index = m_dsp.GetMIXSIndex((address >> 2u) & 0xF);
             if (offset == 0) {
                 uint16 tmpValue = bit::extract<0, 3>(m_dsp.mixStack[index]);
                 write16(tmpValue, value16);
@@ -981,13 +980,17 @@ private:
     void GenerateSample();
     void UpdateTimers();
 
-    void SlotProcessStep1(Slot &slot); // Phase generation and pitch LFO
-    void SlotProcessStep2(Slot &slot); // Address pointer calculation and X/Y modulation data read
-    void SlotProcessStep3(Slot &slot); // Waveform read
-    void SlotProcessStep4(Slot &slot); // Interpolation, envelope generator update and amplitude LFO calculation
-    void SlotProcessStep5(Slot &slot); // Level calculation part 1
-    void SlotProcessStep6(Slot &slot); // Level calculation part 2
-    void SlotProcessStep7(Slot &slot); // Sound stack write
+    void SlotProcessStep1_4(Slot &slot); // Phase generation and pitch LFO calculation
+    void SlotProcessStep2_2(Slot &slot); // Phase latch
+    void SlotProcessStep2_3(Slot &slot); // X modulation data read
+    void SlotProcessStep2_4(Slot &slot); // Y modulation data read and address pointer calculation
+    void SlotProcessStep3_2(Slot &slot); // Waveform read (current sample)
+    void SlotProcessStep3_4(Slot &slot); // Waveform read (next sample)
+    void SlotProcessStep4_2(Slot &slot); // Current sample latch for interpolation
+    void SlotProcessStep4_4(Slot &slot); // Interpolation, envelope generator update and amplitude LFO calculation
+    void SlotProcessStep5_4(Slot &slot); // ALFO calculation
+    void SlotProcessStep6_4(Slot &slot); // Total level calculation
+    void SlotProcessStep7_1(Slot &slot); // Sound stack write
 
     core::config::audio::SampleInterpolationMode m_interpMode = core::config::audio::SampleInterpolationMode::Linear;
 
@@ -995,6 +998,8 @@ private:
     uint64 m_sampleCounter; // Total number of samples
 
     uint32 m_lfsr; // Noise LFSR
+
+    std::array<sint32, 2> m_out;
 
     // -------------------------------------------------------------------------
     // Interrupt handling

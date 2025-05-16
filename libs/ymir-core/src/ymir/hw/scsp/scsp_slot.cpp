@@ -70,10 +70,11 @@ void Slot::Reset() {
 
     egLevel = 0x3FF;
 
-    sampleCount = 0;
     currSample = 0;
     currPhase = 0;
     nextPhase = 0;
+    modXSample = 0;
+    modYSample = 0;
     modulation = 0;
     reverse = false;
     crossedLoopStart = false;
@@ -106,8 +107,8 @@ bool Slot::TriggerKey() {
                 CheckAttackBug();
                 egLevel = egAttackBug ? 0x000 : 0x280;
             }
+            currEGLevel = egLevel;
 
-            sampleCount = 0;
             currSample = 0;
             currPhase = 0;
             nextPhase = 0;
@@ -591,9 +592,9 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     }
 
     state.egLevel = egLevel;
+    state.currEGLevel = currEGLevel;
     state.egAttackBug = egAttackBug;
 
-    state.sampleCount = sampleCount;
     state.currSample = currSample;
     state.currPhase = currPhase;
     state.nextPhase = nextPhase;
@@ -744,9 +745,9 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     }
 
     egLevel = state.egLevel & 0x3FF;
+    currEGLevel = state.currEGLevel & 0x3FF;
     egAttackBug = state.egAttackBug;
 
-    sampleCount = state.sampleCount;
     currSample = state.currSample;
     currPhase = state.currPhase;
     nextPhase = state.nextPhase;
@@ -792,11 +793,7 @@ uint8 Slot::GetCurrentEGRate() const {
 }
 
 uint16 Slot::GetEGLevel() const {
-    if (egBypass || (egState == EGState::Attack && egHold)) {
-        return 0x000;
-    } else {
-        return egLevel;
-    }
+    return currEGLevel;
 }
 
 void Slot::IncrementLFO() {
@@ -933,7 +930,14 @@ void Slot::IncrementEG(uint64 sampleCounter) {
         inc = kIncrementTable[rate][(egCycle >> shift) & 7];
     }
 
+    const uint32 prevLevel = currEGLevel;
     const uint32 currLevel = egLevel;
+
+    if (egBypass || (egState == EGState::Attack && egHold)) {
+        currEGLevel = 0x000;
+    } else {
+        currEGLevel = egLevel;
+    }
 
     switch (egState) {
     case EGState::Attack: //
@@ -957,7 +961,7 @@ void Slot::IncrementEG(uint64 sampleCounter) {
         break;
     }
 
-    if (currLevel >= 0x3C0 && !egBypass) {
+    if (prevLevel >= 0x3C0 && !egBypass) {
         active = false;
         reverse = false;
         crossedLoopStart = false;

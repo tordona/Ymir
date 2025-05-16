@@ -68,10 +68,10 @@ struct SCSPSlotState {
     EGState egState;
 
     uint16 egLevel;
+    uint16 currEGLevel;
 
     bool egAttackBug;
 
-    uint32 sampleCount;
     uint32 currSample;
     uint32 currPhase;
     uint32 nextPhase;

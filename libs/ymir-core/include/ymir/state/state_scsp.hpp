@@ -64,6 +64,8 @@ struct SCSPState {
 
     uint32 lfsr;
 
+    std::array<sint32, 2> out;
+
     std::array<uint8, ymir::scsp::kMidiBufferSize> midiInputBuffer;
     uint32 midiInputReadPos;
     uint32 midiInputWritePos;
