@@ -75,6 +75,8 @@ private:
 
     void EmulatorThread();
 
+    void OpenWelcomeModal();
+
     void RebindInputs();
 
     template <int port>
