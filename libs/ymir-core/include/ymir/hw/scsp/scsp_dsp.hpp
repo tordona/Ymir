@@ -38,11 +38,6 @@ public:
     uint8 ringBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
     uint8 ringBufferLength;      // (W) RBL - DSP Ring Buffer Length
 
-    // HACK: Clears MDEC_CT. Should be used after writing to RBL.
-    void ResetMDEC_CT() {
-        MDEC_CT = 0;
-    }
-
     // -------------------------------------------------------------------------
     // Save states
 
