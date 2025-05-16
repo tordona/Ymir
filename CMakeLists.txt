@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(Ymir VERSION 0.1.3)
+project(Ymir VERSION 0.1.4)
 
 include(cmake/AddVersionDefines.cmake)
 include(cmake/CMakeRC.cmake)
