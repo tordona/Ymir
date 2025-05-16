@@ -75,7 +75,7 @@ private:
 
     void EmulatorThread();
 
-    void OpenWelcomeModal();
+    void OpenWelcomeModal(bool scanIPLROMS);
 
     void RebindInputs();
 
