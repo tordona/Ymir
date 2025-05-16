@@ -1218,7 +1218,14 @@ void CDBlock::ReadSector() {
 }
 
 uint16 CDBlock::DoReadTransfer() {
-    const uint16 value = m_xferBuffer[m_xferBufferPos++];
+    uint16 value;
+    if (m_xferBufferPos < m_xferBuffer.size()) {
+        // TODO: what happens when games attempt to do out-of-bounds reads from TOC of file info transfers?
+        value = m_xferBuffer[m_xferBufferPos++];
+    } else {
+        // TODO: what to return here?
+        value = 0xFFFF;
+    }
 
     switch (m_xferType) {
     case TransferType::GetSector: [[fallthrough]];
