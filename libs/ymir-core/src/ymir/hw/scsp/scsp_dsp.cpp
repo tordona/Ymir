@@ -213,9 +213,6 @@ void DSP::Run() {
         m_writePending = false;
     }
 
-    if (MDEC_CT == 0) {
-        MDEC_CT = 0x2000 << ringBufferLength;
-    }
     MDEC_CT--;
 
     mixStack.fill(0);
