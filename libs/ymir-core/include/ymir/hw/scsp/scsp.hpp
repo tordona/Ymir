@@ -316,7 +316,7 @@ private:
                 return read16(bit::extract<8, 23>(m_dsp.tempMem[index]));
             }
         } else if (AddressInRange<0xE00, 0xE7F>(address)) {
-            // DSP SMEM
+            // DSP MEMS
             const uint32 offset = (address >> 1u) & 0x1;
             const uint32 index = (address >> 2u) & 0x1F;
             if (offset == 0) {
@@ -483,7 +483,7 @@ private:
             }
             return;
         } else if (AddressInRange<0xE00, 0xE7F>(address)) {
-            // DSP SMEM
+            // DSP MEMS
             const uint32 offset = (address >> 1u) & 0x1;
             const uint32 index = (address >> 2u) & 0x1F;
             if (offset == 0) {
