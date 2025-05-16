@@ -231,153 +231,7 @@ int App::Run(const CommandLineOptions &options) {
         m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
     }
 
-    // Load IPL ROM
-    // Should be done after loading disc image so that the auto-detected region is used to select the appropriate ROM
-    ScanIPLROMs();
-    auto iplLoadResult = LoadIPLROM();
-    if (!iplLoadResult.succeeded) {
-        using namespace std::chrono_literals;
-        static constexpr auto kScanInterval = 400ms;
-
-        if (m_context.romManager.GetIPLROMs().empty()) {
-            struct ROMSelectResult {
-                bool fileSelected = false;
-                std::filesystem::path path;
-
-                bool hasResult = false;
-                util::IPLROMLoadResult result;
-            };
-
-            OpenGenericModal("Welcome", [=, this, nextScanDeadline = clk::now() + kScanInterval,
-                                         lastROMCount = m_context.romManager.GetIPLROMs().size(),
-                                         romSelectResult = ROMSelectResult{}]() mutable {
-                bool doSelectRom = false;
-                bool doOpenSettings = false;
-
-                ImGui::Image((ImTextureID)m_context.images.ymirLogo.texture,
-                             ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale * 0.7f,
-                                    m_context.images.ymirLogo.size.y * m_context.displayScale * 0.7f));
-
-                ImGui::PushFont(m_context.fonts.display.large);
-                ImGui::TextUnformatted("Ymir");
-                ImGui::PopFont();
-                ImGui::PushFont(m_context.fonts.sansSerif.xlarge.regular);
-                ImGui::TextUnformatted("Welcome to Ymir!");
-                ImGui::PopFont();
-                ImGui::NewLine();
-                ImGui::TextUnformatted("Ymir requires a valid IPL (BIOS) ROM to work.");
-
-                ImGui::NewLine();
-                ImGui::TextUnformatted("Ymir will automatically load IPL ROMs placed in ");
-                ImGui::SameLine(0, 0);
-                auto romPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
-                if (ImGui::TextLink(fmt::format("{}", romPath).c_str())) {
-                    SDL_OpenURL(fmt::format("file:///{}", romPath).c_str());
-                }
-                ImGui::TextUnformatted("Alternatively, you can ");
-                ImGui::SameLine(0, 0);
-                if (ImGui::TextLink("manually select an IPL ROM")) {
-                    doSelectRom = true;
-                }
-                ImGui::SameLine(0, 0);
-                ImGui::TextUnformatted(" or ");
-                ImGui::SameLine(0, 0);
-                if (ImGui::TextLink("manage the ROM settings in Settings > IPL")) {
-                    doOpenSettings = true;
-                }
-                ImGui::SameLine(0, 0);
-                ImGui::TextUnformatted(".");
-                if (romSelectResult.hasResult && !romSelectResult.result.succeeded) {
-                    ImGui::NewLine();
-                    ImGui::Text("The file %s does not contain a valid IPL ROM.",
-                                fmt::format("{}", romSelectResult.path).c_str());
-                    ImGui::Text("Reason: %s.", romSelectResult.result.errorMessage.c_str());
-                }
-
-                ImGui::Separator();
-
-                if (ImGui::Button("Open IPL ROMs directory")) {
-                    SDL_OpenURL(
-                        fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages)).c_str());
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Select IPL ROM...")) {
-                    doSelectRom = true;
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Open IPL settings")) {
-                    doOpenSettings = true;
-                }
-                ImGui::SameLine(); // this places the OK button next to these
-
-                if (doSelectRom) {
-                    FileDialogParams params{
-                        .dialogTitle = "Select IPL ROM",
-                        .defaultPath = m_context.profile.GetPath(ProfilePath::IPLROMImages),
-                        .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
-                        .userdata = &romSelectResult,
-                        .callback =
-                            [](void *userdata, const char *const *filelist, int filter) {
-                                if (filelist == nullptr) {
-                                    devlog::error<grp::base>("Failed to open file dialog: {}", SDL_GetError());
-                                } else if (*filelist == nullptr) {
-                                    devlog::info<grp::base>("File dialog cancelled");
-                                } else {
-                                    // Only one file should be selected
-                                    const char *file = *filelist;
-                                    std::string fileStr = file;
-                                    std::u8string u8File{fileStr.begin(), fileStr.end()};
-                                    auto &result = *static_cast<ROMSelectResult *>(userdata);
-                                    result.fileSelected = true;
-                                    result.path = u8File;
-                                }
-                            },
-                    };
-                    InvokeOpenFileDialog(params);
-                }
-
-                if (doOpenSettings) {
-                    m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
-                    m_closeGenericModal = true;
-                }
-
-                // Try loading IPL ROM selected through the file dialog.
-                // If successful, set the override path and close the modal.
-                if (romSelectResult.fileSelected) {
-                    romSelectResult.fileSelected = false;
-                    romSelectResult.hasResult = true;
-                    romSelectResult.result = util::LoadIPLROM(romSelectResult.path, m_context.saturn);
-                    if (romSelectResult.result.succeeded) {
-                        m_context.settings.system.ipl.overrideImage = true;
-                        m_context.settings.system.ipl.path = romSelectResult.path;
-                        LoadIPLROM();
-                        m_closeGenericModal = true;
-                    }
-                }
-
-                // Periodically scan for IPL ROMs.
-                if (clk::now() >= nextScanDeadline) {
-                    nextScanDeadline += kScanInterval;
-
-                    ScanIPLROMs();
-
-                    // Don't load until files stop being added to the directory
-                    auto romCount = m_context.romManager.GetIPLROMs().size();
-                    if (romCount != lastROMCount) {
-                        lastROMCount = romCount;
-                    } else {
-                        util::IPLROMLoadResult result = LoadIPLROM();
-                        if (result.succeeded) {
-                            m_context.EnqueueEvent(events::emu::HardReset());
-                            m_closeGenericModal = true;
-                        }
-                    }
-                }
-            });
-        } else {
-            OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
-        }
-    }
+    OpenWelcomeModal(true);
 
     // Load SMPC persistent data and set up the path
     std::error_code error{};
@@ -2003,6 +1857,11 @@ void App::RunEmulator() {
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Help")) {
+                    if (ImGui::MenuItem("Open welcome window", nullptr)) {
+                        OpenWelcomeModal(false);
+                    }
+                        
+                    ImGui::Separator();
 #if Ymir_ENABLE_IMGUI_DEMO
                     ImGui::MenuItem("ImGui demo window", nullptr, &showImGuiDemoWindow);
                     ImGui::Separator();
@@ -2419,6 +2278,181 @@ void App::EmulatorThread() {
             m_audioSystem.SetSilent(true);
         }
     }
+}
+
+void App::OpenWelcomeModal(bool scanIPLROMS) {
+
+    if (scanIPLROMS) {
+        // Load IPL ROM
+        // Should be done after loading disc image so that the auto-detected region is used to select the appropriate
+        // ROM
+        ScanIPLROMs();
+        auto iplLoadResult = LoadIPLROM();
+
+        if (iplLoadResult.succeeded)
+            return;
+
+        if (!m_context.romManager.GetIPLROMs().empty()) {
+            OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
+            return;
+        }
+    }
+
+    bool activeScanning = scanIPLROMS;
+
+    using namespace std::chrono_literals;
+    static constexpr auto kScanInterval = 400ms;
+    
+
+    struct ROMSelectResult {
+        bool fileSelected = false;
+        std::filesystem::path path;
+
+        bool hasResult = false;
+        util::IPLROMLoadResult result;
+    };
+
+    OpenGenericModal("Welcome", [=, this, nextScanDeadline = clk::now() + kScanInterval,
+                                 lastROMCount = m_context.romManager.GetIPLROMs().size(),
+                                 romSelectResult = ROMSelectResult{}]() mutable {
+        bool doSelectRom = false;
+        bool doOpenSettings = false;
+
+        ImGui::Image((ImTextureID)m_context.images.ymirLogo.texture,
+                     ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale * 0.7f,
+                            m_context.images.ymirLogo.size.y * m_context.displayScale * 0.7f));
+
+        ImGui::PushFont(m_context.fonts.display.large);
+        ImGui::TextUnformatted("Ymir");
+        ImGui::PopFont();
+        ImGui::PushFont(m_context.fonts.sansSerif.xlarge.regular);
+        ImGui::TextUnformatted("Welcome to Ymir!");
+        ImGui::PopFont();
+        ImGui::NewLine();
+        ImGui::TextUnformatted("Ymir requires a valid IPL (BIOS) ROM to work.");
+
+        ImGui::NewLine();
+        ImGui::TextUnformatted("Ymir will automatically load IPL ROMs placed in ");
+        ImGui::SameLine(0, 0);
+        auto romPath = m_context.profile.GetPath(ProfilePath::IPLROMImages);
+        if (ImGui::TextLink(fmt::format("{}", romPath).c_str())) {
+            SDL_OpenURL(fmt::format("file:///{}", romPath).c_str());
+        }
+        ImGui::TextUnformatted("Alternatively, you can ");
+        ImGui::SameLine(0, 0);
+        if (ImGui::TextLink("manually select an IPL ROM")) {
+            doSelectRom = true;
+        }
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(" or ");
+        ImGui::SameLine(0, 0);
+        if (ImGui::TextLink("manage the ROM settings in Settings > IPL")) {
+            doOpenSettings = true;
+        }
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(".");
+
+        if (!activeScanning)
+        {
+            ImGui::NewLine();
+            ImGui::TextUnformatted("Ymir is not currently scanning for IPL ROMS.");
+            ImGui::TextUnformatted("If you would like to actively scan for IPL ROMS, press the button below.");
+            if (ImGui::Button("Start active scanning")) {
+                activeScanning = true;
+            }
+            ImGui::NewLine();
+        }
+
+        if (romSelectResult.hasResult && !romSelectResult.result.succeeded) {
+            ImGui::NewLine();
+            ImGui::Text("The file %s does not contain a valid IPL ROM.",
+                        fmt::format("{}", romSelectResult.path).c_str());
+            ImGui::Text("Reason: %s.", romSelectResult.result.errorMessage.c_str());
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Open IPL ROMs directory")) {
+            SDL_OpenURL(
+                fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages)).c_str());
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Select IPL ROM...")) {
+            doSelectRom = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Open IPL settings")) {
+            doOpenSettings = true;
+        }
+        ImGui::SameLine(); // this places the OK button next to these
+
+        if (doSelectRom) {
+            FileDialogParams params{
+                .dialogTitle = "Select IPL ROM",
+                .defaultPath = m_context.profile.GetPath(ProfilePath::IPLROMImages),
+                .filters = {{"ROM files (*.bin, *.rom)", "bin;rom"}, {"All files (*.*)", "*"}},
+                .userdata = &romSelectResult,
+                .callback =
+                    [](void *userdata, const char *const *filelist, int filter) {
+                        if (filelist == nullptr) {
+                            devlog::error<grp::base>("Failed to open file dialog: {}", SDL_GetError());
+                        } else if (*filelist == nullptr) {
+                            devlog::info<grp::base>("File dialog cancelled");
+                        } else {
+                            // Only one file should be selected
+                            const char *file = *filelist;
+                            std::string fileStr = file;
+                            std::u8string u8File{fileStr.begin(), fileStr.end()};
+                            auto &result = *static_cast<ROMSelectResult *>(userdata);
+                            result.fileSelected = true;
+                            result.path = u8File;
+                        }
+                    },
+            };
+            InvokeOpenFileDialog(params);
+        }
+
+        if (doOpenSettings) {
+            m_settingsWindow.OpenTab(ui::SettingsTab::IPL);
+            m_closeGenericModal = true;
+        }
+
+        // Try loading IPL ROM selected through the file dialog.
+        // If successful, set the override path and close the modal.
+        if (romSelectResult.fileSelected) {
+            romSelectResult.fileSelected = false;
+            romSelectResult.hasResult = true;
+            romSelectResult.result = util::LoadIPLROM(romSelectResult.path, m_context.saturn);
+            if (romSelectResult.result.succeeded) {
+                m_context.settings.system.ipl.overrideImage = true;
+                m_context.settings.system.ipl.path = romSelectResult.path;
+                LoadIPLROM();
+                m_closeGenericModal = true;
+            }
+        }
+
+        if (!activeScanning)
+            return;
+
+        // Periodically scan for IPL ROMs.
+        if (clk::now() >= nextScanDeadline) {
+            nextScanDeadline = clk::now() + kScanInterval;
+
+            ScanIPLROMs();
+
+            // Don't load until files stop being added to the directory
+            auto romCount = m_context.romManager.GetIPLROMs().size();
+            if (romCount != lastROMCount) {
+                lastROMCount = romCount;
+            } else {
+                util::IPLROMLoadResult result = LoadIPLROM();
+                if (result.succeeded) {
+                    m_context.EnqueueEvent(events::emu::HardReset());
+                    m_closeGenericModal = true;
+                }
+            }
+        }
+    });
 }
 
 void App::RebindInputs() {
