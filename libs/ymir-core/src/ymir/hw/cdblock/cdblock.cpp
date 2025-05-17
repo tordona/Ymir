@@ -860,6 +860,13 @@ void CDBlock::ProcessDriveStatePlay() {
 
                 if (track->controlADR == 0x01) {
                     // If playing an audio track, send to SCSP
+                    if (track->bigEndian) {
+                        // Swap endianness if necessary
+                        for (uint32 offset = 0; offset < 2352; offset += 2) {
+                            util::WriteLE<uint16>(&buffer.data[offset], util::ReadBE<uint16>(&buffer.data[offset]));
+                        }
+                    }
+
                     if (scan) {
                         // While scanning, lower volume by 12 dB
                         for (uint32 offset = 0; offset < 2352; offset += 2) {

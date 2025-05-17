@@ -24,13 +24,14 @@ struct Track {
     uint32 userDataOffset = 0;
     uint8 controlADR = 0;
     bool interleavedSubchannel = false; // true=96-byte PW subchannel, interleaved
+    bool bigEndian = false;             // indicates audio data endianness on audio tracks
 
     uint32 startFrameAddress = 0;
     uint32 endFrameAddress = 0;
 
     void SetSectorSize(uint32 size) {
         sectorSize = size;
-        userDataOffset = size == 2352 ? 16 : size == 2340 ? 4 : 0;
+        userDataOffset = size >= 2352 ? 16 : size >= 2340 ? 4 : 0;
     }
 
     // Reads the user data portion of a sector.

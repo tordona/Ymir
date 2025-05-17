@@ -4,6 +4,8 @@
 
 ### New features and improvements
 
+- Media: Preliminary support for CHD files. (#48)
+
 ### Fixes
 
 - CD Block: Fix audio track sector sizes. Fixes some CD audio track playback glitches with certain images (particularly MDF/MDS).

@@ -85,6 +85,10 @@ add_subdirectory(cereal EXCLUDE_FROM_ALL)
 message(STATUS "==> stb")
 add_subdirectory(stb)
 
+# libchdr - https://github.com/rtissera/libchdr
+message(STATUS "==> libchdr")
+add_subdirectory(libchdr)
+
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
 

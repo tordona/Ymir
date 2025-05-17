@@ -15,12 +15,15 @@
 #define CMRC_VERSION "2.0.0"   // Not exported
 #define CXXOPTS_VERSION _STR(CXXOPTS__VERSION_MAJOR) "." _STR(CXXOPTS__VERSION_MINOR) "." _STR(CXXOPTS__VERSION_PATCH)
 #define IMGUI_VERSION_FULL IMGUI_VERSION " (" _STR(IMGUI_VERSION_NUM) ")"
-#define MIO_VERSION "1.1.0" // Not exported
+#define LZMA_VERSION "24.05" // Private dependency of libchdr
+#define MIO_VERSION "1.1.0"  // Not exported
 #define SDL_VERSION_STR _STR(SDL_MAJOR_VERSION) "." _STR(SDL_MINOR_VERSION) "." _STR(SDL_MICRO_VERSION)
 #define STB_IMAGE_VERSION "2.30"     // Not exported
 #define MC_CONCQUEUE_VERSION "1.0.4" // Not exported
 #define TOMLPP_VERSION _STR(TOML_LIB_MAJOR) "." _STR(TOML_LIB_MINOR) "." _STR(TOML_LIB_PATCH)
 #define XXHASH_VERSION _STR(XXH_VERSION_MAJOR) "." _STR(XXH_VERSION_MINOR) "." _STR(XXH_VERSION_RELEASE)
+#define ZLIB_VERSION "1.3.1" // Private dependency of libchdr
+#define ZSTD_VERSION "1.5.6" // Private dependency of libchdr
 
 static const std::string fmtVersion = std::to_string(FMT_VERSION / 10000) + "." +
                                       std::to_string(FMT_VERSION / 100 % 100) + "." + std::to_string(FMT_VERSION % 100);
@@ -42,15 +45,16 @@ struct FontDesc {
 };
 
 // clang-format off
-//inline constexpr License licenseApache2_0{.name = "Apache-2.0",   .url = "https://opensource.org/licenses/Apache-2.0"};
-inline constexpr License licenseBSD2     {.name = "BSD-2-Clause", .url = "https://opensource.org/licenses/BSD-2-Clause"};
-inline constexpr License licenseBSD3     {.name = "BSD-3-Clause", .url = "https://opensource.org/licenses/BSD-3-Clause"};
-//inline constexpr License licenseBSL      {.name = "BSL-1.0", .     url = "https://opensource.org/license/bsl-1-0"};
-//inline constexpr License licenseISC      {.name = "ISC",          .url = "https://opensource.org/licenses/ISC"};
-inline constexpr License licenseMIT      {.name = "MIT",          .url = "https://opensource.org/licenses/MIT"};
-//inline constexpr License licenseUnlicense{.name = "Unlicense",    .url = "https://opensource.org/licenses/unlicense"};
-inline constexpr License licenseZlib     {.name = "Zlib",         .url = "https://opensource.org/licenses/Zlib"};
-inline constexpr License licenseOFL      {.name = "OFL-1.1",      .url = "https://opensource.org/licenses/OFL-1.1"};
+//inline constexpr License licenseApache2_0   {.name = "Apache-2.0",    .url = "https://opensource.org/licenses/Apache-2.0"};
+inline constexpr License licenseBSD2        {.name = "BSD-2-Clause",  .url = "https://opensource.org/licenses/BSD-2-Clause"};
+inline constexpr License licenseBSD3        {.name = "BSD-3-Clause",  .url = "https://opensource.org/licenses/BSD-3-Clause"};
+//inline constexpr License licenseBSL         {.name = "BSL-1.0", .      url = "https://opensource.org/license/bsl-1-0"};
+//inline constexpr License licenseISC         {.name = "ISC",           .url = "https://opensource.org/licenses/ISC"};
+inline constexpr License licenseMIT         {.name = "MIT",           .url = "https://opensource.org/licenses/MIT"};
+inline constexpr License licensePublicDomain{.name = "Public domain", .url = nullptr};
+//inline constexpr License licenseUnlicense   {.name = "Unlicense",     .url = "https://opensource.org/licenses/unlicense"};
+inline constexpr License licenseZlib        {.name = "Zlib",          .url = "https://opensource.org/licenses/Zlib"};
+inline constexpr License licenseOFL         {.name = "OFL-1.1",       .url = "https://opensource.org/licenses/OFL-1.1"};
 
 static const struct {
     const char *name;
@@ -61,18 +65,22 @@ static const struct {
     const bool repoPrivate = false;
     const char *homeURL = nullptr;
 } depsCode[] = {
-    {.name = "cereal",                        .version = CEREAL_VERSION,             .license = licenseBSD3,  .repoURL = "https://github.com/USCiLab/cereal",              .licenseURL = "https://github.com/USCiLab/cereal/blob/master/LICENSE",                  .homeURL = "https://uscilab.github.io/cereal/index.html"},
-    {.name = "CMakeRC",                       .version = CMRC_VERSION,               .license = licenseMIT,   .repoURL = "https://github.com/vector-of-bool/cmrc",         .licenseURL = "https://github.com/vector-of-bool/cmrc/blob/master/LICENSE.txt"},
-    {.name = "cxxopts",                       .version = CXXOPTS_VERSION,            .license = licenseMIT,   .repoURL = "https://github.com/jarro2783/cxxopts",           .licenseURL = "https://github.com/jarro2783/cxxopts/blob/master/LICENSE"},
-    {.name = "Dear ImGui",                    .version = IMGUI_VERSION_FULL,         .license = licenseMIT,   .repoURL = "https://github.com/ocornut/imgui",               .licenseURL = "https://github.com/ocornut/imgui/blob/master/LICENSE.txt"},
-    {.name = "{fmt}",                         .version = fmtVersion.c_str(),         .license = licenseMIT,   .repoURL = "https://github.com/fmtlib/fmt",                  .licenseURL = "https://github.com/fmtlib/fmt/blob/master/LICENSE",                      .homeURL = "https://fmt.dev/latest/index.html"},
-    {.name = "ImGui Club",                                                           .license = licenseMIT,   .repoURL = "https://github.com/ocornut/imgui_club",          .licenseURL = "https://github.com/ocornut/imgui_club/blob/main/LICENSE.txt"},
-    {.name = "mio",                           .version = MIO_VERSION,                .license = licenseMIT,   .repoURL = "https://github.com/StrikerX3/mio",               .licenseURL = "https://github.com/StrikerX3/mio/blob/master/LICENSE"},
-    {.name = "moodycamel::\nConcurrentQueue", .version = "\n" MC_CONCQUEUE_VERSION,  .license = licenseBSD2,  .repoURL = "https://github.com/cameron314/concurrentqueue",  .licenseURL = "https://github.com/cameron314/concurrentqueue/blob/master/LICENSE.md"},
-    {.name = "SDL3",                          .version = SDL_VERSION_STR,            .license = licenseZlib,  .repoURL = "https://github.com/libsdl-org/SDL",              .licenseURL = "https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt"},
-    {.name = "stb_image",                     .version = STB_IMAGE_VERSION,          .license = licenseMIT,   .repoURL = "https://github.com/nothings/stb",                .licenseURL = "https://github.com/nothings/stb/blob/master/LICENSE"},
-    {.name = "toml++",                        .version = TOMLPP_VERSION,             .license = licenseMIT,   .repoURL = "https://github.com/marzer/tomlplusplus" ,        .licenseURL = "https://github.com/marzer/tomlplusplus/blob/master/LICENSE",             .homeURL = "https://marzer.github.io/tomlplusplus/"},
-    {.name = "xxHash",                        .version = XXHASH_VERSION,             .license = licenseBSD2,  .repoURL = "https://github.com/Cyan4973/xxHash",             .licenseURL = "https://github.com/Cyan4973/xxHash/blob/dev/LICENSE",                    .homeURL = "https://xxhash.com/"},
+    {.name = "cereal",                        .version = CEREAL_VERSION,             .license = licenseBSD3,          .repoURL = "https://github.com/USCiLab/cereal",              .licenseURL = "https://github.com/USCiLab/cereal/blob/master/LICENSE",                  .homeURL = "https://uscilab.github.io/cereal/index.html"},
+    {.name = "CMakeRC",                       .version = CMRC_VERSION,               .license = licenseMIT,           .repoURL = "https://github.com/vector-of-bool/cmrc",         .licenseURL = "https://github.com/vector-of-bool/cmrc/blob/master/LICENSE.txt"},
+    {.name = "cxxopts",                       .version = CXXOPTS_VERSION,            .license = licenseMIT,           .repoURL = "https://github.com/jarro2783/cxxopts",           .licenseURL = "https://github.com/jarro2783/cxxopts/blob/master/LICENSE"},
+    {.name = "Dear ImGui",                    .version = IMGUI_VERSION_FULL,         .license = licenseMIT,           .repoURL = "https://github.com/ocornut/imgui",               .licenseURL = "https://github.com/ocornut/imgui/blob/master/LICENSE.txt"},
+    {.name = "{fmt}",                         .version = fmtVersion.c_str(),         .license = licenseMIT,           .repoURL = "https://github.com/fmtlib/fmt",                  .licenseURL = "https://github.com/fmtlib/fmt/blob/master/LICENSE",                      .homeURL = "https://fmt.dev/latest/index.html"},
+    {.name = "ImGui Club",                                                           .license = licenseMIT,           .repoURL = "https://github.com/ocornut/imgui_club",          .licenseURL = "https://github.com/ocornut/imgui_club/blob/main/LICENSE.txt"},
+    {.name = "libchdr",                                                              .license = licenseBSD3,          .repoURL = "https://github.com/rtissera/libchdr",            .licenseURL = "https://github.com/rtissera/libchdr/blob/master/LICENSE.txt"},
+    {.name = "lzma",                          .version = LZMA_VERSION,               .license = licensePublicDomain,                                                                                                                                                       .homeURL = "https://www.7-zip.org/sdk.html",},
+    {.name = "mio",                           .version = MIO_VERSION,                .license = licenseMIT,           .repoURL = "https://github.com/StrikerX3/mio",               .licenseURL = "https://github.com/StrikerX3/mio/blob/master/LICENSE"},
+    {.name = "moodycamel::\nConcurrentQueue", .version = "\n" MC_CONCQUEUE_VERSION,  .license = licenseBSD2,          .repoURL = "https://github.com/cameron314/concurrentqueue",  .licenseURL = "https://github.com/cameron314/concurrentqueue/blob/master/LICENSE.md"},
+    {.name = "SDL3",                          .version = SDL_VERSION_STR,            .license = licenseZlib,          .repoURL = "https://github.com/libsdl-org/SDL",              .licenseURL = "https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt"},
+    {.name = "stb_image",                     .version = STB_IMAGE_VERSION,          .license = licenseMIT,           .repoURL = "https://github.com/nothings/stb",                .licenseURL = "https://github.com/nothings/stb/blob/master/LICENSE"},
+    {.name = "toml++",                        .version = TOMLPP_VERSION,             .license = licenseMIT,           .repoURL = "https://github.com/marzer/tomlplusplus" ,        .licenseURL = "https://github.com/marzer/tomlplusplus/blob/master/LICENSE",             .homeURL = "https://marzer.github.io/tomlplusplus/"},
+    {.name = "xxHash",                        .version = XXHASH_VERSION,             .license = licenseBSD2,          .repoURL = "https://github.com/Cyan4973/xxHash",             .licenseURL = "https://github.com/Cyan4973/xxHash/blob/dev/LICENSE",                    .homeURL = "https://xxhash.com/"},
+    {.name = "zlib",                          .version = ZLIB_VERSION,               .license = licenseZlib,          .repoURL = "https://github.com/madler/zlib",                 .licenseURL = "https://github.com/madler/zlib/blob/develop/LICENSE",                    .homeURL = "https://zlib.net/"},
+    {.name = "zstd",                          .version = ZSTD_VERSION,               .license = licenseBSD3,          .repoURL = "https://github.com/facebook/zstd",               .licenseURL = "https://github.com/facebook/zstd/blob/dev/LICENSE",                      .homeURL = "http://www.zstd.net/"},
 };
 
 
@@ -199,12 +207,16 @@ void AboutWindow::DrawDependenciesTab() {
             ImGui::TableSetColumnIndex(1);
             if (dep.licenseURL != nullptr) {
                 ImGui::TextLinkOpenURL(dep.license.name, dep.licenseURL);
-            } else {
+            } else if (dep.license.url != nullptr) {
                 ImGui::TextLinkOpenURL(dep.license.name, dep.license.url);
+            } else {
+                ImGui::TextUnformatted(dep.license.name);
             }
 
             ImGui::TableSetColumnIndex(2);
-            ImGui::TextLinkOpenURL(dep.repoURL);
+            if (dep.repoURL != nullptr) {
+                ImGui::TextLinkOpenURL(dep.repoURL);
+            }
             if (dep.repoPrivate) {
                 ImGui::SameLine();
                 // TODO: don't hardcode colors!
@@ -340,6 +352,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ackWithAuthor("saturn-tests", "StrikerX3", "https://github.com/StrikerX3/saturn-tests");
         ackWithAuthor("SH-4 single step tests", "raddad772", "https://github.com/SingleStepTests/sh4");
         ackWithAuthor("M68000 single step tests", "raddad772", "https://github.com/SingleStepTests/m68000");
+        ackWithAuthor("scsptest and scspadpcm", "celeriyacon", "https://github.com/celeriyacon");
 
         // -----------------------------------------------------------------------------
 

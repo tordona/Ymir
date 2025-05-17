@@ -101,6 +101,7 @@ add_library(ymir-core
     
     include/ymir/media/loader/loader.hpp
     include/ymir/media/loader/loader_bin_cue.hpp
+    include/ymir/media/loader/loader_chd.hpp
     include/ymir/media/loader/loader_img_ccd_sub.hpp
     include/ymir/media/loader/loader_iso.hpp
     include/ymir/media/loader/loader_mdf_mds.hpp
@@ -206,6 +207,7 @@ add_library(ymir-core
 
     src/ymir/media/loader/loader.cpp
     src/ymir/media/loader/loader_bin_cue.cpp
+    src/ymir/media/loader/loader_chd.cpp
     src/ymir/media/loader/loader_img_ccd_sub.cpp
     src/ymir/media/loader/loader_iso.cpp
     src/ymir/media/loader/loader_mdf_mds.cpp
@@ -235,6 +237,7 @@ target_link_libraries(ymir-core PUBLIC
     mio
     concurrentqueue
     xxHash::xxHash
+    chdr-static
 )
 
 # Build precompiled header
@@ -324,9 +327,4 @@ endif ()
 if (MSVC)
     vs_set_filters(TARGET ymir-core)
     set_target_properties(ymir-core PROPERTIES FOLDER "Ymir")
-endif ()
-
-## Include the install rules if the user wanted them
-if (Ymir_INCLUDE_PACKAGING)
-    add_subdirectory(packaging)
 endif ()

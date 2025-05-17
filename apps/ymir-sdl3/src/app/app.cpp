@@ -231,7 +231,19 @@ int App::Run(const CommandLineOptions &options) {
         m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
     }
 
-    OpenWelcomeModal(true);
+    // Load IPL ROM
+    // Should be done after loading disc image so that the auto-detected region is used to select the appropriate ROM
+    ScanIPLROMs();
+    auto iplLoadResult = LoadIPLROM();
+
+    if (!iplLoadResult.succeeded) {
+        if (m_context.romManager.GetIPLROMs().empty()) {
+            // Could not load IPL ROM because there are none -- likely to be a fresh install, so show the Welcome screen
+            OpenWelcomeModal(true);
+        } else {
+            OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
+        }
+    }
 
     // Load SMPC persistent data and set up the path
     std::error_code error{};
@@ -1860,7 +1872,7 @@ void App::RunEmulator() {
                     if (ImGui::MenuItem("Open welcome window", nullptr)) {
                         OpenWelcomeModal(false);
                     }
-                        
+
                     ImGui::Separator();
 #if Ymir_ENABLE_IMGUI_DEMO
                     ImGui::MenuItem("ImGui demo window", nullptr, &showImGuiDemoWindow);
@@ -2280,29 +2292,11 @@ void App::EmulatorThread() {
     }
 }
 
-void App::OpenWelcomeModal(bool scanIPLROMS) {
-
-    if (scanIPLROMS) {
-        // Load IPL ROM
-        // Should be done after loading disc image so that the auto-detected region is used to select the appropriate
-        // ROM
-        ScanIPLROMs();
-        auto iplLoadResult = LoadIPLROM();
-
-        if (iplLoadResult.succeeded)
-            return;
-
-        if (!m_context.romManager.GetIPLROMs().empty()) {
-            OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
-            return;
-        }
-    }
-
-    bool activeScanning = scanIPLROMS;
+void App::OpenWelcomeModal(bool scanIPLROMs) {
+    bool activeScanning = scanIPLROMs;
 
     using namespace std::chrono_literals;
     static constexpr auto kScanInterval = 400ms;
-    
 
     struct ROMSelectResult {
         bool fileSelected = false;
@@ -2352,11 +2346,10 @@ void App::OpenWelcomeModal(bool scanIPLROMS) {
         ImGui::SameLine(0, 0);
         ImGui::TextUnformatted(".");
 
-        if (!activeScanning)
-        {
+        if (!activeScanning) {
             ImGui::NewLine();
-            ImGui::TextUnformatted("Ymir is not currently scanning for IPL ROMS.");
-            ImGui::TextUnformatted("If you would like to actively scan for IPL ROMS, press the button below.");
+            ImGui::TextUnformatted("Ymir is not currently scanning for IPL ROMs.");
+            ImGui::TextUnformatted("If you would like to actively scan for IPL ROMs, press the button below.");
             if (ImGui::Button("Start active scanning")) {
                 activeScanning = true;
             }
@@ -2373,8 +2366,7 @@ void App::OpenWelcomeModal(bool scanIPLROMS) {
         ImGui::Separator();
 
         if (ImGui::Button("Open IPL ROMs directory")) {
-            SDL_OpenURL(
-                fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages)).c_str());
+            SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::IPLROMImages)).c_str());
         }
         ImGui::SameLine();
         if (ImGui::Button("Select IPL ROM...")) {
@@ -2431,8 +2423,9 @@ void App::OpenWelcomeModal(bool scanIPLROMS) {
             }
         }
 
-        if (!activeScanning)
+        if (!activeScanning) {
             return;
+        }
 
         // Periodically scan for IPL ROMs.
         if (clk::now() >= nextScanDeadline) {
@@ -2773,7 +2766,7 @@ void App::ToggleRewindBuffer() {
 
 void App::OpenLoadDiscDialog() {
     static constexpr SDL_DialogFileFilter kCartFileFilters[] = {
-        {.name = "All supported formats (*.cue, *.mds, *.iso, *.ccd)", .pattern = "cue;mds;iso;ccd"},
+        {.name = "All supported formats (*.ccd, *.chd, *.cue, *.iso, *.mds)", .pattern = "ccd;chd;cue;iso;mds"},
         {.name = "All files (*.*)", .pattern = "*"},
     };
 
