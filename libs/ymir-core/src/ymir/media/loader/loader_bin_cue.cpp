@@ -222,7 +222,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
                 // TODO: control/ADR?
             } else if (format == "AUDIO") {
                 // Audio track
-                sectorSize = 2048;
+                sectorSize = 2352;
                 controlADR = 0x01;
             } else {
                 // fmt::println("BIN/CUE: Unsupported track format (line {})", lineNum);

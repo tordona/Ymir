@@ -856,25 +856,21 @@ void CDBlock::ProcessDriveStatePlay() {
 
             // Sanity check: is the track valid?
             if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
-                buffer.size = m_getSectorLength;
-                buffer.frameAddress = frameAddress;
-                track->ReadSectorSubheader(frameAddress, buffer.subheader);
-
                 devlog::trace<grp::play>("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
 
                 if (track->controlADR == 0x01) {
                     // If playing an audio track, send to SCSP
-                    const uint32 userDataOffset = m_getSectorLength == 2352 ? 16 : m_getSectorLength == 2340 ? 4 : 0;
-                    std::span<uint8, 2048> dataSpan{buffer.data.begin() + userDataOffset, 2048};
                     if (scan) {
                         // While scanning, lower volume by 12 dB
-                        for (uint32 offset = 0; offset < 2048; offset += 2) {
-                            util::WriteLE<sint16>(&dataSpan[offset], util::ReadLE<sint16>(&dataSpan[offset]) >> 2u);
+                        for (uint32 offset = 0; offset < 2352; offset += 2) {
+                            util::WriteLE<sint16>(&buffer.data[offset],
+                                                  util::ReadLE<sint16>(&buffer.data[offset]) >> 2u);
                         }
                     }
 
                     // The callback returns how many thirds of the buffer are full
-                    const uint32 currBufferLength = m_cbCDDASector(dataSpan);
+                    const uint32 currBufferLength =
+                        m_cbCDDASector(std::span<uint8, 2352>(buffer.data.begin(), buffer.data.end()));
 
                     // Adjust pace based on how full the SCSP CDDA buffer is
                     if (currBufferLength < 1) {
@@ -898,6 +894,10 @@ void CDBlock::ProcessDriveStatePlay() {
                     SetInterrupt(kHIRQ_BFUL);
                     m_bufferFullPause = true;
                 } else {
+                    buffer.size = m_getSectorLength;
+                    buffer.frameAddress = frameAddress;
+                    track->ReadSectorSubheader(frameAddress, buffer.subheader);
+
                     // Check against CD device filter and send data to the appropriate destination
                     uint8 filterNum = m_cdDeviceConnection;
                     for (int i = 0; i < kNumFilters && filterNum != Filter::kDisconnected; i++) {

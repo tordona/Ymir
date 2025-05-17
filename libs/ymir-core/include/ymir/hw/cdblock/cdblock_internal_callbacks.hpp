@@ -17,6 +17,6 @@ using CBTriggerExternalInterrupt0 = util::RequiredCallback<void()>;
 /// @brief Invoked when the CD Block reads a CDDA sector.
 ///
 /// The callback should return how many thirds of the audio buffer are full.
-using CBCDDASector = util::RequiredCallback<uint32(std::span<uint8, 2048> data)>;
+using CBCDDASector = util::RequiredCallback<uint32(std::span<uint8, 2352> data)>;
 
 } // namespace ymir::cdblock

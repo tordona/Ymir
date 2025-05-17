@@ -143,14 +143,14 @@ void SCSP::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
     m_scheduler.SetEventCountFactor(m_sampleTickEvent, clockRatios.SCSPNum, clockRatios.SCSPDen);
 }
 
-uint32 SCSP::ReceiveCDDA(std::span<uint8, 2048> data) {
-    std::copy_n(data.begin(), 2048, m_cddaBuffer.begin() + m_cddaWritePos);
-    m_cddaWritePos = (m_cddaWritePos + 2048) % m_cddaBuffer.size();
+uint32 SCSP::ReceiveCDDA(std::span<uint8, 2352> data) {
+    std::copy_n(data.begin(), 2352, m_cddaBuffer.begin() + m_cddaWritePos);
+    m_cddaWritePos = (m_cddaWritePos + 2352) % m_cddaBuffer.size();
     sint32 len = static_cast<sint32>(m_cddaWritePos) - m_cddaReadPos;
     if (len < 0) {
         len += m_cddaBuffer.size();
     }
-    if (len >= 2048 * 4) {
+    if (len >= 2352 * 4) {
         m_cddaReady = true;
     }
     return len * 3 / m_cddaBuffer.size();

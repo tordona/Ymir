@@ -14,7 +14,11 @@
 namespace ymir::state {
 
 // Version history:
-// v3:
+// v5:
+// - Changed fields
+//   - cddaBuffer array size increased from 2048 * 75 to 2352 * 75; note that this is a circular buffer indexed by
+//     cddaReadPos and cddaWritePos
+// v4:
 // - Removed fields
 //   - uint16 egCycle
 //   - bool egStep
@@ -26,7 +30,7 @@ struct SCSPState {
 
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> WRAM;
 
-    alignas(16) std::array<uint8, 2048 * 75> cddaBuffer;
+    alignas(16) std::array<uint8, 2352 * 75> cddaBuffer;
     uint32 cddaReadPos;
     uint32 cddaWritePos;
     bool cddaReady;

@@ -222,7 +222,9 @@ target_include_directories(ymir-sdl3
 )
 target_link_libraries(ymir-sdl3 PRIVATE
     ymir::ymir-core
+    ymir-sdl3::rc
     SDL3::SDL3
+    fmt
     cxxopts
     imgui::imgui
     tomlplusplus::tomlplusplus
@@ -246,9 +248,6 @@ cmrc_add_resource_library(ymir-sdl3-rc
     
     res/embed/images/ymir.png
 )
-
-## Add dependencies
-target_link_libraries(ymir-sdl3 PRIVATE fmt ymir-sdl3::rc)
 
 cmrk_copy_runtime_dlls(ymir-sdl3)
 

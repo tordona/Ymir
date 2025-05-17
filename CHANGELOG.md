@@ -6,6 +6,8 @@
 
 ### Fixes
 
+- CD Block: Fix audio track sector sizes. Fixes some CD audio track playback glitches with certain images (particularly MDF/MDS).
+
 
 ## Version 0.1.3
 

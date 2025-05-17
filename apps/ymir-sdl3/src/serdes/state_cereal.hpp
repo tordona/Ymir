@@ -9,7 +9,7 @@
 
 namespace ymir::state {
 
-inline constexpr uint32 kVersion = 4;
+inline constexpr uint32 kVersion = 5;
 
 } // namespace ymir::state
 
@@ -306,7 +306,37 @@ void serialize(Archive &ar, M68KState &s) {
 template <class Archive>
 void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     ar(s.WRAM);
-    ar(s.cddaBuffer, s.cddaReadPos, s.cddaWritePos, s.cddaReady);
+    if (version >= 5) {
+        ar(s.cddaBuffer, s.cddaReadPos, s.cddaWritePos, s.cddaReady);
+    } else {
+        // Reconstruct circular buffer
+        auto cddaBuffer = std::make_unique<std::array<uint8, 2048 * 75>>();
+        uint32 cddaReadPos, cddaWritePos;
+        ar(*cddaBuffer, cddaReadPos, cddaWritePos, s.cddaReady);
+        if (cddaWritePos < cddaReadPos) {
+            // ======W-----R======
+            s.cddaReadPos = 0;
+            s.cddaWritePos = cddaWritePos - cddaReadPos + 2048 * 75;
+            std::copy(cddaBuffer->begin() + cddaReadPos, cddaBuffer->end(), s.cddaBuffer.begin());
+            std::copy(cddaBuffer->begin(), cddaBuffer->begin() + cddaWritePos, s.cddaBuffer.begin() + cddaReadPos);
+        } else if (cddaWritePos > cddaReadPos) {
+            // ------R=====W------
+            s.cddaReadPos = 0;
+            s.cddaWritePos = cddaWritePos - cddaReadPos;
+            std::copy(cddaBuffer->begin(), cddaBuffer->begin() + s.cddaWritePos, s.cddaBuffer.begin());
+        } else if (s.cddaReady) {
+            // Buffer is full
+            std::copy(cddaBuffer->begin() + cddaReadPos, cddaBuffer->end(), s.cddaBuffer.begin());
+            std::copy(cddaBuffer->begin(), cddaBuffer->begin() + cddaWritePos, s.cddaBuffer.begin() + cddaReadPos);
+            s.cddaReadPos = 0;
+            s.cddaWritePos = 2048 * 75;
+        } else {
+            // Buffer is empty
+            s.cddaBuffer.fill(0);
+            s.cddaReadPos = 0;
+            s.cddaWritePos = 0;
+        }
+    }
     ar(s.m68k, s.m68kSpilloverCycles, s.m68kEnabled);
     for (auto &slot : s.slots) {
         serialize(ar, slot, version);

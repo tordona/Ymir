@@ -63,6 +63,13 @@ struct Track {
             return false;
         }
 
+        // Audio tracks always have 2352 bytes
+        if (controlADR == 0x01) {
+            const uint32 sectorOffset = (frameAddress - startFrameAddress) * sectorSize;
+            const uintmax_t readSize = binaryReader->Read(sectorOffset, 2352, outBuf);
+            return readSize == 2352;
+        }
+
         // Determine which components are needed and which are present
         const bool needsSyncBytes = targetSize >= 2352;
         const bool needsHeader = targetSize >= 2340;
@@ -186,6 +193,7 @@ struct Session {
         for (int i = 0; i < tracks.size(); i++) {
             tracks[i].index = i + 1;
         }
+        toc.fill(0xFFFFFFFF);
     }
 
     const Track *FindTrack(uint32 absFrameAddress) const {
