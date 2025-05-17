@@ -12,7 +12,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # Sets up MASM for lzma
+      # Set up MASM for lzma
       - uses: glslang/setup-masm@v1
   
       - uses: actions/checkout@v4

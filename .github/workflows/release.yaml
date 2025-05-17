@@ -34,6 +34,9 @@ jobs:
             cpp_compiler: clang
 
     steps:
+      # Set up MASM for lzma
+      - uses: glslang/setup-masm@v1
+  
       - uses: actions/checkout@v4
         with:
           submodules: recursive
