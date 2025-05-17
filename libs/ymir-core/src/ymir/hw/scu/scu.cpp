@@ -276,7 +276,7 @@ void SCU::AcknowledgeExternalInterrupt() {
 
 void SCU::DumpDSPProgramRAM(std::ostream &out) const {
     for (uint32 i = 0; i < m_dsp.programRAM.size(); ++i) {
-        const uint32 value = bit::big_endian_swap(m_dsp.programRAM[i]);
+        const uint32 value = bit::big_endian_swap(m_dsp.programRAM[i].u32);
         out.write((const char *)&value, sizeof(value));
     }
 }

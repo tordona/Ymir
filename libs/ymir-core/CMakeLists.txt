@@ -50,6 +50,7 @@ add_library(ymir-core
     include/ymir/hw/scu/scu_defs.hpp
     include/ymir/hw/scu/scu_dma.hpp
     include/ymir/hw/scu/scu_dsp.hpp
+    include/ymir/hw/scu/scu_dsp_instr.hpp
     include/ymir/hw/scu/scu_dsp_disasm.hpp
     include/ymir/hw/scu/scu_internal_callbacks.hpp
 

@@ -14,6 +14,8 @@
 
 #include <array>
 
+#include "scu_dsp_instr.hpp"
+
 namespace ymir::scu {
 
 using CBTriggerDSPEnd = util::RequiredCallback<void()>;
@@ -41,7 +43,7 @@ public:
     // Memory accessors
 
     uint32 ReadProgram() {
-        return programRAM[PC];
+        return programRAM[PC].u32;
     }
 
     template <bool poke>
@@ -53,7 +55,7 @@ public:
             }
         }
 
-        programRAM[PC++] = value;
+        programRAM[PC++].u32 = value;
     }
 
     template <bool peek>
@@ -336,7 +338,7 @@ public:
     // -------------------------------------------------------------------------
     // State
 
-    std::array<uint32, 256> programRAM;
+    std::array<DSPInstr, 256> programRAM;
     std::array<std::array<uint32, 64>, 4> dataRAM;
 
     bool programExecuting;
@@ -397,13 +399,13 @@ private:
     // Command interpreters
 
 #define TPL_DEBUG template <bool debug>
-    TPL_DEBUG void Cmd_Operation(uint32 command);
-    TPL_DEBUG void Cmd_LoadImm(uint32 command);
-    TPL_DEBUG void Cmd_Special(uint32 command);
-    TPL_DEBUG void Cmd_Special_DMA(uint32 command);
-    void Cmd_Special_Jump(uint32 command);
-    void Cmd_Special_Loop(uint32 command);
-    void Cmd_Special_End(uint32 command);
+    TPL_DEBUG void Cmd_Operation(DSPInstr instr);
+    TPL_DEBUG void Cmd_LoadImm(DSPInstr instr);
+    TPL_DEBUG void Cmd_Special(DSPInstr instr);
+    TPL_DEBUG void Cmd_Special_DMA(DSPInstr instr);
+    void Cmd_Special_Jump(DSPInstr instr);
+    void Cmd_Special_Loop(DSPInstr instr);
+    void Cmd_Special_End(DSPInstr instr);
 #undef TPL_DEBUG
 };
 
