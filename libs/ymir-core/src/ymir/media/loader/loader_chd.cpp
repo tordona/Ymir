@@ -13,6 +13,7 @@
 
 #include <span>
 #include <string>
+#include <utility>
 
 namespace ymir::media::loader::chd {
 
@@ -50,8 +51,8 @@ public:
 
         // Limit size to the smallest of the requested size, the output buffer size and the amount of bytes available in
         // the file starting from offset
-        size = std::min(size, m_header->logicalbytes - offset);
-        size = std::min(size, output.size());
+        size = std::min<uintmax_t>(size, m_header->logicalbytes - offset);
+        size = std::min<uintmax_t>(size, output.size());
         const uint32 firstHunk = std::min<uint32>(offset / m_header->hunkbytes, m_header->hunkcount - 1);
         uint32 hunkOffset = offset % m_header->hunkbytes;
         const uint32 lastHunk = std::min<uint32>((offset + size - 1) / m_header->hunkbytes, m_header->hunkcount - 1);
