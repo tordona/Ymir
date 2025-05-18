@@ -1090,7 +1090,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
 // -----------------------------------------------------------------------------
 
 struct DSPState {
-    std::array<uint32, 256> programRAM;
+    std::array<scu::DSPInstr, 256> programRAM;
     std::array<std::array<uint32, 64>, 4> dataRAM;
 
     uint8 PC; // program address
@@ -1204,8 +1204,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
     ClearAll();
 
     SECTION("LPS") {
-        dsp.programRAM[0] = 0xE8000000; // LPS
-        dsp.programRAM[1] = 0x10040000; // ADD  MOV ALU,A
+        dsp.programRAM[0].u32 = 0xE8000000; // LPS
+        dsp.programRAM[1].u32 = 0x10040000; // ADD  MOV ALU,A
         dsp.AC.u64 = 1;
         dsp.P.u64 = 1;
         dsp.loopCount = 2;
@@ -1282,10 +1282,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP loop instructions execute cor
     }
 
     SECTION("BTM") {
-        dsp.programRAM[0] = 0x00000000; // NOP
-        dsp.programRAM[1] = 0x10040000; // ADD  MOV ALU,A
-        dsp.programRAM[2] = 0xE0000000; // BTM
-        dsp.programRAM[3] = 0x28040000; // SL   MOV ALU,A
+        dsp.programRAM[0].u32 = 0x00000000; // NOP
+        dsp.programRAM[1].u32 = 0x10040000; // ADD  MOV ALU,A
+        dsp.programRAM[2].u32 = 0xE0000000; // BTM
+        dsp.programRAM[3].u32 = 0x28040000; // SL   MOV ALU,A
         dsp.AC.u64 = 1;
         dsp.P.u64 = 1;
         dsp.loopTop = 1;
@@ -1399,7 +1399,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute corr
     ClearAll();
 
     SECTION("END") {
-        dsp.programRAM[0] = 0xF0000000; // END
+        dsp.programRAM[0].u32 = 0xF0000000; // END
 
         // Setup execution
         dsp.PC = 0;
@@ -1417,7 +1417,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute corr
     }
 
     SECTION("ENDI") {
-        dsp.programRAM[0] = 0xF8000000; // ENDI
+        dsp.programRAM[0].u32 = 0xF8000000; // ENDI
 
         // Setup execution
         dsp.PC = 0;
@@ -1439,7 +1439,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     ClearAll();
 
     SECTION("DMA MC0,D0,#1 (invalid region)") {
-        dsp.programRAM[0] = 0xC0001001;
+        dsp.programRAM[0].u32 = 0xC0001001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1491,7 +1491,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,#1 (A-Bus)") {
-        dsp.programRAM[0] = 0xC0001001;
+        dsp.programRAM[0].u32 = 0xC0001001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1544,7 +1544,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,#1 (B-Bus)") {
-        dsp.programRAM[0] = 0xC0001001;
+        dsp.programRAM[0].u32 = 0xC0001001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1598,7 +1598,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0001001;
+        dsp.programRAM[0].u32 = 0xC0001001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1651,7 +1651,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC1,D0,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0001101;
+        dsp.programRAM[0].u32 = 0xC0001101;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1704,7 +1704,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC2,D0,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0001201;
+        dsp.programRAM[0].u32 = 0xC0001201;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1757,7 +1757,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC3,D0,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0001301;
+        dsp.programRAM[0].u32 = 0xC0001301;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1810,7 +1810,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC3,D0,#4 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0011304;
+        dsp.programRAM[0].u32 = 0xC0011304;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1866,7 +1866,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMAH MC3,D0,#4 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0015304;
+        dsp.programRAM[0].u32 = 0xC0015304;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1922,7 +1922,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,M0 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013000;
+        dsp.programRAM[0].u32 = 0xC0013000;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -1975,7 +1975,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,M1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013001;
+        dsp.programRAM[0].u32 = 0xC0013001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[0][2] = 21;
@@ -2032,7 +2032,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,M2 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013002;
+        dsp.programRAM[0].u32 = 0xC0013002;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[0][2] = 21;
@@ -2095,7 +2095,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,M3 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013003;
+        dsp.programRAM[0].u32 = 0xC0013003;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[0][2] = 21;
@@ -2167,7 +2167,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
 
     // TODO: check this on hardware; is it supposed to preincrement MC0 and read from data RAM[0][1]?
     SECTION("DMA MC0,D0,MC0 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013004;
+        dsp.programRAM[0].u32 = 0xC0013004;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[1][0] = 2;
@@ -2221,7 +2221,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,MC1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013005;
+        dsp.programRAM[0].u32 = 0xC0013005;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[0][2] = 21;
@@ -2278,7 +2278,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,MC2 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013006;
+        dsp.programRAM[0].u32 = 0xC0013006;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[0][2] = 21;
@@ -2341,7 +2341,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA MC0,D0,MC3 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0013007;
+        dsp.programRAM[0].u32 = 0xC0013007;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[0][2] = 21;
@@ -2412,7 +2412,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMAH MC0,D0,MC3 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0017007;
+        dsp.programRAM[0].u32 = 0xC0017007;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[0][1] = 11;
         dsp.dataRAM[0][2] = 21;
@@ -2483,7 +2483,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC0,#1 (invalid region)") {
-        dsp.programRAM[0] = 0xC0000001;
+        dsp.programRAM[0].u32 = 0xC0000001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2536,7 +2536,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC0,#1 (A-Bus)") {
-        dsp.programRAM[0] = 0xC0000001;
+        dsp.programRAM[0].u32 = 0xC0000001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2592,7 +2592,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC0,#1 (B-Bus)") {
-        dsp.programRAM[0] = 0xC0000001;
+        dsp.programRAM[0].u32 = 0xC0000001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2650,7 +2650,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC0,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0000001;
+        dsp.programRAM[0].u32 = 0xC0000001;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2706,7 +2706,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC1,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0000101;
+        dsp.programRAM[0].u32 = 0xC0000101;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2762,7 +2762,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC2,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0000201;
+        dsp.programRAM[0].u32 = 0xC0000201;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2818,7 +2818,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC3,#1 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0000301;
+        dsp.programRAM[0].u32 = 0xC0000301;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2874,7 +2874,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC3,#4 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0010304;
+        dsp.programRAM[0].u32 = 0xC0010304;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -2939,7 +2939,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMAH D0,MC3,#4 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0014304;
+        dsp.programRAM[0].u32 = 0xC0014304;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -3004,7 +3004,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,MC0,M0 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0012000;
+        dsp.programRAM[0].u32 = 0xC0012000;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -3060,7 +3060,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
     }
 
     SECTION("DMA D0,PRG,M0 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0012400;
+        dsp.programRAM[0].u32 = 0xC0012400;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -3111,13 +3111,13 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaReadAddr == 0x6001004);  // no hold = update address
         CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
         CHECK(dsp.dataRAM[0][0] == 1);
-        CHECK(dsp.programRAM[0] == 0x12345678);
+        CHECK(dsp.programRAM[0].u32 == 0x12345678);
         REQUIRE(memoryAccesses.size() == 1);
         CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
     }
 
     SECTION("DMAH D0,PRG,M0 (WRAM High)") {
-        dsp.programRAM[0] = 0xC0016400;
+        dsp.programRAM[0].u32 = 0xC0016400;
         dsp.dataRAM[0][0] = 1;
         dsp.dataRAM[1][0] = 2;
         dsp.dataRAM[1][1] = 3;
@@ -3168,7 +3168,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         CHECK(dsp.dmaReadAddr == 0x6001000);  // hold = maintain address
         CHECK(dsp.dmaWriteAddr == 0x6002000); // not used = maintain address
         CHECK(dsp.dataRAM[0][0] == 1);
-        CHECK(dsp.programRAM[0] == 0x12345678);
+        CHECK(dsp.programRAM[0].u32 == 0x12345678);
         REQUIRE(memoryAccesses.size() == 1);
         CHECK(memoryAccesses[0] == MemoryAccessInfo{0x6001000, 0x12345678, false, sizeof(uint32)});
     }

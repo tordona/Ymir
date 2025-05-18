@@ -29,7 +29,7 @@ SCUDSP::SCUDSP(sys::Bus &bus)
 
 void SCUDSP::Reset(bool hard) {
     if (hard) {
-        programRAM.fill(0);
+        programRAM.fill(DSPInstr{});
         for (auto &bank : dataRAM) {
             bank.fill(0);
         }
@@ -92,12 +92,11 @@ void SCUDSP::Run(uint64 cycles) {
         }
 
         // Execute next command
-        const uint32 command = programRAM[PC++];
-        const uint32 cmdCategory = bit::extract<30, 31>(command);
-        switch (cmdCategory) {
-        case 0b00: Cmd_Operation<debug>(command); break;
-        case 0b10: Cmd_LoadImm<debug>(command); break;
-        case 0b11: Cmd_Special<debug>(command); break;
+        const DSPInstr &instruction = programRAM[PC++];
+        switch (instruction.instructionInfo.instructionClass) {
+        case 0b00: Cmd_Operation<debug>(instruction); break;
+        case 0b10: Cmd_LoadImm<debug>(instruction); break;
+        case 0b11: Cmd_Special<debug>(instruction); break;
         }
 
         // Update PC
@@ -200,7 +199,7 @@ void SCUDSP::RunDMA(uint64 cycles) {
             if (useDataRAM) {
                 dataRAM[ctIndex][CT[ctIndex]] = value;
             } else if (useProgramRAM) {
-                programRAM[programRAMIndex++] = value;
+                programRAM[programRAMIndex++].u32 = value;
             }
         }
         addrD0 &= 0x7FF'FFFF;
@@ -223,7 +222,9 @@ void SCUDSP::RunDMA(uint64 cycles) {
 }
 
 void SCUDSP::SaveState(state::SCUDSPState &state) const {
-    state.programRAM = programRAM;
+    for (size_t i = 0; i < programRAM.size(); ++i) {
+        state.programRAM[i] = programRAM[i].u32;
+    }
     state.dataRAM = dataRAM;
     state.programExecuting = programExecuting;
     state.programPaused = programPaused;
@@ -264,7 +265,9 @@ bool SCUDSP::ValidateState(const state::SCUDSPState &state) const {
 }
 
 void SCUDSP::LoadState(const state::SCUDSPState &state) {
-    programRAM = state.programRAM;
+    for (size_t i = 0; i < programRAM.size(); ++i) {
+        programRAM[i].u32 = state.programRAM[i];
+    }
     dataRAM = state.dataRAM;
     programExecuting = state.programExecuting;
     programPaused = state.programPaused;
@@ -298,9 +301,9 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
 }
 
 template <bool debug>
-FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
+FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
     // ALU
-    switch (bit::extract<26, 29>(command)) {
+    switch (instr.aluInfo.aluOp) {
     case 0b0000: break;            // NOP
     case 0b0001: ALU_AND(); break; // AND
     case 0b0010: ALU_OR(); break;  // OR
@@ -328,17 +331,17 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
     //  101               MOV [s],X
     //  110   MOV MUL,P   MOV [s],X
     //  111   MOV [s],P   MOV [s],X
-    if (bit::extract<23, 24>(command) == 0b10) {
+    if ((instr.aluInfo.xBusOp & 0b11) == 0b10) {
         // MOV MUL,P
         P.s64 = static_cast<sint64>(RX) * static_cast<sint64>(RY);
     }
-    if (bit::extract<23, 25>(command) >= 0b011) {
-        const sint32 value = ReadSource<debug>(bit::extract<20, 22>(command));
-        if (bit::extract<23, 24>(command) == 0b11) {
+    if (instr.aluInfo.xBusOp >= 0b011) {
+        const sint32 value = ReadSource<debug>(instr.aluInfo.xBusSource);
+        if ((instr.aluInfo.xBusOp & 0b11) == 0b11) {
             // MOV [s],P
             P.s64 = static_cast<sint64>(value);
         }
-        if (bit::test<25>(command)) {
+        if (bit::test<2>(instr.aluInfo.xBusOp)) {
             // MOV [s],X
             RX = value;
         }
@@ -357,38 +360,38 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
     // 101    CLR A       MOV [s],Y
     // 110    MOV ALU,A   MOV [s],Y
     // 111    MOV [s],A   MOV [s],Y
-    if (bit::extract<17, 18>(command) == 0b01) {
+    if ((instr.aluInfo.yBusOp & 0b11) == 0b01) {
         // CLR A
         AC.s64 = 0;
-    } else if (bit::extract<17, 18>(command) == 0b10) {
+    } else if ((instr.aluInfo.yBusOp & 0b11) == 0b10) {
         // MOV ALU,A
         AC.s64 = ALU.s64;
     }
-    if (bit::extract<17, 19>(command) >= 0b11) {
-        const sint32 value = ReadSource<debug>(bit::extract<14, 16>(command));
-        if (bit::extract<17, 18>(command) == 0b11) {
+    if (instr.aluInfo.yBusOp >= 0b11) {
+        const sint32 value = ReadSource<debug>(instr.aluInfo.yBusSource);
+        if ((instr.aluInfo.yBusOp & 0b11) == 0b11) {
             // MOV [s],A
             AC.s64 = static_cast<sint64>(value);
         }
-        if (bit::test<19>(command)) {
+        if (bit::test<2>(instr.aluInfo.yBusOp)) {
             // MOV [s],Y
             RY = value;
         }
     }
 
     // D1-Bus
-    switch (bit::extract<12, 13>(command)) {
+    switch (instr.aluInfo.d1BusOp) {
     case 0b01: // MOV SImm, [d]
     {
-        const sint32 imm = bit::extract_signed<0, 7>(command);
-        const uint8 dst = bit::extract<8, 11>(command);
+        const sint32 imm = instr.aluInfo.d1BusImm;
+        const uint8 dst = instr.aluInfo.d1BusDest;
         WriteD1Bus<debug>(dst, imm);
         break;
     }
     case 0b11: // MOV [s], [d]
     {
-        const uint8 src = bit::extract<0, 3>(command);
-        const uint8 dst = bit::extract<8, 11>(command);
+        const uint8 src = instr.aluInfo.d1BusImm & 0b1111;
+        const uint8 dst = instr.aluInfo.d1BusDest;
         const uint32 value = ReadSource<debug>(src);
         WriteD1Bus<debug>(dst, value);
         break;
@@ -397,53 +400,53 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(uint32 command) {
 }
 
 template <bool debug>
-FORCE_INLINE void SCUDSP::Cmd_LoadImm(uint32 command) {
-    const uint32 dst = bit::extract<26, 29>(command);
+FORCE_INLINE void SCUDSP::Cmd_LoadImm(DSPInstr instr) {
+    const uint8 dst = instr.loadInfo.loadControl.storageLocation;
     sint32 imm;
-    if (bit::test<25>(command)) {
+    if (instr.loadInfo.loadControl.conditionalLoad) {
         // Conditional transfer
         // MVI SImm,[d],<cond>
-        imm = bit::extract_signed<0, 18>(command);
+        imm = instr.loadInfo.conditional.imm;
 
-        const uint8 cond = bit::extract<19, 24>(command);
+        const uint8 cond = instr.loadInfo.conditional.condition;
         if (!CondCheck(cond)) {
             return;
         }
     } else {
         // Unconditional transfer
         // MVI SImm,[d]
-        imm = bit::extract_signed<0, 24>(command);
+        imm = instr.loadInfo.unconditional.imm;
     }
 
     WriteImm<debug>(dst, imm);
 }
 
 template <bool debug>
-FORCE_INLINE void SCUDSP::Cmd_Special(uint32 command) {
-    const uint32 cmdSubcategory = bit::extract<28, 29>(command);
+FORCE_INLINE void SCUDSP::Cmd_Special(DSPInstr instr) {
+    const uint32 cmdSubcategory = instr.specialInfo.specialControl.specialClass;
     switch (cmdSubcategory) {
-    case 0b00: Cmd_Special_DMA<debug>(command); break;
-    case 0b01: Cmd_Special_Jump(command); break;
-    case 0b10: Cmd_Special_Loop(command); break;
-    case 0b11: Cmd_Special_End(command); break;
+    case 0b00: Cmd_Special_DMA<debug>(instr); break;
+    case 0b01: Cmd_Special_Jump(instr); break;
+    case 0b10: Cmd_Special_Loop(instr); break;
+    case 0b11: Cmd_Special_End(instr); break;
     }
 }
 
 template <bool debug>
-FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
+FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
     // Finish previous DMA transfer
     if (dmaRun) {
         RunDMA<debug>(1); // TODO: cycles?
     }
 
     dmaRun = true;
-    dmaToD0 = bit::test<12>(command);
-    dmaHold = bit::test<14>(command);
+    dmaToD0 = command.specialInfo.dmaInfo.direction;
+    dmaHold = command.specialInfo.dmaInfo.hold;
 
     // Get DMA transfer length
-    if (bit::test<13>(command)) {
-        const uint8 ctIndex = bit::extract<0, 1>(command);
-        const bool inc = bit::test<2>(command);
+    if (command.specialInfo.dmaInfo.sizeSource) {
+        const uint8 ctIndex = command.specialInfo.dmaInfo.imm & 0b11;
+        const bool inc = bit::test<2>(command.specialInfo.dmaInfo.imm);
         const uint32 ctAddr = CT[ctIndex];
         dmaCount = dataRAM[ctIndex][ctAddr];
         if (inc) {
@@ -451,45 +454,45 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(uint32 command) {
             CT[ctIndex] &= 0x3F;
         }
     } else {
-        dmaCount = bit::extract<0, 7>(command);
+        dmaCount = command.specialInfo.dmaInfo.imm;
     }
 
     // Get [RAM] source/destination register (CT) index and address increment
-    const uint8 addrInc = bit::extract<15, 17>(command);
+    const uint8 addrInc = command.specialInfo.dmaInfo.stride;
     if (dmaToD0) {
         // DMA [RAM],D0,SImm
         // DMA [RAM],D0,[s]
         // DMAH [RAM],D0,SImm
         // DMAH [RAM],D0,[s]
-        dmaSrc = bit::extract<8, 10>(command);
+        dmaSrc = command.specialInfo.dmaInfo.address;
         dmaAddrInc = (1u << addrInc) & ~1u;
     } else {
         // DMA D0,[RAM],SImm
         // DMA D0,[RAM],[s]
         // DMAH D0,[RAM],SImm
         // DMAH D0,[RAM],[s]
-        dmaDst = bit::extract<8, 10>(command);
+        dmaDst = command.specialInfo.dmaInfo.address;
         dmaAddrInc = (1u << (addrInc & 0x2u)) & ~1u;
     }
 
-    devlog::trace<grp::dsp>("DSP DMA command: {:04X} @ {:02X}", command, PC);
+    devlog::trace<grp::dsp>("DSP DMA command: {:04X} @ {:02X}", command.u32, PC);
 }
 
-FORCE_INLINE void SCUDSP::Cmd_Special_Jump(uint32 command) {
+FORCE_INLINE void SCUDSP::Cmd_Special_Jump(DSPInstr command) {
     // JMP <cond>,SImm
     // JMP SImm
-    const uint32 cond = bit::extract<19, 24>(command);
+    const uint32 cond = command.specialInfo.jumpInfo.condition;
     if (cond != 0 && !CondCheck(cond)) {
         return;
     }
 
-    const uint8 target = bit::extract<0, 7>(command);
+    const uint8 target = command.specialInfo.jumpInfo.target;
     DelayedJump(target);
 }
 
-FORCE_INLINE void SCUDSP::Cmd_Special_Loop(uint32 command) {
+FORCE_INLINE void SCUDSP::Cmd_Special_Loop(DSPInstr command) {
     if (loopCount != 0) {
-        if (bit::test<27>(command)) {
+        if (command.specialInfo.loopInfo.repeat) {
             // LPS
             DelayedJump(PC - 1);
         } else {
@@ -501,13 +504,12 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Loop(uint32 command) {
     loopCount &= 0xFFF;
 }
 
-FORCE_INLINE void SCUDSP::Cmd_Special_End(uint32 command) {
+FORCE_INLINE void SCUDSP::Cmd_Special_End(DSPInstr command) {
     // END
     // ENDI
-    const bool setEndIntr = bit::test<27>(command);
     programExecuting = false;
     programEnded = true;
-    if (setEndIntr) {
+    if (command.specialInfo.endInfo.interrupt) {
         m_cbTriggerDSPEnd();
     }
 }

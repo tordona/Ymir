@@ -34,7 +34,7 @@ void SCUDSPDisassemblyView::Display() {
         ImGui::TableHeadersRow();
 
         for (uint32 pc = 0; pc <= 0xFF; pc++) {
-            const uint32 opcode = m_dsp.programRAM[pc];
+            const uint32 opcode = m_dsp.programRAM[pc].u32;
             const auto disasm = scu::Disassemble(opcode);
 
             ImGui::TableNextRow();
