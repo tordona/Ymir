@@ -42,17 +42,14 @@ uint8 ControlPad::WritePDR(uint8 ddr, uint8 value) {
         break;
     case 0x60: // TH/TR control mode
         switch (value & 0x60) {
-        case 0x00: // R X Y Z
-            return 0x10 | bit::extract<4, 7>(btnValue);
-            break;
-        case 0x20: // right left down up
-            return 0x30 | bit::extract<12, 15>(btnValue);
-            break;
-        case 0x40: // start A C B
-            return 0x50 | bit::extract<8, 11>(btnValue);
-            break;
-        case 0x60: // L 1 1 1
+        case 0x60: // 1st data: L 1 1 1
             return 0x70 | bit::extract<0, 3>(btnValue);
+        case 0x20: // 2nd data: right left down up
+            return 0x30 | bit::extract<12, 15>(btnValue);
+        case 0x40: // 3rd data: start A C B
+            return 0x50 | bit::extract<8, 11>(btnValue);
+        case 0x00: // 4th data: R X Y Z
+            return 0x10 | bit::extract<4, 7>(btnValue);
         }
     }
 

@@ -36,6 +36,9 @@ private:
     bool m_analogMode = false;
 
     AnalogPadReport m_report;
+
+    uint8 m_reportPos = 0;
+    bool m_tl = false;
 };
 
 } // namespace ymir::peripheral

@@ -72,7 +72,13 @@ uint8 AnalogPad::WritePDR(uint8 ddr, uint8 value) {
     switch (ddr & 0x7F) {
     case 0x40: // TH control mode
         if (m_analogMode) {
-            // TODO
+            // Mega Drive peripheral ID acquisition sequence
+            // TODO: check correctness
+            if (value & 0x40) {
+                return 0x70 | 0b0001;
+            } else {
+                return 0x30 | 0b0001;
+            }
         } else {
             if (value & 0x40) {
                 return 0x70 | bit::extract<0, 3>(btnValue) | 0b111;
@@ -83,20 +89,46 @@ uint8 AnalogPad::WritePDR(uint8 ddr, uint8 value) {
         break;
     case 0x60: // TH/TR control mode
         if (m_analogMode) {
-            // TODO
+            // Saturn peripheral ID acquisition sequence
+            // TODO: check correctness
+            const bool th = bit::test<6>(value);
+            const bool tr = bit::test<5>(value);
+            if (th) {
+                m_reportPos = 0;
+                m_tl = false;
+            } else if (m_reportPos == 0 || tr != m_tl) {
+                m_tl = tr;
+                const uint8 pos = m_reportPos;
+                m_reportPos = (m_reportPos + 1) & 15;
+                switch (pos) {
+                case 0: return (m_tl << 5) | 0b0001;
+                case 1: return (m_tl << 5) | 0b0101;
+                case 2: return (m_tl << 5) | bit::extract<12, 15>(btnValue);
+                case 3: return (m_tl << 5) | bit::extract<8, 11>(btnValue);
+                case 4: return (m_tl << 5) | bit::extract<4, 7>(btnValue);
+                case 5: return (m_tl << 5) | bit::extract<0, 3>(btnValue) | 0b111;
+                case 6: return (m_tl << 5) | bit::extract<4, 7>(m_report.x);
+                case 7: return (m_tl << 5) | bit::extract<0, 3>(m_report.x);
+                case 8: return (m_tl << 5) | bit::extract<4, 7>(m_report.y);
+                case 9: return (m_tl << 5) | bit::extract<0, 3>(m_report.y);
+                case 10: return (m_tl << 5) | bit::extract<4, 7>(m_report.l);
+                case 11: return (m_tl << 5) | bit::extract<0, 3>(m_report.l);
+                case 12: return (m_tl << 5) | bit::extract<4, 7>(m_report.r);
+                case 13: return (m_tl << 5) | bit::extract<0, 3>(m_report.r);
+                case 14: return (m_tl << 5) | 0b0000;
+                case 15: return (m_tl << 5) | 0b0001;
+                }
+            }
         } else {
             switch (value & 0x60) {
-            case 0x00: // R X Y Z
-                return 0x10 | bit::extract<4, 7>(btnValue);
-                break;
-            case 0x20: // right left down up
+            case 0x60: // 1st data: L 1 1 1
+                return 0x70 | bit::extract<0, 3>(btnValue);
+            case 0x20: // 2nd data: right left down up
                 return 0x30 | bit::extract<12, 15>(btnValue);
-                break;
-            case 0x40: // start A C B
+            case 0x40: // 3rd data: start A C B
                 return 0x50 | bit::extract<8, 11>(btnValue);
-                break;
-            case 0x60: // L 1 1 1
-                return 0x70 | bit::extract<0, 3>(btnValue) | 0b111;
+            case 0x00: // 4th data: R X Y Z
+                return 0x10 | bit::extract<4, 7>(btnValue);
             }
         }
     }
