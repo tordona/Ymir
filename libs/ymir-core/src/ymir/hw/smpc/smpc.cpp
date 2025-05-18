@@ -742,8 +742,8 @@ void SMPC::TriggerOptimizedINTBACKRead() {
 void SMPC::ReadPeripherals() {
     m_intbackReportOffset = 0;
 
-    const size_t port1Len = m_port1.GetReportLength();
-    const size_t port2Len = m_port2.GetReportLength();
+    const size_t port1Len = m_port1.UpdateInputs();
+    const size_t port2Len = m_port2.UpdateInputs();
     m_intbackReport.resize(port1Len + port2Len);
     m_port1.Read(std::span<uint8>{m_intbackReport.begin(), port1Len});
     m_port2.Read(std::span<uint8>{m_intbackReport.begin() + port1Len, port2Len});

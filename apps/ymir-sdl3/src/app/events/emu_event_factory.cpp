@@ -171,6 +171,7 @@ static void InsertPeripheral(peripheral::PeripheralType type, peripheral::Periph
     switch (type) {
     case ymir::peripheral::PeripheralType::None: port.DisconnectPeripherals(); break;
     case ymir::peripheral::PeripheralType::ControlPad: port.ConnectControlPad(); break;
+    case ymir::peripheral::PeripheralType::AnalogPad: port.ConnectAnalogPad(); break;
     }
 }
 
