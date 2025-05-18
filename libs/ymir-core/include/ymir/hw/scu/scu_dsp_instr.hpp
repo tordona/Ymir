@@ -42,11 +42,11 @@ union DSPInstr {
         } loadControl;
 
         struct LoadUnconditional {
-            uint32 imm : 25; // 00-24 - Immediate
+            sint32 imm : 25; // 00-24 - Immediate
         } unconditional;
 
         struct LoadConditional {
-            uint32 imm : 19;      // 00-18 - Immediate
+            sint32 imm : 19;      // 00-18 - Immediate
             uint32 condition : 6; // 19-24 - Condition
         } conditional;
     } loadInfo;
