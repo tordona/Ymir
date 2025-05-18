@@ -2756,8 +2756,8 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
             }
 
             // Store screen coordinates
-            state.screenCoords[x].x = ((kx * scrX) >> 16ll) + Xp;
-            state.screenCoords[x].y = ((ky * scrY) >> 16ll) + Yp;
+            state.screenCoords[x].x() = ((kx * scrX) >> 16ll) + Xp;
+            state.screenCoords[x].y() = ((ky * scrY) >> 16ll) + Yp;
 
             // Increment screen coordinates and coefficient table address by Hcnt
             scrX += scrXIncH;
@@ -3117,8 +3117,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
             if constexpr (rotate) {
                 const auto &rotParamState = m_rotParamStates[0];
                 const auto &screenCoord = rotParamState.screenCoords[x];
-                const sint32 sx = screenCoord.x >> 16;
-                const sint32 sy = screenCoord.y >> 16;
+                const sint32 sx = screenCoord.x() >> 16;
+                const sint32 sy = screenCoord.y() >> 16;
                 return sx + sy * regs1.fbSizeH;
             } else {
                 return x + y * regs1.fbSizeH;
@@ -3715,8 +3715,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             continue;
         }
 
-        const sint32 fracScrollX = rotParamState.screenCoords[x].x;
-        const sint32 fracScrollY = rotParamState.screenCoords[x].y;
+        const sint32 fracScrollX = rotParamState.screenCoords[x].x();
+        const sint32 fracScrollY = rotParamState.screenCoords[x].y();
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 16u;
@@ -3812,8 +3812,8 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
             continue;
         }
 
-        const sint32 fracScrollX = rotParamState.screenCoords[x].x;
-        const sint32 fracScrollY = rotParamState.screenCoords[x].y;
+        const sint32 fracScrollX = rotParamState.screenCoords[x].x();
+        const sint32 fracScrollY = rotParamState.screenCoords[x].y();
 
         // Get integer scroll screen coordinates
         const uint32 scrollX = fracScrollX >> 16u;
