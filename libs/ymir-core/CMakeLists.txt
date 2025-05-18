@@ -249,6 +249,7 @@ target_precompile_headers(ymir-core
         <atomic>
         <bit>
         <cassert>
+        <charconv>
         <cinttypes>
         <climits>
         <cmath>

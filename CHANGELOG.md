@@ -5,6 +5,7 @@
 ### New features and improvements
 
 - Media: Preliminary support for CHD files. (#48)
+- Core: Performance improvements, especially for ARM builds. (@Wunkolo)
 
 ### Fixes
 
@@ -29,6 +30,7 @@
 - App: Mitigate input lag in every mode (#101)
 - App: Display reverse, rewind, fast-forward and pause indicators on the top-right corner of the viewport. (#103)
 - Build: Added macOS builds. (huge thanks to @Wunkolo!)
+- Core: Several performance and stability improvements. (@Wunkolo)
 
 ### Fixes
 

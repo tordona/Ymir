@@ -11,6 +11,7 @@
 
 #include <libchdr/chd.h>
 
+#include <charconv>
 #include <span>
 #include <string>
 #include <utility>
