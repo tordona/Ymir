@@ -163,7 +163,6 @@ int App::Run(const CommandLineOptions &options) {
         m_context.profile.UsePortableProfilePath();
     }
 
-
     {
         auto &inputSettings = m_context.settings.input;
         auto &inputContext = m_context.inputContext;
