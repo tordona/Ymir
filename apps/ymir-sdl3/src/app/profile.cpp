@@ -41,8 +41,13 @@ void Profile::UseProfilePath(std::filesystem::path path) {
 }
 
 bool Profile::CheckFolders() const {
-    for (auto &suffix : kPathSuffixes) {
-        if (!std::filesystem::is_directory(m_profilePath / suffix)) {
+    for (size_t i = 0; i < static_cast<size_t>(ProfilePath::_Count); ++i) {
+
+        if (!m_pathOverrides[i].empty() && !std::filesystem::is_directory(m_pathOverrides[i]))
+        {
+            return false;
+        } else if (!std::filesystem::is_directory(m_profilePath / kPathSuffixes[i]))
+        {
             return false;
         }
     }
@@ -52,8 +57,14 @@ bool Profile::CheckFolders() const {
 bool Profile::CreateFolders(std::error_code &error) {
     error.clear();
 
-    for (auto &suffix : kPathSuffixes) {
-        std::filesystem::create_directories(m_profilePath / suffix, error);
+    for (size_t i = 0; i < static_cast<size_t>(ProfilePath::_Count); ++i) {
+        if (m_pathOverrides[i].empty()) {
+            std::filesystem::create_directories(m_profilePath / kPathSuffixes[i], error);
+        } else if (!std::filesystem::is_directory(m_pathOverrides[i])) {
+            std::filesystem::create_directories(m_pathOverrides[i], error);
+        }
+
+
         if (error) {
             return false;
         }
