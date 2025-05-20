@@ -2499,6 +2499,11 @@ void VDP::VDP2InitFrame() {
         // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
         // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
 
+        // TODO: translate NBG0-3 pattern name/charpat accesses
+        // TODO: translate RGB0/1 accesses from RAMCTL
+        // TODO: compute access cycles only if CYC* registers are dirty
+        // TODO: compute RBG0/1 accesses only if the corresponding RAMCTL registers are dirty
+
         const bool useVertScrollNBG0 = m_VDP2.bgParams[1].verticalCellScrollEnable;
         const bool useVertScrollNBG1 = m_VDP2.bgParams[2].verticalCellScrollEnable;
 
@@ -2515,23 +2520,12 @@ void VDP::VDP2InitFrame() {
             }
 
             // Get the corresponding CYCxn register
-            const RegCYC cyc = [&] {
-                switch (bank) {
-                case 0: return m_VDP2.CYCA0;
-                case 1: return m_VDP2.CYCA1;
-                case 2: return m_VDP2.CYCB0;
-                case 3: return m_VDP2.CYCB1;
-                }
-                util::unreachable();
-            }();
-
-            for (auto access : {cyc.L.VCP0n, cyc.L.VCP1n, cyc.L.VCP2n, cyc.L.VCP3n, //
-                                cyc.U.VCP4n, cyc.U.VCP5n, cyc.U.VCP6n, cyc.U.VCP7n}) {
-                if (useVertScrollNBG0 && access == 0xC) {
+            for (auto access : m_VDP2.cyclePatterns.timings[bank]) {
+                if (useVertScrollNBG0 && access == CyclePatterns::VCellScrollNBG0) {
                     m_vertCellScrollInc += sizeof(uint32);
                     m_normBGLayerStates[0].vertCellScrollOffset = accessOffset;
                     accessOffset += sizeof(uint32);
-                } else if (useVertScrollNBG1 && access == 0xD) {
+                } else if (useVertScrollNBG1 && access == CyclePatterns::VCellScrollNBG1) {
                     m_vertCellScrollInc += sizeof(uint32);
                     m_normBGLayerStates[1].vertCellScrollOffset = accessOffset;
                     accessOffset += sizeof(uint32);
