@@ -525,8 +525,8 @@ T CDBlock::PeekReg(uint32 address) {
         address &= 0x3F;
 
         switch (address) {
-        case 0x00: return m_xferBuffer[m_xferBufferPos];
-        case 0x02: return m_xferBuffer[m_xferBufferPos];
+        case 0x00: return m_xferBuffer[m_xferBufferPos % m_xferBuffer.size()];
+        case 0x02: return m_xferBuffer[m_xferBufferPos % m_xferBuffer.size()];
         case 0x08: return m_HIRQ;
         case 0x0C: return m_HIRQMASK;
         case 0x18: return m_CR[0];
@@ -549,8 +549,8 @@ void CDBlock::PokeReg(uint32 address, T value) {
         address &= 0x3F;
 
         switch (address) {
-        case 0x00: m_xferBuffer[m_xferBufferPos] = value; break;
-        case 0x02: m_xferBuffer[m_xferBufferPos] = value; break;
+        case 0x00: m_xferBuffer[m_xferBufferPos % m_xferBuffer.size()] = value; break;
+        case 0x02: m_xferBuffer[m_xferBufferPos % m_xferBuffer.size()] = value; break;
         case 0x08: m_HIRQ = value; break;
         case 0x0C: m_HIRQMASK = value; break;
         case 0x18: m_CR[0] = value; break;
