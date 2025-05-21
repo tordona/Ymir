@@ -110,6 +110,9 @@ struct alignas(128) BGParams {
     }
 
     void Reset() {
+        patternNameAccesses.fill(false);
+        charPatternAccesses.fill(false);
+
         enableTransparency = false;
         bitmap = false;
 
@@ -173,12 +176,20 @@ struct alignas(128) BGParams {
         bmsz = 0;
     }
 
+    // Whether the background can access pattern name data in each VRAM bank.
+    // Derived from CYCxn.VCPtxxn
+    std::array<bool, 4> patternNameAccesses;
+
+    // Whether the background can access character pattern data in each VRAM bank.
+    // Derived from CYCxn.VCPtxxn
+    std::array<bool, 4> charPatternAccesses;
+
     // If true, honor transparency bit in color data.
     // Derived from BGON.xxTPON
     bool enableTransparency;
 
     // Whether the background uses cells (false) or a bitmap (true).
-    // Derived CHCTLA/CHCTLB.xxBMEN
+    // Derived from CHCTLA/CHCTLB.xxBMEN
     bool bitmap;
 
     // Enables LNCL screen insertion if this BG is the topmost layer.

@@ -579,19 +579,19 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCA0L(uint16 value) {
+        cyclePatterns.dirty = ReadCYCA0L() != value;
         cyclePatterns.timings[0][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[0][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[0][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[0][3] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     FORCE_INLINE void WriteCYCA0U(uint16 value) {
+        cyclePatterns.dirty = ReadCYCA0U() != value;
         cyclePatterns.timings[0][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[0][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[0][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[0][7] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     FORCE_INLINE uint16 ReadCYCA1L() const {
@@ -605,19 +605,19 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCA1L(uint16 value) {
+        cyclePatterns.dirty = ReadCYCA1L() != value;
         cyclePatterns.timings[1][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[1][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[1][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[1][3] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     FORCE_INLINE void WriteCYCA1U(uint16 value) {
+        cyclePatterns.dirty = ReadCYCA1U() != value;
         cyclePatterns.timings[1][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[1][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[1][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[1][7] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     FORCE_INLINE uint16 ReadCYCB0L() const {
@@ -631,19 +631,19 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCB0L(uint16 value) {
+        cyclePatterns.dirty = ReadCYCB0L() != value;
         cyclePatterns.timings[2][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[2][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[2][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[2][3] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     FORCE_INLINE void WriteCYCB0U(uint16 value) {
+        cyclePatterns.dirty = ReadCYCB0U() != value;
         cyclePatterns.timings[2][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[2][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[2][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[2][7] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     FORCE_INLINE uint16 ReadCYCB1L() const {
@@ -657,19 +657,19 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCB1L(uint16 value) {
+        cyclePatterns.dirty = ReadCYCB1L() != value;
         cyclePatterns.timings[3][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[3][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[3][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[3][3] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     FORCE_INLINE void WriteCYCB1U(uint16 value) {
+        cyclePatterns.dirty = ReadCYCB1U() != value;
         cyclePatterns.timings[3][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[3][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[3][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
         cyclePatterns.timings[3][7] = static_cast<CyclePatterns::Type>(bit::extract<0, 3>(value));
-        cyclePatterns.dirty = true;
     }
 
     // 180020   BGON    Screen Display Enable

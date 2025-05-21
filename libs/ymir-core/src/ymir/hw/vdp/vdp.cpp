@@ -2501,11 +2501,13 @@ void VDP::VDP2InitFrame() {
         // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
         // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
 
-        // TODO: translate NBG0-3 pattern name/charpat accesses from CYCxn
+        // TODO: check for pattern name/charpat accesses during rendering
         // TODO: translate RGB0/1 accesses from RAMCTL
         // TODO: compute RBG0/1 accesses only if the corresponding RAMCTL registers are dirty
 
-        if (m_VDP2.cyclePatterns.dirty) {
+        if (m_VDP2.cyclePatterns.dirty) [[unlikely]] {
+            m_VDP2.cyclePatterns.dirty = false;
+
             m_vertCellScrollInc = 0;
             uint32 vcellAccessOffset = 0;
 
@@ -2520,16 +2522,39 @@ void VDP::VDP2InitFrame() {
             const bool useVertScrollNBG0 = m_VDP2.bgParams[1].verticalCellScrollEnable;
             const bool useVertScrollNBG1 = m_VDP2.bgParams[2].verticalCellScrollEnable;
 
+            for (size_t i = 1; i <= 4; ++i) {
+                m_VDP2.bgParams[i].patternNameAccesses.fill(false);
+                m_VDP2.bgParams[i].charPatternAccesses.fill(false);
+            }
+
             // Update cycle accesses
-            for (auto access : m_VDP2.cyclePatterns.timings[vcellBank]) {
-                if (useVertScrollNBG0 && access == CyclePatterns::VCellScrollNBG0) {
-                    m_vertCellScrollInc += sizeof(uint32);
-                    m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
-                    vcellAccessOffset += sizeof(uint32);
-                } else if (useVertScrollNBG1 && access == CyclePatterns::VCellScrollNBG1) {
-                    m_vertCellScrollInc += sizeof(uint32);
-                    m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
-                    vcellAccessOffset += sizeof(uint32);
+            for (uint32 bank = 0; bank < 4; ++bank) {
+                for (auto access : m_VDP2.cyclePatterns.timings[bank]) {
+                    switch (access) {
+                    case CyclePatterns::PatNameNBG0: m_VDP2.bgParams[1].patternNameAccesses[bank] = true; break;
+                    case CyclePatterns::PatNameNBG1: m_VDP2.bgParams[2].patternNameAccesses[bank] = true; break;
+                    case CyclePatterns::PatNameNBG2: m_VDP2.bgParams[3].patternNameAccesses[bank] = true; break;
+                    case CyclePatterns::PatNameNBG3: m_VDP2.bgParams[4].patternNameAccesses[bank] = true; break;
+                    case CyclePatterns::CharPatNBG0: m_VDP2.bgParams[1].charPatternAccesses[bank] = true; break;
+                    case CyclePatterns::CharPatNBG1: m_VDP2.bgParams[2].charPatternAccesses[bank] = true; break;
+                    case CyclePatterns::CharPatNBG2: m_VDP2.bgParams[3].charPatternAccesses[bank] = true; break;
+                    case CyclePatterns::CharPatNBG3: m_VDP2.bgParams[4].charPatternAccesses[bank] = true; break;
+                    case CyclePatterns::VCellScrollNBG0:
+                        if (useVertScrollNBG0 && bank == vcellBank) {
+                            m_vertCellScrollInc += sizeof(uint32);
+                            m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
+                            vcellAccessOffset += sizeof(uint32);
+                        }
+                        break;
+                    case CyclePatterns::VCellScrollNBG1:
+                        if (useVertScrollNBG1 && bank == vcellBank) {
+                            m_vertCellScrollInc += sizeof(uint32);
+                            m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
+                            vcellAccessOffset += sizeof(uint32);
+                        }
+                        break;
+                    default: break;
+                    }
                 }
             }
         }
