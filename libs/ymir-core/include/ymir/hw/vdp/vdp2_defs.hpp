@@ -989,6 +989,7 @@ struct CyclePatterns {
         for (auto &bank : timings) {
             bank.fill(Type::PatNameNBG0);
         }
+        dirty = true;
     }
 
     // [0] VRAM bank A0 / A  (00000..1FFFF / 00000..3FFFF)
@@ -997,6 +998,8 @@ struct CyclePatterns {
     // [3] VRAM bank B1      (60000..7FFFF)
     // [n][0..7] Access type per timing slot (T0-T7)
     alignas(16) std::array<std::array<Type, 8>, 4> timings;
+
+    bool dirty;
 };
 
 // 180098   ZMCTL   Reduction Enable

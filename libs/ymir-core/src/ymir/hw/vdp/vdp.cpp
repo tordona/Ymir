@@ -764,6 +764,8 @@ void VDP::LoadState(const state::VDPState &state) {
     m_VDP2.WriteCOBG(state.regs2.COBG);
     m_VDP2.WriteCOBB(state.regs2.COBB);
 
+    m_VDP2.cyclePatterns.dirty = true;
+
     switch (state.HPhase) {
     default:
     case state::VDPState::HorizontalPhase::Active: m_HPhase = HorizontalPhase::Active; break;
@@ -2499,36 +2501,35 @@ void VDP::VDP2InitFrame() {
         // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
         // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
 
-        // TODO: translate NBG0-3 pattern name/charpat accesses
+        // TODO: translate NBG0-3 pattern name/charpat accesses from CYCxn
         // TODO: translate RGB0/1 accesses from RAMCTL
-        // TODO: compute access cycles only if CYC* registers are dirty
         // TODO: compute RBG0/1 accesses only if the corresponding RAMCTL registers are dirty
 
-        const bool useVertScrollNBG0 = m_VDP2.bgParams[1].verticalCellScrollEnable;
-        const bool useVertScrollNBG1 = m_VDP2.bgParams[2].verticalCellScrollEnable;
-
-        if (useVertScrollNBG0 || useVertScrollNBG1) {
+        if (m_VDP2.cyclePatterns.dirty) {
             m_vertCellScrollInc = 0;
-            uint32 accessOffset = 0;
+            uint32 vcellAccessOffset = 0;
 
             // Check in which bank the vertical cell scroll table is located at
-            uint32 bank = m_VDP2.verticalCellScrollTableAddress >> 17;
-            if (bank < 2 && !m_VDP2.vramControl.partitionVRAMA) {
-                bank = 0;
+            uint32 vcellBank = m_VDP2.verticalCellScrollTableAddress >> 17;
+            if (vcellBank < 2 && !m_VDP2.vramControl.partitionVRAMA) {
+                vcellBank = 0;
             } else if (!m_VDP2.vramControl.partitionVRAMB) {
-                bank = 2;
+                vcellBank = 2;
             }
 
-            // Get the corresponding CYCxn register
-            for (auto access : m_VDP2.cyclePatterns.timings[bank]) {
+            const bool useVertScrollNBG0 = m_VDP2.bgParams[1].verticalCellScrollEnable;
+            const bool useVertScrollNBG1 = m_VDP2.bgParams[2].verticalCellScrollEnable;
+
+            // Update cycle accesses
+            for (auto access : m_VDP2.cyclePatterns.timings[vcellBank]) {
                 if (useVertScrollNBG0 && access == CyclePatterns::VCellScrollNBG0) {
                     m_vertCellScrollInc += sizeof(uint32);
-                    m_normBGLayerStates[0].vertCellScrollOffset = accessOffset;
-                    accessOffset += sizeof(uint32);
+                    m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
+                    vcellAccessOffset += sizeof(uint32);
                 } else if (useVertScrollNBG1 && access == CyclePatterns::VCellScrollNBG1) {
                     m_vertCellScrollInc += sizeof(uint32);
-                    m_normBGLayerStates[1].vertCellScrollOffset = accessOffset;
-                    accessOffset += sizeof(uint32);
+                    m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
+                    vcellAccessOffset += sizeof(uint32);
                 }
             }
         }
