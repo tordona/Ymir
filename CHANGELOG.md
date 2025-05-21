@@ -13,6 +13,7 @@
 
 - App: Customized profile paths are now created at the specified location instead of the default. (#119, #126; @lvsweat)
 - CD Block: Fix audio track sector sizes. Fixes some CD audio track playback glitches with certain images (particularly MDF/MDS).
+- IPL: Automatically load IPL ROM when switching disc images. (#128)
 
 
 ## Version 0.1.3

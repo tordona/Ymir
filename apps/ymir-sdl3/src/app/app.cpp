@@ -2313,11 +2313,17 @@ void App::EmulatorThread() {
                     m_context.saturn.OpenTray();
                 }
                 break;
-            case LoadDisc:
+            case LoadDisc: //
+            {
                 // LoadDiscImage locks the disc mutex
                 LoadDiscImage(std::get<std::filesystem::path>(evt.value));
                 LoadSaveStates();
+                auto iplLoadResult = LoadIPLROM();
+                if (!iplLoadResult.succeeded) {
+                    OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
+                }
                 break;
+            }
             case EjectDisc: //
             {
                 std::unique_lock lock{m_context.locks.disc};
