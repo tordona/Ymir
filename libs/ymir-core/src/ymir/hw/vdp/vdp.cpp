@@ -3004,7 +3004,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
     if (regs2.bgEnabled[5]) {
         // Copy access properties from RBG0 to RBG1
         regs2.bgParams[1].patternNameAccesses = regs2.bgParams[0].patternNameAccesses;
-        regs2.bgParams[1].charPatternAccesses = regs2.bgParams[1].charPatternAccesses;
+        regs2.bgParams[1].charPatternAccesses = regs2.bgParams[0].charPatternAccesses;
     } else {
         // Translate VRAM access cycles for vertical cell scroll data into increment and offset for NBG0 and NBG1
         // and access flags for each VRAM bank for all NBGs.
