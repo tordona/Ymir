@@ -2583,15 +2583,22 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
         return value;
     };
 
-    if (bgParams.lineScrollXEnable) {
-        bgState.fracScrollX = bit::extract<8, 26>(read());
+    const VDP2Regs &regs = VDP2GetRegs();
+    size_t count = 1;
+    if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity && (y > 0 || regs.TVSTAT.ODD)) {
+        ++count;
     }
-    if (bgParams.lineScrollYEnable) {
-        // TODO: check/optimize this
-        bgState.fracScrollY = bit::extract<8, 26>(read());
-    }
-    if (bgParams.lineZoomEnable) {
-        bgState.scrollIncH = bit::extract<8, 18>(read());
+    for (size_t i = 0; i < count; ++i) {
+        if (bgParams.lineScrollXEnable) {
+            bgState.fracScrollX = bit::extract<8, 26>(read());
+        }
+        if (bgParams.lineScrollYEnable) {
+            // TODO: check/optimize this
+            bgState.fracScrollY = bit::extract<8, 26>(read());
+        }
+        if (bgParams.lineZoomEnable) {
+            bgState.scrollIncH = bit::extract<8, 18>(read());
+        }
     }
     if (y > 0 && (y & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
         bgState.lineScrollTableAddress = address;
