@@ -138,6 +138,7 @@ App::App()
     , m_slaveSH2WindowSet(m_context, false)
     , m_scuWindowSet(m_context)
     , m_vdpWindowSet(m_context)
+    , m_cdblockWindowSet(m_context)
     , m_debugOutputWindow(m_context)
     , m_settingsWindow(m_context)
     , m_periphBindsWindow(m_context)
@@ -1957,6 +1958,12 @@ void App::RunEmulator() {
                         ImGui::Unindent();
                         ImGui::EndMenu();
                     }
+
+                    if (ImGui::BeginMenu("CD Block")) {
+                        ImGui::MenuItem("Command trace", nullptr, &m_cdblockWindowSet.cmdTrace.Open);
+                        ImGui::EndMenu();
+                    }
+
                     ImGui::MenuItem("Debug output", nullptr, &m_debugOutputWindow.Open);
                     ImGui::EndMenu();
                 }
@@ -3037,6 +3044,7 @@ void App::DrawWindows() {
     m_slaveSH2WindowSet.DisplayAll();
     m_scuWindowSet.DisplayAll();
     m_vdpWindowSet.DisplayAll();
+    m_cdblockWindowSet.DisplayAll();
 
     m_debugOutputWindow.Display();
 

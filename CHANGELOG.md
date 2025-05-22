@@ -8,6 +8,7 @@
 - Input: Implemented 3D Control Pad. (#28)
 - Media: Preliminary support for CHD files. (#48)
 - Media: Support multi-indexed audio tracks (BIN/CUE only). (#58)
+- Debug: Simple CD Block commmand tracer window.
 
 ### Fixes
 
@@ -17,6 +18,7 @@
 - VDP2: Fix bitmap base address for RBGs. Fixes several graphics glitches on menus and in-game in Need for Speed.
 - VDP2: Don't increment vertical mosaic counter if mosaic is disabled. Fixes text boxes and character portraits in Grandia. (#91)
 - VDP2: Fix line screen scroll in double-density interlace mode. Fixes stretched videos in Grandia. (#91)
+
 
 ## Version 0.1.3
 

@@ -11,6 +11,26 @@
 
 namespace ymir::cdblock {
 
+// -----------------------------------------------------------------------------
+// Debugger
+
+FORCE_INLINE static void TraceProcessCommand(debug::ICDBlockTracer *tracer, uint16 cr1, uint16 cr2, uint16 cr3,
+                                             uint16 cr4) {
+    if (tracer) {
+        return tracer->ProcessCommand(cr1, cr2, cr3, cr4);
+    }
+}
+
+FORCE_INLINE static void TraceProcessCommandResponse(debug::ICDBlockTracer *tracer, uint16 cr1, uint16 cr2, uint16 cr3,
+                                                     uint16 cr4) {
+    if (tracer) {
+        return tracer->ProcessCommandResponse(cr1, cr2, cr3, cr4);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Implementation
+
 CDBlock::CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &config)
     : m_scheduler(scheduler) {
 
@@ -1320,6 +1340,7 @@ void CDBlock::SetupCommand() {
 
 FORCE_INLINE void CDBlock::ProcessCommand() {
     devlog::trace<grp::base>("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+    TraceProcessCommand(m_tracer, m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 
     const uint8 cmd = m_CR[0] >> 8u;
 
@@ -1399,6 +1420,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     }
 
     devlog::trace<grp::base>("Command response:  {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+    TraceProcessCommandResponse(m_tracer, m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 }
 
 void CDBlock::CmdGetStatus() {

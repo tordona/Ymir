@@ -11,6 +11,8 @@
 #include <ymir/sys/bus.hpp>
 #include <ymir/sys/clocks.hpp>
 
+#include <ymir/debug/cdblock_tracer_base.hpp>
+
 #include <ymir/hw/cdblock/cdblock_internal_callbacks.hpp>
 #include <ymir/sys/system_internal_callbacks.hpp>
 
@@ -413,6 +415,12 @@ public:
     // -------------------------------------------------------------------------
     // Debugger
 
+    // Attaches the specified tracer to this component.
+    // Pass nullptr to disable tracing.
+    void UseTracer(debug::ICDBlockTracer *tracer) {
+        m_tracer = tracer;
+    }
+
     class Probe {
     public:
         Probe(CDBlock &cdblock);
@@ -441,6 +449,7 @@ public:
 
 private:
     Probe m_probe{*this};
+    debug::ICDBlockTracer *m_tracer = nullptr;
 };
 
 } // namespace ymir::cdblock

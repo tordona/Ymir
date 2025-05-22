@@ -10,6 +10,7 @@
 #include <app/input/input_context.hpp>
 #include <app/input/input_utils.hpp>
 
+#include <app/debug/cdblock_tracer.hpp>
 #include <app/debug/scu_tracer.hpp>
 #include <app/debug/sh2_tracer.hpp>
 
@@ -170,6 +171,7 @@ struct SharedContext {
         SH2Tracer masterSH2;
         SH2Tracer slaveSH2;
         SCUTracer SCU;
+        CDBlockTracer CDBlock;
     } tracers;
 
     struct Fonts {
