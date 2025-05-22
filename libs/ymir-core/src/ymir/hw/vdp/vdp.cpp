@@ -3704,7 +3704,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
             const CoordU32 scrollCoord{scrollX, scrollY};
 
             // Plot pixel
-            layerState.pixels[x] = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, scrollCoord);
+            layerState.pixels[x] =
+                VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, bgParams.bitmapBaseAddress, scrollCoord);
         }
 
         // Increment horizontal coordinate
@@ -3856,7 +3857,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
             pixel.transparent = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
-            pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, scrollCoord);
+            pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, rotParams.bitmapBaseAddress, scrollCoord);
         } else {
             // Out of bounds and no repeat
             pixel.transparent = true;
@@ -4078,8 +4079,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     //
     // fourCellChar stores the character pattern size (1x1 when false, 2x2 when true).
     // twoWordChar determines if characters are one (false) or two (true) words long.
-    // extChar determines the length of the character data field in one word characters --
-    // when true, they're extended by two bits, taking over the two flip bits.
+    // extChar determines the length of the character data field in one word characters -- when true, they're extended
+    // by two bits, taking over the two flip bits.
     //
     //           Cell
     // +--+--+--+--+--+--+--+--+
@@ -4336,7 +4337,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, CoordU32 dotCoord) {
+FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint32 bitmapBaseAddress,
+                                                  CoordU32 dotCoord) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
     Pixel pixel{};
@@ -4348,7 +4350,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, Coor
     dotY &= bgParams.bitmapSizeV - 1;
 
     // Bitmap addressing uses a fixed offset of 0x20000 bytes which is precalculated when MPOFN/MPOFR is written to
-    const uint32 bitmapBaseAddress = bgParams.bitmapBaseAddress;
     const uint32 dotOffset = dotX + dotY * bgParams.bitmapSizeH;
     const uint32 palNum = bgParams.supplBitmapPalNum;
 
