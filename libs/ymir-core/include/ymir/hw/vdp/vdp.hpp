@@ -1024,6 +1024,9 @@ private:
     void VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                           const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
 
+    // Computes the access cycles for NBGs and RBGs.
+    void VDP2CalcAccessCycles();
+
     // Draws the specified VDP2 scanline.
     //
     // y is the scanline to draw
