@@ -3234,12 +3234,11 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    const VDP2Regs &regs = VDP2GetRegs();
-
-    if (!regs.bgEnabled[bgIndex]) {
+    if (!m_layerStates[bgIndex + 2].enabled) {
         return;
     }
 
+    const VDP2Regs &regs = VDP2GetRegs();
     const BGParams &bgParams = regs.bgParams[bgIndex + 1];
     LayerState &layerState = m_layerStates[bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
@@ -3262,9 +3261,11 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
         (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState, windowState);
     }
 
-    bgState.mosaicCounterY++;
-    if (bgState.mosaicCounterY >= regs.mosaicV) {
-        bgState.mosaicCounterY = 0;
+    if (bgParams.mosaicEnable) {
+        bgState.mosaicCounterY++;
+        if (bgState.mosaicCounterY >= regs.mosaicV) {
+            bgState.mosaicCounterY = 0;
+        }
     }
 }
 
@@ -3313,12 +3314,11 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    const VDP2Regs &regs = VDP2GetRegs();
-
-    if (!regs.bgEnabled[bgIndex + 4]) {
+    if (!m_layerStates[bgIndex].enabled) {
         return;
     }
 
+    const VDP2Regs &regs = VDP2GetRegs();
     const BGParams &bgParams = regs.bgParams[bgIndex];
     LayerState &layerState = m_layerStates[bgIndex + 1];
     const auto &windowState = m_bgWindows[bgIndex];
