@@ -2979,33 +2979,7 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
 FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
     VDP2Regs &regs2 = VDP2GetRegs();
 
-    // TODO: Compute RBG0 accesses
-    // TODO: compute only if the corresponding RAMCTL registers are dirty
-    regs2.bgParams[0].patternNameAccesses[0] = regs2.vramControl.rotDataBankSelA0 == 2;
-    regs2.bgParams[0].patternNameAccesses[1] = regs2.vramControl.rotDataBankSelA1 == 2;
-    regs2.bgParams[0].patternNameAccesses[2] = regs2.vramControl.rotDataBankSelB0 == 2;
-    regs2.bgParams[0].patternNameAccesses[3] = regs2.vramControl.rotDataBankSelB1 == 2;
-
-    regs2.bgParams[0].charPatternAccesses[0] = regs2.vramControl.rotDataBankSelA0 == 3;
-    regs2.bgParams[0].charPatternAccesses[1] = regs2.vramControl.rotDataBankSelA1 == 3;
-    regs2.bgParams[0].charPatternAccesses[2] = regs2.vramControl.rotDataBankSelB0 == 3;
-    regs2.bgParams[0].charPatternAccesses[3] = regs2.vramControl.rotDataBankSelB1 == 3;
-
-    if (!regs2.vramControl.partitionVRAMA) {
-        regs2.bgParams[0].patternNameAccesses[1] = regs2.bgParams[0].patternNameAccesses[0];
-        regs2.bgParams[0].charPatternAccesses[1] = regs2.bgParams[0].charPatternAccesses[0];
-    }
-    if (!regs2.vramControl.partitionVRAMB) {
-        regs2.bgParams[0].patternNameAccesses[3] = regs2.bgParams[0].patternNameAccesses[2];
-        regs2.bgParams[0].charPatternAccesses[3] = regs2.bgParams[0].charPatternAccesses[2];
-    }
-
-    // If RBG1 is enabled, assume RBG0 is also enabled; NBGs are disabled
-    if (regs2.bgEnabled[5]) {
-        // Copy access properties from RBG0 to RBG1
-        regs2.bgParams[1].patternNameAccesses = regs2.bgParams[0].patternNameAccesses;
-        regs2.bgParams[1].charPatternAccesses = regs2.bgParams[0].charPatternAccesses;
-    } else {
+    if (!regs2.bgEnabled[5]) {
         // Translate VRAM access cycles for vertical cell scroll data into increment and offset for NBG0 and NBG1
         // and access flags for each VRAM bank for all NBGs.
         //
@@ -3029,23 +3003,10 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
             const bool useVertScrollNBG0 = regs2.bgParams[1].verticalCellScrollEnable;
             const bool useVertScrollNBG1 = regs2.bgParams[2].verticalCellScrollEnable;
 
-            for (size_t i = 1; i <= 4; ++i) {
-                regs2.bgParams[i].patternNameAccesses.fill(false);
-                regs2.bgParams[i].charPatternAccesses.fill(false);
-            }
-
             // Update cycle accesses
             for (uint32 bank = 0; bank < 4; ++bank) {
                 for (auto access : regs2.cyclePatterns.timings[bank]) {
                     switch (access) {
-                    case CyclePatterns::PatNameNBG0: regs2.bgParams[1].patternNameAccesses[bank] = true; break;
-                    case CyclePatterns::PatNameNBG1: regs2.bgParams[2].patternNameAccesses[bank] = true; break;
-                    case CyclePatterns::PatNameNBG2: regs2.bgParams[3].patternNameAccesses[bank] = true; break;
-                    case CyclePatterns::PatNameNBG3: regs2.bgParams[4].patternNameAccesses[bank] = true; break;
-                    case CyclePatterns::CharPatNBG0: regs2.bgParams[1].charPatternAccesses[bank] = true; break;
-                    case CyclePatterns::CharPatNBG1: regs2.bgParams[2].charPatternAccesses[bank] = true; break;
-                    case CyclePatterns::CharPatNBG2: regs2.bgParams[3].charPatternAccesses[bank] = true; break;
-                    case CyclePatterns::CharPatNBG3: regs2.bgParams[4].charPatternAccesses[bank] = true; break;
                     case CyclePatterns::VCellScrollNBG0:
                         if (useVertScrollNBG0 && bank == vcellBank) {
                             m_vertCellScrollInc += sizeof(uint32);
@@ -3062,17 +3023,6 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
                         break;
                     default: break;
                     }
-                }
-            }
-
-            for (uint32 i = 1; i <= 4; ++i) {
-                if (!regs2.vramControl.partitionVRAMA) {
-                    regs2.bgParams[i].patternNameAccesses[1] = regs2.bgParams[i].patternNameAccesses[0];
-                    regs2.bgParams[i].charPatternAccesses[1] = regs2.bgParams[i].charPatternAccesses[0];
-                }
-                if (!regs2.vramControl.partitionVRAMB) {
-                    regs2.bgParams[i].patternNameAccesses[3] = regs2.bgParams[i].patternNameAccesses[2];
-                    regs2.bgParams[i].charPatternAccesses[3] = regs2.bgParams[i].charPatternAccesses[2];
                 }
             }
         }
@@ -4175,9 +4125,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     const uint32 plane = planeX + planeY * planeWidth;
     const uint32 pageBaseAddress = pageBaseAddresses[plane];
     const uint32 pageBank = (pageBaseAddress >> 17u) & 3u;
-    if (!bgParams.patternNameAccesses[pageBank]) {
-        return {};
-    }
 
     // Determine page index from the scroll coordinates
     const uint32 pageX = bit::extract<9>(scrollX) & pageShiftH;
@@ -4334,10 +4281,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     uint8 colorData = 0;
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = cellAddress + (dotOffset >> 1u);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> ((~dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
@@ -4346,10 +4289,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = cellAddress + dotOffset;
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint8 dotData = VDP2ReadRendererVRAM<uint8>(dotAddress);
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
@@ -4358,10 +4297,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
@@ -4370,20 +4305,12 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
         pixel.specialColorCalc = getSpecialColorCalcFlag(colorData);
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111);
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint32);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint32 dotData = VDP2ReadRendererVRAM<uint32>(dotAddress);
         pixel.color.u32 = dotData;
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
@@ -4436,10 +4363,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> ((~dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -4447,10 +4370,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
         pixel.specialColorCalc = getSpecialColorCalcFlag(bit::test<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint8 dotData = VDP2ReadRendererVRAM<uint8>(dotAddress);
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -4458,10 +4377,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
         pixel.specialColorCalc = getSpecialColorCalcFlag(bit::test<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         const uint32 colorIndex = dotData & 0x7FF;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -4469,20 +4384,12 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
         pixel.specialColorCalc = getSpecialColorCalcFlag(bit::test<3>(dotData));
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(true);
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
-        const uint32 bank = (dotAddress >> 17u) & 3u;
-        if (!bgParams.charPatternAccesses[bank]) {
-            return pixel;
-        }
         const uint32 dotData = VDP2ReadRendererVRAM<uint32>(dotAddress);
         pixel.color = Color888{.u32 = dotData};
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
