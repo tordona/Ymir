@@ -14,10 +14,12 @@
 
 - App: Customized profile paths are now created at the specified location instead of the default. (#119, #126; @lvsweat)
 - CD Block: Fix audio track sector sizes. Fixes some CD audio track playback glitches with certain images (particularly MDF/MDS).
+- CD Block: Free last buffer from partition when ending a Get Then Delete Sector transfer when the last sector isn't fully read. Fixes some game boot issues.
 - IPL: Automatically load IPL ROM when switching disc images. (#128)
 - VDP2: Fix bitmap base address for RBGs. Fixes several graphics glitches on menus and in-game in Need for Speed.
 - VDP2: Don't increment vertical mosaic counter if mosaic is disabled. Fixes text boxes and character portraits in Grandia. (#91)
 - VDP2: Fix line screen scroll in double-density interlace mode. Fixes stretched videos in Grandia. (#91)
+- SH-2: Fix PC offsets for exceptions, interrupts, TRAPA and RTE. Fixes some game boot issues.
 
 
 ## Version 0.1.3
