@@ -182,7 +182,7 @@ void VDP::MapMemory(sys::Bus &bus) {
     bus.MapNormal(
         0x5D0'0000, 0x5D7'FFFF, this,
         [](uint32 address, void *ctx) -> uint8 {
-            const uint16 value = cast(ctx).VDP1ReadReg<false>(address);
+            const uint16 value = cast(ctx).VDP1ReadReg<false>(address & ~1);
             return value >> ((~address & 1) * 8u);
         },
         [](uint32 address, void *ctx) -> uint16 { return cast(ctx).VDP1ReadReg<false>(address); },
@@ -207,7 +207,7 @@ void VDP::MapMemory(sys::Bus &bus) {
     bus.MapSideEffectFree(
         0x5D0'0000, 0x5D7'FFFF, this,
         [](uint32 address, void *ctx) -> uint8 {
-            const uint16 value = cast(ctx).VDP1ReadReg<true>(address);
+            const uint16 value = cast(ctx).VDP1ReadReg<true>(address & ~1);
             return value >> ((~address & 1) * 8u);
         },
         [](uint32 address, void *ctx) -> uint16 { return cast(ctx).VDP1ReadReg<true>(address); },
@@ -306,7 +306,7 @@ void VDP::MapMemory(sys::Bus &bus) {
     bus.MapSideEffectFree(
         0x5F8'0000, 0x5FB'FFFF, this,
         [](uint32 address, void *ctx) -> uint8 {
-            const uint16 value = cast(ctx).VDP2ReadReg(address);
+            const uint16 value = cast(ctx).VDP2ReadReg(address & ~1);
             return value >> ((~address & 1) * 8u);
         },
         [](uint32 address, uint8 value, void *ctx) {
