@@ -693,8 +693,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         uint8 lastTrack = session.lastTrackIndex + 1;
         startTrack = std::clamp(startTrack, firstTrack, lastTrack);
         endTrack = std::clamp(endTrack, firstTrack, lastTrack);
-        startIndex = std::clamp<uint8>(startIndex, 1, session.tracks[startTrack - 1].indices.size() + 1);
-        endIndex = std::clamp<uint8>(endIndex, 1, session.tracks[endTrack - 1].indices.size() + 1);
+        startIndex = std::clamp<uint8>(startIndex, 1, session.tracks[startTrack - 1].indices.size());
+        endIndex = std::clamp<uint8>(endIndex, 1, session.tracks[endTrack - 1].indices.size());
         devlog::debug<grp::play_init>("Track:Index range after clamping {:02d}:{:02d}-{:02d}:{:02d}", startTrack,
                                       startIndex, endTrack, endIndex);
 
