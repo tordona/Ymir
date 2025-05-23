@@ -181,10 +181,9 @@ void VDP::MapMemory(sys::Bus &bus) {
     // VDP1 registers
     bus.MapNormal(
         0x5D0'0000, 0x5D7'FFFF, this,
-        [](uint32 address, void * /*ctx*/) -> uint8 {
-            address &= 0x7FFFF;
-            devlog::debug<grp::vdp1_regs>("Illegal 8-bit VDP1 register read from {:05X}", address);
-            return 0;
+        [](uint32 address, void *ctx) -> uint8 {
+            const uint16 value = cast(ctx).VDP1ReadReg<false>(address);
+            return value >> ((~address & 1) * 8u);
         },
         [](uint32 address, void *ctx) -> uint16 { return cast(ctx).VDP1ReadReg<false>(address); },
         [](uint32 address, void *ctx) -> uint32 {
@@ -192,9 +191,12 @@ void VDP::MapMemory(sys::Bus &bus) {
             value |= cast(ctx).VDP1ReadReg<false>(address + 2) << 0u;
             return value;
         },
-        [](uint32 address, uint8 value, void * /*ctx*/) {
-            address &= 0x7FFFF;
-            devlog::debug<grp::vdp1_regs>("Illegal 8-bit VDP1 register write to {:05X} = {:02X}", address, value);
+        [](uint32 address, uint8 value, void *ctx) {
+            uint16 currValue = cast(ctx).VDP1ReadReg<false>(address & ~1);
+            const uint16 shift = (~address & 1) * 8u;
+            const uint16 mask = ~(0xFF << shift);
+            currValue = (currValue & mask) | (value << shift);
+            cast(ctx).VDP1WriteReg<false>(address & ~1, currValue);
         },
         [](uint32 address, uint16 value, void *ctx) { cast(ctx).VDP1WriteReg<false>(address, value); },
         [](uint32 address, uint32 value, void *ctx) {
