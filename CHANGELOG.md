@@ -8,6 +8,8 @@
 - Input: Implemented 3D Control Pad. (#28)
 - Media: Preliminary support for CHD files. (#48)
 - Media: Support multi-indexed audio tracks (BIN/CUE only). (#58)
+- CD Block: Implement Put Sector command, used by After Burner II. (#78)
+- SMPC: Set SF=0 on unimplemented commands so that games can move forward.
 - Debug: Simple CD Block commmand tracer window.
 
 ### Fixes

@@ -474,7 +474,7 @@ void serialize(Archive &ar, SCSPTimer &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, CDBlockState &s) {
+void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     ar(s.discHash);
     ar(s.CR, s.HIRQ, s.HIRQMASK);
     ar(s.status);
@@ -488,7 +488,27 @@ void serialize(Archive &ar, CDBlockState &s) {
     ar(s.xferSectorPos, s.xferSectorEnd, s.xferPartition);
     ar(s.xferSubcodeFrameAddress, s.xferSubcodeGroup);
     ar(s.xferExtraCount);
-    ar(s.buffers, s.scratchBuffer);
+    if (version >= 5) {
+        ar(s.buffers, s.scratchBufferPutIndex);
+    } else {
+        // scratchBuffer was moved into the buffers array immediately after the partition buffers
+        auto buffers = std::make_unique<std::array<CDBlockState::BufferState, cdblock::kNumBuffers>>();
+        auto scratchBuffer = std::make_unique<CDBlockState::BufferState>();
+        ar(*buffers, *scratchBuffer);
+
+        // Copy entire buffers array
+        std::copy_n(buffers->begin(), cdblock::kNumBuffers, s.buffers.begin());
+
+        // Find a place for the scratch buffer immediately after the partition buffers
+        for (uint32 i = 0; i < s.buffers.size(); ++i) {
+            if (s.buffers[i].partitionIndex == 0xFF) {
+                s.buffers[i] = *scratchBuffer;
+                break;
+            }
+        }
+
+        s.scratchBufferPutIndex = 0;
+    }
     ar(s.filters);
     ar(s.cdDeviceConnection, s.lastCDWritePartition);
     ar(s.calculatedPartitionSize);
@@ -541,7 +561,7 @@ void serialize(Archive &ar, State &s, const uint32 version) {
     serialize(ar, s.smpc);
     serialize(ar, s.vdp, version);
     serialize(ar, s.scsp, version);
-    serialize(ar, s.cdblock);
+    serialize(ar, s.cdblock, version);
 }
 
 } // namespace ymir::state
