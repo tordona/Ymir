@@ -204,6 +204,7 @@ private:
 
     void SetupTOCTransfer();
     void SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del);
+    void SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber);
     uint32 SetupFileInfoTransfer(uint32 fileID);
     bool SetupSubcodeTransfer(uint8 type);
     void EndTransfer();

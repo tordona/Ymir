@@ -1094,6 +1094,15 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
     ReadSector();
 }
 
+void CDBlock::SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber) {
+    devlog::trace<grp::xfer>("Starting sector write transfer - {} sectors into buffer partition {}", sectorCount,
+                             partitionNumber);
+
+    // TODO: setup write transfer parameters
+
+    devlog::debug<grp::xfer>("Put sector transfer is unimplemented");
+}
+
 uint32 CDBlock::SetupFileInfoTransfer(uint32 fileID) {
     devlog::debug<grp::xfer>("Starting file info transfer - file ID {:X}", fileID);
 
@@ -1300,6 +1309,8 @@ void CDBlock::DoWriteTransfer(uint16 value) {
     /*switch (m_xferType) {
     }*/
 
+    // TODO: raise kHIRQ_EHST if not enough buffer space available
+
     m_xferExtraCount++;
 
     AdvanceTransfer();
@@ -1387,7 +1398,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     case 0x61: CmdGetSectorData(); break;
     case 0x62: CmdDeleteSectorData(); break;
     case 0x63: CmdGetThenDeleteSectorData(); break;
-    // case 0x64: CmdPutSectorData(); break;
+    case 0x64: CmdPutSectorData(); break;
     // case 0x65: CmdCopySectorData(); break;
     // case 0x66: CmdMoveSectorData(); break;
     case 0x67: CmdGetCopyError(); break;
@@ -2469,8 +2480,10 @@ void CDBlock::CmdGetSectorData() {
 
     bool reject = false;
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
+        devlog::trace<grp::base>("Get then delete sector transfer rejected: invalid partition {}", partitionNumber);
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
+        devlog::trace<grp::base>("Get then delete sector transfer rejected: no data in partition {}", partitionNumber);
         reject = true;
     } else {
         SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
@@ -2501,8 +2514,10 @@ void CDBlock::CmdDeleteSectorData() {
 
     bool reject = false;
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
+        devlog::trace<grp::base>("Delete sector rejected: invalid partition {}", partitionNumber);
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
+        devlog::trace<grp::base>("Delete sector rejected: no data in partition {}", partitionNumber);
         reject = true;
     } else {
         const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
@@ -2534,8 +2549,10 @@ void CDBlock::CmdGetThenDeleteSectorData() {
 
     bool reject = false;
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
+        devlog::trace<grp::base>("Get then delete sector transfer rejected: invalid partition {}", partitionNumber);
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
+        devlog::trace<grp::base>("Get then delete sector transfer rejected: no data in partition {}", partitionNumber);
         reject = true;
     } else {
         SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
@@ -2560,16 +2577,27 @@ void CDBlock::CmdPutSectorData() {
     // <blank>
     // partition number   <blank>
     // sector number
-    // const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-    // const uint16 sectorNumber = m_CR[3];
+    const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint16 sectorNumber = m_CR[3];
 
-    // TODO: setup sector write transfer
-    // TODO: raise kHIRQ_EHST if not enough buffer space available
-    // TODO: should set status flag kStatusFlagXferRequest until ready
-    devlog::info<grp::base>("Put sector data command is unimplemented");
+    bool reject = false;
+    if (partitionNumber >= kNumPartitions) [[unlikely]] {
+        devlog::trace<grp::base>("Put sector transfer rejected: invalid partition {}", partitionNumber);
+        reject = true;
+    } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
+        devlog::trace<grp::base>("Put sector transfer rejected: no free buffers available");
+        reject = true;
+    } else {
+        SetupPutSectorTransfer(sectorNumber, partitionNumber);
+        // TODO: should set status flag kStatusFlagXferRequest until ready
+    }
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (reject) [[unlikely]] {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
 }
