@@ -4442,7 +4442,7 @@ FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
     if (type < 8) {
         return VDP2FetchWordSpriteData(fbOffset * sizeof(uint16), type);
     } else {
-        return VDP2FetchByteSpriteData(fbOffset, type);
+        return VDP2FetchByteSpriteData(fbOffset * sizeof(uint16), type);
     }
 }
 
@@ -4518,7 +4518,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type
 
     const VDP2Regs &regs = VDP2GetRegs();
 
-    const uint8 rawData = m_spriteFB[VDP1GetDisplayFBIndex()][fbOffset & 0x3FFFF];
+    const uint8 rawData = m_spriteFB[VDP1GetDisplayFBIndex()][(fbOffset + 1) & 0x3FFFF];
 
     SpriteData data{};
     switch (regs.spriteParams.type) {
