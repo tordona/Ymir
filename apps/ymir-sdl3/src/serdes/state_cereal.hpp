@@ -311,8 +311,21 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     } else {
         // Reconstruct circular buffer
         auto cddaBuffer = std::make_unique<std::array<uint8, 2048 * 75>>();
-        uint32 cddaReadPos, cddaWritePos;
+        uint32 cddaReadPos{}, cddaWritePos{};
         ar(*cddaBuffer, cddaReadPos, cddaWritePos, s.cddaReady);
+
+        // Use the most recent samples if there is too much data in the old buffer since the new buffer is smaller
+        uint32 count = cddaWritePos - cddaReadPos;
+        if (cddaWritePos < cddaReadPos) {
+            count += 2048 * 75;
+        }
+        if (count > s.cddaBuffer.size()) {
+            cddaReadPos += count - s.cddaBuffer.size();
+            if (cddaReadPos >= 2048 * 75) {
+                cddaReadPos -= 2048 * 75;
+            }
+        }
+
         if (cddaWritePos < cddaReadPos) {
             // ======W-----R======
             s.cddaReadPos = 0;
