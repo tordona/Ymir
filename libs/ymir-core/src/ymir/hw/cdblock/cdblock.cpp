@@ -1218,7 +1218,15 @@ void CDBlock::EndTransfer() {
     // Trigger EHST HIRQ if ending certain sector transfers
     switch (m_xferType) {
     case TransferType::GetSector:
-    case TransferType::GetThenDeleteSector: {
+    case TransferType::GetThenDeleteSector: //
+    {
+        if (m_xferType == TransferType::GetThenDeleteSector) {
+            if (m_xferBufferPos < m_getSectorLength / sizeof(uint16)) {
+                // Delete sector if not fully read
+                m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
+                devlog::trace<grp::xfer>("Sector freed");
+            }
+        }
         SetInterrupt(kHIRQ_EHST);
         break;
     }
