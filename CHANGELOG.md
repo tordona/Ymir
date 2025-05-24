@@ -25,6 +25,8 @@
 - VDP2: Allow 8-bit reads and writes to VDP2 registers.
 - VDP1/2: Fix handling of 16-bit sprite data from VDP1 when VDP2 uses 8-bit sprite types. Fixes sprites in I Love Mickey Mouse/Donald Duck.
 - SH-2: Fix PC offsets for exceptions, interrupts, TRAPA and RTE. Fixes some game boot issues.
+- SCSP: Don't mirror sound RAM on 5A8'0000-5AF'FFFF. Fixes After Burner II audio and M68K crashes.
+- ymdasm: Fix file length when using a non-zero initial offset only.
 
 
 ## Version 0.1.3
