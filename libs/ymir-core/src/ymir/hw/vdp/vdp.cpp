@@ -554,6 +554,7 @@ void VDP::SaveState(state::VDPState &state) const {
     state.renderer.vdp1State.localCoordX = m_VDP1RenderContext.localCoordX;
     state.renderer.vdp1State.localCoordY = m_VDP1RenderContext.localCoordY;
     state.renderer.vdp1State.rendering = m_VDP1RenderContext.rendering;
+    state.renderer.vdp1State.erase = m_VDP1RenderContext.erase;
     state.renderer.vdp1State.cycleCount = m_VDP1RenderContext.cycleCount;
 
     for (size_t i = 0; i < 4; i++) {
@@ -808,6 +809,7 @@ void VDP::LoadState(const state::VDPState &state) {
     m_VDP1RenderContext.localCoordX = state.renderer.vdp1State.localCoordX;
     m_VDP1RenderContext.localCoordY = state.renderer.vdp1State.localCoordY;
     m_VDP1RenderContext.rendering = state.renderer.vdp1State.rendering;
+    m_VDP1RenderContext.erase = state.renderer.vdp1State.erase;
     m_VDP1RenderContext.cycleCount = state.renderer.vdp1State.cycleCount;
 
     for (size_t i = 0; i < 4; i++) {
@@ -1252,6 +1254,22 @@ void VDP::BeginHPhaseVBlankOut() {
         devlog::trace<grp::base>("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
                                  m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.plotTrigger);
 
+        // Erase frame if manually requested in previous frame
+        if (m_VDP1RenderContext.erase) {
+            m_VDP1RenderContext.erase = false;
+            if (m_threadedVDPRendering) {
+                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+            } else {
+                VDP1EraseFramebuffer();
+            }
+        }
+
+        // If manual erase is requested, schedule it for the next frame
+        if (m_VDP1.fbManualErase) {
+            m_VDP1.fbManualErase = false;
+            m_VDP1RenderContext.erase = true;
+        }
+
         // Swap framebuffer in manual swap requested or in 1-cycle mode
         if (!m_VDP1.fbSwapMode || m_VDP1.fbManualSwap) {
             m_VDP1.fbManualSwap = false;
@@ -1564,15 +1582,6 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
     devlog::trace<grp::vdp1_render>("Swapping framebuffers - draw {}, display {}", m_displayFB, m_displayFB ^ 1);
-
-    if (m_VDP1.fbManualErase) {
-        m_VDP1.fbManualErase = false;
-        if (m_threadedVDPRendering) {
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
-        } else {
-            VDP1EraseFramebuffer();
-        }
-    }
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1SwapFramebuffer());

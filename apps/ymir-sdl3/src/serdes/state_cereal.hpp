@@ -195,7 +195,7 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState &s, const uint32 version) {
-    ar(s.vdp1State);
+    serialize(ar, s.vdp1State, version);
     for (auto &state : s.normBGLayerStates) {
         serialize(ar, state, version);
     }
@@ -264,11 +264,16 @@ void serialize(Archive &ar, VDPState::VDP2RegsState &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, VDPState::VDPRendererState::VDP1RenderState &s) {
+void serialize(Archive &ar, VDPState::VDPRendererState::VDP1RenderState &s, const uint32 version) {
     ar(s.sysClipH, s.sysClipV);
     ar(s.userClipX0, s.userClipY0, s.userClipX1, s.userClipY1);
     ar(s.localCoordX, s.localCoordY);
     ar(s.rendering);
+    if (version >= 5) {
+        ar(s.erase);
+    } else {
+        s.erase = false;
+    }
     ar(s.cycleCount);
 }
 
