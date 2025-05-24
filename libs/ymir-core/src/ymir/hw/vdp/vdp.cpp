@@ -3384,15 +3384,13 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     alignas(16) std::array<std::array<uint8, 3>, kMaxResH> scanline_layerPrios;
     std::fill_n(scanline_layerPrios.begin(), m_HRes, kLayerPriosInit);
 
-    for (uint32 x = 0; x < m_HRes; x++) {
-        std::array<LayerIndex, 3> &layers = scanline_layers[x];
-        std::array<uint8, 3> &layerPrios = scanline_layerPrios[x];
+    for (int layer = 0; layer < m_layerStates.size(); layer++) {
+        const LayerState &state = m_layerStates[layer];
+        if (!state.enabled) {
+            continue;
+        }
 
-        for (int layer = 0; layer < m_layerStates.size(); layer++) {
-            const LayerState &state = m_layerStates[layer];
-            if (!state.enabled) {
-                continue;
-            }
+        for (uint32 x = 0; x < m_HRes; x++) {
 
             const Pixel &pixel = state.pixels[x];
             if (pixel.transparent) {
@@ -3413,6 +3411,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             // - Higher priority beats lower priority
             // - If same priority, lower Layer index beats higher Layer index
             // - layers[0] is topmost (first) layer
+            std::array<LayerIndex, 3> &layers = scanline_layers[x];
+            std::array<uint8, 3> &layerPrios = scanline_layerPrios[x];
             for (int i = 0; i < 3; i++) {
                 if (priority > layerPrios[i] || (priority == layerPrios[i] && layer < layers[i])) {
                     // Push layers back
