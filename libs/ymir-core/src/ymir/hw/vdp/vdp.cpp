@@ -4436,13 +4436,19 @@ FORCE_INLINE Color888 VDP::VDP2FetchCRAMColor(uint32 cramOffset, uint32 colorInd
 }
 
 FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(uint32 fbOffset) {
-    const VDP2Regs &regs = VDP2GetRegs();
+    const VDP1Regs &regs1 = VDP1GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
 
-    const uint8 type = regs.spriteParams.type;
+    const uint8 type = regs2.spriteParams.type;
     if (type < 8) {
         return VDP2FetchWordSpriteData(fbOffset * sizeof(uint16), type);
     } else {
-        return VDP2FetchByteSpriteData(fbOffset * sizeof(uint16), type);
+        // Adjust the offset if VDP1 used 16-bit data.
+        // The majority of games actually set these two parameters properly, but there's *always* an exception...
+        if (!regs1.pixel8Bits) {
+            fbOffset = fbOffset * sizeof(uint16) + 1;
+        }
+        return VDP2FetchByteSpriteData(fbOffset, type);
     }
 }
 
