@@ -207,7 +207,7 @@ private:
     T Read(uint32 address) {
         static constexpr SCSPAccessType accessType = instrFetch ? SCSPAccessType::M68kCode : SCSPAccessType::M68kData;
 
-        if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
+        if (util::AddressInRange<0x000000, 0x07FFFF>(address)) {
             // TODO: handle memory size bit
             return ReadWRAM<T>(address);
         } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
@@ -219,7 +219,7 @@ private:
 
     template <mem_primitive T>
     void Write(uint32 address, T value) {
-        if (util::AddressInRange<0x000000, 0x0FFFFF>(address)) {
+        if (util::AddressInRange<0x000000, 0x07FFFF>(address)) {
             WriteWRAM<T>(address, value);
         } else if (util::AddressInRange<0x100000, 0x1FFFFF>(address)) {
             WriteReg<T, SCSPAccessType::M68kData>(address & 0xFFF, value);
