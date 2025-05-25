@@ -208,7 +208,6 @@ void CDBlock::OpenTray() {
         m_status.statusCode = kStatusCodeOpen;
         m_discAuthStatus = 0;
 
-        m_fs.Clear();
         SetInterrupt(kHIRQ_DCHG | kHIRQ_EFLS);
 
         devlog::info<grp::base>("Tray opened");
