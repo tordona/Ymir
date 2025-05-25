@@ -11,6 +11,10 @@
 
 #include <cassert>
 
+#if defined(_M_ARM64) || defined(__aarch64__)
+    #include <arm_neon.h>
+#endif
+
 namespace ymir::vdp {
 
 namespace grp {
@@ -3363,10 +3367,31 @@ static const auto kColorOffsetLUT = [] {
     return arr;
 }();
 
-// SWAR-based method of testing if an array of uint8 values are all zeroes or not
+// Tests if an array of uint8 values are all zeroes
 FORCE_INLINE bool AllZeroU8(std::span<const uint8> Values) {
 
-#if defined(__clang__) || defined(__GNUC__)
+#if defined(_M_ARM64) || defined(__aarch64__)
+    // 64 at a time
+    for (; Values.size() >= 64; Values = Values.subspan(64)) {
+        const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
+
+        // If the largest value is not zero, we have a true value
+        if ((vmaxvq_u8(Vec64.val[0]) != 0u) || (vmaxvq_u8(Vec64.val[1]) != 0u) || (vmaxvq_u8(Vec64.val[2]) != 0u) ||
+            (vmaxvq_u8(Vec64.val[3]) != 0u)) {
+            return false;
+        }
+    }
+
+    // 16 at a time
+    for (; Values.size() >= 16; Values = Values.subspan(16)) {
+        const uint8x16_t Vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(Values.data()));
+
+        // If the largest value is not zero, we have a true value
+        if (vmaxvq_u8(Vec16) != 0u) {
+            return false;
+        }
+    }
+#elif defined(__clang__) || defined(__GNUC__)
     // 16 at a time
     for (; Values.size() >= sizeof(__int128); Values = Values.subspan(sizeof(__int128))) {
         const __int128 &Vec16 = *reinterpret_cast<const __int128 *>(Values.data());
@@ -3403,6 +3428,126 @@ FORCE_INLINE bool AllZeroU8(std::span<const uint8> Values) {
     return true;
 }
 
+// Tests if an array of bool values are all true
+FORCE_INLINE bool AllBool(std::span<const bool> Values) {
+
+#if defined(_M_ARM64) || defined(__aarch64__)
+    // 64 at a time
+    for (; Values.size() >= 64; Values = Values.subspan(64)) {
+        const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
+
+        // If the smallest value is zero, then we have a false value
+        if ((vminvq_u8(Vec64.val[0]) == 0u) || (vminvq_u8(Vec64.val[1]) == 0u) || (vminvq_u8(Vec64.val[2]) == 0u) ||
+            (vminvq_u8(Vec64.val[3]) == 0u)) {
+            return false;
+        }
+    }
+    // 16 at a time
+    for (; Values.size() >= 16; Values = Values.subspan(16)) {
+        const uint8x16_t Vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(Values.data()));
+
+        // If the smallest value is zero, then we have a false value
+        if (vminvq_u8(Vec16) == 0u) {
+            return false;
+        }
+    }
+#elif defined(__clang__) || defined(__GNUC__)
+    // 16 at a time
+    for (; Values.size() >= sizeof(__int128); Values = Values.subspan(sizeof(__int128))) {
+        const __int128 &Vec16 = *reinterpret_cast<const __int128 *>(Values.data());
+
+        if (Vec16 != __int128((__int128(0x01'01'01'01'01'01'01'01) << 64) | 0x01'01'01'01'01'01'01'01)) {
+            return false;
+        }
+    }
+#endif
+
+    // 8 at a time
+    for (; Values.size() >= sizeof(uint64); Values = Values.subspan(sizeof(uint64))) {
+        const uint64 &Vec8 = *reinterpret_cast<const uint64 *>(Values.data());
+
+        if (Vec8 != 0x01'01'01'01'01'01'01'01) {
+            return false;
+        }
+    }
+
+    // 4 at a time
+    for (; Values.size() >= sizeof(uint32); Values = Values.subspan(sizeof(uint32))) {
+        const uint32 &Vec4 = *reinterpret_cast<const uint32 *>(Values.data());
+
+        if (Vec4 != 0x01'01'01'01) {
+            return false;
+        }
+    }
+
+    for (const bool &Value : Values) {
+        if (!Value) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Tests if an any element in an array of bools are true
+FORCE_INLINE bool AnyBool(std::span<const bool> Values) {
+#if defined(_M_ARM64) || defined(__aarch64__)
+    // 64 at a time
+    for (; Values.size() >= 64; Values = Values.subspan(64)) {
+        const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
+
+        // If the smallest value is not zero, then we have a true value
+        if ((vminvq_u8(Vec64.val[0]) != 0u) || (vminvq_u8(Vec64.val[1]) != 0u) || (vminvq_u8(Vec64.val[2]) != 0u) ||
+            (vminvq_u8(Vec64.val[3]) != 0u)) {
+            return true;
+        }
+    }
+
+    // 16 at a time
+    for (; Values.size() >= 16; Values = Values.subspan(16)) {
+        const uint8x16_t Vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(Values.data()));
+
+        // If the smallest value is not zero, then we have a true value
+        if (vminvq_u8(Vec16) != 0u) {
+            return true;
+        }
+    }
+#elif defined(__clang__) || defined(__GNUC__)
+    // 16 at a time
+    for (; Values.size() >= sizeof(__int128); Values = Values.subspan(sizeof(__int128))) {
+        const __int128 &Vec16 = *reinterpret_cast<const __int128 *>(Values.data());
+
+        if (Vec16) {
+            return true;
+        }
+    }
+#endif
+
+    // 8 at a time
+    for (; Values.size() >= sizeof(uint64); Values = Values.subspan(sizeof(uint64))) {
+        const uint64 &Vec8 = *reinterpret_cast<const uint64 *>(Values.data());
+
+        if (Vec8) {
+            return true;
+        }
+    }
+
+    // 4 at a time
+    for (; Values.size() >= sizeof(uint32); Values = Values.subspan(sizeof(uint32))) {
+        const uint32 &Vec4 = *reinterpret_cast<const uint32 *>(Values.data());
+
+        if (Vec4) {
+            return true;
+        }
+    }
+
+    for (const bool &Value : Values) {
+        if (Value) {
+            return true;
+        }
+    }
+    return false;
+}
+
 FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     const VDP2Regs &regs = VDP2GetRegs();
     const auto &colorCalcParams = regs.colorCalcParams;
@@ -3432,7 +3577,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             continue;
         }
 
-        if (state.pixels.transparent.all()) {
+        if (AllBool(std::span{state.pixels.transparent}.first(m_HRes))) {
             // All pixels are transparent
             continue;
         }
@@ -3501,8 +3646,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Gether layer color calc data
-    alignas(16) std::bitset<kMaxResH> layer0ColorCalcEnabled = {};
-    alignas(16) std::bitset<kMaxResH> layer1ColorCalcEnabled = {};
+    alignas(16) std::array<bool, kMaxResH> layer0ColorCalcEnabled = {};
+    alignas(16) std::array<bool, kMaxResH> layer1ColorCalcEnabled = {};
     for (uint32 x = 0; x < m_HRes; x++) {
         const auto isColorCalcEnabled = [&](LayerIndex layer) {
             if (layer == LYR_Sprite) {
@@ -3545,7 +3690,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Apply Extended color calc to layer 1
-    if (useExtendedColorCalc && layer0ColorCalcEnabled.any()) {
+    if (useExtendedColorCalc && AnyBool(std::span{layer0ColorCalcEnabled}.first(m_HRes))) {
         for (uint32 x = 0; x < m_HRes; ++x) {
             if (layer1ColorCalcEnabled[x]) {
 
@@ -3563,10 +3708,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Gather line-color data
-    alignas(16) std::bitset<kMaxResH> layer0LineColorEnabled = {};
+    alignas(16) std::array<bool, kMaxResH> layer0LineColorEnabled = {};
     alignas(16) std::array<Color888, kMaxResH> layer0LineColors = {};
     for (uint32 x = 0; x < m_HRes; x++) {
-
         auto isLineColorEnabled = [&](LayerIndex layer) {
             if (layer == LYR_Sprite) {
                 return regs.spriteParams.lineColorScreenEnable;
@@ -3595,7 +3739,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Blend line color if top layer uses it
-    if (layer0LineColorEnabled.any()) {
+    if (AnyBool(std::span{layer0LineColorEnabled}.first(m_HRes))) {
         if (useExtendedColorCalc) {
             // Average color
             // TODO: x64 - _mm_avg_epu8(pavgb)
@@ -3619,7 +3763,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Gather shadow data
-    alignas(16) std::bitset<kMaxResH> layer0ShadowEnabled = {};
+    alignas(16) std::array<bool, kMaxResH> layer0ShadowEnabled = {};
     for (uint32 x = 0; x < m_HRes; x++) {
         auto isShadowEnabled = [&](LayerIndex layer) {
             if (layer == LYR_Sprite) {
@@ -3653,7 +3797,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Gather color offset info
-    alignas(16) std::bitset<kMaxResH> layer0ColorOffsetEnabled = {};
+    alignas(16) std::array<bool, kMaxResH> layer0ColorOffsetEnabled = {};
     for (uint32 x = 0; x < m_HRes; x++) {
         layer0ColorOffsetEnabled[x] = regs.colorOffsetEnable[scanline_layers[x][0]];
     }
@@ -3661,7 +3805,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     const std::span<Color888> framebufferOutput(reinterpret_cast<Color888 *>(&m_framebuffer[y * m_HRes]), m_HRes);
 
     // Blend layer 0 and layer 1
-    if (layer0ColorCalcEnabled.any()) {
+    if (AnyBool(std::span{layer0ColorCalcEnabled}.first(m_HRes))) {
         if (colorCalcParams.useAdditiveBlend) {
             // Saturated add
             // TODO: _mm_adds_epi8(paddsb)
@@ -3700,7 +3844,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Apply sprite shadow
-    if (layer0ShadowEnabled.any()) {
+    if (AnyBool(std::span{layer0ShadowEnabled}.first(m_HRes))) {
         for (uint32 x = 0; Color888 & outputColor : framebufferOutput) {
             if (layer0ShadowEnabled[x]) {
                 // outputColor.r >>= 1u;
@@ -3714,7 +3858,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     }
 
     // Apply color offset if enabled
-    if (layer0ColorOffsetEnabled.any()) {
+    if (AnyBool(std::span{layer0ColorOffsetEnabled}.first(m_HRes))) {
         for (uint32 x = 0; Color888 & outputColor : framebufferOutput) {
             if (layer0ColorOffsetEnabled[x]) {
                 const auto &colorOffset = regs.colorOffset[regs.colorOffsetSelect[scanline_layers[x][0]]];

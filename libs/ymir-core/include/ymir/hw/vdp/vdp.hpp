@@ -730,8 +730,8 @@ private:
     struct Pixels {
         alignas(16) std::array<Color888, kMaxResH> color;
         alignas(16) std::array<uint8, kMaxResH> priority;
-        alignas(16) std::bitset<kMaxResH> transparent;
-        alignas(16) std::bitset<kMaxResH> specialColorCalc;
+        alignas(16) std::array<bool, kMaxResH> transparent;
+        alignas(16) std::array<bool, kMaxResH> specialColorCalc;
 
         FORCE_INLINE Pixel GetPixel(size_t index) const {
             return Pixel{
@@ -759,8 +759,8 @@ private:
         void Reset() {
             pixels.color.fill({});
             pixels.priority.fill({});
-            pixels.transparent.reset();
-            pixels.specialColorCalc.reset();
+            pixels.transparent.fill(false);
+            pixels.specialColorCalc.fill(false);
             enabled = false;
         }
 
