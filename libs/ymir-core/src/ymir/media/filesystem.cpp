@@ -229,7 +229,8 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
             }
 
             // Create a directory entry
-            Directory &directory = m_directories.emplace_back(dirRecord, pathTableRecord.parentDirNumber);
+            Directory &directory =
+                m_directories.emplace_back(dirRecord, pathTableRecord.parentDirNumber, pathTableRecord.directoryID);
             auto &contents = directory.GetContents();
 
             // Read directory contents

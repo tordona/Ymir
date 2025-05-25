@@ -9,6 +9,7 @@
 #include "iso9660.hpp"
 
 #include <cassert>
+#include <string>
 #include <vector>
 
 namespace ymir::media::fs {
@@ -44,7 +45,8 @@ public:
         , m_size(dirRecord.dataSize)
         , m_parent(parent)
         , m_isDirectory(bit::test<1>(dirRecord.flags))
-        , m_fileInfo(dirRecord, fileID) {}
+        , m_fileInfo(dirRecord, fileID)
+        , m_name(dirRecord.fileID) {}
 
     uint32 FrameAddress() const {
         return m_frameAddress;
@@ -76,14 +78,16 @@ private:
     uint16 m_parent;
     bool m_isDirectory;
     FileInfo m_fileInfo;
+    std::string m_name;
 };
 
 // Represents a path table directory.
 class Directory {
 public:
-    Directory(const iso9660::DirectoryRecord &dirRecord, uint16 parent)
+    Directory(const iso9660::DirectoryRecord &dirRecord, uint16 parent, std::string_view name)
         : m_frameAddress(dirRecord.extentPos)
-        , m_parent(parent) {
+        , m_parent(parent)
+        , m_name(name) {
         assert(bit::test<1>(dirRecord.flags));
     }
 
@@ -102,6 +106,7 @@ public:
 private:
     uint32 m_frameAddress;
     uint16 m_parent;
+    std::string m_name;
 
     std::vector<FilesystemEntry> m_contents;
 
