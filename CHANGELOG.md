@@ -19,7 +19,7 @@
 - CD Block: Free last buffer from partition when ending a Get Then Delete Sector transfer when the last sector isn't fully read. Fixes some game boot issues.
 - CD Block: Fix Delete Sector end position when sector count is FFFF. Fixes some game boot issues.
 - CD Block: Don't clear the file system when opening the tray.
-- CD Block: Directories are 1-indexed. Fixes one of Assault Suit Leynos 2 crashes on startup. (#127)
+- CD Block: Fix directory indexing. Fixes one of Assault Suit Leynos 2 crashes on startup. (#127)
 - IPL: Automatically load IPL ROM when switching disc images. (#128)
 - VDP2: Fix bitmap base address for RBGs. Fixes several graphics glitches on menus and in-game in Need for Speed.
 - VDP2: Don't increment vertical mosaic counter if mosaic is disabled. Fixes text boxes and character portraits in Grandia. (#91)

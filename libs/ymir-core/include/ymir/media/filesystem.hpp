@@ -144,7 +144,7 @@ public:
 
     // Retrieves the path to the current directory.
     // Returns an empty string if the file system is invalid.
-    // Returns "." if the current directory is the root directory.
+    // Returns "/" if the current directory is the root directory.
     std::string GetCurrentPath() const;
 
     // Determines if the file system is valid, i.e., there is at least one directory.

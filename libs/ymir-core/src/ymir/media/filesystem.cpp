@@ -121,9 +121,14 @@ bool Filesystem::ChangeDirectory(uint32 fileID) {
     if (fileID == 0xFFFFFF) {
         // Go to root directory; should be the first in the list
         m_currDirectory = 0;
-    } else if (m_currDirectory != ~0 && fileID - m_currFileOffset < m_directories.size()) {
+    } else if (fileID == 0) {
+        // Self directory; no change
+    } else if (m_currDirectory != ~0 && fileID == 1) {
+        // Go to parent directory
+        m_currDirectory = m_directories[m_currDirectory].m_parent - 1;
+    } else if (m_currDirectory != ~0 && fileID - 2 + m_currFileOffset < m_directories.size()) {
         // Go to specified directory
-        m_currDirectory = fileID - m_currFileOffset - 1;
+        m_currDirectory = fileID - 2 + m_currFileOffset;
     } else {
         // File ID out of range or invalid current directory
         return false;
@@ -144,7 +149,7 @@ std::string Filesystem::GetCurrentPath() const {
 
     if (m_currDirectory == 0) {
         // Root directory
-        return ".";
+        return "/";
     }
 
     // Build path from components
