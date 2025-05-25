@@ -5,6 +5,7 @@
 #include <xxh3.h>
 
 #include <cassert>
+#include <vector>
 
 using namespace ymir::media::iso9660;
 
@@ -130,6 +131,45 @@ bool Filesystem::ChangeDirectory(uint32 fileID) {
 
     m_currFileOffset = 0;
     return true;
+}
+
+std::string Filesystem::GetCurrentPath() const {
+    if (!IsValid()) {
+        return "";
+    }
+    if (!HasCurrentDirectory()) {
+        return "";
+    }
+    assert(m_currDirectory < m_directories.size());
+
+    if (m_currDirectory == 0) {
+        // Root directory
+        return ".";
+    }
+
+    // Build path from components
+    std::vector<uint32> fullPath{};
+    uint32 currDir = m_currDirectory;
+    fullPath.push_back(currDir);
+    while (currDir != 0 && fullPath.size() < 32) {
+        currDir = m_directories[currDir].m_parent - 1; // 1-indexed
+        if (currDir != 0) {
+            fullPath.push_back(currDir);
+        }
+    }
+
+    std::string out{};
+
+    bool first = true;
+    for (auto it = fullPath.rbegin(); it != fullPath.rend(); ++it) {
+        if (first) {
+            first = false;
+        } else {
+            out += "/";
+        }
+        out += m_directories[*it].m_name;
+    }
+    return out;
 }
 
 uint32 Filesystem::GetFileCount() const {

@@ -791,7 +791,7 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     // Reject if the file ID is out of range
     const media::fs::FileInfo &fileInfo = m_fs.GetFileInfo(fileID);
     if (!fileInfo.IsValid()) {
-        devlog::debug<grp::play_init>("Invalid file ID; rejecting playback request");
+        devlog::debug<grp::play_init>("Invalid file ID {:X}; rejecting playback request", fileID);
         return false;
     }
 
@@ -827,8 +827,8 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     m_status.track = trackIndex + 1;
     m_status.index = 1;
 
-    devlog::debug<grp::play_init>("Read file {}, offset {}, filter {}, frame addresses {:06X} to {:06X}", fileID,
-                                  offset, filterNumber, m_playStartPos, m_playEndPos);
+    devlog::debug<grp::play_init>("Read file {} (ID {}), offset {}, filter {}, frame addresses {:06X} to {:06X}",
+                                  fileInfo.name, fileID, offset, filterNumber, m_playStartPos, m_playEndPos);
     return true;
 }
 
@@ -2772,7 +2772,8 @@ void CDBlock::CmdChangeDirectory() {
         // TODO: use filter to read the sector(s) containing the directory record
         reject = !m_fs.ChangeDirectory(fileID);
         if (!reject) {
-            devlog::debug<grp::base>("Changed directory to file ID {:X} using filter {}", fileID, filterNumber);
+            devlog::debug<grp::base>("Changed directory to {} (file ID {:X}) using filter {}", m_fs.GetCurrentPath(),
+                                     fileID, filterNumber);
         }
     } else if (filterNumber == 0xFF) {
         reject = true;

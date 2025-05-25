@@ -22,7 +22,8 @@ struct FileInfo {
         , unitSize(dirRecord.fileUnitSize)
         , interleaveGapSize(dirRecord.interleaveGapSize)
         , fileNumber(fileID)
-        , attributes(dirRecord.flags) {}
+        , attributes(dirRecord.flags)
+        , name(dirRecord.fileID) {}
 
     uint32 frameAddress = ~0;
     uint32 fileSize = ~0;
@@ -30,9 +31,18 @@ struct FileInfo {
     uint8 interleaveGapSize = ~0;
     uint8 fileNumber = ~0;
     uint8 attributes = ~0;
+    std::string name = "";
 
     bool IsValid() const {
         return frameAddress != ~0;
+    }
+
+    bool IsDirectory() const {
+        return bit::test<1>(attributes);
+    }
+
+    bool IsFile() const {
+        return !IsDirectory();
     }
 };
 inline constexpr FileInfo kEmptyFileInfo = {};
@@ -131,6 +141,11 @@ public:
     // Returns true if succesful, false if fileID is not a directory or does not exist.
     // The filesystem state is not modified on failure.
     bool ChangeDirectory(uint32 fileID);
+
+    // Retrieves the path to the current directory.
+    // Returns an empty string if the file system is invalid.
+    // Returns "." if the current directory is the root directory.
+    std::string GetCurrentPath() const;
 
     // Determines if the file system is valid, i.e., there is at least one directory.
     bool IsValid() const {
