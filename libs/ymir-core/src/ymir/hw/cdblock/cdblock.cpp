@@ -795,6 +795,14 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
         return false;
     }
 
+    // Reject if file ID points to a directory
+    // TODO: should this be rejected?
+    if (fileInfo.IsDirectory()) {
+        devlog::warn<grp::play_init>("Attempting to read a directory (file ID {:X}); rejecting playback request",
+                                     fileID);
+        return false;
+    }
+
     // Reject if frame address doesn't point to a valid data track
     const uint32 fileOffset = fileInfo.frameAddress + offset;
     const auto &session = m_disc.sessions.back();

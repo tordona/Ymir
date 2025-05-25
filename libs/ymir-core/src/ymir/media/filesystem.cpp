@@ -123,7 +123,7 @@ bool Filesystem::ChangeDirectory(uint32 fileID) {
         m_currDirectory = 0;
     } else if (m_currDirectory != ~0 && fileID - m_currFileOffset < m_directories.size()) {
         // Go to specified directory
-        m_currDirectory = fileID - m_currFileOffset;
+        m_currDirectory = fileID - m_currFileOffset - 1;
     } else {
         // File ID out of range or invalid current directory
         return false;
