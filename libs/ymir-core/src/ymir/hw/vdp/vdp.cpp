@@ -3642,19 +3642,19 @@ FORCE_INLINE void Color888ShadowMasked(const std::span<Color888> pixels, const s
 
 #if defined(_M_X64) || defined(__x86_64__)
     #if defined(__AVX2__)
-    // Four pixels at a time
+    // Eight pixels at a time
     for (; (i + 8) < pixels.size(); i += 8) {
-        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        // Load eight mask values into the MSB of each 32-bit lane
         __m256i mask_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(mask.data() + i));
         mask_x8 = _mm256_sub_epi32(_mm256_setzero_si256(), mask_x8);
 
         const __m256i pixel_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&pixels[i]));
 
-        __m256i shadowed_x8 = _mm256_srli_epi64(pixel_x8, 1);
+        __m256i shadowed_x8 = _mm256_srli_epi32(pixel_x8, 1);
         shadowed_x8 = _mm256_and_si256(shadowed_x8, _mm256_set1_epi8(0x7F));
 
         // Blend with mask
-        const __m256i dstColor_x8 = _mm256_blendv_epi8(shadowed_x8, dstColor_x8, mask_x8);
+        const __m256i dstColor_x8 = _mm256_blendv_epi8(pixel_x8, shadowed_x8, mask_x8);
 
         // Write
         _mm256_storeu_si256(reinterpret_cast<__m256i *>(&pixels[i]), dstColor_x8);
