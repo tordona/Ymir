@@ -3387,7 +3387,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             if (pixel.transparent) {
                 continue;
             }
-            if (pixel.priority == 0) {
+            const uint8 priority = pixel.priority;
+            if (priority == 0) {
                 continue;
             }
             if (layer == LYR_Sprite) {
@@ -3402,14 +3403,14 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             // - If same priority, lower Layer index beats higher Layer index
             // - layers[0] is topmost (first) layer
             for (int i = 0; i < 3; i++) {
-                if (pixel.priority > layerPrios[i] || (pixel.priority == layerPrios[i] && layer < layers[i])) {
+                if (priority > layerPrios[i] || (priority == layerPrios[i] && layer < layers[i])) {
                     // Push layers back
                     for (int j = 2; j > i; j--) {
                         layers[j] = layers[j - 1];
                         layerPrios[j] = layerPrios[j - 1];
                     }
                     layers[i] = static_cast<LayerIndex>(layer);
-                    layerPrios[i] = pixel.priority;
+                    layerPrios[i] = priority;
                     break;
                 }
             }
