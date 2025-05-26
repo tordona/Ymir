@@ -11,7 +11,9 @@
 
 #include <cassert>
 
-#if defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_M_X64) || defined(__x86_64__)
+    #include <immintrin.h>
+#elif defined(_M_ARM64) || defined(__aarch64__)
     #include <arm_neon.h>
 #endif
 
@@ -3370,7 +3372,35 @@ static const auto kColorOffsetLUT = [] {
 // Tests if an array of uint8 values are all zeroes
 FORCE_INLINE bool AllZeroU8(std::span<const uint8> Values) {
 
-#if defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_M_X64) || defined(__x86_64__)
+
+    #if defined(__AVX__)
+    // 32 at a time
+    for (; Values.size() >= 32; Values = Values.subspan(32)) {
+        const __m256i Vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(Values.data()));
+
+        // Test if all bits are 0
+        if (!_mm256_testz_si256(Vec32, Vec32)) {
+            return false;
+        }
+    }
+    #endif
+
+    #if defined(__SSE2__)
+    // 16 at a time
+    for (; Values.size() >= 16; Values = Values.subspan(16)) {
+        __m128i Vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(Values.data()));
+
+        // Compare to zero
+        Vec16 = _mm_cmpeq_epi8(Vec16, _mm_setzero_si128());
+
+        // Extract MSB all into a 16-bit mask, if any bit is set, then we have a true value
+        if (_mm_movemask_epi8(Vec16) != 0xFFFF) {
+            return false;
+        }
+    }
+    #endif
+#elif defined(_M_ARM64) || defined(__aarch64__)
     // 64 at a time
     for (; Values.size() >= 64; Values = Values.subspan(64)) {
         const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
@@ -3431,7 +3461,37 @@ FORCE_INLINE bool AllZeroU8(std::span<const uint8> Values) {
 // Tests if an array of bool values are all true
 FORCE_INLINE bool AllBool(std::span<const bool> Values) {
 
-#if defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_M_X64) || defined(__x86_64__)
+    #if defined(__AVX__)
+    // 32 at a time
+    for (; Values.size() >= 32; Values = Values.subspan(32)) {
+        __m256i Vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(Values.data()));
+
+        // Move bit 0 into the MSB
+        Vec32 = _mm256_slli_epi64(Vec32, 7);
+
+        // Extract MSB all into a 32-bit mask, if any bit is zero, then we have a false value
+        if (_mm256_movemask_epi8(Vec32) != 0xFFFF'FFFF) {
+            return false;
+        }
+    }
+    #endif
+
+    #if defined(__SSE2__)
+    // 16 at a time
+    for (; Values.size() >= 16; Values = Values.subspan(16)) {
+        __m128i Vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(Values.data()));
+
+        // Move bit 0 into the MSB
+        Vec16 = _mm_slli_epi64(Vec16, 7);
+
+        // Extract MSB all into a 16-bit mask, if any bit is zero, then we have a false value
+        if (_mm_movemask_epi8(Vec16) != 0xFFFF) {
+            return false;
+        }
+    }
+    #endif
+#elif defined(_M_ARM64) || defined(__aarch64__)
     // 64 at a time
     for (; Values.size() >= 64; Values = Values.subspan(64)) {
         const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
@@ -3490,7 +3550,36 @@ FORCE_INLINE bool AllBool(std::span<const bool> Values) {
 
 // Tests if an any element in an array of bools are true
 FORCE_INLINE bool AnyBool(std::span<const bool> Values) {
-#if defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_M_X64) || defined(__x86_64__)
+    #if defined(__AVX__)
+    // 32 at a time
+    for (; Values.size() >= 32; Values = Values.subspan(32)) {
+        __m256i Vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(Values.data()));
+
+        // Move bit 0 into the MSB
+        Vec32 = _mm256_slli_epi64(Vec32, 7);
+
+        // Extract MSB into a 32-bit mask, if any bit is set, then we have a true value
+        if (_mm256_movemask_epi8(Vec32) != 0u) {
+            return true;
+        }
+    }
+    #endif
+    #if defined(__SSE2__)
+    // 16 at a time
+    for (; Values.size() >= 16; Values = Values.subspan(16)) {
+        __m128i Vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(Values.data()));
+
+        // Move bit 0 into the MSB
+        Vec16 = _mm_slli_epi64(Vec16, 7);
+
+        // Extract MSB into a 16-bit mask, if any bit is set, then we have a true value
+        if (_mm_movemask_epi8(Vec16) != 0u) {
+            return true;
+        }
+    }
+    #endif
+#elif defined(_M_ARM64) || defined(__aarch64__)
     // 64 at a time
     for (; Values.size() >= 64; Values = Values.subspan(64)) {
         const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
