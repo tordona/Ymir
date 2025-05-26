@@ -738,8 +738,18 @@ void SMPC::TriggerOptimizedINTBACKRead() {
     if (m_optimize) {
         m_optimize = false;
 
-        ReadPeripherals();
-        m_cbSystemManagerInterruptCallback();
+        // TODO: this needs to be reworked
+        // - Rayman doesn't respond to inputs
+        // - Assault Suit Leynos 2 requests an INTBACK continue with the optimized timing flag set but doesn't continue
+        //   past the first continue request
+        if (m_getPeripheralData) {
+            devlog::trace<grp::base>("Optimized INTBACK triggered");
+
+            ReadPeripherals();
+            WriteINTBACKPeripheralReport();
+            SF = false;
+            m_cbSystemManagerInterruptCallback();
+        }
     }
 }
 
