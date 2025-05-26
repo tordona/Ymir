@@ -3370,17 +3370,17 @@ static const auto kColorOffsetLUT = [] {
 }();
 
 // Tests if an array of uint8 values are all zeroes
-FORCE_INLINE bool AllZeroU8(std::span<const uint8> Values) {
+FORCE_INLINE bool AllZeroU8(std::span<const uint8> values) {
 
 #if defined(_M_X64) || defined(__x86_64__)
 
     #if defined(__AVX__)
     // 32 at a time
-    for (; Values.size() >= 32; Values = Values.subspan(32)) {
-        const __m256i Vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(Values.data()));
+    for (; values.size() >= 32; values = values.subspan(32)) {
+        const __m256i vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(values.data()));
 
         // Test if all bits are 0
-        if (!_mm256_testz_si256(Vec32, Vec32)) {
+        if (!_mm256_testz_si256(vec32, vec32)) {
             return false;
         }
     }
@@ -3388,70 +3388,70 @@ FORCE_INLINE bool AllZeroU8(std::span<const uint8> Values) {
 
     #if defined(__SSE2__)
     // 16 at a time
-    for (; Values.size() >= 16; Values = Values.subspan(16)) {
-        __m128i Vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(Values.data()));
+    for (; values.size() >= 16; values = values.subspan(16)) {
+        __m128i vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(values.data()));
 
         // Compare to zero
-        Vec16 = _mm_cmpeq_epi8(Vec16, _mm_setzero_si128());
+        vec16 = _mm_cmpeq_epi8(vec16, _mm_setzero_si128());
 
         // Extract MSB all into a 16-bit mask, if any bit is set, then we have a true value
-        if (_mm_movemask_epi8(Vec16) != 0xFFFF) {
+        if (_mm_movemask_epi8(vec16) != 0xFFFF) {
             return false;
         }
     }
     #endif
 #elif defined(_M_ARM64) || defined(__aarch64__)
     // 64 at a time
-    for (; Values.size() >= 64; Values = Values.subspan(64)) {
-        const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
+    for (; values.size() >= 64; values = values.subspan(64)) {
+        const uint8x16x4_t vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the largest value is not zero, we have a true value
-        if ((vmaxvq_u8(Vec64.val[0]) != 0u) || (vmaxvq_u8(Vec64.val[1]) != 0u) || (vmaxvq_u8(Vec64.val[2]) != 0u) ||
-            (vmaxvq_u8(Vec64.val[3]) != 0u)) {
+        if ((vmaxvq_u8(vec64.val[0]) != 0u) || (vmaxvq_u8(vec64.val[1]) != 0u) || (vmaxvq_u8(vec64.val[2]) != 0u) ||
+            (vmaxvq_u8(vec64.val[3]) != 0u)) {
             return false;
         }
     }
 
     // 16 at a time
-    for (; Values.size() >= 16; Values = Values.subspan(16)) {
-        const uint8x16_t Vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(Values.data()));
+    for (; values.size() >= 16; values = values.subspan(16)) {
+        const uint8x16_t vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the largest value is not zero, we have a true value
-        if (vmaxvq_u8(Vec16) != 0u) {
+        if (vmaxvq_u8(vec16) != 0u) {
             return false;
         }
     }
 #elif defined(__clang__) || defined(__GNUC__)
     // 16 at a time
-    for (; Values.size() >= sizeof(__int128); Values = Values.subspan(sizeof(__int128))) {
-        const __int128 &Vec16 = *reinterpret_cast<const __int128 *>(Values.data());
+    for (; values.size() >= sizeof(__int128); values = values.subspan(sizeof(__int128))) {
+        const __int128 &vec16 = *reinterpret_cast<const __int128 *>(values.data());
 
-        if (Vec16 != __int128(0)) {
+        if (vec16 != __int128(0)) {
             return false;
         }
     }
 #endif
 
     // 8 at a time
-    for (; Values.size() >= sizeof(uint64); Values = Values.subspan(sizeof(uint64))) {
-        const uint64 &Vec8 = *reinterpret_cast<const uint64 *>(Values.data());
+    for (; values.size() >= sizeof(uint64); values = values.subspan(sizeof(uint64))) {
+        const uint64 &vec8 = *reinterpret_cast<const uint64 *>(values.data());
 
-        if (Vec8 != 0ull) {
+        if (vec8 != 0ull) {
             return false;
         }
     }
 
     // 4 at a time
-    for (; Values.size() >= sizeof(uint32); Values = Values.subspan(sizeof(uint32))) {
-        const uint32 &Vec4 = *reinterpret_cast<const uint32 *>(Values.data());
+    for (; values.size() >= sizeof(uint32); values = values.subspan(sizeof(uint32))) {
+        const uint32 &vec4 = *reinterpret_cast<const uint32 *>(values.data());
 
-        if (Vec4 != 0u) {
+        if (vec4 != 0u) {
             return false;
         }
     }
 
-    for (const uint8 &Value : Values) {
-        if (Value != 0u) {
+    for (const uint8 &value : values) {
+        if (value != 0u) {
             return false;
         }
     }
@@ -3459,19 +3459,19 @@ FORCE_INLINE bool AllZeroU8(std::span<const uint8> Values) {
 }
 
 // Tests if an array of bool values are all true
-FORCE_INLINE bool AllBool(std::span<const bool> Values) {
+FORCE_INLINE bool AllBool(std::span<const bool> values) {
 
 #if defined(_M_X64) || defined(__x86_64__)
     #if defined(__AVX__)
     // 32 at a time
-    for (; Values.size() >= 32; Values = Values.subspan(32)) {
-        __m256i Vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(Values.data()));
+    for (; values.size() >= 32; values = values.subspan(32)) {
+        __m256i vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(values.data()));
 
         // Move bit 0 into the MSB
-        Vec32 = _mm256_slli_epi64(Vec32, 7);
+        vec32 = _mm256_slli_epi64(vec32, 7);
 
         // Extract MSB all into a 32-bit mask, if any bit is zero, then we have a false value
-        if (_mm256_movemask_epi8(Vec32) != 0xFFFF'FFFF) {
+        if (_mm256_movemask_epi8(vec32) != 0xFFFF'FFFF) {
             return false;
         }
     }
@@ -3479,69 +3479,69 @@ FORCE_INLINE bool AllBool(std::span<const bool> Values) {
 
     #if defined(__SSE2__)
     // 16 at a time
-    for (; Values.size() >= 16; Values = Values.subspan(16)) {
-        __m128i Vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(Values.data()));
+    for (; values.size() >= 16; values = values.subspan(16)) {
+        __m128i vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(values.data()));
 
         // Move bit 0 into the MSB
-        Vec16 = _mm_slli_epi64(Vec16, 7);
+        vec16 = _mm_slli_epi64(vec16, 7);
 
         // Extract MSB all into a 16-bit mask, if any bit is zero, then we have a false value
-        if (_mm_movemask_epi8(Vec16) != 0xFFFF) {
+        if (_mm_movemask_epi8(vec16) != 0xFFFF) {
             return false;
         }
     }
     #endif
 #elif defined(_M_ARM64) || defined(__aarch64__)
     // 64 at a time
-    for (; Values.size() >= 64; Values = Values.subspan(64)) {
-        const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
+    for (; values.size() >= 64; values = values.subspan(64)) {
+        const uint8x16x4_t vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the smallest value is zero, then we have a false value
-        if ((vminvq_u8(Vec64.val[0]) == 0u) || (vminvq_u8(Vec64.val[1]) == 0u) || (vminvq_u8(Vec64.val[2]) == 0u) ||
-            (vminvq_u8(Vec64.val[3]) == 0u)) {
+        if ((vminvq_u8(vec64.val[0]) == 0u) || (vminvq_u8(vec64.val[1]) == 0u) || (vminvq_u8(vec64.val[2]) == 0u) ||
+            (vminvq_u8(vec64.val[3]) == 0u)) {
             return false;
         }
     }
     // 16 at a time
-    for (; Values.size() >= 16; Values = Values.subspan(16)) {
-        const uint8x16_t Vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(Values.data()));
+    for (; values.size() >= 16; values = values.subspan(16)) {
+        const uint8x16_t vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the smallest value is zero, then we have a false value
-        if (vminvq_u8(Vec16) == 0u) {
+        if (vminvq_u8(vec16) == 0u) {
             return false;
         }
     }
 #elif defined(__clang__) || defined(__GNUC__)
     // 16 at a time
-    for (; Values.size() >= sizeof(__int128); Values = Values.subspan(sizeof(__int128))) {
-        const __int128 &Vec16 = *reinterpret_cast<const __int128 *>(Values.data());
+    for (; values.size() >= sizeof(__int128); values = values.subspan(sizeof(__int128))) {
+        const __int128 &vec16 = *reinterpret_cast<const __int128 *>(values.data());
 
-        if (Vec16 != __int128((__int128(0x01'01'01'01'01'01'01'01) << 64) | 0x01'01'01'01'01'01'01'01)) {
+        if (vec16 != __int128((__int128(0x01'01'01'01'01'01'01'01) << 64) | 0x01'01'01'01'01'01'01'01)) {
             return false;
         }
     }
 #endif
 
     // 8 at a time
-    for (; Values.size() >= sizeof(uint64); Values = Values.subspan(sizeof(uint64))) {
-        const uint64 &Vec8 = *reinterpret_cast<const uint64 *>(Values.data());
+    for (; values.size() >= sizeof(uint64); values = values.subspan(sizeof(uint64))) {
+        const uint64 &vec8 = *reinterpret_cast<const uint64 *>(values.data());
 
-        if (Vec8 != 0x01'01'01'01'01'01'01'01) {
+        if (vec8 != 0x01'01'01'01'01'01'01'01) {
             return false;
         }
     }
 
     // 4 at a time
-    for (; Values.size() >= sizeof(uint32); Values = Values.subspan(sizeof(uint32))) {
-        const uint32 &Vec4 = *reinterpret_cast<const uint32 *>(Values.data());
+    for (; values.size() >= sizeof(uint32); values = values.subspan(sizeof(uint32))) {
+        const uint32 &vec4 = *reinterpret_cast<const uint32 *>(values.data());
 
-        if (Vec4 != 0x01'01'01'01) {
+        if (vec4 != 0x01'01'01'01) {
             return false;
         }
     }
 
-    for (const bool &Value : Values) {
-        if (!Value) {
+    for (const bool &value : values) {
+        if (!value) {
             return false;
         }
     }
@@ -3549,92 +3549,412 @@ FORCE_INLINE bool AllBool(std::span<const bool> Values) {
 }
 
 // Tests if an any element in an array of bools are true
-FORCE_INLINE bool AnyBool(std::span<const bool> Values) {
+FORCE_INLINE bool AnyBool(std::span<const bool> values) {
 #if defined(_M_X64) || defined(__x86_64__)
     #if defined(__AVX__)
     // 32 at a time
-    for (; Values.size() >= 32; Values = Values.subspan(32)) {
-        __m256i Vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(Values.data()));
+    for (; values.size() >= 32; values = values.subspan(32)) {
+        __m256i vec32 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(values.data()));
 
         // Move bit 0 into the MSB
-        Vec32 = _mm256_slli_epi64(Vec32, 7);
+        vec32 = _mm256_slli_epi64(vec32, 7);
 
         // Extract MSB into a 32-bit mask, if any bit is set, then we have a true value
-        if (_mm256_movemask_epi8(Vec32) != 0u) {
+        if (_mm256_movemask_epi8(vec32) != 0u) {
             return true;
         }
     }
     #endif
     #if defined(__SSE2__)
     // 16 at a time
-    for (; Values.size() >= 16; Values = Values.subspan(16)) {
-        __m128i Vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(Values.data()));
+    for (; values.size() >= 16; values = values.subspan(16)) {
+        __m128i vec16 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(values.data()));
 
         // Move bit 0 into the MSB
-        Vec16 = _mm_slli_epi64(Vec16, 7);
+        vec16 = _mm_slli_epi64(vec16, 7);
 
         // Extract MSB into a 16-bit mask, if any bit is set, then we have a true value
-        if (_mm_movemask_epi8(Vec16) != 0u) {
+        if (_mm_movemask_epi8(vec16) != 0u) {
             return true;
         }
     }
     #endif
 #elif defined(_M_ARM64) || defined(__aarch64__)
     // 64 at a time
-    for (; Values.size() >= 64; Values = Values.subspan(64)) {
-        const uint8x16x4_t Vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(Values.data()));
+    for (; values.size() >= 64; values = values.subspan(64)) {
+        const uint8x16x4_t vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the smallest value is not zero, then we have a true value
-        if ((vminvq_u8(Vec64.val[0]) != 0u) || (vminvq_u8(Vec64.val[1]) != 0u) || (vminvq_u8(Vec64.val[2]) != 0u) ||
-            (vminvq_u8(Vec64.val[3]) != 0u)) {
+        if ((vminvq_u8(vec64.val[0]) != 0u) || (vminvq_u8(vec64.val[1]) != 0u) || (vminvq_u8(vec64.val[2]) != 0u) ||
+            (vminvq_u8(vec64.val[3]) != 0u)) {
             return true;
         }
     }
 
     // 16 at a time
-    for (; Values.size() >= 16; Values = Values.subspan(16)) {
-        const uint8x16_t Vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(Values.data()));
+    for (; values.size() >= 16; values = values.subspan(16)) {
+        const uint8x16_t vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the smallest value is not zero, then we have a true value
-        if (vminvq_u8(Vec16) != 0u) {
+        if (vminvq_u8(vec16) != 0u) {
             return true;
         }
     }
 #elif defined(__clang__) || defined(__GNUC__)
     // 16 at a time
-    for (; Values.size() >= sizeof(__int128); Values = Values.subspan(sizeof(__int128))) {
-        const __int128 &Vec16 = *reinterpret_cast<const __int128 *>(Values.data());
+    for (; values.size() >= sizeof(__int128); values = values.subspan(sizeof(__int128))) {
+        const __int128 &vec16 = *reinterpret_cast<const __int128 *>(values.data());
 
-        if (Vec16) {
+        if (vec16) {
             return true;
         }
     }
 #endif
 
     // 8 at a time
-    for (; Values.size() >= sizeof(uint64); Values = Values.subspan(sizeof(uint64))) {
-        const uint64 &Vec8 = *reinterpret_cast<const uint64 *>(Values.data());
+    for (; values.size() >= sizeof(uint64); values = values.subspan(sizeof(uint64))) {
+        const uint64 &vec8 = *reinterpret_cast<const uint64 *>(values.data());
 
-        if (Vec8) {
+        if (vec8) {
             return true;
         }
     }
 
     // 4 at a time
-    for (; Values.size() >= sizeof(uint32); Values = Values.subspan(sizeof(uint32))) {
-        const uint32 &Vec4 = *reinterpret_cast<const uint32 *>(Values.data());
+    for (; values.size() >= sizeof(uint32); values = values.subspan(sizeof(uint32))) {
+        const uint32 &vec4 = *reinterpret_cast<const uint32 *>(values.data());
 
-        if (Vec4) {
+        if (vec4) {
             return true;
         }
     }
 
-    for (const bool &Value : Values) {
-        if (Value) {
+    for (const bool &value : values) {
+        if (value) {
             return true;
         }
     }
     return false;
+}
+
+FORCE_INLINE void Color888ShadowMasked(const std::span<Color888> pixels, const std::span<const bool, kMaxResH> mask) {
+    size_t i = 0;
+
+#if defined(_M_X64) || defined(__x86_64__)
+    #if defined(__AVX2__)
+    // Four pixels at a time
+    for (; (i + 8) < pixels.size(); i += 8) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        __m256i mask_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(mask.data() + i));
+        mask_x8 = _mm256_sub_epi32(_mm256_setzero_si256(), mask_x8);
+
+        const __m256i pixel_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&pixels[i]));
+
+        __m256i shadowed_x8 = _mm256_srli_epi64(pixel_x8, 1);
+        shadowed_x8 = _mm256_and_si256(shadowed_x8, _mm256_set1_epi8(0x7F));
+
+        // Blend with mask
+        const __m256i dstColor_x8 = _mm256_blendv_epi8(shadowed_x8, dstColor_x8, mask_x8);
+
+        // Write
+        _mm256_storeu_si256(reinterpret_cast<__m256i *>(&pixels[i]), dstColor_x8);
+    }
+    #endif
+
+    #if defined(__SSE2__)
+    // Four pixels at a time
+    for (; (i + 4) < pixels.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        __m128i mask_x4 = _mm_loadu_si32(mask.data() + i);
+        mask_x4 = _mm_unpacklo_epi8(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_unpacklo_epi16(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_sub_epi32(_mm_setzero_si128(), mask_x4);
+
+        const __m128i pixel_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&pixels[i]));
+
+        __m128i shadowed_x4 = _mm_srli_epi64(pixel_x4, 1);
+
+        shadowed_x4 = _mm_and_si128(shadowed_x4, _mm_set1_epi8(0x7F));
+
+        // Blend with mask
+        const __m128i dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, shadowed_x4), _mm_andnot_ps(mask_x4, pixel_x4));
+
+        // Write
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(&pixels[i]), dstColor_x4);
+    }
+    #endif
+#endif
+
+    for (; i < pixels.size(); i++) {
+        Color888 &pixel = pixels[i];
+        if (mask[i]) {
+            pixel.u32 >>= 1;
+            pixel.u32 &= 0x7F'7F'7F'7F;
+        }
+    }
+}
+
+FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std::span<const bool, kMaxResH> mask,
+                                       const std::span<const Color888, kMaxResH> topColors,
+                                       const std::span<const Color888, kMaxResH> btmColors) {
+    size_t i = 0;
+
+#if defined(_M_X64) || defined(__x86_64__)
+
+    #if defined(__AVX2__)
+    // Eight pixels at a time
+    for (; (i + 8) < dest.size(); i += 8) {
+        // Load eightmask values and expand each byte into 32-bit 000... or 111...
+        __m256i mask_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(mask.data() + i));
+        mask_x8 = _mm256_sub_epi32(_mm256_setzero_si256(), mask_x8);
+
+        const __m256i topColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&topColors[i]));
+        const __m256i btmColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&btmColors[i]));
+
+        // Pack back into 8-bit values, be sure to truncate to avoid saturation
+        __m256i dstColor_x8 = _mm256_adds_epi8(topColor_x8, btmColor_x8);
+
+        // Blend with mask
+        dstColor_x8 = _mm256_blendv_epi8(topColor_x8, dstColor_x8, mask_x8);
+
+        // Write
+        _mm256_storeu_si256(reinterpret_cast<__m256i *>(&dest[i]), dstColor_x8);
+    }
+    #endif
+
+    #if defined(__SSE2__)
+    // Four pixels at a time
+    for (; (i + 4) < dest.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        __m128i mask_x4 = _mm_loadu_si32(mask.data() + i);
+        mask_x4 = _mm_unpacklo_epi8(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_unpacklo_epi16(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_sub_epi32(_mm_setzero_si128(), mask_x4);
+
+        const __m128i topColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&topColors[i]));
+        const __m128i btmColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&btmColors[i]));
+
+        // Saturated add
+        __m128i dstColor_x4 = _mm_adds_epi8(topColor_x4, btmColor_x4);
+
+        // Blend with mask
+        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_ps(mask_x4, topColor_x4));
+
+        // Write
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
+    }
+    #endif
+#endif
+
+    for (; i < dest.size(); i++) {
+        const Color888 &topColor = topColors[i];
+        const Color888 &btmColor = btmColors[i];
+        Color888 &dstColor = dest[i];
+        if (mask[i]) {
+            dstColor.r = std::min<uint16>(topColor.r + btmColor.r, 255u);
+            dstColor.g = std::min<uint16>(topColor.g + btmColor.g, 255u);
+            dstColor.b = std::min<uint16>(topColor.b + btmColor.b, 255u);
+        } else {
+            dstColor = topColor;
+        }
+    }
+}
+
+FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, const std::span<const bool> mask,
+                                               const std::span<const Color888, kMaxResH> topColors,
+                                               const std::span<const Color888, kMaxResH> btmColors,
+                                               const std::span<const uint8, kMaxResH> ratios) {
+    size_t i = 0;
+
+#if defined(_M_X64) || defined(__x86_64__)
+    #if defined(__AVX2__)
+    // Eight pixels at a time
+    for (; (i + 8) < dest.size(); i += 8) {
+        // Load eightmask values and expand each byte into 32-bit 000... or 111...
+        __m256i mask_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(mask.data() + i));
+        mask_x8 = _mm256_sub_epi32(_mm256_setzero_si256(), mask_x8);
+
+        // Load eight ratios and widen each byte into 32-bit lanes
+        // Put each byte into a 32-bit lane
+        __m256i ratio_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(&ratios[i]));
+        // Repeat the byte
+        ratio_x8 = _mm256_mullo_epi32(ratio_x8, _mm256_set1_epi32(0x01'01'01'01));
+
+        const __m256i topColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&topColors[i]));
+        const __m256i btmColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&btmColors[i]));
+
+        // Expand to 16-bit values
+        __m256i ratio16lo_x8 = _mm256_unpacklo_epi8(ratio_x8, _mm256_setzero_si256());
+        __m256i ratio16hi_x8 = _mm256_unpackhi_epi8(ratio_x8, _mm256_setzero_si256());
+
+        const __m256i topColor16lo = _mm256_unpacklo_epi8(topColor_x8, _mm256_setzero_si256());
+        const __m256i btmColor16lo = _mm256_unpacklo_epi8(btmColor_x8, _mm256_setzero_si256());
+
+        const __m256i topColor16hi = _mm256_unpackhi_epi8(topColor_x8, _mm256_setzero_si256());
+        const __m256i btmColor16hi = _mm256_unpackhi_epi8(btmColor_x8, _mm256_setzero_si256());
+
+        // Lerp
+        const __m256i dstColor16lo = _mm256_add_epi16(
+            btmColor16lo,
+            _mm256_srli_epi16(_mm256_mullo_epi16(_mm256_sub_epi16(topColor16lo, btmColor16lo), ratio16lo_x8), 5));
+        const __m256i dstColor16hi = _mm256_add_epi16(
+            btmColor16hi,
+            _mm256_srli_epi16(_mm256_mullo_epi16(_mm256_sub_epi16(topColor16hi, btmColor16hi), ratio16hi_x8), 5));
+
+        // Pack back into 8-bit values, be sure to truncate to avoid saturation
+        __m256i dstColor_x8 = _mm256_packus_epi16(_mm256_and_si256(dstColor16lo, _mm256_set1_epi16(0xFF)),
+                                                  _mm256_and_si256(dstColor16hi, _mm256_set1_epi16(0xFF)));
+
+        // Blend with mask
+        dstColor_x8 = _mm256_blendv_epi8(topColor_x8, dstColor_x8, mask_x8);
+
+        // Write
+        _mm256_storeu_si256(reinterpret_cast<__m256i *>(&dest[i]), dstColor_x8);
+    }
+    #endif
+
+    #if defined(__SSE2__)
+    // Four pixels at a time
+    for (; (i + 4) < dest.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        __m128i mask_x4 = _mm_loadu_si32(mask.data() + i);
+        mask_x4 = _mm_unpacklo_epi8(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_unpacklo_epi16(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_sub_epi32(_mm_setzero_si128(), mask_x4);
+
+        const __m128i topColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&topColors[i]));
+        const __m128i btmColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&btmColors[i]));
+
+        // Load four ratios and splat each byte into 32-bit lanes
+        __m128i ratio_x4 = _mm_loadu_si32(&ratios[i]);
+        ratio_x4 = _mm_unpacklo_epi8(ratio_x4, ratio_x4);
+        ratio_x4 = _mm_unpacklo_epi16(ratio_x4, ratio_x4);
+
+        // Expand to 16-bit values
+        const __m128i ratio16lo_x4 = _mm_unpacklo_epi8(ratio_x4, _mm_setzero_si128());
+        const __m128i ratio16hi_x4 = _mm_unpackhi_epi8(ratio_x4, _mm_setzero_si128());
+
+        const __m128i topColor16lo = _mm_unpacklo_epi8(topColor_x4, _mm_setzero_si128());
+        const __m128i btmColor16lo = _mm_unpacklo_epi8(btmColor_x4, _mm_setzero_si128());
+
+        const __m128i topColor16hi = _mm_unpackhi_epi8(topColor_x4, _mm_setzero_si128());
+        const __m128i btmColor16hi = _mm_unpackhi_epi8(btmColor_x4, _mm_setzero_si128());
+
+        // Composite
+        const __m128i dstColor16lo = _mm_add_epi16(
+            btmColor16lo, _mm_srli_epi16(_mm_mullo_epi16(_mm_sub_epi16(topColor16lo, btmColor16lo), ratio16lo_x4), 5));
+        const __m128i dstColor16hi = _mm_add_epi16(
+            btmColor16hi, _mm_srli_epi16(_mm_mullo_epi16(_mm_sub_epi16(topColor16hi, btmColor16hi), ratio16hi_x4), 5));
+
+        // Pack back into 8-bit values, be sure to truncate to avoid saturation
+        __m128i dstColor_x4 = _mm_packus_epi16(_mm_and_si128(dstColor16lo, _mm_set1_epi16(0xFF)),
+                                               _mm_and_si128(dstColor16hi, _mm_set1_epi16(0xFF)));
+
+        // Blend with mask
+        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_ps(mask_x4, topColor_x4));
+
+        // Write
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
+    }
+    #endif
+#endif
+
+    for (; i < dest.size(); i++) {
+        const Color888 &topColor = topColors[i];
+        const Color888 &btmColor = btmColors[i];
+        const uint8 &ratio = ratios[i];
+        Color888 &dstColor = dest[i];
+        if (mask[i]) {
+            dstColor.r = btmColor.r + ((int)topColor.r - (int)btmColor.r) * ratio / 32;
+            dstColor.g = btmColor.g + ((int)topColor.g - (int)btmColor.g) * ratio / 32;
+            dstColor.b = btmColor.b + ((int)topColor.b - (int)btmColor.b) * ratio / 32;
+        } else {
+            dstColor = topColor;
+        }
+    }
+}
+
+FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
+                                         const std::span<const Color888, kMaxResH> topColors,
+                                         const std::span<const Color888, kMaxResH> btmColors, const uint8 ratio) {
+    size_t i = 0;
+
+#if defined(_M_X64) || defined(__x86_64__)
+    #if defined(__AVX2__)
+    // Eight pixels at a time
+    const __m256i ratio_x8 = _mm256_set1_epi32(0x01'01'01'01 * ratio);
+    // Expand to 16-bit values
+    const __m256i ratio16lo_x8 = _mm256_unpacklo_epi8(ratio_x8, _mm256_setzero_si256());
+    const __m256i ratio16hi_x8 = _mm256_unpackhi_epi8(ratio_x8, _mm256_setzero_si256());
+    for (; (i + 8) < dest.size(); i += 8) {
+
+        const __m256i topColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&topColors[i]));
+        const __m256i btmColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&btmColors[i]));
+
+        // Expand into 16-bit values
+        const __m256i topColor16lo = _mm256_unpacklo_epi8(topColor_x8, _mm256_setzero_si256());
+        const __m256i btmColor16lo = _mm256_unpacklo_epi8(btmColor_x8, _mm256_setzero_si256());
+        const __m256i topColor16hi = _mm256_unpackhi_epi8(topColor_x8, _mm256_setzero_si256());
+        const __m256i btmColor16hi = _mm256_unpackhi_epi8(btmColor_x8, _mm256_setzero_si256());
+
+        // Composite
+        const __m256i dstColor16lo = _mm256_add_epi16(
+            btmColor16lo,
+            _mm256_srli_epi16(_mm256_mullo_epi16(_mm256_sub_epi16(topColor16lo, btmColor16lo), ratio16lo_x8), 5));
+        const __m256i dstColor16hi = _mm256_add_epi16(
+            btmColor16hi,
+            _mm256_srli_epi16(_mm256_mullo_epi16(_mm256_sub_epi16(topColor16hi, btmColor16hi), ratio16hi_x8), 5));
+
+        // Pack back into 8-bit values, be sure to truncate to avoid saturation
+        __m256i dstColor_x8 = _mm256_packus_epi16(_mm256_and_si256(dstColor16lo, _mm256_set1_epi16(0xFF)),
+                                                  _mm256_and_si256(dstColor16hi, _mm256_set1_epi16(0xFF)));
+
+        // Write
+        _mm256_storeu_si256(reinterpret_cast<__m256i *>(&dest[i]), dstColor_x8);
+    }
+    #endif
+
+    #if defined(__SSE2__)
+    // Four pixels at a time
+    const __m128i ratio_x4 = _mm_set1_epi32(0x01'01'01'01 * ratio);
+    // Expand to 16-bit values
+    const __m128i ratio16lo_x4 = _mm_unpacklo_epi8(ratio_x4, _mm_setzero_si128());
+    const __m128i ratio16hi_x4 = _mm_unpackhi_epi8(ratio_x4, _mm_setzero_si128());
+    for (; (i + 4) < dest.size(); i += 4) {
+
+        const __m128i topColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&topColors[i]));
+        const __m128i btmColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&btmColors[i]));
+
+        const __m128i topColor16lo = _mm_unpacklo_epi8(topColor_x4, _mm_setzero_si128());
+        const __m128i btmColor16lo = _mm_unpacklo_epi8(btmColor_x4, _mm_setzero_si128());
+
+        const __m128i topColor16hi = _mm_unpackhi_epi8(topColor_x4, _mm_setzero_si128());
+        const __m128i btmColor16hi = _mm_unpackhi_epi8(btmColor_x4, _mm_setzero_si128());
+
+        // Composite
+        const __m128i dstColor16lo = _mm_add_epi16(
+            btmColor16lo, _mm_srli_epi16(_mm_mullo_epi16(_mm_sub_epi16(topColor16lo, btmColor16lo), ratio16lo_x4), 5));
+        const __m128i dstColor16hi = _mm_add_epi16(
+            btmColor16hi, _mm_srli_epi16(_mm_mullo_epi16(_mm_sub_epi16(topColor16hi, btmColor16hi), ratio16hi_x4), 5));
+
+        // Pack back into 8-bit values, be sure to truncate to avoid saturation
+        __m128i dstColor_x4 = _mm_packus_epi16(_mm_and_si128(dstColor16lo, _mm_set1_epi16(0xFF)),
+                                               _mm_and_si128(dstColor16hi, _mm_set1_epi16(0xFF)));
+
+        // Write
+        _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
+    }
+    #endif
+#endif
+
+    for (; i < dest.size(); i++) {
+        const Color888 &topColor = topColors[i];
+        const Color888 &btmColor = btmColors[i];
+        Color888 &dstColor = dest[i];
+        dstColor.r = btmColor.r + ((int)topColor.r - (int)btmColor.r) * ratio / 32;
+        dstColor.g = btmColor.g + ((int)topColor.g - (int)btmColor.g) * ratio / 32;
+        dstColor.b = btmColor.b + ((int)topColor.b - (int)btmColor.b) * ratio / 32;
+    }
 }
 
 FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
@@ -3840,14 +4160,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         } else {
             // Alpha composite
-            for (uint32 x = 0; x < m_HRes; ++x) {
-                const Color888 &lineColor = layer0LineColors[x];
-                const uint8 ratio = regs.lineScreenParams.colorCalcRatio;
-                Color888 &pixel = layer1Pixels[x];
-                pixel.r = lineColor.r + ((int)pixel.r - (int)lineColor.r) * ratio / 32;
-                pixel.g = lineColor.g + ((int)pixel.g - (int)lineColor.g) * ratio / 32;
-                pixel.b = lineColor.b + ((int)pixel.b - (int)lineColor.b) * ratio / 32;
-            }
+            Color888CompositeRatio(std::span{layer1Pixels}.first(m_HRes), layer1Pixels, layer0LineColors,
+                                   regs.lineScreenParams.colorCalcRatio);
         }
     }
 
@@ -3897,36 +4211,11 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     if (AnyBool(std::span{layer0ColorCalcEnabled}.first(m_HRes))) {
         if (colorCalcParams.useAdditiveBlend) {
             // Saturated add
-            // TODO: _mm_adds_epi8(paddsb)
-            for (uint32 x = 0; Color888 & outputColor : framebufferOutput) {
-                const Color888 &topColor = layer0Pixels[x];
-                const Color888 &btmColor = layer1Pixels[x];
-
-                if (layer0ColorCalcEnabled[x]) {
-                    outputColor.r = std::min<uint32>(topColor.r + btmColor.r, 255u);
-                    outputColor.g = std::min<uint32>(topColor.g + btmColor.g, 255u);
-                    outputColor.b = std::min<uint32>(topColor.b + btmColor.b, 255u);
-                } else {
-                    outputColor = topColor;
-                }
-                ++x;
-            }
+            Color888SatAddMasked(framebufferOutput, layer0ColorCalcEnabled, layer0Pixels, layer1Pixels);
         } else {
             // Alpha composite
-            for (uint32 x = 0; Color888 & outputColor : framebufferOutput) {
-                const Color888 &topColor = layer0Pixels[x];
-                const Color888 &btmColor = layer1Pixels[x];
-
-                if (layer0ColorCalcEnabled[x]) {
-                    const uint8 &ratio = scanline_ratio[x];
-                    outputColor.r = btmColor.r + ((int)topColor.r - (int)btmColor.r) * ratio / 32;
-                    outputColor.g = btmColor.g + ((int)topColor.g - (int)btmColor.g) * ratio / 32;
-                    outputColor.b = btmColor.b + ((int)topColor.b - (int)btmColor.b) * ratio / 32;
-                } else {
-                    outputColor = topColor;
-                }
-                ++x;
-            }
+            Color888CompositeRatioMasked(framebufferOutput, layer0ColorCalcEnabled, layer0Pixels, layer1Pixels,
+                                         scanline_ratio);
         }
     } else {
         std::copy_n(layer0Pixels.cbegin(), framebufferOutput.size(), framebufferOutput.begin());
@@ -3934,16 +4223,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
     // Apply sprite shadow
     if (AnyBool(std::span{layer0ShadowEnabled}.first(m_HRes))) {
-        for (uint32 x = 0; Color888 & outputColor : framebufferOutput) {
-            if (layer0ShadowEnabled[x]) {
-                // outputColor.r >>= 1u;
-                // outputColor.g >>= 1u;
-                // outputColor.b >>= 1u;
-                outputColor.u32 >>= 1;
-                outputColor.u32 &= 0x7F'7F'7F'7F;
-            }
-            ++x;
-        }
+        Color888ShadowMasked(framebufferOutput, layer0ShadowEnabled);
     }
 
     // Apply color offset if enabled
