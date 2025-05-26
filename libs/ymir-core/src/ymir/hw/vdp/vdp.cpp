@@ -4434,12 +4434,12 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
 
         if (windowState[x]) {
             // Make pixel transparent if inside a window
-            layerState.pixels.transparent[x] = true;
+            layerState.pixels.transparent[xx] = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
-            layerState.pixels.SetPixel(x, VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
-                                              bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH,
-                                              rotParams.pageShiftV, scrollCoord));
+            layerState.pixels.SetPixel(xx, VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
+                                               bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH,
+                                               rotParams.pageShiftV, scrollCoord));
         } else if (rotParams.screenOverProcess == ScreenOverProcess::RepeatChar) {
             // Out of bounds - repeat character
             const uint16 charData = rotParams.screenOverPatternName;
@@ -4480,10 +4480,10 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             const uint32 dotX = bit::extract<0, 2>(scrollX);
             const uint32 dotY = bit::extract<0, 2>(scrollY);
             const CoordU32 dotCoord{dotX, dotY};
-            layerState.pixels.SetPixel(x, VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, 0));
+            layerState.pixels.SetPixel(xx, VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, 0));
         } else {
             // Out of bounds - transparent
-            layerState.pixels.transparent[x] = true;
+            layerState.pixels.transparent[xx] = true;
         }
     }
 }
