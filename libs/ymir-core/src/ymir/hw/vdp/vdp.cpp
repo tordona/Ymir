@@ -3395,7 +3395,7 @@ FORCE_INLINE bool AllZeroU8(std::span<const uint8> values) {
         vec16 = _mm_cmpeq_epi8(vec16, _mm_setzero_si128());
 
         // Extract MSB all into a 16-bit mask, if any bit is set, then we have a true value
-        if (_mm_movemask_epi8(vec16) != 0xFFFF) {
+        if (_mm_movemask_epi8(vec16) != 0x0) {
             return false;
         }
     }
@@ -3470,7 +3470,7 @@ FORCE_INLINE bool AllBool(std::span<const bool> values) {
         // Move bit 0 into the MSB
         vec32 = _mm256_slli_epi64(vec32, 7);
 
-        // Extract MSB all into a 32-bit mask, if any bit is zero, then we have a false value
+        // Extract 32 MSBs into a 32-bit mask, if any bit is zero, then we have a false value
         if (_mm256_movemask_epi8(vec32) != 0xFFFF'FFFF) {
             return false;
         }
@@ -3485,7 +3485,7 @@ FORCE_INLINE bool AllBool(std::span<const bool> values) {
         // Move bit 0 into the MSB
         vec16 = _mm_slli_epi64(vec16, 7);
 
-        // Extract MSB all into a 16-bit mask, if any bit is zero, then we have a false value
+        // Extract 16 MSBs into a 32-bit mask, if any bit is zero, then we have a false value
         if (_mm_movemask_epi8(vec16) != 0xFFFF) {
             return false;
         }
@@ -3644,7 +3644,7 @@ FORCE_INLINE void Color888ShadowMasked(const std::span<Color888> pixels, const s
     #if defined(__AVX2__)
     // Eight pixels at a time
     for (; (i + 8) < pixels.size(); i += 8) {
-        // Load eight mask values into the MSB of each 32-bit lane
+        // Load eight mask bytes into 32-bit lanes of 000... or 111...
         __m256i mask_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(mask.data() + i));
         mask_x8 = _mm256_sub_epi32(_mm256_setzero_si256(), mask_x8);
 
@@ -3704,7 +3704,7 @@ FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std
     #if defined(__AVX2__)
     // Eight pixels at a time
     for (; (i + 8) < dest.size(); i += 8) {
-        // Load eightmask values and expand each byte into 32-bit 000... or 111...
+        // Load eight mask bytes into 32-bit lanes of 000... or 111...
         __m256i mask_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(mask.data() + i));
         mask_x8 = _mm256_sub_epi32(_mm256_setzero_si256(), mask_x8);
 
