@@ -778,7 +778,7 @@ void SMPC::WriteINTBACKStatusReport() {
     SR.bit7 = 0;                  // fixed 0
     SR.PDL = 1;                   // fixed 1 for status report
     SR.NPE = m_getPeripheralData; // 0=no peripheral data, 1=has peripheral data
-    SR.RESB = 0;                  // reset button state (0=off, 1=on)
+    SR.RESB = m_resetState;       // reset button state (0=off, 1=on)
     SR.P1MDn = m_port1mode;
     SR.P2MDn = m_port2mode;
 
@@ -843,7 +843,7 @@ void SMPC::WriteINTBACKPeripheralReport() {
     SR.bit7 = 1;                  // fixed 1
     SR.PDL = firstReport;         // 1=first data, 0=second+ data
     SR.NPE = m_intbackInProgress; // 0=no remaining data, 1=more data
-    SR.RESB = 0;                  // reset button state (0=off, 1=on)
+    SR.RESB = m_resetState;       // reset button state (0=off, 1=on)
     SR.P1MDn = m_port1mode;       // port 1 mode \  0=15 byte, 1=255 byte
     SR.P2MDn = m_port2mode;       // port 2 mode /  2=unused,  3=0 byte
 }
