@@ -4178,6 +4178,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             alignas(16) std::array<uint8, kMaxResH> scanline_ratio;
             for (uint32 x = 0; x < m_HRes; x++) {
                 if (!layer0ColorCalcEnabled[x]) {
+                    scanline_ratio[x] = 0;
                     continue;
                 }
 
