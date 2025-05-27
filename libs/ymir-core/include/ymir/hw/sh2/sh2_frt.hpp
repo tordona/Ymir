@@ -8,7 +8,7 @@
 namespace ymir::sh2 {
 
 struct FreeRunningTimer {
-    static constexpr uint64 kDividerShifts[] = {3, 5, 7, 0};
+    static constexpr uint64 kDividerShifts[] = {3, 5, 7, 64};
 
     enum class Event { None, OVI, OCI };
 
@@ -33,6 +33,10 @@ struct FreeRunningTimer {
     }
 
     FORCE_INLINE Event Advance(uint64 cycles) {
+        if (m_clockDividerShift >= 64) [[unlikely]] {
+            return Event::None;
+        }
+
         m_cycleCount += cycles;
         const uint64 steps = m_cycleCount >> m_clockDividerShift;
         m_cycleCount &= m_cycleCountMask;
@@ -265,6 +269,8 @@ struct FreeRunningTimer {
     //                          01 (1) = Internal clock / 32
     //                          10 (2) = Internal clock / 128
     //                          11 (3) = External clock (on rising edge)
+    //                                   (the FTCI pin is tied to +5V on the Saturn,
+    //                                    so this option effectively disables the timer)
     struct RegTCR {
         RegTCR() {
             Reset();
