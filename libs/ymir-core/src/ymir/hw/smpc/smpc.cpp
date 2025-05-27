@@ -78,6 +78,7 @@ void SMPC::Reset(bool hard) {
     m_extLatchEnable2 = false;
 
     m_getPeripheralData = false;
+    m_optimize = false;
     m_port1mode = 0;
     m_port2mode = 0;
 
