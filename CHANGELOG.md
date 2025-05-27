@@ -4,6 +4,7 @@
 
 ### New features and improvements
 
+- App: Changed background color around screen to black on windowed mode.
 - Core: Performance improvements, especially for ARM builds. (@Wunkolo)
 - Input: Implemented 3D Control Pad. (#28)
 - Media: Preliminary support for CHD files. (#48)

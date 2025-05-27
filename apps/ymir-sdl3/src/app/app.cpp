@@ -756,7 +756,7 @@ void App::RunEmulator() {
     ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
-    ImVec4 clearColor = ImVec4(0.15f, 0.18f, 0.37f, 1.00f);
+    ImVec4 clearColor = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
 
     // ---------------------------------
     // Setup framebuffer and render callbacks
