@@ -90,20 +90,23 @@ struct FreeRunningTimer {
 
         void Reset() {
             ICIE = false;
+            unused = 0x00;
             OCIAE = false;
             OCIBE = false;
             OVIE = false;
         }
 
-        bool ICIE;  // 7   R/W  ICIE     Input Capture Interrupt Enable
-        bool OCIAE; // 3   R/W  OCIAE    Output Compare Interrupt A Enable
-        bool OCIBE; // 2   R/W  OCIBE    Output Compare Interrupt B Enable
-        bool OVIE;  // 1   R/W  OVIE     Timer Overflow Interrupt Enable
+        bool ICIE;    // 7   R/W  ICIE     Input Capture Interrupt Enable
+        uint8 unused; // 6-4 R/W  -        (unused but writable bits)
+        bool OCIAE;   // 3   R/W  OCIAE    Output Compare Interrupt A Enable
+        bool OCIBE;   // 2   R/W  OCIBE    Output Compare Interrupt B Enable
+        bool OVIE;    // 1   R/W  OVIE     Timer Overflow Interrupt Enable
     } TIER;
 
     FORCE_INLINE uint8 ReadTIER() const {
         uint8 value = 0;
         bit::deposit_into<7>(value, TIER.ICIE);
+        bit::deposit_into<4, 6>(value, bit::extract<4, 6>(TIER.unused));
         bit::deposit_into<3>(value, TIER.OCIAE);
         bit::deposit_into<2>(value, TIER.OCIBE);
         bit::deposit_into<1>(value, TIER.OVIE);
@@ -113,6 +116,7 @@ struct FreeRunningTimer {
 
     FORCE_INLINE void WriteTIER(uint8 value) {
         TIER.ICIE = bit::test<7>(value);
+        TIER.unused = bit::extract<4, 6>(value) << 4u;
         TIER.OCIAE = bit::test<3>(value);
         TIER.OCIBE = bit::test<2>(value);
         TIER.OVIE = bit::test<1>(value);
@@ -315,15 +319,17 @@ struct FreeRunningTimer {
             OLVLB = false;
         }
 
-        bool OCRS;  // 4   R/W  OCRS     Output Compare Register Select (0=OCRA, 1=OCRB)
-        bool OLVLA; // 1   R/W  OLVLA    Output Level A
-        bool OLVLB; // 0   R/W  OLVLB    Output Level B
+        bool OCRS;    // 4   R/W  OCRS     Output Compare Register Select (0=OCRA, 1=OCRB)
+        uint8 unused; // 3-2 R/W  -        (unused but writable)
+        bool OLVLA;   // 1   R/W  OLVLA    Output Level A
+        bool OLVLB;   // 0   R/W  OLVLB    Output Level B
     } TOCR;
 
     FORCE_INLINE uint8 ReadTOCR() const {
         uint8 value = 0;
         bit::deposit_into<5, 7>(value, 0b111);
         bit::deposit_into<4>(value, TOCR.OCRS);
+        bit::deposit_into<2, 3>(value, bit::extract<2, 3>(TOCR.unused));
         bit::deposit_into<1>(value, TOCR.OLVLA);
         bit::deposit_into<0>(value, TOCR.OLVLB);
         return value;
@@ -331,6 +337,7 @@ struct FreeRunningTimer {
 
     FORCE_INLINE void WriteTOCR(uint8 value) {
         TOCR.OCRS = bit::test<4>(value);
+        TOCR.unused = bit::extract<2, 3>(value) << 2u;
         TOCR.OLVLA = bit::test<1>(value);
         TOCR.OLVLB = bit::test<0>(value);
     }
