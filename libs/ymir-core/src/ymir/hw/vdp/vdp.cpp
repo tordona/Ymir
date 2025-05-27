@@ -1254,6 +1254,13 @@ void VDP::BeginHPhaseVBlankOut() {
         devlog::trace<grp::base>("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
                                  m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.plotTrigger);
 
+        // FIXME: this breaks several games:
+        // - After Burner II and OutRun: erases data used by VDP2 graphics tiles
+        // - Powerslave/Exhumed: intro video flashes light blue every other frame
+        //
+        // Without this, Mickey Mouse/Donald Duck don't clear sprites on some screens (e.g. Donald Duck's items menu)
+
+        /*
         // Erase frame if manually requested in previous frame
         if (m_VDP1RenderContext.erase) {
             m_VDP1RenderContext.erase = false;
@@ -1269,6 +1276,7 @@ void VDP::BeginHPhaseVBlankOut() {
             m_VDP1.fbManualErase = false;
             m_VDP1RenderContext.erase = true;
         }
+        */
 
         // Swap framebuffer in manual swap requested or in 1-cycle mode
         if (!m_VDP1.fbSwapMode || m_VDP1.fbManualSwap) {
@@ -1582,6 +1590,17 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
     devlog::trace<grp::vdp1_render>("Swapping framebuffers - draw {}, display {}", m_displayFB, m_displayFB ^ 1);
+
+    // FIXME: FCM=1 FCT=0 should erase regardless of framebuffer swap, otherwise I Love Mickey Mouse/Donald Duck leaves
+    // behind sprites in some screens
+    if (m_VDP1.fbManualErase) {
+        m_VDP1.fbManualErase = false;
+        if (m_threadedVDPRendering) {
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+        } else {
+            VDP1EraseFramebuffer();
+        }
+    }
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1SwapFramebuffer());
