@@ -173,6 +173,11 @@ void AboutWindow::DrawAboutTab() {
     ImGui::TextUnformatted("The source code can be found at ");
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("https://github.com/StrikerX3/Ymir");
+
+    ImGui::NewLine();
+    ImGui::TextUnformatted("Join the official ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("Discord server", "https://discord.gg/YFrBBcXwu7");
 }
 
 void AboutWindow::DrawDependenciesTab() {
