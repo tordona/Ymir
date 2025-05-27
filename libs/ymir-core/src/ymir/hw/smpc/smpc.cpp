@@ -718,10 +718,6 @@ void SMPC::INTBACK() {
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
 
-        if (m_getPeripheralData) {
-            ReadPeripherals();
-        }
-
         const bool getSMPCStatus = IREG[0] == 0x01;
         if (getSMPCStatus) {
             WriteINTBACKStatusReport();
@@ -822,6 +818,10 @@ void SMPC::WriteINTBACKPeripheralReport() {
     const bool firstReport = m_intbackReportOffset == 0;
     devlog::trace<grp::base>("INTBACK peripheral report - first? {}", firstReport);
 
+    if (firstReport) {
+        ReadPeripherals();
+    }
+
     const uint8 reportLength = std::min<uint8>(32, m_intbackReport.size() - m_intbackReportOffset);
     std::copy_n(m_intbackReport.begin() + m_intbackReportOffset, reportLength, OREG.begin());
     if (reportLength < 32) {
@@ -830,6 +830,7 @@ void SMPC::WriteINTBACKPeripheralReport() {
     m_intbackReportOffset += reportLength;
     if (m_intbackReportOffset == m_intbackReport.size()) {
         m_intbackInProgress = false;
+        m_intbackReportOffset = 0;
     }
 
     SR.bit7 = 1;                  // fixed 1
