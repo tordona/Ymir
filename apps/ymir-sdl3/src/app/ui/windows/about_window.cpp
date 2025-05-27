@@ -354,7 +354,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ackWithAuthor("saturn-tests", "StrikerX3", "https://github.com/StrikerX3/saturn-tests");
         ackWithAuthor("SH-4 single step tests", "raddad772", "https://github.com/SingleStepTests/sh4");
         ackWithAuthor("M68000 single step tests", "raddad772", "https://github.com/SingleStepTests/m68000");
-        ackWithAuthor("scsptest and scspadpcm", "celeriyacon", "https://github.com/celeriyacon");
+        ackWithAuthor("scsptest, scspadpcm and sh2test", "celeriyacon", "https://github.com/celeriyacon");
 
         // -----------------------------------------------------------------------------
 
