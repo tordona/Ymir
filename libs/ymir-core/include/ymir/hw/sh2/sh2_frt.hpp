@@ -153,6 +153,10 @@ struct FreeRunningTimer {
         bool OCFB;  // 2   R/W  OCFB     Output Compare Flag B (clear on zero write)
         bool OVF;   // 1   R/W  OVF      Timer Overflow Flag (clear on zero write)
         bool CCLRA; // 0   R/W  CCLRA    Counter Clear A
+
+        // Was the register read?
+        // In order to clear overflow flags, the register needs to be read before it is written to.
+        mutable bool read;
     } FTCSR;
 
     FORCE_INLINE uint8 ReadFTCSR() const {
@@ -162,6 +166,7 @@ struct FreeRunningTimer {
         bit::deposit_into<2>(value, FTCSR.OCFB);
         bit::deposit_into<1>(value, FTCSR.OVF);
         bit::deposit_into<0>(value, FTCSR.CCLRA);
+        FTCSR.read = true;
         return value;
     }
 
@@ -174,10 +179,13 @@ struct FreeRunningTimer {
             FTCSR.OVF = bit::test<1>(value);
             FTCSR.CCLRA = bit::test<0>(value);
         } else {
-            FTCSR.ICF &= bit::test<7>(value);
-            FTCSR.OCFA &= bit::test<3>(value);
-            FTCSR.OCFB &= bit::test<2>(value);
-            FTCSR.OVF &= bit::test<1>(value);
+            if (FTCSR.read) {
+                FTCSR.read = false;
+                FTCSR.ICF &= bit::test<7>(value);
+                FTCSR.OCFA &= bit::test<3>(value);
+                FTCSR.OCFB &= bit::test<2>(value);
+                FTCSR.OVF &= bit::test<1>(value);
+            }
             FTCSR.CCLRA = bit::test<0>(value);
         }
     }
@@ -399,6 +407,7 @@ struct FreeRunningTimer {
         state.ICR = ICR;
         state.TEMP = TEMP;
         state.cycleCount = m_cycleCount;
+        state.FTCSR_read = FTCSR.read;
     }
 
     void LoadState(const state::SH2State::FRT &state) {
@@ -412,6 +421,7 @@ struct FreeRunningTimer {
         ICR = state.ICR;
         TEMP = state.TEMP;
         m_cycleCount = state.cycleCount;
+        FTCSR.read = state.FTCSR_read;
     }
 
 private:

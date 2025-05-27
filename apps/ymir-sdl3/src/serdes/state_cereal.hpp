@@ -36,10 +36,12 @@ void serialize(Archive &ar, SystemState &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, SH2State &s) {
+void serialize(Archive &ar, SH2State &s, const uint32 version) {
     ar(s.R, s.PC, s.PR, s.MACL, s.MACH, s.SR, s.GBR, s.VBR);
     ar(s.delaySlot, s.delaySlotTarget);
-    ar(s.bsc, s.dmac, s.wdt, s.divu, s.frt, s.intc, s.cache, s.SBYCR);
+    ar(s.bsc, s.dmac, s.wdt, s.divu);
+    serialize(ar, s.frt, version);
+    ar(s.intc, s.cache, s.SBYCR);
 }
 
 template <class Archive>
@@ -68,8 +70,13 @@ void serialize(Archive &ar, SH2State::DIVU &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, SH2State::FRT &s) {
+void serialize(Archive &ar, SH2State::FRT &s, const uint32 version) {
     ar(s.TIER, s.FTCSR, s.FRC, s.OCRA, s.OCRB, s.TCR, s.TOCR, s.ICR, s.TEMP, s.cycleCount);
+    if (version >= 5) {
+        ar(s.FTCSR_read);
+    } else {
+        s.FTCSR_read = false;
+    }
 }
 
 template <class Archive>
@@ -573,8 +580,8 @@ void serialize(Archive &ar, State &s, const uint32 version) {
     // NOTE: serialize is invoked manually here to handle versioned and non-versioned (pre-v4) variants
     serialize(ar, s.scheduler);
     serialize(ar, s.system);
-    serialize(ar, s.msh2);
-    serialize(ar, s.ssh2);
+    serialize(ar, s.msh2, version);
+    serialize(ar, s.ssh2, version);
     serialize(ar, s.scu, version);
     serialize(ar, s.smpc);
     serialize(ar, s.vdp, version);

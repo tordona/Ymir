@@ -6,6 +6,11 @@
 
 namespace ymir::state {
 
+// Version history:
+// v5:
+// - New fields
+//   - FRT::FTCSR_read = false
+
 struct SH2State {
     alignas(16) std::array<uint32, 16> R;
 
@@ -74,6 +79,7 @@ struct SH2State {
         uint16 ICR;
         uint8 TEMP;
         uint64 cycleCount;
+        bool FTCSR_read;
     } frt;
 
     struct INTC {
