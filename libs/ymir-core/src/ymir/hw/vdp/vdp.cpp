@@ -3961,9 +3961,6 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     const VDP2Regs &regs = VDP2GetRegs();
     const auto &colorCalcParams = regs.colorCalcParams;
 
-    // Extended color calculations (only in normal TV modes)
-    const bool useExtendedColorCalc = colorCalcParams.extendedColorCalcEnable && regs.TVMD.HRESOn < 2;
-
     y = VDP2GetY(y);
 
     if (!regs.TVMD.DISP) {
@@ -3997,11 +3994,10 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         }
 
         for (uint32 x = 0; x < m_HRes; x++) {
-
             if (state.pixels.transparent[x]) {
                 continue;
             }
-            const uint8 priority = pixel.priority;
+            const uint8 priority = state.pixels.priority[x];
             if (priority == 0) {
                 continue;
             }
@@ -4033,186 +4029,166 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         }
     }
 
-    // Gather pixels for each layer
-    alignas(16) std::array<Color888, kMaxResH> layer0Pixels = {};
-    alignas(16) std::array<Color888, kMaxResH> layer1Pixels = {};
-    alignas(16) std::array<Color888, kMaxResH> layer2Pixels = {};
+    // Retrieves the color of the given layer
+    auto getLayerColor = [&](LayerIndex layer, uint32 x) -> Color888 {
+        if (layer == LYR_Back) {
+            return m_lineBackLayerState.backColor;
+        } else {
+            return m_layerStates[layer].pixels.color[x];
+        }
+    };
 
+    // Gather pixels for layer 0
+    alignas(16) std::array<Color888, kMaxResH> layer0Pixels;
     for (uint32 x = 0; x < m_HRes; x++) {
-        // Retrieves the color of the given layer
-        auto getLayerColor = [&](LayerIndex layer) -> Color888 {
-            if (layer == LYR_Back) {
-                return m_lineBackLayerState.backColor;
-            } else {
-                const LayerState &state = m_layerStates[layer];
-                return state.pixels.color[x];
-            }
-        };
-
-        layer0Pixels[x] = getLayerColor(scanline_layers[x][0]);
-        layer1Pixels[x] = getLayerColor(scanline_layers[x][1]);
-        layer2Pixels[x] = getLayerColor(scanline_layers[x][2]);
+        layer0Pixels[x] = getLayerColor(scanline_layers[x][0], x);
     }
 
-    // Gether layer color calc data
-    alignas(16) std::array<bool, kMaxResH> layer0ColorCalcEnabled = {};
-    alignas(16) std::array<bool, kMaxResH> layer1ColorCalcEnabled = {};
+    const auto isColorCalcEnabled = [&](LayerIndex layer, uint32 x) {
+        if (layer == LYR_Sprite) {
+            const SpriteParams &spriteParams = regs.spriteParams;
+            if (!spriteParams.colorCalcEnable) {
+                return false;
+            }
+
+            const uint8 pixelPriority = m_layerStates[LYR_Sprite].pixels.priority[x];
+
+            using enum SpriteColorCalculationCondition;
+            switch (spriteParams.colorCalcCond) {
+            case PriorityLessThanOrEqual: return pixelPriority <= spriteParams.colorCalcValue;
+            case PriorityEqual: return pixelPriority == spriteParams.colorCalcValue;
+            case PriorityGreaterThanOrEqual: return pixelPriority >= spriteParams.colorCalcValue;
+            case MsbEqualsOne: return m_layerStates[LYR_Sprite].pixels.color[x].msb == 1;
+            default: util::unreachable();
+            }
+        } else if (layer == LYR_Back) {
+            return regs.backScreenParams.colorCalcEnable;
+        } else {
+            return regs.bgParams[layer - LYR_RBG0].colorCalcEnable;
+        }
+    };
+
+    // Gather layer color calculation data
+    alignas(16) std::array<bool, kMaxResH> layer0ColorCalcEnabled;
+
     for (uint32 x = 0; x < m_HRes; x++) {
-        const auto isColorCalcEnabled = [&](LayerIndex layer) {
-            if (layer == LYR_Sprite) {
-                const SpriteParams &spriteParams = regs.spriteParams;
-                if (!spriteParams.colorCalcEnable) {
-                    return false;
-                }
+        const LayerIndex layer = scanline_layers[x][0];
+        if (m_colorCalcWindow[x]) {
+            layer0ColorCalcEnabled[x] = false;
+            continue;
+        }
+        if (!isColorCalcEnabled(layer, x)) {
+            layer0ColorCalcEnabled[x] = false;
+            continue;
+        }
 
-                const uint8 &pixelPriority = m_layerStates[LYR_Sprite].pixels.priority[x];
-                const bool pixelMsb = m_layerStates[LYR_Sprite].pixels.color[x].msb;
-
-                using enum SpriteColorCalculationCondition;
-                switch (spriteParams.colorCalcCond) {
-                case PriorityLessThanOrEqual: return pixelPriority <= spriteParams.colorCalcValue;
-                case PriorityEqual: return pixelPriority == spriteParams.colorCalcValue;
-                case PriorityGreaterThanOrEqual: return pixelPriority >= spriteParams.colorCalcValue;
-                case MsbEqualsOne: return pixelMsb == 1;
-                default: util::unreachable();
-                }
-            } else if (layer == LYR_Back) {
-                return regs.backScreenParams.colorCalcEnable;
-            } else {
-                return regs.bgParams[layer - LYR_RBG0].colorCalcEnable;
-            }
-        };
-        const auto isTopLayerColorCalcEnabled = [&]() -> bool {
-            if (!isColorCalcEnabled(scanline_layers[x][0])) {
-                return false;
-            }
-            if (m_colorCalcWindow[x]) {
-                return false;
-            }
-            if (scanline_layers[x][0] == LYR_Back || scanline_layers[x][0] == LYR_Sprite) {
-                return true;
-            }
-            return m_layerStates[scanline_layers[x][0]].pixels.specialColorCalc[x];
-        };
-        layer0ColorCalcEnabled[x] = isTopLayerColorCalcEnabled();
-        layer1ColorCalcEnabled[x] = isColorCalcEnabled(scanline_layers[x][1]);
-    }
-
-    // Apply Extended color calc to layer 1
-    if (useExtendedColorCalc && AnyBool(std::span{layer0ColorCalcEnabled}.first(m_HRes))) {
-        for (uint32 x = 0; x < m_HRes; ++x) {
-            if (layer1ColorCalcEnabled[x]) {
-
-                // TODO: honor color RAM mode + palette/RGB format restrictions
-                // - modes 1 and 2 don't blend layers if the bottom layer uses palette color
-
-                // HACK: assuming color RAM mode 0 for now (aka no restrictions)
-                const Color888 &l2Color = layer2Pixels[x];
-                // TODO: x64 - _mm_avg_epu8(pavgb)
-                // TODO: a64 - vhaddq_u8(uhadd.u8)
-                Color888 &pixel = layer1Pixels[x];
-                pixel = AverageRGB888(pixel, l2Color);
-            }
+        switch (layer) {
+        case LYR_Back: [[fallthrough]];
+        case LYR_Sprite: layer0ColorCalcEnabled[x] = true; break;
+        default: layer0ColorCalcEnabled[x] = m_layerStates[layer].pixels.specialColorCalc[x]; break;
         }
     }
 
-    // Gather line-color data
-    alignas(16) std::array<bool, kMaxResH> layer0LineColorEnabled = {};
-    alignas(16) std::array<Color888, kMaxResH> layer0LineColors = {};
-    for (uint32 x = 0; x < m_HRes; x++) {
-        auto isLineColorEnabled = [&](LayerIndex layer) {
-            if (layer == LYR_Sprite) {
-                return regs.spriteParams.lineColorScreenEnable;
-            } else if (layer == LYR_Back) {
-                return false;
-            } else {
-                return regs.bgParams[layer - LYR_RBG0].lineColorScreenEnable;
-            }
-        };
+    const std::span<Color888> framebufferOutput(reinterpret_cast<Color888 *>(&m_framebuffer[y * m_HRes]), m_HRes);
 
-        auto getLineColor = [&](LayerIndex layer) {
-            if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && regs.bgEnabled[5])) {
-                const auto &rotParams = regs.rotParams[layer - LYR_RBG0];
-                if (rotParams.coeffTableEnable && rotParams.coeffUseLineColorData) {
-                    return m_rotParamStates[layer - LYR_RBG0].lineColor[x];
+    if (AnyBool(std::span{layer0ColorCalcEnabled}.first(m_HRes))) {
+        // Gather pixels for layer 1
+        alignas(16) std::array<Color888, kMaxResH> layer1Pixels;
+        for (uint32 x = 0; x < m_HRes; x++) {
+            layer1Pixels[x] = getLayerColor(scanline_layers[x][1], x);
+        }
+
+        // Gather line-color data
+        alignas(16) std::array<bool, kMaxResH> layer0LineColorEnabled;
+        alignas(16) std::array<Color888, kMaxResH> layer0LineColors;
+        for (uint32 x = 0; x < m_HRes; x++) {
+            const LayerIndex layer = scanline_layers[x][0];
+
+            switch (layer) {
+            case LYR_Sprite: layer0LineColorEnabled[x] = regs.spriteParams.lineColorScreenEnable; break;
+            case LYR_Back: layer0LineColorEnabled[x] = false; break;
+            default: layer0LineColorEnabled[x] = regs.bgParams[layer - LYR_RBG0].lineColorScreenEnable; break;
+            }
+
+            if (layer0LineColorEnabled[x]) {
+                if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && regs.bgEnabled[5])) {
+                    const auto &rotParams = regs.rotParams[layer - LYR_RBG0];
+                    if (rotParams.coeffTableEnable && rotParams.coeffUseLineColorData) {
+                        layer0LineColors[x] = m_rotParamStates[layer - LYR_RBG0].lineColor[x];
+                    } else {
+                        layer0LineColors[x] = m_lineBackLayerState.lineColor;
+                    }
                 } else {
-                    return m_lineBackLayerState.lineColor;
+                    layer0LineColors[x] = m_lineBackLayerState.lineColor;
                 }
-            } else {
-                return m_lineBackLayerState.lineColor;
             }
-        };
+        }
 
-        layer0LineColorEnabled[x] = isLineColorEnabled(scanline_layers[x][0]);
-        layer0LineColors[x] = getLineColor(scanline_layers[x][0]);
-    }
+        // Extended color calculations (only in normal TV modes)
+        const bool useExtendedColorCalc = colorCalcParams.extendedColorCalcEnable && regs.TVMD.HRESOn < 2;
 
-    // Blend line color if top layer uses it
-    if (AnyBool(std::span{layer0LineColorEnabled}.first(m_HRes))) {
+        // Apply extended color calculations to layer 1
         if (useExtendedColorCalc) {
-            // Average color
-            // TODO: x64 - _mm_avg_epu8(pavgb)
-            // TODO: a64 - vhaddq_u8(uhadd.u8)
+            alignas(16) std::array<bool, kMaxResH> layer1ColorCalcEnabled;
+            alignas(16) std::array<Color888, kMaxResH> layer2Pixels;
+
+            // Gather pixels for layer 2
+            for (uint32 x = 0; x < m_HRes; x++) {
+                layer1ColorCalcEnabled[x] = isColorCalcEnabled(scanline_layers[x][1], x);
+                if (layer1ColorCalcEnabled[x]) {
+                    layer2Pixels[x] = getLayerColor(scanline_layers[x][2], x);
+                }
+            }
+
             for (uint32 x = 0; x < m_HRes; ++x) {
-                const Color888 &lineColor = layer0LineColors[x];
-                Color888 &pixel = layer1Pixels[x];
-                pixel = AverageRGB888(pixel, lineColor);
+                if (layer1ColorCalcEnabled[x]) {
+                    // TODO: honor color RAM mode + palette/RGB format restrictions
+                    // - modes 1 and 2 don't blend layers if the bottom layer uses palette color
+
+                    // HACK: assuming color RAM mode 0 for now (aka no restrictions)
+                    // TODO: x64 - _mm_avg_epu8(pavgb)
+                    // TODO: a64 - vhaddq_u8(uhadd.u8)
+                    const Color888 &l2Color = layer2Pixels[x];
+                    Color888 &l1Color = layer1Pixels[x];
+                    l1Color = AverageRGB888(l1Color, l2Color);
+                }
+
+                // Blend line color if top layer uses it
+                if (layer0LineColorEnabled[x]) {
+                    // Average color
+                    // TODO: x64 - _mm_avg_epu8(pavgb)
+                    // TODO: a64 - vhaddq_u8(uhadd.u8)
+                    const Color888 &lineColor = layer0LineColors[x];
+                    Color888 &l1Color = layer1Pixels[x];
+                    l1Color = AverageRGB888(l1Color, lineColor);
+                }
             }
         } else {
             // Alpha composite
             Color888CompositeRatio(std::span{layer1Pixels}.first(m_HRes), layer1Pixels, layer0LineColors,
                                    regs.lineScreenParams.colorCalcRatio);
         }
-    }
 
-    // Gather shadow data
-    alignas(16) std::array<bool, kMaxResH> layer0ShadowEnabled = {};
-    for (uint32 x = 0; x < m_HRes; x++) {
-        auto isShadowEnabled = [&](LayerIndex layer) {
-            if (layer == LYR_Sprite) {
-                return m_spriteLayerState.attrs[x].shadowOrWindow;
-            } else if (layer == LYR_Back) {
-                return regs.backScreenParams.shadowEnable;
-            } else {
-                return regs.bgParams[layer - LYR_RBG0].shadowEnable;
-            }
-        };
-        const bool isNormalShadow = m_spriteLayerState.attrs[x].normalShadow;
-        const bool isMSBShadow = !regs.spriteParams.spriteWindowEnable && m_spriteLayerState.attrs[x].shadowOrWindow;
-
-        layer0ShadowEnabled[x] = isShadowEnabled(scanline_layers[x][0]) || isNormalShadow || isMSBShadow;
-    }
-
-    // Gather extended color ratio info
-    alignas(16) std::array<uint8, kMaxResH> scanline_ratio = {};
-    for (uint32 x = 0; x < m_HRes; x++) {
-        auto getColorCalcRatio = [&](LayerIndex layer) {
-            if (layer == LYR_Sprite) {
-                return m_spriteLayerState.attrs[x].colorCalcRatio;
-            } else if (layer == LYR_Back) {
-                return regs.backScreenParams.colorCalcRatio;
-            } else {
-                return regs.bgParams[layer - LYR_RBG0].colorCalcRatio;
-            }
-        };
-        scanline_ratio[x] =
-            getColorCalcRatio(colorCalcParams.useSecondScreenRatio ? scanline_layers[x][1] : scanline_layers[x][0]);
-    }
-
-    // Gather color offset info
-    alignas(16) std::array<bool, kMaxResH> layer0ColorOffsetEnabled = {};
-    for (uint32 x = 0; x < m_HRes; x++) {
-        layer0ColorOffsetEnabled[x] = regs.colorOffsetEnable[scanline_layers[x][0]];
-    }
-
-    const std::span<Color888> framebufferOutput(reinterpret_cast<Color888 *>(&m_framebuffer[y * m_HRes]), m_HRes);
-
-    // Blend layer 0 and layer 1
-    if (AnyBool(std::span{layer0ColorCalcEnabled}.first(m_HRes))) {
+        // Blend layer 0 and layer 1
         if (colorCalcParams.useAdditiveBlend) {
             // Saturated add
             Color888SatAddMasked(framebufferOutput, layer0ColorCalcEnabled, layer0Pixels, layer1Pixels);
         } else {
+            // Gather extended color ratio info
+            alignas(16) std::array<uint8, kMaxResH> scanline_ratio;
+            for (uint32 x = 0; x < m_HRes; x++) {
+                if (!layer0ColorCalcEnabled[x]) {
+                    continue;
+                }
+
+                const LayerIndex layer = scanline_layers[x][colorCalcParams.useSecondScreenRatio];
+                switch (layer) {
+                case LYR_Sprite: scanline_ratio[x] = m_spriteLayerState.attrs[x].colorCalcRatio; break;
+                case LYR_Back: scanline_ratio[x] = regs.backScreenParams.colorCalcRatio; break;
+                default: scanline_ratio[x] = regs.bgParams[layer - LYR_RBG0].colorCalcRatio; break;
+                }
+            }
+
             // Alpha composite
             Color888CompositeRatioMasked(framebufferOutput, layer0ColorCalcEnabled, layer0Pixels, layer1Pixels,
                                          scanline_ratio);
@@ -4221,9 +4197,34 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         std::copy_n(layer0Pixels.cbegin(), framebufferOutput.size(), framebufferOutput.begin());
     }
 
+    // Gather shadow data
+    alignas(16) std::array<bool, kMaxResH> layer0ShadowEnabled;
+    for (uint32 x = 0; x < m_HRes; x++) {
+        const LayerIndex layer = scanline_layers[x][0];
+
+        const bool isNormalShadow = m_spriteLayerState.attrs[x].normalShadow;
+        const bool isMSBShadow = !regs.spriteParams.spriteWindowEnable && m_spriteLayerState.attrs[x].shadowOrWindow;
+        if (!isNormalShadow && !isMSBShadow) {
+            layer0ShadowEnabled[x] = false;
+            continue;
+        }
+
+        switch (layer) {
+        case LYR_Sprite: layer0ShadowEnabled[x] = m_spriteLayerState.attrs[x].shadowOrWindow; break;
+        case LYR_Back: layer0ShadowEnabled[x] = regs.backScreenParams.shadowEnable; break;
+        default: layer0ShadowEnabled[x] = regs.bgParams[layer - LYR_RBG0].shadowEnable; break;
+        }
+    }
+
     // Apply sprite shadow
     if (AnyBool(std::span{layer0ShadowEnabled}.first(m_HRes))) {
         Color888ShadowMasked(framebufferOutput, layer0ShadowEnabled);
+    }
+
+    // Gather color offset info
+    alignas(16) std::array<bool, kMaxResH> layer0ColorOffsetEnabled;
+    for (uint32 x = 0; x < m_HRes; x++) {
+        layer0ColorOffsetEnabled[x] = regs.colorOffsetEnable[scanline_layers[x][0]];
     }
 
     // Apply color offset if enabled
