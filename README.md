@@ -1,7 +1,7 @@
 # Ymir
 A work-in-progress Sega Saturn emulator.
 
-[![Release](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml) <a href="https://discord.gg/YFrBBcXwu7">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a>
+[![Release](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml) <a href="https://discord.gg/NN3A7n5dzn">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a>
 
 <div class="grid" markdown>
   <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/cd-player.png"/>

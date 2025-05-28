@@ -177,7 +177,7 @@ void AboutWindow::DrawAboutTab() {
     ImGui::NewLine();
     ImGui::TextUnformatted("Join the official ");
     ImGui::SameLine(0, 0);
-    ImGui::TextLinkOpenURL("Discord server", "https://discord.gg/YFrBBcXwu7");
+    ImGui::TextLinkOpenURL("Discord server", "https://discord.gg/NN3A7n5dzn");
 }
 
 void AboutWindow::DrawDependenciesTab() {
