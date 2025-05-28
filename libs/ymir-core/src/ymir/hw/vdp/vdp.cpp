@@ -3683,6 +3683,23 @@ FORCE_INLINE void Color888ShadowMasked(const std::span<Color888> pixels, const s
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&pixels[i]), dstColor_x4);
     }
     #endif
+#elif defined(_M_ARM64) || defined(__aarch64__)
+    // Four pixels at a time
+    for (; (i + 4) < pixels.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        uint32x4_t mask_x4 = vld1q_lane_u32(reinterpret_cast<const uint32 *>(mask.data() + i), vdupq_n_u32(0), 0);
+        mask_x4 = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(mask_x4))));
+        mask_x4 = vnegq_s32(mask_x4);
+
+        const uint32x4_t pixel_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&pixels[i]));
+        const uint32x4_t shadowed_x4 = vshrq_n_u8(pixel_x4, 1);
+
+        // Blend with mask
+        const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, shadowed_x4, pixel_x4);
+
+        // Write
+        vst1q_u32(reinterpret_cast<uint32x4_t *>(&pixels[i]), dstColor_x4);
+    }
 #endif
 
     for (; i < pixels.size(); i++) {
@@ -3744,6 +3761,26 @@ FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
     }
     #endif
+#elif defined(_M_ARM64) || defined(__aarch64__)
+    // Four pixels at a time
+    for (; (i + 4) < dest.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        uint32x4_t mask_x4 = vld1q_lane_u32(reinterpret_cast<const uint32 *>(mask.data() + i), vdupq_n_u32(0), 0);
+        mask_x4 = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(mask_x4))));
+        mask_x4 = vnegq_s32(mask_x4);
+
+        const uint32x4_t topColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&topColors[i]));
+        const uint32x4_t btmColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&btmColors[i]));
+
+        // Saturated add
+        const uint32x4_t add_x4 = vqaddq_u8(topColor_x4, btmColor_x4);
+
+        // Blend with mask
+        const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, add_x4, topColor_x4);
+
+        // Write
+        vst1q_u32(reinterpret_cast<uint32x4_t *>(&dest[i]), dstColor_x4);
+    }
 #endif
 
     for (; i < dest.size(); i++) {
@@ -3857,6 +3894,39 @@ FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, c
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
     }
     #endif
+#elif defined(_M_ARM64) || defined(__aarch64__)
+    // Four pixels at a time
+    for (; (i + 4) < dest.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        uint32x4_t mask_x4 = vld1q_lane_u32(reinterpret_cast<const uint32 *>(mask.data() + i), vdupq_n_u32(0), 0);
+        mask_x4 = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(mask_x4))));
+        mask_x4 = vnegq_s32(mask_x4);
+
+        // Load four ratios and splat each byte into 32-bit lanes
+        uint32x4_t ratio_x4 = vld1q_lane_u32(reinterpret_cast<const uint32 *>(ratios.data() + i), vdupq_n_u32(0), 0);
+        // 8 -> 16
+        ratio_x4 = vzip1q_u8(ratio_x4, ratio_x4);
+        // 16 -> 32
+        ratio_x4 = vzip1q_u16(ratio_x4, ratio_x4);
+
+        const uint32x4_t topColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&topColors[i]));
+        const uint32x4_t btmColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&btmColors[i]));
+
+        // Composite
+        int8x16_t composite_x4 = vsubq_s8(topColor_x4, btmColor_x4);
+
+        const int16x8_t composite16lo = vmull_u8(vget_low_u8(composite_x4), vget_low_u8(ratio_x4));
+        const int16x8_t composite16hi = vmull_high_u8(composite_x4, ratio_x4);
+
+        composite_x4 = vshrn_high_n_u16(vshrn_n_u16(composite16lo, 5), composite16hi, 5);
+        composite_x4 = vaddq_u8(btmColor_x4, composite_x4);
+
+        // Blend with mask
+        const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, composite_x4, topColor_x4);
+
+        // Write
+        vst1q_u32(reinterpret_cast<uint32x4_t *>(&dest[i]), dstColor_x4);
+    }
 #endif
 
     for (; i < dest.size(); i++) {
@@ -3945,6 +4015,25 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
     }
     #endif
+#elif defined(_M_ARM64) || defined(__aarch64__)
+    // Four pixels at a time
+    const uint8x16_t ratio_x4 = vdupq_n_u8(ratio);
+    for (; (i + 4) < dest.size(); i += 4) {
+        const uint32x4_t topColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&topColors[i]));
+        const uint32x4_t btmColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&btmColors[i]));
+
+        // Composite
+        int8x16_t composite_x4 = vsubq_s8(topColor_x4, btmColor_x4);
+
+        const int16x8_t composite16lo = vmull_u8(vget_low_u8(composite_x4), vget_low_u8(ratio_x4));
+        const int16x8_t composite16hi = vmull_high_u8(composite_x4, ratio_x4);
+
+        composite_x4 = vshrn_high_n_u16(vshrn_n_u16(composite16lo, 5), composite16hi, 5);
+        composite_x4 = vaddq_u8(btmColor_x4, composite_x4);
+
+        // Write
+        vst1q_u32(reinterpret_cast<uint32x4_t *>(&dest[i]), composite_x4);
+    }
 #endif
 
     for (; i < dest.size(); i++) {
