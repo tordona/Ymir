@@ -3748,7 +3748,7 @@ FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std
         const __m256i btmColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&btmColors[i]));
 
         // Pack back into 8-bit values, be sure to truncate to avoid saturation
-        __m256i dstColor_x8 = _mm256_adds_epi8(topColor_x8, btmColor_x8);
+        __m256i dstColor_x8 = _mm256_adds_epu8(topColor_x8, btmColor_x8);
 
         // Blend with mask
         dstColor_x8 = _mm256_blendv_epi8(topColor_x8, dstColor_x8, mask_x8);
@@ -3771,7 +3771,7 @@ FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std
         const __m128i btmColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&btmColors[i]));
 
         // Saturated add
-        __m128i dstColor_x4 = _mm_adds_epi8(topColor_x4, btmColor_x4);
+        __m128i dstColor_x4 = _mm_adds_epu8(topColor_x4, btmColor_x4);
 
         // Blend with mask
         dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_ps(mask_x4, topColor_x4));
