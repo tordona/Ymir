@@ -4206,6 +4206,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             layer1Pixels[x] = getLayerColor(scanline_layers[x][1], x);
         }
 
+        // Extended color calculations (only in normal TV modes)
+        const bool useExtendedColorCalc = colorCalcParams.extendedColorCalcEnable && regs.TVMD.HRESOn < 2;
+
         // Gather line-color data
         alignas(16) std::array<bool, kMaxResH> layer0LineColorEnabled;
         alignas(16) std::array<Color888, kMaxResH> layer0LineColors;
@@ -4218,7 +4221,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             default: layer0LineColorEnabled[x] = regs.bgParams[layer - LYR_RBG0].lineColorScreenEnable; break;
             }
 
-            if (layer0LineColorEnabled[x]) {
+            if (!useExtendedColorCalc || layer0LineColorEnabled[x]) {
                 if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && regs.bgEnabled[5])) {
                     const auto &rotParams = regs.rotParams[layer - LYR_RBG0];
                     if (rotParams.coeffTableEnable && rotParams.coeffUseLineColorData) {
@@ -4231,9 +4234,6 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 }
             }
         }
-
-        // Extended color calculations (only in normal TV modes)
-        const bool useExtendedColorCalc = colorCalcParams.extendedColorCalcEnable && regs.TVMD.HRESOn < 2;
 
         // Apply extended color calculations to layer 1
         if (useExtendedColorCalc) {
@@ -4338,7 +4338,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
     // Apply color offset if enabled
     if (AnyBool(std::span{layer0ColorOffsetEnabled}.first(m_HRes))) {
-        for (uint32 x = 0; Color888 &outputColor : framebufferOutput) {
+        for (uint32 x = 0; Color888 & outputColor : framebufferOutput) {
             if (layer0ColorOffsetEnabled[x]) {
                 const auto &colorOffset = regs.colorOffset[regs.colorOffsetSelect[scanline_layers[x][0]]];
                 if (colorOffset.nonZero) {
