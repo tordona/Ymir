@@ -3698,7 +3698,7 @@ FORCE_INLINE void Color888ShadowMasked(const std::span<Color888> pixels, const s
         const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, shadowed_x4, pixel_x4);
 
         // Write
-        vst1q_u32(reinterpret_cast<uint32x4_t *>(&pixels[i]), dstColor_x4);
+        vst1q_u32(reinterpret_cast<uint32 *>(&pixels[i]), dstColor_x4);
     }
 #endif
 
@@ -3779,7 +3779,7 @@ FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std
         const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, add_x4, topColor_x4);
 
         // Write
-        vst1q_u32(reinterpret_cast<uint32x4_t *>(&dest[i]), dstColor_x4);
+        vst1q_u32(reinterpret_cast<uint32 *>(&dest[i]), dstColor_x4);
     }
 #endif
 
@@ -3925,7 +3925,7 @@ FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, c
         const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, composite_x4, topColor_x4);
 
         // Write
-        vst1q_u32(reinterpret_cast<uint32x4_t *>(&dest[i]), dstColor_x4);
+        vst1q_u32(reinterpret_cast<uint32 *>(&dest[i]), dstColor_x4);
     }
 #endif
 
@@ -4032,7 +4032,7 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
         composite_x4 = vaddq_u8(btmColor_x4, composite_x4);
 
         // Write
-        vst1q_u32(reinterpret_cast<uint32x4_t *>(&dest[i]), composite_x4);
+        vst1q_u32(reinterpret_cast<uint32 *>(&dest[i]), composite_x4);
     }
 #endif
 
@@ -4319,7 +4319,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
     // Apply color offset if enabled
     if (AnyBool(std::span{layer0ColorOffsetEnabled}.first(m_HRes))) {
-        for (uint32 x = 0; Color888 & outputColor : framebufferOutput) {
+        for (uint32 x = 0; Color888 &outputColor : framebufferOutput) {
             if (layer0ColorOffsetEnabled[x]) {
                 const auto &colorOffset = regs.colorOffset[regs.colorOffsetSelect[scanline_layers[x][0]]];
                 if (colorOffset.nonZero) {
