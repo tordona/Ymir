@@ -698,27 +698,22 @@ void SMPC::RESDISA() {
 void SMPC::INTBACK() {
     devlog::trace<grp::base>("Processing INTBACK {:02X} {:02X} {:02X}", IREG[0], IREG[1], IREG[2]);
 
-    m_getPeripheralData = bit::test<3>(IREG[1]);
-
     if (m_intbackInProgress) {
-        if (m_getPeripheralData) {
-            WriteINTBACKPeripheralReport();
-        } else {
-            WriteINTBACKStatusReport();
-        }
+        WriteINTBACKPeripheralReport();
     } else {
         if (IREG[2] != 0xF0) {
             devlog::debug<grp::base>("Unexpected INTBACK IREG2: {:02X}", IREG[2]);
             // TODO: does SMPC reject the command in this case?
         }
 
-        m_intbackInProgress = true;
-
         m_optimize = bit::test<1>(IREG[1]);
+        m_getPeripheralData = bit::test<3>(IREG[1]);
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
 
-        const bool getSMPCStatus = IREG[0] == 0x01;
+        m_intbackInProgress = m_getPeripheralData;
+
+        const bool getSMPCStatus = bit::test<0>(IREG[0]);
         if (getSMPCStatus) {
             WriteINTBACKStatusReport();
         } else if (m_getPeripheralData) {
@@ -810,8 +805,6 @@ void SMPC::WriteINTBACKStatusReport() {
     OREG[15] = SMEM[3]; // SMEM 4 Saved Data
 
     OREG[31] = 0x10;
-
-    m_intbackInProgress = m_getPeripheralData;
 }
 
 void SMPC::WriteINTBACKPeripheralReport() {
