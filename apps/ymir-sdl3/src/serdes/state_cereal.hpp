@@ -137,6 +137,12 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
         ar(cereal::binary_data(s.cartData.data(), s.cartData.size()));
     }
     ar(s.intrMask, s.intrStatus, s.abusIntrAck);
+    if (version >= 5) {
+        ar(s.pendingIntrLevel, s.pendingIntrIndex);
+    } else {
+        s.pendingIntrLevel = 0;
+        s.pendingIntrIndex = 0;
+    }
     ar(s.timer0Counter, s.timer0Compare);
     ar(s.timer1Reload, s.timer1Enable, s.timer1Mode);
     ar(s.wramSizeSelect);

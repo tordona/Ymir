@@ -175,6 +175,10 @@ private:
     InterruptMask m_intrMask;
     InterruptStatus m_intrStatus;
     bool m_abusIntrAck;
+    uint8 m_pendingIntrLevel;
+    uint8 m_pendingIntrIndex;
+
+    void UpdateInterruptLevel();
 
     // -------------------------------------------------------------------------
     // DMA
@@ -259,9 +263,6 @@ private:
     void WriteRegWord(uint32 address, uint16 value);
     template <bool poke>
     void WriteRegLong(uint32 address, uint32 value);
-
-    template <bool acknowledge>
-    void UpdateInterruptLevel();
 
 public:
     // -------------------------------------------------------------------------

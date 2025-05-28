@@ -8,6 +8,10 @@
 namespace ymir::state {
 
 // Version history:
+// v5:
+// - New fields
+//   - pendingIntrLevel = 0
+//   - pendingIntrIndex = 0
 // v4:
 // - New fields
 //   - enum SCUState::CartType: added ROM
@@ -89,7 +93,8 @@ struct SCUState {
     uint32 intrMask;
     uint32 intrStatus;
     bool abusIntrAck;
-    // bool intrPending;
+    uint8 pendingIntrLevel;
+    uint8 pendingIntrIndex;
 
     uint16 timer0Counter;
     uint16 timer0Compare;

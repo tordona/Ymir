@@ -32,6 +32,7 @@
 - SH-2: FRT accuracy fixes (thanks to @celeriyacon).
 - M68K: Soft reset CPU when executing the `RESET` instruction. Fixes OutRun getting stuck on its own SEGA logo.
 - SCSP: Don't mirror sound RAM on 5A8'0000-5AF'FFFF. Fixes After Burner II audio and M68K crashes.
+- SCU: Rework interrupt handling. Fixes Rayman inputs. (#59)
 - SMPC: Various INTBACK handling adjustments. Partially fixes Assault Suit Leynos 2 no-boot issues.
 - ymdasm: Fix file length when using a non-zero initial offset with the default length.
 

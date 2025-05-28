@@ -1434,10 +1434,9 @@ FORCE_INLINE void SH2::TriggerFRTInputCapture() {
 FORCE_INLINE void SH2::SetExternalInterrupt(uint8 level, uint8 vector) {
     assert(level < 16);
 
-    const InterruptSource source = InterruptSource::IRL;
+    static constexpr InterruptSource source = InterruptSource::IRL;
 
     INTC.externalVector = vector;
-
     INTC.SetLevel(source, level);
 
     if (level > 0) {
