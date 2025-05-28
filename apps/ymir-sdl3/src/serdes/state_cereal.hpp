@@ -73,9 +73,9 @@ template <class Archive>
 void serialize(Archive &ar, SH2State::FRT &s, const uint32 version) {
     ar(s.TIER, s.FTCSR, s.FRC, s.OCRA, s.OCRB, s.TCR, s.TOCR, s.ICR, s.TEMP, s.cycleCount);
     if (version >= 5) {
-        ar(s.FTCSR_read);
+        ar(s.FTCSR_mask);
     } else {
-        s.FTCSR_read = false;
+        s.FTCSR_mask = 0x00;
     }
 }
 
