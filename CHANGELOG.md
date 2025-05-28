@@ -6,6 +6,7 @@
 
 - App: Changed background color around screen to black on windowed mode.
 - Core: Performance improvements, especially for ARM builds. (@Wunkolo)
+- VDP: Rewrite VDP2 frame composition code to use SIMD on x86 and ARM for improved performance. (@Wunkolo)
 - Input: Implemented 3D Control Pad. (#28)
 - Media: Preliminary support for CHD files. (#48)
 - Media: Support multi-indexed audio tracks (BIN/CUE only). (#58)
