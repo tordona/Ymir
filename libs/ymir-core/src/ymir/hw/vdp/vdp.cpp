@@ -3816,10 +3816,10 @@ FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std
     }
 }
 
-FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, const std::span<const bool> mask,
-                                               const std::span<const Color888, kMaxResH> topColors,
-                                               const std::span<const Color888, kMaxResH> btmColors,
-                                               const std::span<const uint8, kMaxResH> ratios) {
+FORCE_INLINE void Color888CompositeRatioPerPixelMasked(const std::span<Color888> dest, const std::span<const bool> mask,
+                                                       const std::span<const Color888, kMaxResH> topColors,
+                                                       const std::span<const Color888, kMaxResH> btmColors,
+                                                       const std::span<const uint8, kMaxResH> ratios) {
     size_t i = 0;
 
 #if defined(_M_X64) || defined(__x86_64__)
@@ -3963,9 +3963,9 @@ FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, c
     }
 }
 
-FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
-                                         const std::span<const Color888, kMaxResH> topColors,
-                                         const std::span<const Color888, kMaxResH> btmColors, const uint8 ratio) {
+FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, const std::span<const bool> mask,
+                                               const std::span<const Color888, kMaxResH> topColors,
+                                               const std::span<const Color888, kMaxResH> btmColors, uint8 ratio) {
     size_t i = 0;
 
 #if defined(_M_X64) || defined(__x86_64__)
@@ -3976,17 +3976,20 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
     const __m256i ratio16lo_x8 = _mm256_unpacklo_epi8(ratio_x8, _mm256_setzero_si256());
     const __m256i ratio16hi_x8 = _mm256_unpackhi_epi8(ratio_x8, _mm256_setzero_si256());
     for (; (i + 8) < dest.size(); i += 8) {
+        // Load eight mask values and expand each byte into 32-bit 000... or 111...
+        __m256i mask_x8 = _mm256_cvtepu8_epi32(_mm_loadu_si64(mask.data() + i));
+        mask_x8 = _mm256_sub_epi32(_mm256_setzero_si256(), mask_x8);
 
         const __m256i topColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&topColors[i]));
         const __m256i btmColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&btmColors[i]));
 
-        // Expand into 16-bit values
         const __m256i topColor16lo = _mm256_unpacklo_epi8(topColor_x8, _mm256_setzero_si256());
         const __m256i btmColor16lo = _mm256_unpacklo_epi8(btmColor_x8, _mm256_setzero_si256());
+
         const __m256i topColor16hi = _mm256_unpackhi_epi8(topColor_x8, _mm256_setzero_si256());
         const __m256i btmColor16hi = _mm256_unpackhi_epi8(btmColor_x8, _mm256_setzero_si256());
 
-        // Composite
+        // Lerp
         const __m256i dstColor16lo = _mm256_add_epi16(
             btmColor16lo,
             _mm256_srli_epi16(_mm256_mullo_epi16(_mm256_sub_epi16(topColor16lo, btmColor16lo), ratio16lo_x8), 5));
@@ -3997,6 +4000,9 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
         // Pack back into 8-bit values, be sure to truncate to avoid saturation
         __m256i dstColor_x8 = _mm256_packus_epi16(_mm256_and_si256(dstColor16lo, _mm256_set1_epi16(0xFF)),
                                                   _mm256_and_si256(dstColor16hi, _mm256_set1_epi16(0xFF)));
+
+        // Blend with mask
+        dstColor_x8 = _mm256_blendv_epi8(topColor_x8, dstColor_x8, mask_x8);
 
         // Write
         _mm256_storeu_si256(reinterpret_cast<__m256i *>(&dest[i]), dstColor_x8);
@@ -4010,6 +4016,11 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
     const __m128i ratio16lo_x4 = _mm_unpacklo_epi8(ratio_x4, _mm_setzero_si128());
     const __m128i ratio16hi_x4 = _mm_unpackhi_epi8(ratio_x4, _mm_setzero_si128());
     for (; (i + 4) < dest.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        __m128i mask_x4 = _mm_loadu_si32(mask.data() + i);
+        mask_x4 = _mm_unpacklo_epi8(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_unpacklo_epi16(mask_x4, _mm_setzero_si128());
+        mask_x4 = _mm_sub_epi32(_mm_setzero_si128(), mask_x4);
 
         const __m128i topColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&topColors[i]));
         const __m128i btmColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&btmColors[i]));
@@ -4030,6 +4041,9 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
         __m128i dstColor_x4 = _mm_packus_epi16(_mm_and_si128(dstColor16lo, _mm_set1_epi16(0xFF)),
                                                _mm_and_si128(dstColor16hi, _mm_set1_epi16(0xFF)));
 
+        // Blend with mask
+        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_ps(mask_x4, topColor_x4));
+
         // Write
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
     }
@@ -4038,6 +4052,11 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
     // Four pixels at a time
     const uint8x16_t ratio_x4 = vdupq_n_u8(ratio);
     for (; (i + 4) < dest.size(); i += 4) {
+        // Load four mask values and expand each byte into 32-bit 000... or 111...
+        uint32x4_t mask_x4 = vld1q_lane_u32(reinterpret_cast<const uint32 *>(mask.data() + i), vdupq_n_u32(0), 0);
+        mask_x4 = vmovl_u16(vget_low_u16(vmovl_u8(vget_low_u8(mask_x4))));
+        mask_x4 = vnegq_s32(mask_x4);
+
         const uint32x4_t topColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&topColors[i]));
         const uint32x4_t btmColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&btmColors[i]));
 
@@ -4050,8 +4069,11 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
         composite_x4 = vshrn_high_n_u16(vshrn_n_u16(composite16lo, 5), composite16hi, 5);
         composite_x4 = vaddq_u8(btmColor_x4, composite_x4);
 
+        // Blend with mask
+        const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, composite_x4, topColor_x4);
+
         // Write
-        vst1q_u32(reinterpret_cast<uint32 *>(&dest[i]), composite_x4);
+        vst1q_u32(reinterpret_cast<uint32 *>(&dest[i]), dstColor_x4);
     }
 #endif
 
@@ -4059,9 +4081,13 @@ FORCE_INLINE void Color888CompositeRatio(const std::span<Color888> dest,
         const Color888 &topColor = topColors[i];
         const Color888 &btmColor = btmColors[i];
         Color888 &dstColor = dest[i];
-        dstColor.r = btmColor.r + ((int)topColor.r - (int)btmColor.r) * ratio / 32;
-        dstColor.g = btmColor.g + ((int)topColor.g - (int)btmColor.g) * ratio / 32;
-        dstColor.b = btmColor.b + ((int)topColor.b - (int)btmColor.b) * ratio / 32;
+        if (mask[i]) {
+            dstColor.r = btmColor.r + ((int)topColor.r - (int)btmColor.r) * ratio / 32;
+            dstColor.g = btmColor.g + ((int)topColor.g - (int)btmColor.g) * ratio / 32;
+            dstColor.b = btmColor.b + ((int)topColor.b - (int)btmColor.b) * ratio / 32;
+        } else {
+            dstColor = topColor;
+        }
     }
 }
 
@@ -4221,7 +4247,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             default: layer0LineColorEnabled[x] = regs.bgParams[layer - LYR_RBG0].lineColorScreenEnable; break;
             }
 
-            if (!useExtendedColorCalc || layer0LineColorEnabled[x]) {
+            if (layer0LineColorEnabled[x]) {
                 if (layer == LYR_RBG0 || (layer == LYR_NBG0_RBG1 && regs.bgEnabled[5])) {
                     const auto &rotParams = regs.rotParams[layer - LYR_RBG0];
                     if (rotParams.coeffTableEnable && rotParams.coeffUseLineColorData) {
@@ -4273,8 +4299,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
         } else {
             // Alpha composite
-            Color888CompositeRatio(std::span{layer1Pixels}.first(m_HRes), layer1Pixels, layer0LineColors,
-                                   regs.lineScreenParams.colorCalcRatio);
+            Color888CompositeRatioMasked(std::span{layer1Pixels}.first(m_HRes), layer0LineColorEnabled, layer1Pixels,
+                                         layer0LineColors, regs.lineScreenParams.colorCalcRatio);
         }
 
         // Blend layer 0 and layer 1
@@ -4299,8 +4325,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             }
 
             // Alpha composite
-            Color888CompositeRatioMasked(framebufferOutput, layer0ColorCalcEnabled, layer0Pixels, layer1Pixels,
-                                         scanline_ratio);
+            Color888CompositeRatioPerPixelMasked(framebufferOutput, layer0ColorCalcEnabled, layer0Pixels, layer1Pixels,
+                                                 scanline_ratio);
         }
     } else {
         std::copy_n(layer0Pixels.cbegin(), framebufferOutput.size(), framebufferOutput.begin());
