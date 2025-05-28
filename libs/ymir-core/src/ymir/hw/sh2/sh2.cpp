@@ -975,13 +975,15 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     switch (address) {
     case 0x10:
         FRT.WriteTIER(value);
-        if (INTC.pending.source == InterruptSource::FRT_OVI || INTC.pending.source == InterruptSource::FRT_OCI) {
+        if (INTC.pending.source == InterruptSource::FRT_OVI || INTC.pending.source == InterruptSource::FRT_OCI ||
+            INTC.pending.source == InterruptSource::FRT_ICI) {
             RecalcInterrupts();
         }
         break;
     case 0x11:
         FRT.WriteFTCSR<poke>(value);
-        if (INTC.pending.source == InterruptSource::FRT_OVI || INTC.pending.source == InterruptSource::FRT_OCI) {
+        if (INTC.pending.source == InterruptSource::FRT_OVI || INTC.pending.source == InterruptSource::FRT_OCI ||
+            INTC.pending.source == InterruptSource::FRT_ICI) {
             RecalcInterrupts();
         }
         break;
