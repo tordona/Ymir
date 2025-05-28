@@ -39,12 +39,15 @@ struct FreeRunningTimer {
 
         m_cycleCount += cycles;
         const uint64 steps = m_cycleCount >> m_clockDividerShift;
+        if (steps == 0) {
+            return Event::None;
+        }
         m_cycleCount &= m_cycleCountMask;
 
         Event event = Event::None;
 
         uint64 nextFRC = FRC + steps;
-        if (FRC < OCRA && nextFRC >= OCRA) {
+        if (FRC - 1 < OCRA && FRC + steps - 1 >= OCRA) {
             FTCSR.OCFA = 1;
             if (FTCSR.CCLRA) {
                 nextFRC = 0;
@@ -53,7 +56,7 @@ struct FreeRunningTimer {
                 event = Event::OCI;
             }
         }
-        if (FRC < OCRB && nextFRC >= OCRB) {
+        if (FRC - 1 < OCRB && FRC + steps - 1 >= OCRB) {
             FTCSR.OCFB = 1;
             if (TIER.OCIBE) {
                 event = Event::OCI;
