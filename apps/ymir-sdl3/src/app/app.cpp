@@ -2773,6 +2773,10 @@ void App::LoadSaveStates() {
                 archive(state);
             } catch (const cereal::Exception &e) {
                 devlog::error<grp::base>("Could not load save state from {}: {}", statePath, e.what());
+            } catch (const std::exception &e) {
+                devlog::error<grp::base>("Could not load save state from {}: {}", statePath, e.what());
+            } catch (...) {
+                devlog::error<grp::base>("Could not load save state from {}: unspecified error", statePath);
             }
         } else {
             m_context.saveStates[slot].reset();
