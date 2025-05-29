@@ -47,6 +47,12 @@ struct FreeRunningTimer {
         Event event = Event::None;
 
         uint64 nextFRC = FRC + steps;
+        if (nextFRC >= 0x10000) {
+            FTCSR.OVF = 1;
+            if (TIER.OVIE) {
+                event = Event::OVI;
+            }
+        }
         if (FRC - 1 < OCRA && FRC + steps - 1 >= OCRA) {
             FTCSR.OCFA = 1;
             if (FTCSR.CCLRA) {
@@ -60,12 +66,6 @@ struct FreeRunningTimer {
             FTCSR.OCFB = 1;
             if (TIER.OCIBE) {
                 event = Event::OCI;
-            }
-        }
-        if (nextFRC >= 0x10000) {
-            FTCSR.OVF = 1;
-            if (TIER.OVIE) {
-                event = Event::OVI;
             }
         }
         FRC = nextFRC;
