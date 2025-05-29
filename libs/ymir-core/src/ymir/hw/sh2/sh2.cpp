@@ -261,8 +261,15 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
 
 void SH2::MapMemory(sys::Bus &bus) {
     const uint32 addressOffset = !BCR1.MASTER * 0x80'0000;
-    bus.MapNormal(0x100'0000 + addressOffset, 0x17F'FFFF + addressOffset, this,
-                  [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); });
+    bus.MapNormal(
+        0x100'0000 + addressOffset, 0x17F'FFFF + addressOffset, this,
+        [](uint32 address, uint8, void *ctx) {
+            if (address & 1) {
+                static_cast<SH2 *>(ctx)->TriggerFRTInputCapture();
+            }
+        },
+        [](uint32 address, uint16, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); },
+        [](uint32 address, uint32, void *ctx) { static_cast<SH2 *>(ctx)->TriggerFRTInputCapture(); });
 }
 
 void SH2::DumpCacheData(std::ostream &out) const {
