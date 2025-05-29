@@ -17,6 +17,7 @@
 ### Fixes
 
 - App: Customized profile paths are now created at the specified location instead of the default. (#119, #126; @lvsweat)
+- App: Automatically adjust scaling when system-wide DPI is changed. (@Wunkolo)
 - CD Block: Fix audio track sector sizes. Fixes some CD audio track playback glitches with certain images (particularly MDF/MDS).
 - CD Block: Free last buffer from partition when ending a Get Then Delete Sector transfer when the last sector isn't fully read. Fixes some game boot issues.
 - CD Block: Fix Delete Sector end position when sector count is FFFF. Fixes some game boot issues.
@@ -29,7 +30,7 @@
 - VDP2: Allow 8-bit reads and writes to VDP2 registers.
 - VDP1/2: Fix handling of 16-bit sprite data from VDP1 when VDP2 uses 8-bit sprite types. Fixes sprites in I Love Mickey Mouse/Donald Duck.
 - SH-2: Fix PC offsets for exceptions, interrupts, TRAPA and RTE. Fixes some game boot issues.
-- SH-2: FRT fixes and accuracy improvements (thanks to @celeriyacon).
+- SH-2: FRT fixes and accuracy improvements (thanks to @celeriyacon). Fixes freezes in Daytona USA. (#7)
 - M68K: Soft reset CPU when executing the `RESET` instruction. Fixes OutRun getting stuck on its own SEGA logo.
 - SCSP: Don't mirror sound RAM on 5A8'0000-5AF'FFFF. Fixes After Burner II audio and M68K crashes.
 - SCU: Rework interrupt handling. Fixes Rayman inputs. (#59)
