@@ -151,6 +151,12 @@ void AboutWindow::DrawAboutTab() {
     ImGui::PushFont(m_context.fonts.sansSerif.xlarge.bold);
     ImGui::TextUnformatted("Version " Ymir_VERSION);
     ImGui::PopFont();
+#if Ymir_DEV_BUILD
+    ImGui::SameLine();
+    ImGui::PushFont(m_context.fonts.sansSerif.xlarge.regular);
+    ImGui::TextUnformatted("(development build)");
+    ImGui::PopFont();
+#endif
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.regular);
     ImGui::TextUnformatted("A Sega Saturn emulator");
