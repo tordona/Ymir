@@ -713,7 +713,7 @@ void SMPC::INTBACK() {
 
         m_intbackInProgress = m_getPeripheralData;
 
-        const bool getSMPCStatus = bit::test<0>(IREG[0]);
+        const bool getSMPCStatus = IREG[0] == 0x01;
         if (getSMPCStatus) {
             WriteINTBACKStatusReport();
         } else if (m_getPeripheralData) {
