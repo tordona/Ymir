@@ -10,6 +10,7 @@ namespace ymir::state {
 // v5:
 // - New fields
 //   - FRT::FTCSR_mask = 0x00
+//   - DIVU::VCRDIV = INTC.vectors[static_cast<size_t>(InterruptSource::DIVU_OVFI)]
 
 struct SH2State {
     alignas(16) std::array<uint32, 16> R;
@@ -62,6 +63,7 @@ struct SH2State {
         uint32 DVSR;
         uint32 DVDNT;
         uint32 DVCR;
+        uint16 VCRDIV;
         uint32 DVDNTH;
         uint32 DVDNTL;
         uint32 DVDNTUH;

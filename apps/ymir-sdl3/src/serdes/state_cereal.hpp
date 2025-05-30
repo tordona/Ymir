@@ -39,9 +39,13 @@ template <class Archive>
 void serialize(Archive &ar, SH2State &s, const uint32 version) {
     ar(s.R, s.PC, s.PR, s.MACL, s.MACH, s.SR, s.GBR, s.VBR);
     ar(s.delaySlot, s.delaySlotTarget);
-    ar(s.bsc, s.dmac, s.wdt, s.divu);
+    ar(s.bsc, s.dmac, s.wdt);
+    serialize(ar, s.divu, version);
     serialize(ar, s.frt, version);
     ar(s.intc, s.cache, s.SBYCR);
+    if (version < 5) {
+        s.divu.VCRDIV = s.intc.vectors[12]; // 12 == static_cast<size_t>(sh2::InterruptSource::DIVU_OVFI)
+    }
 }
 
 template <class Archive>
@@ -65,8 +69,12 @@ void serialize(Archive &ar, SH2State::WDT &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, SH2State::DIVU &s) {
+void serialize(Archive &ar, SH2State::DIVU &s, const uint32 version) {
     ar(s.DVSR, s.DVDNT, s.DVCR, s.DVDNTH, s.DVDNTL, s.DVDNTUH, s.DVDNTUL);
+    if (version >= 5) {
+        ar(s.VCRDIV);
+        // VCRDIV is filled in with INTC.vectors[DIVU_OVFI] for version prior to 5 in the SH2State serializer above
+    }
 }
 
 template <class Archive>

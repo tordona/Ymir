@@ -877,7 +877,7 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     case 0x128: return DIVU.DVCR.Read();
 
     case 0x10C:
-    case 0x12C: return INTC.GetVector(InterruptSource::DIVU_OVFI);
+    case 0x12C: return DIVU.VCRDIV;
 
     case 0x110:
     case 0x130: return DIVU.DVDNTH;
@@ -1179,7 +1179,10 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     case 0x128: DIVU.DVCR.Write(value); break;
 
     case 0x10C:
-    case 0x12C: INTC.SetVector(InterruptSource::DIVU_OVFI, bit::extract<0, 6>(value)); break;
+    case 0x12C:
+        INTC.SetVector(InterruptSource::DIVU_OVFI, bit::extract<0, 6>(value));
+        DIVU.VCRDIV = value;
+        break;
 
     case 0x110:
     case 0x130: DIVU.DVDNTH = value; break;

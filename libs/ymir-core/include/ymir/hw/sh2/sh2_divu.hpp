@@ -61,6 +61,9 @@ struct RegDVCR {
 //   bits   r/w  code   description
 //   31-7   R    -      Reserved - must be zero
 //    6-0   R/W  -      Interrupt Vector Number
+//
+// Bits 15-0 are all writable.
+using RegVCRDIV = uint16;
 
 // 110  R/W  32       ud        DVDNTH  Dividend register H
 //
@@ -97,6 +100,7 @@ struct DivisionUnit {
         DVSR = 0x0;  // undefined initial value
         DVDNT = 0x0; // undefined initial value
         DVCR.Reset();
+        VCRDIV = 0x0;  // undefined initial value
         DVDNTH = 0x0;  // undefined initial value
         DVDNTL = 0x0;  // undefined initial value
         DVDNTUH = 0x0; // undefined initial value
@@ -106,7 +110,7 @@ struct DivisionUnit {
     RegDVSR DVSR;       // 100  R/W  32       ud        DVSR    Divisor register
     RegDVDNT DVDNT;     // 104  R/W  32       ud        DVDNT   Dividend register L for 32-bit division
     RegDVCR DVCR;       // 108  R/W  16,32    00000000  DVCR    Division control register
-                        // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
+    RegVCRDIV VCRDIV;   // 10C  R/W  16,32    ud        VCRDIV  Vector number register setting DIV
     RegDVDNTH DVDNTH;   // 110  R/W  32       ud        DVDNTH  Dividend register H
     RegDVDNTL DVDNTL;   // 114  R/W  32       ud        DVDNTL  Dividend register L
     RegDVDNTUH DVDNTUH; // 118  R/W  32       ud        DVDNTUH Undocumented dividend register H
@@ -244,6 +248,7 @@ struct DivisionUnit {
         state.DVSR = DVSR;
         state.DVDNT = DVDNT;
         state.DVCR = DVCR.Read();
+        state.VCRDIV = VCRDIV;
         state.DVDNTH = DVDNTH;
         state.DVDNTL = DVDNTL;
         state.DVDNTUH = DVDNTUH;
@@ -254,6 +259,7 @@ struct DivisionUnit {
         DVSR = state.DVSR;
         DVDNT = state.DVDNT;
         DVCR.Write(state.DVCR);
+        VCRDIV = state.VCRDIV;
         DVDNTH = state.DVDNTH;
         DVDNTL = state.DVDNTL;
         DVDNTUH = state.DVDNTUH;
