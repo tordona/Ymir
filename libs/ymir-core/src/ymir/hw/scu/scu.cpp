@@ -61,7 +61,7 @@ SCU::SCU(core::Scheduler &scheduler, sys::Bus &bus)
 void SCU::Reset(bool hard) {
     m_cartSlot.Reset(hard);
 
-    m_intrMask.u32 = 0;
+    m_intrMask.u32 = 0xBFFF;
     m_intrStatus.u32 = 0;
     m_abusIntrAck = false;
     m_pendingIntrLevel = 0;
