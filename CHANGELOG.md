@@ -38,6 +38,7 @@
 - VDP2: Don't increment vertical mosaic counter if mosaic is disabled. Fixes text boxes and character portraits in Grandia. (#91)
 - VDP2: Fix bitmap base address for RBGs. Fixes several graphics glitches on menus and in-game in Need for Speed.
 - VDP2: Fix line screen scroll in double-density interlace mode. Fixes stretched videos in Grandia. (#91)
+- VDP2: Fix special color calculation bits. Fixes Sonic R water effects. (#150)
 - ymdasm: Fix file length when using a non-zero initial offset with the default length.
 
 
