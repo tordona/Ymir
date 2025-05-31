@@ -287,11 +287,11 @@ void SCU::AcknowledgeExternalInterrupt() {
         }
         m_pendingIntrLevel = 0;
 
-        m_cbExternalMasterInterrupt(0, 0);
-        m_cbExternalSlaveInterrupt(0, 0);
-
         m_intrMask.u32 = 0xBFFF;
     }
+
+    m_cbExternalMasterInterrupt(0, 0);
+    m_cbExternalSlaveInterrupt(0, 0);
 }
 
 void SCU::DumpDSPProgramRAM(std::ostream &out) const {
