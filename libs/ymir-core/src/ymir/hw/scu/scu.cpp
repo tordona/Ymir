@@ -55,6 +55,8 @@ SCU::SCU(core::Scheduler &scheduler, sys::Bus &bus)
 
     m_timer1Event = m_scheduler.RegisterEvent(core::events::SCUTimer1, this, OnTimer1Event);
 
+    m_intrStatus.u32 = 0;
+
     Reset(true);
 }
 
@@ -62,7 +64,7 @@ void SCU::Reset(bool hard) {
     m_cartSlot.Reset(hard);
 
     m_intrMask.u32 = 0xBFFF;
-    m_intrStatus.u32 = 0;
+    // m_intrStatus.u32 = 0;
     m_abusIntrAck = false;
     m_pendingIntrLevel = 0;
     m_pendingIntrIndex = 0;
@@ -287,6 +289,8 @@ void SCU::AcknowledgeExternalInterrupt() {
 
         m_cbExternalMasterInterrupt(0, 0);
         m_cbExternalSlaveInterrupt(0, 0);
+
+        m_intrMask.u32 = 0xBFFF;
     }
 }
 
