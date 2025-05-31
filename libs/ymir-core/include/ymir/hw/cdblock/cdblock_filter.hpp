@@ -20,7 +20,7 @@ struct Filter {
     void Reset() {
         ResetConditions();
 
-        trueOutput = 0; // TODO: should == index
+        trueOutput = index;
         falseOutput = kDisconnected;
     }
 
@@ -75,6 +75,9 @@ struct Filter {
         }
         return true;
     }
+
+    // Filter index. Do not touch!
+    uint8 index;
 
     // Frame address filters
     uint32 startFrameAddress;

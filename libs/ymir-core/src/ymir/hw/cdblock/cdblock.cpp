@@ -46,6 +46,11 @@ CDBlock::CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &confi
     });
     m_readSpeedFactor = 2;
 
+    for (int i = 0; auto &filter : m_filters) {
+        filter.index = i;
+        i++;
+    }
+
     Reset(true);
 }
 
@@ -105,10 +110,8 @@ void CDBlock::Reset(bool hard) {
 
     m_partitionManager.Reset();
 
-    for (int i = 0; auto &filter : m_filters) {
+    for (auto &filter : m_filters) {
         filter.Reset();
-        filter.trueOutput = i;
-        i++;
     }
     m_cdDeviceConnection = Filter::kDisconnected;
     m_lastCDWritePartition = ~0;
@@ -1684,11 +1687,11 @@ void CDBlock::CmdInitializeCDSystem() {
 
         m_discAuthStatus = 0;
         m_mpegAuthStatus = 0;
-    }
 
-    m_partitionManager.Reset();
-    for (auto &filter : m_filters) {
-        filter.Reset();
+        m_partitionManager.Reset();
+        for (auto &filter : m_filters) {
+            filter.Reset();
+        }
     }
 
     m_readSpeed = readSpeed == 1 ? 1 : m_readSpeedFactor;
