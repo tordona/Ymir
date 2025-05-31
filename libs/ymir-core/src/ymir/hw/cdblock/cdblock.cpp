@@ -362,8 +362,8 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
         state.filters[i].codingInfoMask = m_filters[i].codingInfoMask;
         state.filters[i].codingInfoValue = m_filters[i].codingInfoValue;
 
-        state.filters[i].trueOutput = m_filters[i].trueOutput;
-        state.filters[i].falseOutput = m_filters[i].falseOutput;
+        state.filters[i].passOutput = m_filters[i].passOutput;
+        state.filters[i].failOutput = m_filters[i].failOutput;
     }
 
     state.cdDeviceConnection = m_cdDeviceConnection;
@@ -482,8 +482,8 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
         m_filters[i].codingInfoMask = state.filters[i].codingInfoMask;
         m_filters[i].codingInfoValue = state.filters[i].codingInfoValue;
 
-        m_filters[i].trueOutput = state.filters[i].trueOutput;
-        m_filters[i].falseOutput = state.filters[i].falseOutput;
+        m_filters[i].passOutput = state.filters[i].passOutput;
+        m_filters[i].failOutput = state.filters[i].failOutput;
     }
 
     m_cdDeviceConnection = state.cdDeviceConnection;
@@ -969,25 +969,25 @@ void CDBlock::ProcessDriveStatePlay() {
                     for (int i = 0; i < kNumFilters && filterNum != Filter::kDisconnected; i++) {
                         const Filter &filter = m_filters[filterNum];
                         if (filter.Test(buffer)) {
-                            if (filter.trueOutput == Filter::kDisconnected) [[unlikely]] {
+                            if (filter.passOutput == Filter::kDisconnected) [[unlikely]] {
                                 devlog::trace<grp::play>("Passed filter; output disconnected - discarded");
                             } else {
-                                assert(filter.trueOutput < m_filters.size());
+                                assert(filter.passOutput < m_filters.size());
                                 devlog::trace<grp::play>("Passed filter; sent to buffer partition {}",
-                                                         filter.trueOutput);
-                                m_partitionManager.InsertHead(filter.trueOutput, buffer);
-                                m_lastCDWritePartition = filter.trueOutput;
+                                                         filter.passOutput);
+                                m_partitionManager.InsertHead(filter.passOutput, buffer);
+                                m_lastCDWritePartition = filter.passOutput;
                                 SetInterrupt(kHIRQ_CSCT);
                             }
                             break;
                         } else {
-                            if (filter.falseOutput == Filter::kDisconnected) [[unlikely]] {
+                            if (filter.failOutput == Filter::kDisconnected) [[unlikely]] {
                                 devlog::trace<grp::play>("Filtered out; output disconnected - discarded");
                                 break;
                             } else {
-                                assert(filter.falseOutput < m_filters.size());
-                                devlog::trace<grp::play>("Filtered out; sent to filter {}", filter.falseOutput);
-                                filterNum = filter.falseOutput;
+                                assert(filter.failOutput < m_filters.size());
+                                devlog::trace<grp::play>("Filtered out; sent to filter {}", filter.failOutput);
+                                filterNum = filter.failOutput;
                             }
                         }
                     }
@@ -1438,8 +1438,8 @@ void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
         m_cdDeviceConnection = Filter::kDisconnected;
     }
     for (auto &filter : m_filters) {
-        if (filter.falseOutput == filterNumber) {
-            filter.falseOutput = Filter::kDisconnected;
+        if (filter.failOutput == filterNumber) {
+            filter.failOutput = Filter::kDisconnected;
             break; // there can be only one input connection to a filter
         }
     }
@@ -2192,25 +2192,25 @@ void CDBlock::CmdSetFilterConnection() {
 
     // Input structure:
     // 0x46           connection flags
-    // true conn      false conn
+    // pass conn      fail conn
     // filter number  <blank>
     // <blank>
-    const bool setTrueConn = bit::test<0>(m_CR[0]);
-    const bool setFalseConn = bit::test<1>(m_CR[0]);
-    const uint8 trueConn = bit::extract<8, 15>(m_CR[1]);
-    const uint8 falseConn = bit::extract<0, 7>(m_CR[1]);
+    const bool setPassConn = bit::test<0>(m_CR[0]);
+    const bool setFailConn = bit::test<1>(m_CR[0]);
+    const uint8 passConn = bit::extract<8, 15>(m_CR[1]);
+    const uint8 failConn = bit::extract<0, 7>(m_CR[1]);
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
 
     if (filterNumber < kNumFilters) {
         auto &filter = m_filters[filterNumber];
-        if (setTrueConn) {
-            devlog::debug<grp::base>("Filter {} true output={:02X}", filterNumber, trueConn);
-            filter.trueOutput = trueConn;
+        if (setPassConn) {
+            devlog::debug<grp::base>("Filter {} pass output={:02X}", filterNumber, passConn);
+            filter.passOutput = passConn;
         }
-        if (setFalseConn) {
-            devlog::debug<grp::base>("Filter {} false output={:02X}", filterNumber, falseConn);
+        if (setFailConn) {
+            devlog::debug<grp::base>("Filter {} fail output={:02X}", filterNumber, failConn);
             DisconnectFilterInput(filterNumber);
-            filter.falseOutput = falseConn;
+            filter.failOutput = failConn;
         }
 
         // Output structure: standard CD status data
@@ -2235,12 +2235,12 @@ void CDBlock::CmdGetFilterConnection() {
     if (filterNumber < kNumFilters) {
         // Output structure:
         // status code    <blank>
-        // true conn      false conn
+        // pass conn      fail conn
         // <blank>
         // <blank>
         const auto &filter = m_filters[filterNumber];
         m_CR[0] = (m_status.statusCode << 8u);
-        m_CR[1] = (filter.trueOutput << 8u) | filter.falseOutput;
+        m_CR[1] = (filter.passOutput << 8u) | filter.failOutput;
         m_CR[2] = 0x0000;
         m_CR[3] = 0x0000;
     } else {
@@ -2274,8 +2274,8 @@ void CDBlock::CmdResetSelector() {
         const bool clearPartitionOutputs = bit::test<3>(resetFlags);
         const bool clearFilterConditions = bit::test<4>(resetFlags);
         const bool clearFilterInputs = bit::test<5>(resetFlags);
-        const bool clearFilterTrueOutputs = bit::test<6>(resetFlags);
-        const bool clearFilterFalseOutputs = bit::test<7>(resetFlags);
+        const bool clearFilterPassOutputs = bit::test<6>(resetFlags);
+        const bool clearFilterFailOutputs = bit::test<7>(resetFlags);
 
         if (clearBufferData) {
             devlog::debug<grp::base>("Clearing all buffer partitions");
@@ -2294,21 +2294,21 @@ void CDBlock::CmdResetSelector() {
         if (clearFilterInputs) {
             devlog::debug<grp::base>("Clearing all filter input connectors");
             for (auto &filter : m_filters) {
-                filter.falseOutput = Filter::kDisconnected;
+                filter.failOutput = Filter::kDisconnected;
             }
             m_cdDeviceConnection = Filter::kDisconnected;
         }
-        if (clearFilterTrueOutputs) {
-            devlog::debug<grp::base>("Clearing all true filter output connectors");
+        if (clearFilterPassOutputs) {
+            devlog::debug<grp::base>("Clearing all filter pass output connectors");
             for (int i = 0; auto &filter : m_filters) {
-                filter.trueOutput = i;
+                filter.passOutput = i;
                 i++;
             }
         }
-        if (clearFilterFalseOutputs) {
-            devlog::debug<grp::base>("Clearing all false filter output connectors");
+        if (clearFilterFailOutputs) {
+            devlog::debug<grp::base>("Clearing all filter fail output connectors");
             for (auto &filter : m_filters) {
-                filter.falseOutput = Filter::kDisconnected;
+                filter.failOutput = Filter::kDisconnected;
             }
         }
     }

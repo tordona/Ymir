@@ -581,7 +581,7 @@ void serialize(Archive &ar, CDBlockState::FilterState &s) {
     ar(s.fileNum, s.chanNum);
     ar(s.submodeMask, s.submodeValue);
     ar(s.codingInfoMask, s.codingInfoValue);
-    ar(s.trueOutput, s.falseOutput);
+    ar(s.passOutput, s.failOutput);
 }
 
 template <class Archive>

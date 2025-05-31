@@ -20,8 +20,8 @@ struct Filter {
     void Reset() {
         ResetConditions();
 
-        trueOutput = index;
-        falseOutput = kDisconnected;
+        passOutput = index;
+        failOutput = kDisconnected;
     }
 
     void ResetConditions() {
@@ -107,8 +107,8 @@ struct Filter {
     uint8 codingInfoValue;
 
     // Output connectors
-    uint8 trueOutput;  // buffer index;  0xFF = disconnected
-    uint8 falseOutput; // filter number; 0xFF = disconnected
+    uint8 passOutput; // buffer index;  0xFF = disconnected
+    uint8 failOutput; // filter number; 0xFF = disconnected
 };
 
 } // namespace ymir::cdblock

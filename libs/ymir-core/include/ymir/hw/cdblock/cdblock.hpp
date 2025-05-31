@@ -228,10 +228,10 @@ private:
     // allocations backed by physical memory in systems with MMUs.
     //
     // All streamed data passes through a configurable set of 24 filters that conditionally route data to one of two
-    // outputs: "true" or "false", or, more appropriately, "accept" and "reject". There are also 24 buffer partitions
-    // used as a staging area for transfers. Every filter and buffer partition has an input and output connector. By
-    // default, all filter inputs and buffer partition outputs are disconnected, and filter output connectors are routed
-    // to the buffer partition inputs of the same index.
+    // outputs: "pass" and "fail". There are also 24 buffer partitions used as a staging area for transfers. Every
+    // filter and buffer partition has an input and output connector. By default, all filter inputs and buffer partition
+    // outputs are disconnected, and filter output connectors are routed to the buffer partition inputs of the same
+    // index.
     //
     // The CD block can receive data from these devices that expose an output connector:
     // - The CD drive
@@ -251,9 +251,9 @@ private:
     //
     // Connections are constrained to the following rules:
     // - Output connectors from devices can only be assigned to filter input connectors.
-    // - The "true" output connector of a filter can only be routed to the input connector of a buffer partition.
+    // - The "pass" output connector of a filter can only be routed to the input connector of a buffer partition.
     //   A buffer partition may receive any number of inputs. Data received from multiple inputs will be concatenated.
-    // - The "false" output connector of a filter can only be assigned to a filter's input connector. The filter may
+    // - The "fail" output connector of a filter can only be assigned to a filter's input connector. The filter may
     //   output data to itself or another filter.
     // - The buffer partition output connector can be assigned to a device input connector or a filter's input connector
     //   through the copy/move commands.

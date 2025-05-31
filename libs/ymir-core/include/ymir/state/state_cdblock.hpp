@@ -14,6 +14,9 @@
 //   - scratchBufferPutIndex = 0
 // - Removed fields
 //   - scratchBuffer: moved into the buffers array
+// - Changed fields:
+//   - FilterState::trueOutput: renamed to passOutput
+//   - FilterState::falseOutput: renamed to failOutput
 
 namespace ymir::state {
 
@@ -113,8 +116,8 @@ struct CDBlockState {
         uint8 codingInfoMask;
         uint8 codingInfoValue;
 
-        uint8 trueOutput;
-        uint8 falseOutput;
+        uint8 passOutput;
+        uint8 failOutput;
     };
     alignas(16) std::array<FilterState, cdblock::kNumFilters> filters;
 
