@@ -18,6 +18,7 @@
 
 - App: Automatically adjust scaling when system-wide DPI is changed. (@Wunkolo)
 - App: Customized profile paths are now created at the specified location instead of the default. (#119, #126; @lvsweat)
+- CD Block: Clear partitions and filters on soft resets triggered by Initialize CD System command. Fixes some game boot issues.
 - CD Block: Don't clear the file system when opening the tray.
 - CD Block: Fix audio track sector sizes. Fixes some CD audio track playback glitches with certain images (particularly MDF/MDS).
 - CD Block: Fix Delete Sector end position when sector count is FFFF. Fixes some game boot issues.

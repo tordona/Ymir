@@ -1686,6 +1686,11 @@ void CDBlock::CmdInitializeCDSystem() {
         m_mpegAuthStatus = 0;
     }
 
+    m_partitionManager.Reset();
+    for (auto &filter : m_filters) {
+        filter.Reset();
+    }
+
     m_readSpeed = readSpeed == 1 ? 1 : m_readSpeedFactor;
     devlog::info<grp::base>("Read speed set to {}x", m_readSpeed);
 
