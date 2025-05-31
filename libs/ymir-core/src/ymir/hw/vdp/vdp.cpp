@@ -3915,14 +3915,23 @@ FORCE_INLINE void Color888CompositeRatioPerPixelMasked(const std::span<Color888>
         const uint32x4_t topColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&topColors[i]));
         const uint32x4_t btmColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&btmColors[i]));
 
+        const uint16x8_t topColor16lo = vmovl_u8(vget_low_u8(topColor_x4));
+        const uint16x8_t btmColor16lo = vmovl_u8(vget_low_u8(btmColor_x4));
+
+        const uint16x8_t topColor16hi = vmovl_high_u8(topColor_x4);
+        const uint16x8_t btmColor16hi = vmovl_high_u8(btmColor_x4);
+
         // Composite
-        int8x16_t composite_x4 = vsubq_s8(topColor_x4, btmColor_x4);
+        int16x8_t composite16lo = vsubq_s16(topColor16lo, btmColor16lo);
+        int16x8_t composite16hi = vsubq_s16(topColor16hi, btmColor16hi);
 
-        const int16x8_t composite16lo = vmull_u8(vget_low_u8(composite_x4), vget_low_u8(ratio_x4));
-        const int16x8_t composite16hi = vmull_high_u8(composite_x4, ratio_x4);
+        composite16lo = vmulq_u16(composite16lo, vmovl_u8(vget_low_s8(ratio_x4)));
+        composite16hi = vmulq_u16(composite16hi, vmovl_high_u8(ratio_x4));
 
-        composite_x4 = vshrn_high_n_u16(vshrn_n_u16(composite16lo, 5), composite16hi, 5);
-        composite_x4 = vaddq_u8(btmColor_x4, composite_x4);
+        composite16lo = vsraq_n_s16(vmovl_s8(vget_low_s8(btmColor_x4)), composite16lo, 5);
+        composite16hi = vsraq_n_s16(vmovl_high_s8(btmColor_x4), composite16hi, 5);
+
+        int8x16_t composite_x4 = vmovn_high_s16(vmovn_s16(composite16lo), composite16hi);
 
         // Blend with mask
         const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, composite_x4, topColor_x4);
@@ -4044,14 +4053,23 @@ FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, c
         const uint32x4_t topColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&topColors[i]));
         const uint32x4_t btmColor_x4 = vld1q_u32(reinterpret_cast<const uint32 *>(&btmColors[i]));
 
+        const uint16x8_t topColor16lo = vmovl_u8(vget_low_u8(topColor_x4));
+        const uint16x8_t btmColor16lo = vmovl_u8(vget_low_u8(btmColor_x4));
+
+        const uint16x8_t topColor16hi = vmovl_high_u8(topColor_x4);
+        const uint16x8_t btmColor16hi = vmovl_high_u8(btmColor_x4);
+
         // Composite
-        int8x16_t composite_x4 = vsubq_s8(topColor_x4, btmColor_x4);
+        int16x8_t composite16lo = vsubq_s16(topColor16lo, btmColor16lo);
+        int16x8_t composite16hi = vsubq_s16(topColor16hi, btmColor16hi);
 
-        const int16x8_t composite16lo = vmull_u8(vget_low_u8(composite_x4), vget_low_u8(ratio_x4));
-        const int16x8_t composite16hi = vmull_high_u8(composite_x4, ratio_x4);
+        composite16lo = vmulq_u16(composite16lo, vmovl_u8(vget_low_s8(ratio_x4)));
+        composite16hi = vmulq_u16(composite16hi, vmovl_high_u8(ratio_x4));
 
-        composite_x4 = vshrn_high_n_u16(vshrn_n_u16(composite16lo, 5), composite16hi, 5);
-        composite_x4 = vaddq_u8(btmColor_x4, composite_x4);
+        composite16lo = vsraq_n_s16(vmovl_s8(vget_low_s8(btmColor_x4)), composite16lo, 5);
+        composite16hi = vsraq_n_s16(vmovl_high_s8(btmColor_x4), composite16hi, 5);
+
+        int8x16_t composite_x4 = vmovn_high_s16(vmovn_s16(composite16lo), composite16hi);
 
         // Blend with mask
         const uint32x4_t dstColor_x4 = vbslq_u32(mask_x4, composite_x4, topColor_x4);
