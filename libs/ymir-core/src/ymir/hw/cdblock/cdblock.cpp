@@ -1786,6 +1786,7 @@ void CDBlock::CmdSeekDisc() {
         devlog::debug<grp::base>("Paused");
         m_status.statusCode = kStatusCodePause;
         m_targetDriveCycles = kDriveCyclesNotPlaying;
+        m_bufferFullPause = false;
     } else if (startPos == 0x000000) {
         devlog::debug<grp::base>("Stopped");
         m_status.statusCode = kStatusCodeStandby;
