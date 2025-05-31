@@ -4670,8 +4670,8 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
             layerState.pixels.transparent[xx] = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
-            layerState.pixels.SetPixel(xx + 1, VDP2FetchBitmapPixel<colorFormat, colorMode>(
-                                                   bgParams, rotParams.bitmapBaseAddress, scrollCoord));
+            layerState.pixels.SetPixel(
+                xx, VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, rotParams.bitmapBaseAddress, scrollCoord));
         } else {
             // Out of bounds and no repeat
             layerState.pixels.transparent[xx] = true;
