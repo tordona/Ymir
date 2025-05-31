@@ -9,6 +9,9 @@
 
 namespace ymir::state {
 
+// Current save state format version.
+// Increment once per release if there are any changes to the serializers.
+// Remember to document every change!
 inline constexpr uint32 kVersion = 5;
 
 } // namespace ymir::state
