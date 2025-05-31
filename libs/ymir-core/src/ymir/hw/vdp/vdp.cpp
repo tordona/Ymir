@@ -3023,8 +3023,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
     VDP2Regs &regs2 = VDP2GetRegs();
 
     if (!regs2.bgEnabled[5]) {
-        // Translate VRAM access cycles for vertical cell scroll data into increment and offset for NBG0 and NBG1
-        // and access flags for each VRAM bank for all NBGs.
+        // Translate VRAM access cycles for vertical cell scroll data into increment and offset for NBG0 and NBG1.
         //
         // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
         // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
@@ -3035,34 +3034,19 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
             m_vertCellScrollInc = 0;
             uint32 vcellAccessOffset = 0;
 
-            // Check in which bank the vertical cell scroll table is located at
-            uint32 vcellBank = regs2.verticalCellScrollTableAddress >> 17;
-            if (vcellBank < 2 && !regs2.vramControl.partitionVRAMA) {
-                vcellBank = 0;
-            } else if (vcellBank >= 2 && !regs2.vramControl.partitionVRAMB) {
-                vcellBank = 2;
-            }
-
-            const bool useVertScrollNBG0 = regs2.bgParams[1].verticalCellScrollEnable;
-            const bool useVertScrollNBG1 = regs2.bgParams[2].verticalCellScrollEnable;
-
             // Update cycle accesses
             for (uint32 bank = 0; bank < 4; ++bank) {
                 for (auto access : regs2.cyclePatterns.timings[bank]) {
                     switch (access) {
                     case CyclePatterns::VCellScrollNBG0:
-                        if (useVertScrollNBG0 && bank == vcellBank) {
-                            m_vertCellScrollInc += sizeof(uint32);
-                            m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
-                            vcellAccessOffset += sizeof(uint32);
-                        }
+                        m_vertCellScrollInc += sizeof(uint32);
+                        m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
+                        vcellAccessOffset += sizeof(uint32);
                         break;
                     case CyclePatterns::VCellScrollNBG1:
-                        if (useVertScrollNBG1 && bank == vcellBank) {
-                            m_vertCellScrollInc += sizeof(uint32);
-                            m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
-                            vcellAccessOffset += sizeof(uint32);
-                        }
+                        m_vertCellScrollInc += sizeof(uint32);
+                        m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
+                        vcellAccessOffset += sizeof(uint32);
                         break;
                     default: break;
                     }

@@ -42,6 +42,7 @@
 - VDP2: Fix bitmap base address for RBGs. Fixes several graphics glitches on menus and in-game in Need for Speed.
 - VDP2: Fix line screen scroll in double-density interlace mode. Fixes stretched videos in Grandia. (#91)
 - VDP2: Fix special color calculation bits. Fixes Sonic R water effects. (#150)
+- VDP2: Fix vertical cell scroll effect on games that set up access patterns that don't match the NBG parameters. Fixes Sakura Taisen 2 FMVs.
 - ymdasm: Fix file length when using a non-zero initial offset with the default length.
 
 
