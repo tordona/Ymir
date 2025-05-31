@@ -126,6 +126,8 @@ public:
         bool enableRewindBuffer;
         // TODO: rewind buffer size
         int rewindCompressionLevel;
+
+        bool pauseWhenUnfocused;
     } general;
 
     struct System {

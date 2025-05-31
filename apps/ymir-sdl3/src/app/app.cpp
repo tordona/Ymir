@@ -686,6 +686,7 @@ void App::RunEmulator() {
     auto &inputContext = m_context.inputContext;
 
     bool paused = false; // TODO: this should be updated by the emulator thread via events
+    bool pausedByLostFocus = false;
 
     // General
     {
@@ -1314,6 +1315,25 @@ void App::RunEmulator() {
                 if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
                     goto end_loop;
                 }
+
+            case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                if (m_context.settings.general.pauseWhenUnfocused) {
+                    if (paused && pausedByLostFocus) {
+                        paused = false;
+                        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+                    }
+                    pausedByLostFocus = false;
+                }
+                break;
+            case SDL_EVENT_WINDOW_FOCUS_LOST:
+                if (m_context.settings.general.pauseWhenUnfocused) {
+                    if (!paused) {
+                        paused = true;
+                        pausedByLostFocus = true;
+                        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+                    }
+                }
+                break;
             }
         }
 

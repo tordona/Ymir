@@ -519,6 +519,7 @@ void Settings::ResetToDefaults() {
     general.boostProcessPriority = true;
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 12;
+    general.pauseWhenUnfocused = false;
 
     system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
 
@@ -595,6 +596,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
         Parse(tblGeneral, "RewindCompressionLevel", general.rewindCompressionLevel);
+        Parse(tblGeneral, "PauseWhenUnfocused", general.pauseWhenUnfocused);
 
         if (auto tblPathOverrides = tblGeneral["PathOverrides"]) {
             auto parse = [&](const char *name, ProfilePath pathType) {
@@ -817,6 +819,7 @@ SettingsSaveResult Settings::Save() {
             {"BoostProcessPriority", general.boostProcessPriority},
             {"EnableRewindBuffer", general.enableRewindBuffer},
             {"RewindCompressionLevel", general.rewindCompressionLevel},
+            {"PauseWhenUnfocused", general.pauseWhenUnfocused},
 
             {"PathOverrides", toml::table{{
                 {"IPLROMImages", m_context.profile.GetPathOverride(ProfilePath::IPLROMImages).native()},

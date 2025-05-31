@@ -52,6 +52,18 @@ void GeneralSettingsView::Display() {
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Behavior");
+    ImGui::PopFont();
+
+    MakeDirty(ImGui::Checkbox("Pause when unfocused", &settings.pauseWhenUnfocused));
+    widgets::ExplanationTooltip(
+        "The emulator will pause when the window loses focus and resume when it regains focus.\n"
+        "Does not affect the behavior of manual pauses - they persist through focus changes.",
+        m_context.displayScale);
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
     ImGui::SeparatorText("Rewind buffer");
     ImGui::PopFont();
 
