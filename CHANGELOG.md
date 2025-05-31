@@ -25,12 +25,13 @@
 - CD Block: Free last buffer from partition when ending a Get Then Delete Sector transfer when the last sector isn't fully read. Fixes some game boot issues.
 - IPL: Automatically load IPL ROM when switching disc images. (#128)
 - M68K: Soft reset CPU when executing the `RESET` instruction. Fixes OutRun getting stuck on its own SEGA logo.
+- Media: Fix crash when parsing CUE sheets with non-contiguous tracks.
 - SCSP: Don't mirror sound RAM on 5A8'0000-5AF'FFFF. Fixes After Burner II audio and M68K crashes.
 - SCU: Rework interrupt handling. Fixes Rayman inputs. (#59)
 - SCU: Set ALU = AC before running DSP operations. Fixes Quake crash on boot. (#156)
 - SCU: Timer enable flag applies to both timers. Fixes background priority issues in Need for Speed.
 - SH-2: Fix PC offsets for exceptions, interrupts, TRAPA and RTE. Fixes some game boot issues.
-- SH-2: Fix PC offsets for `mova`, `mov.w` and `mov.l` with `@(disp,PC)` operand.
+- SH-2: Fix PC offsets for `mova`, `mov.w` and `mov.l` with `@(disp,PC)` operand  (thanks to @celeriyacon).
 - SH-2: Fixes and accuracy improvements to DIVU (thanks to @celeriyacon).
 - SH-2: Fixes and accuracy improvements to FRT (thanks to @celeriyacon). Fixes freezes in Daytona USA. (#7)
 - SMPC: Various INTBACK handling adjustments. Partially fixes Assault Suit Leynos 2 no-boot issues.
