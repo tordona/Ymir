@@ -3039,7 +3039,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
             uint32 vcellBank = regs2.verticalCellScrollTableAddress >> 17;
             if (vcellBank < 2 && !regs2.vramControl.partitionVRAMA) {
                 vcellBank = 0;
-            } else if (!regs2.vramControl.partitionVRAMB) {
+            } else if (vcellBank >= 2 && !regs2.vramControl.partitionVRAMB) {
                 vcellBank = 2;
             }
 
