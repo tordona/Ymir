@@ -70,6 +70,11 @@ void serialize(Archive &ar, SH2State::WDT &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SH2State::DIVU &s, const uint32 version) {
+    // Version history:
+    // v5:
+    // - New fields
+    //   - VCRDIV = INTC.vectors[static_cast<size_t>(InterruptSource::DIVU_OVFI)]
+
     ar(s.DVSR, s.DVDNT, s.DVCR, s.DVDNTH, s.DVDNTL, s.DVDNTUH, s.DVDNTUL);
     if (version >= 5) {
         ar(s.VCRDIV);
@@ -79,6 +84,11 @@ void serialize(Archive &ar, SH2State::DIVU &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, SH2State::FRT &s, const uint32 version) {
+    // Version history:
+    // v5:
+    // - New fields
+    //   - FTCSR_mask = 0x00
+
     ar(s.TIER, s.FTCSR, s.FRC, s.OCRA, s.OCRB, s.TCR, s.TOCR, s.ICR, s.TEMP, s.cycleCount);
     if (version >= 5) {
         ar(s.FTCSR_mask);
@@ -104,7 +114,17 @@ void serialize(Archive &ar, SH2State::Cache::Entry &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SCUState &s, const uint32 version) {
-    ar(s.dma, s.dsp);
+    // Version history:
+    // v5:
+    // - New fields
+    //   - pendingIntrLevel = 0
+    //   - pendingIntrIndex = 0
+    // - Changed fields
+    //   - timer1Enable renamed to timerEnable; no changes to value
+    // v4:
+    // - New fields
+    //   - enum SCUState::CartType: added ROM
+
     ar(s.cartType);
 
     if (version >= 4) {
@@ -216,6 +236,14 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState &s, const uint32 version) {
+    // Version history:
+    // v5:
+    // - New fields
+    //   - erase = false
+    // v4:
+    // - New fields
+    //   - vertCellScrollInc = sizeof(uint32)
+
     serialize(ar, s.vdp1State, version);
     for (auto &state : s.normBGLayerStates) {
         serialize(ar, state, version);
@@ -300,6 +328,24 @@ void serialize(Archive &ar, VDPState::VDPRendererState::VDP1RenderState &s, cons
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, const uint32 version) {
+    // Version history:
+    // v4:
+    // - Changed fields
+    //   - fracScrollX and fracScrollY no longer include the values of SC[XY][ID]N#. Therefore, they need to be
+    //     compensated for as follows:
+    //       normBGLayerStates[0].fracScrollX -= (regs2.SCXIN0 << 8u) | (regs2.SCXDN0 >> 8u);
+    //       normBGLayerStates[1].fracScrollX -= (regs2.SCXIN1 << 8u) | (regs2.SCXDN1 >> 8u);
+    //       normBGLayerStates[2].fracScrollX -= (regs2.SCXIN2 << 8u);
+    //       normBGLayerStates[3].fracScrollX -= (regs2.SCXIN3 << 8u);
+    //
+    //       normBGLayerStates[0].fracScrollY -= (regs2.SCYIN0 << 8u) | (regs2.SCYDN0 >> 8u);
+    //       normBGLayerStates[1].fracScrollY -= (regs2.SCYIN1 << 8u) | (regs2.SCYDN1 >> 8u);
+    //       normBGLayerStates[2].fracScrollY -= (regs2.SCYIN2 << 8u);
+    //       normBGLayerStates[3].fracScrollY -= (regs2.SCYIN3 << 8u);
+    // - New fields
+    //   - vertCellScrollOffset = 0
+
+    // NOTE: fracScrollX/Y compensation happens in the VDPState serializer
     ar(s.fracScrollX, s.fracScrollY, s.scrollIncH);
     ar(s.lineScrollTableAddress);
     if (version >= 4) {
@@ -331,6 +377,19 @@ void serialize(Archive &ar, M68KState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SCSPState &s, const uint32 version) {
+    // Version history:
+    // v5:
+    // - Changed fields
+    //   - cddaBuffer array size reduced from 2048 * 75 to 2352 * 25; note that this is a circular buffer indexed by
+    //     cddaReadPos and cddaWritePos
+    // v4:
+    // - Removed fields
+    //   - uint16 egCycle
+    //   - bool egStep
+    // v3:
+    // - New fields
+    //   - KYONEX = false
+
     ar(s.WRAM);
     if (version >= 5) {
         ar(s.cddaBuffer, s.cddaReadPos, s.cddaWritePos, s.cddaReady);
@@ -404,6 +463,30 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
+    // Version history:
+    // v4:
+    // - New fields
+    //   - MM = bit 15 of extra10 if available, otherwise false
+    //   - modulation = 0
+    //   - egAttackBug = false
+    //   - finalLevel = 0
+    // - Removed fields
+    //   - uint16 extra10
+    //   - uint32 currAddress
+    // - Changed fields
+    //   - LSA and LEA changed from uint32 to uint16
+    // v3:
+    // - New fields
+    //   - SBCTL = 0
+    //   - EGBYPASS = false
+    //   - extra0C = 0
+    //   - extra10 = 0
+    //   - extra14 = 0
+    //   - nextPhase = currPhase
+    //   - alfoOutput = 0
+    // - Changed fields
+    //   - currPhase >>= 4u
+
     ar(s.SA);
     if (version >= 4) {
         ar(s.LSA, s.LEA);
@@ -514,6 +597,14 @@ void serialize(Archive &ar, SCSPTimer &s) {
 
 template <class Archive>
 void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
+    // Version history:
+    // v5:
+    // - New fields
+    //   - enum CDBlockState::TransferType: added PutSector (= 6)
+    //   - scratchBufferPutIndex = 0
+    // - Removed fields
+    //   - scratchBuffer moved into the buffers array
+
     ar(s.discHash);
     ar(s.CR, s.HIRQ, s.HIRQMASK);
     ar(s.status);
@@ -576,6 +667,12 @@ void serialize(Archive &ar, CDBlockState::BufferState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, CDBlockState::FilterState &s) {
+    // Version history:
+    // v5:
+    // - Changed fields:
+    //   - trueOutput renamed to passOutput; no changes to value
+    //   - falseOutput renamed to failOutput; no changes to value
+
     ar(s.startFrameAddress, s.frameAddressCount);
     ar(s.mode);
     ar(s.fileNum, s.chanNum);

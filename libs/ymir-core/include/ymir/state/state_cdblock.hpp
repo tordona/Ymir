@@ -7,17 +7,6 @@
 
 #include <array>
 
-// Version history:
-// v5:
-// - New fields
-//   - enum CDBlockState::TransferType: added PutSector (= 6)
-//   - scratchBufferPutIndex = 0
-// - Removed fields
-//   - scratchBuffer: moved into the buffers array
-// - Changed fields:
-//   - FilterState::trueOutput: renamed to passOutput
-//   - FilterState::falseOutput: renamed to failOutput
-
 namespace ymir::state {
 
 struct CDBlockState {

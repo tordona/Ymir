@@ -8,27 +8,6 @@
 
 namespace ymir::state {
 
-// Version history:
-// v5:
-// - New fields
-//   - VDPRendererState::erase = false
-// v4:
-// - Changed fields
-//   - NormBGLayerState::fracScrollX and fracScrollY no longer include the values of SC[XY][ID]N#. Therefore, they need
-//     to be compensated for as follows:
-//       normBGLayerStates[0].fracScrollX -= (regs2.SCXIN0 << 8u) | (regs2.SCXDN0 >> 8u);
-//       normBGLayerStates[1].fracScrollX -= (regs2.SCXIN1 << 8u) | (regs2.SCXDN1 >> 8u);
-//       normBGLayerStates[2].fracScrollX -= (regs2.SCXIN2 << 8u);
-//       normBGLayerStates[3].fracScrollX -= (regs2.SCXIN3 << 8u);
-//
-//       normBGLayerStates[0].fracScrollY -= (regs2.SCYIN0 << 8u) | (regs2.SCYDN0 >> 8u);
-//       normBGLayerStates[1].fracScrollY -= (regs2.SCYIN1 << 8u) | (regs2.SCYDN1 >> 8u);
-//       normBGLayerStates[2].fracScrollY -= (regs2.SCYIN2 << 8u);
-//       normBGLayerStates[3].fracScrollY -= (regs2.SCYIN3 << 8u);
-// - New fields
-//   - VDPRendererState::vertCellScrollInc = sizeof(uint32)
-//   - NormBGLayerState::vertCellScrollOffset = 0
-
 struct VDPState {
     alignas(16) std::array<uint8, vdp::kVDP1VRAMSize> VRAM1;
     alignas(16) std::array<uint8, vdp::kVDP2VRAMSize> VRAM2;

@@ -6,30 +6,6 @@
 
 namespace ymir::state {
 
-// Version history:
-// v4:
-// - New fields
-//   - MM = bit 15 of extra10 if available, otherwise false
-//   - modulation = 0
-//   - egAttackBug = false
-//   - finalLevel = 0
-// - Removed fields
-//   - uint16 extra10
-//   - uint32 currAddress
-// - Changed fields
-//   - LSA and LEA changed from uint32 to uint16
-// v3:
-// - New fields
-//   - SBCTL = 0
-//   - EGBYPASS = false
-//   - extra0C = 0
-//   - extra10 = 0
-//   - extra14 = 0
-//   - nextPhase = currPhase
-//   - alfoOutput = 0
-// - Changed fields
-//   - currPhase >>= 4u
-
 struct SCSPSlotState {
     uint32 SA;
     uint16 LSA;

@@ -7,17 +7,6 @@
 
 namespace ymir::state {
 
-// Version history:
-// v5:
-// - New fields
-//   - SCUState::pendingIntrLevel = 0
-//   - SCUState::pendingIntrIndex = 0
-// - Changed fields
-//   - SCUState::timer1Enable renamed to timerEnable; no changes to value
-// v4:
-// - New fields
-//   - enum SCUState::CartType: added ROM
-
 struct SCUDMAState {
     uint32 srcAddr;
     uint32 dstAddr;
