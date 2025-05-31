@@ -1934,10 +1934,12 @@ void App::RunEmulator() {
                 static constexpr float kBaseSize = 50.0f;
                 static constexpr float kBasePadding = 30.0f;
                 static constexpr float kBaseRounding = 0;
+                static constexpr float kBaseShadowOffset = 3.0f;
                 static constexpr sint64 kBlinkInterval = 700;
                 const float size = kBaseSize * m_context.displayScale;
                 const float padding = kBasePadding * m_context.displayScale;
                 const float rounding = kBaseRounding * m_context.displayScale;
+                const float shadowOffset = kBaseShadowOffset * m_context.displayScale;
 
                 auto *drawList = ImGui::GetBackgroundDrawList();
 
@@ -1953,8 +1955,16 @@ void App::RunEmulator() {
                 const double alpha = std::sin(phase) * 0.2 + 0.7;
                 const uint32 alphaU32 = std::clamp((uint32)(alpha * 255.0), 0u, 255u);
                 const uint32 color = 0xFFFFFF | (alphaU32 << 24u);
+                const uint32 shadowColor = 0x000000 | (alphaU32 << 24u);
 
                 if (paused) {
+                    drawList->AddRectFilled(ImVec2(tl.x + size * 0.2f + shadowOffset, tl.y + shadowOffset),
+                                            ImVec2(tl.x + size * 0.4f + shadowOffset, br.y + shadowOffset), shadowColor,
+                                            rounding);
+                    drawList->AddRectFilled(ImVec2(tl.x + size * 0.6f + shadowOffset, tl.y + shadowOffset),
+                                            ImVec2(tl.x + size * 0.8f + shadowOffset, br.y + shadowOffset), shadowColor,
+                                            rounding);
+
                     drawList->AddRectFilled(ImVec2(tl.x + size * 0.2f, tl.y), ImVec2(tl.x + size * 0.4f, br.y), color,
                                             rounding);
                     drawList->AddRectFilled(ImVec2(tl.x + size * 0.6f, tl.y), ImVec2(tl.x + size * 0.8f, br.y), color,
@@ -1976,6 +1986,14 @@ void App::RunEmulator() {
                             p3 = {tl.x, br.y};
                         }
 
+                        drawList->AddTriangleFilled(ImVec2(p1.x + shadowOffset, p1.y + shadowOffset),
+                                                    ImVec2(p2.x + shadowOffset, p2.y + shadowOffset),
+                                                    ImVec2(p3.x + shadowOffset, p3.y + shadowOffset), shadowColor);
+                        drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f + shadowOffset, p1.y + shadowOffset),
+                                                    ImVec2(p2.x + size * 0.5f + shadowOffset, p2.y + shadowOffset),
+                                                    ImVec2(p3.x + size * 0.5f + shadowOffset, p3.y + shadowOffset),
+                                                    shadowColor);
+
                         drawList->AddTriangleFilled(p1, p2, p3, color);
                         drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f, p1.y), ImVec2(p2.x + size * 0.5f, p2.y),
                                                     ImVec2(p3.x + size * 0.5f, p3.y), color);
@@ -1983,6 +2001,10 @@ void App::RunEmulator() {
                         const ImVec2 p1 = {tl.x + size * 0.75f, br.y};
                         const ImVec2 p2 = {tl.x + size * 0.25f, (tl.y + br.y) * 0.5f};
                         const ImVec2 p3 = {tl.x + size * 0.75f, tl.y};
+
+                        drawList->AddTriangleFilled(ImVec2(p1.x + shadowOffset, p1.y + shadowOffset),
+                                                    ImVec2(p2.x + shadowOffset, p2.y + shadowOffset),
+                                                    ImVec2(p3.x + shadowOffset, p3.y + shadowOffset), shadowColor);
 
                         drawList->AddTriangleFilled(p1, p2, p3, color);
                     }
