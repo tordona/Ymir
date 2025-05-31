@@ -152,7 +152,7 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
         s.pendingIntrIndex = 0;
     }
     ar(s.timer0Counter, s.timer0Compare);
-    ar(s.timer1Reload, s.timer1Enable, s.timer1Mode);
+    ar(s.timer1Reload, s.timerEnable, s.timer1Mode);
     ar(s.wramSizeSelect);
 }
 

@@ -82,8 +82,8 @@ void SCU::Reset(bool hard) {
 
         m_scheduler.Cancel(m_timer1Event);
         m_timer1Reload = 0;
-        m_timer1Enable = false;
         m_timer1Mode = false;
+        m_timerEnable = false;
     }
 
     m_WRAMSizeSelect = false;
@@ -157,7 +157,7 @@ void SCU::UpdateHBlank(bool level) {
     if (m_intrStatus.VDP2_HBlankIN != level) {
         m_intrStatus.VDP2_HBlankIN = level;
         UpdateInterruptLevel();
-        if (level) {
+        if (level && m_timerEnable) {
             m_timer0Counter++;
             if (m_timer0Counter == m_timer0Compare) {
                 TriggerTimer0();
@@ -388,8 +388,8 @@ void SCU::SaveState(state::SCUState &state) const {
     state.timer0Compare = m_timer0Compare;
     state.timer0Counter = m_timer0Counter;
     state.timer1Reload = m_timer1Reload;
-    state.timer1Enable = m_timer1Enable;
     state.timer1Mode = m_timer1Mode;
+    state.timerEnable = m_timerEnable;
 
     state.wramSizeSelect = m_WRAMSizeSelect;
 }
@@ -458,7 +458,7 @@ void SCU::LoadState(const state::SCUState &state) {
     m_timer0Compare = state.timer0Compare;
     m_timer0Counter = state.timer0Counter;
     m_timer1Reload = state.timer1Reload;
-    m_timer1Enable = state.timer1Enable;
+    m_timerEnable = state.timerEnable;
     m_timer1Mode = state.timer1Mode;
 
     m_WRAMSizeSelect = state.wramSizeSelect;
@@ -838,7 +838,7 @@ void SCU::TriggerDMATransfer(DMATrigger trigger) {
 }
 
 FORCE_INLINE void SCU::TickTimer1() {
-    if (m_timer1Enable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
+    if (m_timerEnable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
         TriggerTimer1();
     }
 }
@@ -970,7 +970,7 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
         case 0x98: // Timer 1 Mode (write-only)
             if constexpr (peek) {
                 uint32 value = 0;
-                bit::deposit_into<0>(value, m_timer1Enable);
+                bit::deposit_into<0>(value, m_timerEnable);
                 bit::deposit_into<8>(value, m_timer1Mode);
                 return value;
             } else {
@@ -1221,7 +1221,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         WriteTimer1Reload(value);
         break;
     case 0x98: // Timer 1 Mode
-        m_timer1Enable = bit::test<0>(value);
+        m_timerEnable = bit::test<0>(value);
         m_timer1Mode = bit::test<8>(value);
         break;
 
@@ -1337,12 +1337,12 @@ void SCU::Probe::SetTimer1Reload(uint16 value) {
     m_scu.WriteTimer1Reload(value);
 }
 
-bool SCU::Probe::IsTimer1Enabled() const {
-    return m_scu.m_timer1Enable;
+bool SCU::Probe::IsTimerEnabled() const {
+    return m_scu.m_timerEnable;
 }
 
-void SCU::Probe::SetTimer1Enabled(bool enabled) {
-    m_scu.m_timer1Enable = enabled;
+void SCU::Probe::SetTimerEnabled(bool enabled) {
+    m_scu.m_timerEnable = enabled;
 }
 
 bool SCU::Probe::GetTimer1Mode() const {
