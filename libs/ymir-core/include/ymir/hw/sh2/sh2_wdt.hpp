@@ -131,7 +131,7 @@ struct WatchdogTimer {
         if constexpr (poke) {
             WTCSR.OVF = bit::test<7>(value);
         } else {
-            WTCSR.OVF &= bit::test<7>(value) | ~WTCSR.OVFread;
+            WTCSR.OVF &= bit::test<7>(value) || !WTCSR.OVFread;
         }
         WTCSR.WT_nIT = bit::test<6>(value);
         WTCSR.TME = bit::test<5>(value);

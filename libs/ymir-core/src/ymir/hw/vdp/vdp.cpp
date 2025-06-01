@@ -5241,7 +5241,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     } else if (bgParams.priorityMode == PriorityMode::PerDot) {
         if constexpr (IsPaletteColorFormat(colorFormat)) {
             pixel.priority &= ~1;
-            pixel.priority |= specFuncCode.colorMatches[colorData];
+            pixel.priority |= static_cast<uint8>(specFuncCode.colorMatches[colorData]);
         }
     }
 

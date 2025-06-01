@@ -188,10 +188,10 @@ struct FreeRunningTimer {
             FTCSR.OVF = bit::test<1>(value);
             FTCSR.CCLRA = bit::test<0>(value);
         } else {
-            FTCSR.ICF &= bit::test<7>(value) | ~bit::test<7>(FTCSR.mask);
-            FTCSR.OCFA &= bit::test<3>(value) | ~bit::test<3>(FTCSR.mask);
-            FTCSR.OCFB &= bit::test<2>(value) | ~bit::test<2>(FTCSR.mask);
-            FTCSR.OVF &= bit::test<1>(value) | ~bit::test<1>(FTCSR.mask);
+            FTCSR.ICF &= bit::test<7>(value) || !bit::test<7>(FTCSR.mask);
+            FTCSR.OCFA &= bit::test<3>(value) || !bit::test<3>(FTCSR.mask);
+            FTCSR.OCFB &= bit::test<2>(value) || !bit::test<2>(FTCSR.mask);
+            FTCSR.OVF &= bit::test<1>(value) || !bit::test<1>(FTCSR.mask);
             FTCSR.CCLRA = bit::test<0>(value);
             FTCSR.mask = 0x00;
         }
