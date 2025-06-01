@@ -13,6 +13,7 @@ string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}" is_top_
 
 option(Ymir_INCLUDE_PACKAGING "Include packaging rules for Ymir" "${is_top_level}")
 option(Ymir_DEV_BUILD "Mark as a development build" ON)
+option(Ymir_EXTRA_INLINING "Enable more aggressive inlining (slows down build!)" "${is_top_level}")
 option(Ymir_ENABLE_TESTS "Enable tests for Ymir" "${is_top_level}")
 option(Ymir_ENABLE_SANDBOX "Compile the sandbox app" "${is_top_level}")
 option(Ymir_ENABLE_YMDASM "Compile the disassembly tool" "${is_top_level}")
@@ -26,6 +27,7 @@ else ()
     message(STATUS "Ymir: Release build")
 endif ()
 message(STATUS "Ymir: Devlog ${Ymir_ENABLE_DEVLOG}")
+message(STATUS "Ymir: Extra inlining ${Ymir_EXTRA_INLINING}")
 
 # Detect target architectures
 # ARCHITECTURES may have multiple variables in the case of a multi-arch build
