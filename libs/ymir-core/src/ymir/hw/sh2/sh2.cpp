@@ -783,13 +783,13 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x72: return m_dmaChannels[1].ReadDRCR();
 
     case 0x80: [[fallthrough]];
-    case 0x88: AdvanceFRT(); return WDT.ReadWTCSR();
+    case 0x88: AdvanceWDT(); return WDT.ReadWTCSR();
 
     case 0x81: [[fallthrough]];
     case 0x89: AdvanceWDT(); return WDT.ReadWTCNT();
 
     case 0x83: [[fallthrough]];
-    case 0x8B: return WDT.ReadRSTCSR();
+    case 0x8B: AdvanceWDT(); return WDT.ReadRSTCSR();
 
     case 0x82: return 0xFF;
     case 0x85: return 0xFF;
@@ -978,7 +978,10 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
             break;
 
         case 0x83: [[fallthrough]];
-        case 0x8B: WDT.WriteRSTCSR<poke>(value); break;
+        case 0x8B:
+            AdvanceWDT();
+            WDT.WriteRSTCSR<poke>(value);
+            break;
 
         case 0x93: [[fallthrough]];
         case 0x94: [[fallthrough]];
@@ -1012,17 +1015,17 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
             RecalcInterrupts();
         }
         break;
-    case 0x12:
-        AdvanceFRT();
-        FRT.WriteFRCH<poke>(value);
-        break;
+    case 0x12: FRT.WriteFRCH<poke>(value); break;
     case 0x13:
         AdvanceFRT();
         FRT.WriteFRCL<poke>(value);
         break;
     case 0x14: FRT.WriteOCRH<poke>(value); break;
     case 0x15: FRT.WriteOCRL<poke>(value); break;
-    case 0x16: FRT.WriteTCR(value); break;
+    case 0x16:
+        AdvanceFRT();
+        FRT.WriteTCR(value);
+        break;
     case 0x17: FRT.WriteTOCR(value); break;
     case 0x18: FRT.WriteICRH<poke>(value); break; // ICRH is read-only
     case 0x19: FRT.WriteICRL<poke>(value); break; // ICRL is read-only
