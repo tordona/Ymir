@@ -42,7 +42,8 @@ template <class Archive>
 void serialize(Archive &ar, SH2State &s, const uint32 version) {
     ar(s.R, s.PC, s.PR, s.MACL, s.MACH, s.SR, s.GBR, s.VBR);
     ar(s.delaySlot, s.delaySlotTarget);
-    ar(s.bsc, s.dmac, s.wdt);
+    ar(s.bsc, s.dmac);
+    serialize(ar, s.wdt, version);
     serialize(ar, s.divu, version);
     serialize(ar, s.frt, version);
     ar(s.intc, s.cache, s.SBYCR);
@@ -67,8 +68,18 @@ void serialize(Archive &ar, SH2State::DMAC::Channel &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, SH2State::WDT &s) {
+void serialize(Archive &ar, SH2State::WDT &s, const uint32 version) {
+    // Version history:
+    // v5:
+    // - New fields
+    //   - WTCSR_mask = false
+
     ar(s.WTCSR, s.WTCNT, s.RSTCSR, s.cycleCount);
+    if (version >= 5) {
+        ar(s.WTCSR_mask);
+    } else {
+        s.WTCSR_mask = false;
+    }
 }
 
 template <class Archive>

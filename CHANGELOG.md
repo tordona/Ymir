@@ -38,6 +38,7 @@
 - SH-2: Fix PC offsets for `mova`, `mov.w` and `mov.l` with `@(disp,PC)` operand  (thanks to @celeriyacon).
 - SH-2: Fixes and accuracy improvements to DIVU (thanks to @celeriyacon).
 - SH-2: Fixes and accuracy improvements to FRT (thanks to @celeriyacon). Fixes freezes in Daytona USA. (#7)
+- SH-2: Fixes and accuracy improvements to WDT (thanks to @celeriyacon).
 - SMPC: Various INTBACK handling adjustments. Partially fixes Assault Suit Leynos 2 no-boot issues.
 - VDP1/2: Fix handling of 16-bit sprite data from VDP1 when VDP2 uses 8-bit sprite types. Fixes sprites in I Love Mickey Mouse/Donald Duck.
 - VDP2: Allow 8-bit reads and writes to VDP2 registers.

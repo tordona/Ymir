@@ -97,12 +97,18 @@ struct WatchdogTimer {
             WT_nIT = false;
             TME = false;
             CKSn = 0;
+
+            OVFread = false;
         }
 
         bool OVF;    //   7   R/W  OVF      Overflow Flag
         bool WT_nIT; //   6   R/W  WT/!IT   Timer Mode Select (0=interval timer (ITI), 1=watchdog timer)
         bool TME;    //   5   R/W  TME      Timer Enable
         uint8 CKSn;  // 2-0   R/W  CKS2-0   Clock Select
+
+        // Has the OVF been read as true?
+        // Necessary to mask clears.
+        mutable bool OVFread;
     } WTCSR;
 
     FORCE_INLINE uint8 ReadWTCSR() const {
@@ -112,6 +118,7 @@ struct WatchdogTimer {
         bit::deposit_into<5>(value, WTCSR.TME);
         bit::deposit_into<3, 4>(value, 0b11);
         bit::deposit_into<0, 2>(value, WTCSR.CKSn);
+        WTCSR.OVFread = WTCSR.OVF;
         return value;
     }
 
@@ -120,7 +127,7 @@ struct WatchdogTimer {
         if constexpr (poke) {
             WTCSR.OVF = bit::test<7>(value);
         } else {
-            WTCSR.OVF &= bit::test<7>(value);
+            WTCSR.OVF &= bit::test<7>(value) | ~WTCSR.OVFread;
         }
         WTCSR.WT_nIT = bit::test<6>(value);
         WTCSR.TME = bit::test<5>(value);
