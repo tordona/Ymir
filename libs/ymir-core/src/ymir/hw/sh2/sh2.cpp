@@ -806,6 +806,15 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x83: [[fallthrough]];
     case 0x8B: return WDT.ReadRSTCSR();
 
+    case 0x82: return 0xFF;
+    case 0x85: return 0xFF;
+    case 0x86: return 0xFF;
+    case 0x87: return 0xFF;
+    case 0x8A: return 0xFF;
+    case 0x8D: return 0xFF;
+    case 0x8E: return 0xFF;
+    case 0x8F: return 0xFF;
+
     case 0x91: return SBYCR.u8;
 
     case 0x92: [[fallthrough]];
@@ -841,8 +850,17 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
 template <bool peek>
 FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
     if (address < 0x100) {
-        if (address == 0xE0) {
-            return INTC.ReadICR();
+        switch (address) {
+        case 0x82: return 0xFFFF;
+        case 0x85: return 0xFFFF;
+        case 0x86: return 0xFFFF;
+        case 0x87: return 0xFFFF;
+        case 0x8A: return 0xFFFF;
+        case 0x8D: return 0xFFFF;
+        case 0x8E: return 0xFFFF;
+        case 0x8F: return 0xFFFF;
+
+        case 0xE0: return INTC.ReadICR();
         }
         if constexpr (peek) {
             uint16 value = OnChipRegReadByte<peek>(address + 0) << 8u;
