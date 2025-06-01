@@ -4,8 +4,8 @@
 
 ### New features and improvements
 
-- App: Add option to pause emulator when the window loses focus. (#181)
-- App: Add shadow under playback indicators to make them visible on white backgrounds.
+- App: Added option to pause emulator when the window loses focus. (#181)
+- App: Added shadow under playback indicators to make them visible on white backgrounds.
 - App: Changed background color around screen to black on windowed mode.
 - CD Block: Implement Put Sector command, used by After Burner II. (#78)
 - Core: Performance improvements, especially for ARM builds. (@Wunkolo)
