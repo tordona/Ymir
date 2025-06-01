@@ -3353,7 +3353,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    if (!m_layerStates[bgIndex].enabled) {
+    if (!m_layerStates[bgIndex + 1].enabled) {
         return;
     }
 
