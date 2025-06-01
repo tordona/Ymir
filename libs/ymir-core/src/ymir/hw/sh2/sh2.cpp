@@ -295,7 +295,7 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
         if (WDT.WTCSR.TME) {
             deadline = std::min(deadline, cyclesExecuted + WDT.CyclesUntilNextTick());
         }
-        // TODO: skip FRT updates if interrupt disabled
+        // TODO: skip FRT updates if interrupt disabled (!FRT.TIER.anyEnabled)
         // - update on reads
         // - needs to keep track of global cycle count to update properly
         deadline = std::min(deadline, cyclesExecuted + FRT.CyclesUntilNextTick());

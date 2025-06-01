@@ -108,6 +108,8 @@ struct FreeRunningTimer {
         bool OCIAE;   // 3   R/W  OCIAE    Output Compare Interrupt A Enable
         bool OCIBE;   // 2   R/W  OCIBE    Output Compare Interrupt B Enable
         bool OVIE;    // 1   R/W  OVIE     Timer Overflow Interrupt Enable
+
+        bool anyEnabled; // whether any of the interrupt enable bits are set (cached for performance)
     } TIER;
 
     FORCE_INLINE uint8 ReadTIER() const {
@@ -127,6 +129,8 @@ struct FreeRunningTimer {
         TIER.OCIAE = bit::test<3>(value);
         TIER.OCIBE = bit::test<2>(value);
         TIER.OVIE = bit::test<1>(value);
+
+        TIER.anyEnabled = (value & 0b10001110) != 0;
     }
 
     // 011  R/W  8        00        FTCSR   Free-running timer control/status register
