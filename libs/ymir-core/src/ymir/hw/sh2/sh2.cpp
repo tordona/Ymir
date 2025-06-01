@@ -797,24 +797,30 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x71: return m_dmaChannels[0].ReadDRCR();
     case 0x72: return m_dmaChannels[1].ReadDRCR();
 
-    case 0x80: return WDT.ReadWTCSR();
-    case 0x81: return WDT.ReadWTCNT();
-    case 0x83: return WDT.ReadRSTCSR();
+    case 0x80: [[fallthrough]];
+    case 0x88: return WDT.ReadWTCSR();
+
+    case 0x81: [[fallthrough]];
+    case 0x89: return WDT.ReadWTCNT();
+
+    case 0x83: [[fallthrough]];
+    case 0x8B: return WDT.ReadRSTCSR();
 
     case 0x91: return SBYCR.u8;
-    case 0x92: return m_cache.ReadCCR();
-    case 0x93: return m_cache.ReadCCR();
-    case 0x94: return m_cache.ReadCCR();
-    case 0x95: return m_cache.ReadCCR();
-    case 0x96: return m_cache.ReadCCR();
-    case 0x97: return m_cache.ReadCCR();
-    case 0x98: return m_cache.ReadCCR();
-    case 0x99: return m_cache.ReadCCR();
-    case 0x9A: return m_cache.ReadCCR();
-    case 0x9B: return m_cache.ReadCCR();
-    case 0x9C: return m_cache.ReadCCR();
-    case 0x9D: return m_cache.ReadCCR();
-    case 0x9E: return m_cache.ReadCCR();
+
+    case 0x92: [[fallthrough]];
+    case 0x93: [[fallthrough]];
+    case 0x94: [[fallthrough]];
+    case 0x95: [[fallthrough]];
+    case 0x96: [[fallthrough]];
+    case 0x97: [[fallthrough]];
+    case 0x98: [[fallthrough]];
+    case 0x99: [[fallthrough]];
+    case 0x9A: [[fallthrough]];
+    case 0x9B: [[fallthrough]];
+    case 0x9C: [[fallthrough]];
+    case 0x9D: [[fallthrough]];
+    case 0x9E: [[fallthrough]];
     case 0x9F: return m_cache.ReadCCR();
 
     case 0xE0: return OnChipRegReadWord<peek>(address) >> 8u;
@@ -867,28 +873,28 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
     }
 
     switch (address) {
-    case 0x100:
+    case 0x100: [[fallthrough]];
     case 0x120: return DIVU.DVSR;
 
-    case 0x104:
+    case 0x104: [[fallthrough]];
     case 0x124: return DIVU.DVDNT;
 
-    case 0x108:
+    case 0x108: [[fallthrough]];
     case 0x128: return DIVU.DVCR.Read();
 
-    case 0x10C:
+    case 0x10C: [[fallthrough]];
     case 0x12C: return DIVU.VCRDIV;
 
-    case 0x110:
+    case 0x110: [[fallthrough]];
     case 0x130: return DIVU.DVDNTH;
 
-    case 0x114:
+    case 0x114: [[fallthrough]];
     case 0x134: return DIVU.DVDNTL;
 
-    case 0x118:
+    case 0x118: [[fallthrough]];
     case 0x138: return DIVU.DVDNTUH;
 
-    case 0x11C:
+    case 0x11C: [[fallthrough]];
     case 0x13C: return DIVU.DVDNTUL;
 
     case 0x180: return m_dmaChannels[0].srcAddress;
@@ -956,25 +962,27 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
 
     if constexpr (poke) {
         switch (address) {
-        case 0x80: WDT.WriteWTCSR<poke>(value); break;
-        case 0x81: WDT.WriteWTCNT(value); break;
-        case 0x83: WDT.WriteRSTCSR<poke>(value); break;
+        case 0x80: [[fallthrough]];
         case 0x88: WDT.WriteWTCSR<poke>(value); break;
+
+        case 0x81: [[fallthrough]];
         case 0x89: WDT.WriteWTCNT(value); break;
+
+        case 0x83: [[fallthrough]];
         case 0x8B: WDT.WriteRSTCSR<poke>(value); break;
 
-        case 0x93: m_cache.WriteCCR<poke>(value); break;
-        case 0x94: m_cache.WriteCCR<poke>(value); break;
-        case 0x95: m_cache.WriteCCR<poke>(value); break;
-        case 0x96: m_cache.WriteCCR<poke>(value); break;
-        case 0x97: m_cache.WriteCCR<poke>(value); break;
-        case 0x98: m_cache.WriteCCR<poke>(value); break;
-        case 0x99: m_cache.WriteCCR<poke>(value); break;
-        case 0x9A: m_cache.WriteCCR<poke>(value); break;
-        case 0x9B: m_cache.WriteCCR<poke>(value); break;
-        case 0x9C: m_cache.WriteCCR<poke>(value); break;
-        case 0x9D: m_cache.WriteCCR<poke>(value); break;
-        case 0x9E: m_cache.WriteCCR<poke>(value); break;
+        case 0x93: [[fallthrough]];
+        case 0x94: [[fallthrough]];
+        case 0x95: [[fallthrough]];
+        case 0x96: [[fallthrough]];
+        case 0x97: [[fallthrough]];
+        case 0x98: [[fallthrough]];
+        case 0x99: [[fallthrough]];
+        case 0x9A: [[fallthrough]];
+        case 0x9B: [[fallthrough]];
+        case 0x9C: [[fallthrough]];
+        case 0x9D: [[fallthrough]];
+        case 0x9E: [[fallthrough]];
         case 0x9F: m_cache.WriteCCR<poke>(value); break;
         }
     }
