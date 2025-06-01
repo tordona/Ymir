@@ -178,9 +178,9 @@ struct DivisionUnit {
 
         bool overflow = divisor == 0;
 
-        if (dividend == -0x80000000ll && divisor == -1) {
+        if (dividend == -0x80000000ll && (divisor == 1 || divisor == -1)) {
             DVDNTH = DVDNTUH = 0;
-            DVDNTL = DVDNTUL = 0x80000000;
+            DVDNT = DVDNTL = DVDNTUL = 0x80000000;
             return;
         }
 
