@@ -249,11 +249,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
     //   [0] push SR to stack
-    //   [1] push PC-4 to stack
+    //   [1] push PC to stack
     //   [2] read PC from VBR + vector*4
     REQUIRE(memoryAccesses.size() == 3);
     CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
-    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, true, sizeof(uint32)});
+    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC, true, sizeof(uint32)});
     CHECK(memoryAccesses[2] == MemoryAccessInfo{startVBR1 + intrVec * sizeof(uint32), intrPC1, false, sizeof(uint32)});
 
     ClearCaptures();
@@ -299,7 +299,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     //   [2] pop SR from stack
     REQUIRE(memoryAccesses.size() == 3);
     CHECK(memoryAccesses[0] == MemoryAccessInfo{intrPC1 + 2, instrRTE, false, sizeof(uint16)});
-    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, false, sizeof(uint32)});
+    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC, false, sizeof(uint32)});
     CHECK(memoryAccesses[2] == MemoryAccessInfo{startSP - 4, startSR, false, sizeof(uint32)});
 
     ClearCaptures();
@@ -351,11 +351,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     CHECK(probe.SR().ILevel == intrLevel);
     // - memory accesses:
     //   [0] push SR to stack
-    //   [1] push PC-4 to stack
+    //   [1] push PC to stack
     //   [2] read PC from VBR + vector*4
     REQUIRE(memoryAccesses.size() == 3);
     CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
-    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, true, sizeof(uint32)});
+    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC, true, sizeof(uint32)});
     CHECK(memoryAccesses[2] == MemoryAccessInfo{startVBR2 + intrVec * sizeof(uint32), intrPC2, false, sizeof(uint32)});
 
     ClearCaptures();
@@ -401,7 +401,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     //   [2] pop SR from stack
     REQUIRE(memoryAccesses.size() == 3);
     CHECK(memoryAccesses[0] == MemoryAccessInfo{intrPC2 + 2, instrRTE, false, sizeof(uint16)});
-    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, false, sizeof(uint32)});
+    CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC, false, sizeof(uint32)});
     CHECK(memoryAccesses[2] == MemoryAccessInfo{startSP - 4, startSR, false, sizeof(uint32)});
 
     ClearCaptures();
@@ -512,12 +512,12 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         }
         // - memory accesses
         //   [0] push SR to stack
-        //   [1] push PC-4 to stack
+        //   [1] push PC to stack
         //   [2] read PC from VBR + vecNum*4
         const uint32 vecAddr = startVBR + vecNum * sizeof(uint32);
         REQUIRE(memoryAccesses.size() == 3);
         CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
-        CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, true, sizeof(uint32)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC, true, sizeof(uint32)});
         CHECK(memoryAccesses[2] == MemoryAccessInfo{vecAddr, intrHandlerAddr, false, sizeof(uint32)});
         // - IRL interrupt acknowledged; no other interrupt should be acknowledged
         if (source == sh2::InterruptSource::IRL) {
@@ -542,11 +542,11 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         CHECK(probe.SR().u32 == startSR);
         // - memory accesses
         //   [0] read instruction from PC (RTE)
-        //   [1] pop PC-4 from stack
+        //   [1] pop PC from stack
         //   [2] pop SR from stack
         REQUIRE(memoryAccesses.size() == 3);
         CHECK(memoryAccesses[0] == MemoryAccessInfo{intrHandlerAddr, instrRTE, false, sizeof(uint16)});
-        CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC - 4, false, sizeof(uint32)});
+        CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC, false, sizeof(uint32)});
         CHECK(memoryAccesses[2] == MemoryAccessInfo{startSP - 4, startSR, false, sizeof(uint32)});
     };
 
