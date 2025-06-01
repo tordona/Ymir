@@ -35,13 +35,13 @@ struct FreeRunningTimer {
 
     // Advances the cycle counter to the specified amount
     FORCE_INLINE Event AdvanceTo(uint64 cycles) {
+        // Must be monotonically increasing
+        assert(cycles >= m_cycleCount);
+
         if (m_clockDividerShift >= 64) [[unlikely]] {
             m_cycleCount = cycles;
             return Event::None;
         }
-
-        // Must be monotonically increasing
-        assert(cycles >= m_cycleCount);
 
         const uint64 steps = (cycles >> m_clockDividerShift) - (m_cycleCount >> m_clockDividerShift);
         m_cycleCount = cycles;
