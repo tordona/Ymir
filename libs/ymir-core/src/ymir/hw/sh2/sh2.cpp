@@ -290,6 +290,8 @@ void SH2::DumpCacheAddressTag(std::ostream &out) const {
 template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Advance(uint64 cycles) {
     m_cyclesExecuted = 0;
+    AdvanceWDT();
+    AdvanceFRT();
     while (m_cyclesExecuted < cycles) {
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         m_cyclesExecuted += InterpretNext<debug, enableCache>();
