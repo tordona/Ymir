@@ -3605,8 +3605,8 @@ FORCE_INLINE bool AnyBool(std::span<const bool> values) {
         const uint8x16x4_t vec64 = vld1q_u8_x4(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the smallest value is not zero, then we have a true value
-        if ((vminvq_u8(vec64.val[0]) != 0u) || (vminvq_u8(vec64.val[1]) != 0u) || (vminvq_u8(vec64.val[2]) != 0u) ||
-            (vminvq_u8(vec64.val[3]) != 0u)) {
+        if ((vmaxvq_u8(vec64.val[0]) != 0u) || (vmaxvq_u8(vec64.val[1]) != 0u) || (vmaxvq_u8(vec64.val[2]) != 0u) ||
+            (vmaxvq_u8(vec64.val[3]) != 0u)) {
             return true;
         }
     }
@@ -3616,7 +3616,7 @@ FORCE_INLINE bool AnyBool(std::span<const bool> values) {
         const uint8x16_t vec16 = vld1q_u8(reinterpret_cast<const uint8 *>(values.data()));
 
         // If the smallest value is not zero, then we have a true value
-        if (vminvq_u8(vec16) != 0u) {
+        if (vmaxvq_u8(vec16) != 0u) {
             return true;
         }
     }
