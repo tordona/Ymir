@@ -41,6 +41,7 @@
 - SMPC: Various INTBACK handling adjustments. Partially fixes Assault Suit Leynos 2 no-boot issues.
 - VDP1/2: Fix handling of 16-bit sprite data from VDP1 when VDP2 uses 8-bit sprite types. Fixes sprites in I Love Mickey Mouse/Donald Duck.
 - VDP2: Allow 8-bit reads and writes to VDP2 registers.
+- VDP2: Apply transparency to mixed-format sprite data when rendering the special value 0x8000. Fixes Assault Suit Leynos 2 black screen after loading.
 - VDP2: Don't increment vertical mosaic counter if mosaic is disabled. Fixes text boxes and character portraits in Grandia. (#91)
 - VDP2: Fix bitmap base address for RBGs. Fixes several graphics glitches on menus and in-game in Need for Speed.
 - VDP2: Fix line screen scroll in double-density interlace mode. Fixes stretched videos in Grandia. (#91)

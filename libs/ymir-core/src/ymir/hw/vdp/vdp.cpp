@@ -3188,6 +3188,23 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
             const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[(spriteFBOffset * sizeof(uint16)) & 0x3FFFE]);
             if (bit::test<15>(spriteDataValue)) {
                 // RGB data
+
+                // Transparent if:
+                // - Using byte-sized sprite types (0x8 to 0xF) and the lower 8 bits are all zero
+                // - Using word-sized sprite types that have the shadow/sprite window bit (types 0x2 to 0x7), sprite
+                //   window is enabled, and the lower 15 bits are all zero
+                if (params.type >= 8) {
+                    if (bit::extract<0, 7>(spriteDataValue) == 0) {
+                        layerState.pixels.transparent[xx] = true;
+                        continue;
+                    }
+                } else if (params.type >= 2) {
+                    if (params.spriteWindowEnable && bit::extract<0, 14>(spriteDataValue) == 0) {
+                        layerState.pixels.transparent[xx] = true;
+                        continue;
+                    }
+                }
+
                 layerState.pixels.color[xx] = ConvertRGB555to888(Color555{spriteDataValue});
                 layerState.pixels.transparent[xx] = false;
                 layerState.pixels.priority[xx] = params.priorities[0];
