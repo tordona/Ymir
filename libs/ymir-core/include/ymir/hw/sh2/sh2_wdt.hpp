@@ -137,7 +137,6 @@ struct WatchdogTimer {
         WTCSR.TME = bit::test<5>(value);
         WTCSR.CKSn = bit::extract<0, 2>(value);
         if (!WTCSR.TME) {
-            m_cycleCount = 0;
             WTCNT = 0;
         }
 
