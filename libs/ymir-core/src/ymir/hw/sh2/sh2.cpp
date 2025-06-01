@@ -760,7 +760,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x10: return FRT.ReadTIER();
     case 0x11: AdvanceFRT(); return FRT.ReadFTCSR();
     case 0x12: AdvanceFRT(); return FRT.ReadFRCH<peek>();
-    case 0x13: AdvanceFRT(); return FRT.ReadFRCL<peek>();
+    case 0x13: return FRT.ReadFRCL<peek>();
     case 0x14: return FRT.ReadOCRH();
     case 0x15: return FRT.ReadOCRL();
     case 0x16: return FRT.ReadTCR();
@@ -966,22 +966,13 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     if constexpr (poke) {
         switch (address) {
         case 0x80: [[fallthrough]];
-        case 0x88:
-            AdvanceWDT();
-            WDT.WriteWTCSR<poke>(value);
-            break;
+        case 0x88: WDT.WriteWTCSR<poke>(value); break;
 
         case 0x81: [[fallthrough]];
-        case 0x89:
-            AdvanceWDT();
-            WDT.WriteWTCNT(value);
-            break;
+        case 0x89: WDT.WriteWTCNT(value); break;
 
         case 0x83: [[fallthrough]];
-        case 0x8B:
-            AdvanceWDT();
-            WDT.WriteRSTCSR<poke>(value);
-            break;
+        case 0x8B: WDT.WriteRSTCSR<poke>(value); break;
 
         case 0x93: [[fallthrough]];
         case 0x94: [[fallthrough]];
@@ -1119,28 +1110,17 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
         OnChipRegWriteByte<poke, debug, enableCache>(address | 1, value >> 0u);
         break;
 
-    case 0x80:
+    case 0x80: [[fallthrough]];
+    case 0x88:
+        AdvanceWDT();
         if ((value >> 8u) == 0x5A) {
             WDT.WriteWTCNT(value);
         } else if ((value >> 8u) == 0xA5) {
             WDT.WriteWTCSR<poke>(value);
-        }
-        break;
-    case 0x82:
-        if ((value >> 8u) == 0x5A) {
-            WDT.WriteRSTE_RSTS(value);
-        } else if ((value >> 8u) == 0xA5) {
-            WDT.WriteWOVF<poke>(value);
         }
         break;
 
-    case 0x88:
-        if ((value >> 8u) == 0x5A) {
-            WDT.WriteWTCNT(value);
-        } else if ((value >> 8u) == 0xA5) {
-            WDT.WriteWTCSR<poke>(value);
-        }
-        break;
+    case 0x82: [[fallthrough]];
     case 0x8A:
         if ((value >> 8u) == 0x5A) {
             WDT.WriteRSTE_RSTS(value);
