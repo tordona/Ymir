@@ -31,8 +31,8 @@ namespace grp {
 } // namespace grp
 
 Saturn::Saturn()
-    : masterSH2(mainBus, true, m_systemFeatures)
-    , slaveSH2(mainBus, false, m_systemFeatures)
+    : masterSH2(m_scheduler, mainBus, true, m_systemFeatures)
+    , slaveSH2(m_scheduler, mainBus, false, m_systemFeatures)
     , SCU(m_scheduler, mainBus)
     , VDP(m_scheduler, configuration)
     , SMPC(m_scheduler, smpcOps, configuration.rtc)

@@ -192,8 +192,9 @@ FORCE_INLINE static void TraceDMAXferEnd(debug::ISH2Tracer *tracer, uint32 chann
 // -----------------------------------------------------------------------------
 // Implementation
 
-SH2::SH2(sys::Bus &bus, bool master, const sys::SystemFeatures &systemFeatures)
-    : m_bus(bus)
+SH2::SH2(core::Scheduler &scheduler, sys::Bus &bus, bool master, const sys::SystemFeatures &systemFeatures)
+    : m_scheduler(scheduler)
+    , m_bus(bus)
     , m_systemFeatures(systemFeatures)
     , m_logPrefix(master ? "SH2-M" : "SH2-S") {
 
@@ -288,41 +289,25 @@ void SH2::DumpCacheAddressTag(std::ostream &out) const {
 
 template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Advance(uint64 cycles) {
-    uint64 cyclesExecuted = 0;
-    while (cyclesExecuted < cycles) {
-        uint64 deadline = cycles;
+    m_cyclesExecuted = 0;
+    while (m_cyclesExecuted < cycles) {
+        // TODO: choose between interpreter (cached or uncached) and JIT recompiler
+        m_cyclesExecuted += InterpretNext<debug, enableCache>();
 
-        if (WDT.WTCSR.TME) {
-            deadline = std::min(deadline, cyclesExecuted + WDT.CyclesUntilNextTick());
-        }
-        // TODO: skip FRT updates if interrupt disabled (!FRT.TIER.anyEnabled)
-        // - update on reads
-        // - needs to keep track of global cycle count to update properly
-        deadline = std::min(deadline, cyclesExecuted + FRT.CyclesUntilNextTick());
+        // If PC is in any of these places, something went horribly wrong
+        /*if ((PC & 1) || ((PC >> 29u) != 0b000 && (PC >> 29u) != 0b001 && (PC >> 29u) != 0b101)) {
+            __debugbreak();
+        }*/
 
-        const uint64 prevCyclesExecuted = cyclesExecuted;
-        while (cyclesExecuted <= deadline) {
-            // TODO: choose between interpreter (cached or uncached) and JIT recompiler
-            cyclesExecuted += InterpretNext<debug, enableCache>();
-
-            // If PC is in any of these places, something went horribly wrong
-            /*if ((PC & 1) || ((PC >> 29u) != 0b000 && (PC >> 29u) != 0b001 && (PC >> 29u) != 0b101)) {
-                __debugbreak();
-            }*/
-
-            if constexpr (devlog::debug_enabled<grp::exec_dump>) {
-                // Dump stack trace on SYS_EXECDMP
-                if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
-                    devlog::debug<grp::exec_dump>(m_logPrefix, "SYS_EXECDMP triggered");
-                    // TODO: trace event
-                }
+        if constexpr (devlog::debug_enabled<grp::exec_dump>) {
+            // Dump stack trace on SYS_EXECDMP
+            if ((PC & 0x7FFFFFF) == config::sysExecDumpAddress) {
+                devlog::debug<grp::exec_dump>(m_logPrefix, "SYS_EXECDMP triggered");
+                // TODO: trace event
             }
         }
-        const uint64 cyclesExecutedNow = cyclesExecuted - prevCyclesExecuted;
-        AdvanceWDT(cyclesExecutedNow);
-        AdvanceFRT(cyclesExecutedNow);
     }
-    return cyclesExecuted;
+    return m_cyclesExecuted;
 }
 
 template uint64 SH2::Advance<false, false>(uint64 cycles);
@@ -332,10 +317,10 @@ template uint64 SH2::Advance<true, true>(uint64 cycles);
 
 template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Step() {
-    uint64 cyclesExecuted = InterpretNext<debug, enableCache>();
-    AdvanceWDT(cyclesExecuted);
-    AdvanceFRT(cyclesExecuted);
-    return cyclesExecuted;
+    m_cyclesExecuted = InterpretNext<debug, enableCache>();
+    AdvanceWDT();
+    AdvanceFRT();
+    return m_cyclesExecuted;
 }
 
 template uint64 SH2::Step<false, false>();
@@ -773,9 +758,9 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     switch (address) {
     case 0x04: return 0; // TODO: SCI SSR
     case 0x10: return FRT.ReadTIER();
-    case 0x11: return FRT.ReadFTCSR();
-    case 0x12: return FRT.ReadFRCH<peek>();
-    case 0x13: return FRT.ReadFRCL<peek>();
+    case 0x11: AdvanceFRT(); return FRT.ReadFTCSR();
+    case 0x12: AdvanceFRT(); return FRT.ReadFRCH<peek>();
+    case 0x13: AdvanceFRT(); return FRT.ReadFRCL<peek>();
     case 0x14: return FRT.ReadOCRH();
     case 0x15: return FRT.ReadOCRL();
     case 0x16: return FRT.ReadTCR();
@@ -798,10 +783,10 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x72: return m_dmaChannels[1].ReadDRCR();
 
     case 0x80: [[fallthrough]];
-    case 0x88: return WDT.ReadWTCSR();
+    case 0x88: AdvanceFRT(); return WDT.ReadWTCSR();
 
     case 0x81: [[fallthrough]];
-    case 0x89: return WDT.ReadWTCNT();
+    case 0x89: AdvanceWDT(); return WDT.ReadWTCNT();
 
     case 0x83: [[fallthrough]];
     case 0x8B: return WDT.ReadRSTCSR();
@@ -981,10 +966,16 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     if constexpr (poke) {
         switch (address) {
         case 0x80: [[fallthrough]];
-        case 0x88: WDT.WriteWTCSR<poke>(value); break;
+        case 0x88:
+            AdvanceWDT();
+            WDT.WriteWTCSR<poke>(value);
+            break;
 
         case 0x81: [[fallthrough]];
-        case 0x89: WDT.WriteWTCNT(value); break;
+        case 0x89:
+            AdvanceWDT();
+            WDT.WriteWTCNT(value);
+            break;
 
         case 0x83: [[fallthrough]];
         case 0x8B: WDT.WriteRSTCSR<poke>(value); break;
@@ -1014,14 +1005,21 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         }
         break;
     case 0x11:
+        AdvanceFRT();
         FRT.WriteFTCSR<poke>(value);
         if (INTC.pending.source == InterruptSource::FRT_OVI || INTC.pending.source == InterruptSource::FRT_OCI ||
             INTC.pending.source == InterruptSource::FRT_ICI) {
             RecalcInterrupts();
         }
         break;
-    case 0x12: FRT.WriteFRCH<poke>(value); break;
-    case 0x13: FRT.WriteFRCL<poke>(value); break;
+    case 0x12:
+        AdvanceFRT();
+        FRT.WriteFRCH<poke>(value);
+        break;
+    case 0x13:
+        AdvanceFRT();
+        FRT.WriteFRCL<poke>(value);
+        break;
     case 0x14: FRT.WriteOCRH<poke>(value); break;
     case 0x15: FRT.WriteOCRL<poke>(value); break;
     case 0x16: FRT.WriteTCR(value); break;
@@ -1303,6 +1301,10 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
     }
 }
 
+FORCE_INLINE uint64 SH2::GetCurrentCycleCount() const {
+    return m_scheduler.CurrentCount() + m_cyclesExecuted;
+}
+
 FLATTEN FORCE_INLINE bool SH2::IsDMATransferActive(const DMAChannel &ch) const {
     return ch.IsEnabled() && DMAOR.DME && !DMAOR.NMIF && !DMAOR.AE;
 }
@@ -1417,8 +1419,10 @@ void SH2::RunDMAC(uint32 channel) {
     }
 }
 
-FORCE_INLINE void SH2::AdvanceWDT(uint64 cycles) {
-    switch (WDT.Advance(cycles)) {
+FORCE_INLINE void SH2::AdvanceWDT() {
+    const uint64 cycles = GetCurrentCycleCount();
+
+    switch (WDT.AdvanceTo(cycles)) {
     case WatchdogTimer::Event::None: break;
     case WatchdogTimer::Event::Reset: Reset(WDT.RSTCSR.RSTS, true); break;
     case WatchdogTimer::Event::RaiseInterrupt: RaiseInterrupt(InterruptSource::WDT_ITI); break;
@@ -1449,8 +1453,10 @@ FORCE_INLINE void SH2::ExecuteDiv64() {
     }
 }
 
-FORCE_INLINE void SH2::AdvanceFRT(uint64 cycles) {
-    switch (FRT.Advance(cycles)) {
+FORCE_INLINE void SH2::AdvanceFRT() {
+    const uint64 cycles = GetCurrentCycleCount();
+
+    switch (FRT.AdvanceTo(cycles)) {
     case FreeRunningTimer::Event::None: break;
     case FreeRunningTimer::Event::OCI: RaiseInterrupt(InterruptSource::FRT_OCI); break;
     case FreeRunningTimer::Event::OVI: RaiseInterrupt(InterruptSource::FRT_OVI); break;

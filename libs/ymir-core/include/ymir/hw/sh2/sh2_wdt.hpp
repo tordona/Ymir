@@ -7,6 +7,8 @@
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/inline.hpp>
 
+#include <cassert>
+
 namespace ymir::sh2 {
 
 struct WatchdogTimer {
@@ -27,17 +29,23 @@ struct WatchdogTimer {
 
         m_cycleCount = 0;
         m_clockDividerShift = kDividerShifts[WTCSR.CKSn];
-        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
 
-    FORCE_INLINE Event Advance(uint64 cycles) {
+    // Advances the cycle counter to the specified amount
+    FORCE_INLINE Event AdvanceTo(uint64 cycles) {
         if (!WTCSR.TME) {
+            m_cycleCount = cycles;
             return Event::None;
         }
 
-        m_cycleCount += cycles;
-        const uint64 steps = m_cycleCount >> m_clockDividerShift;
-        m_cycleCount &= m_cycleCountMask;
+        // Must be monotonically increasing
+        assert(cycles >= m_cycleCount);
+
+        const uint64 steps = (cycles >> m_clockDividerShift) - (m_cycleCount >> m_clockDividerShift);
+        m_cycleCount = cycles;
+        if (steps == 0) {
+            return Event::None;
+        }
 
         Event event = Event::None;
 
@@ -58,10 +66,6 @@ struct WatchdogTimer {
         WTCNT = nextCount;
 
         return event;
-    }
-
-    FORCE_INLINE uint64 CyclesUntilNextTick() const {
-        return (1ull << m_clockDividerShift) - (m_cycleCount & m_cycleCountMask);
     }
 
     // -------------------------------------------------------------------------
@@ -138,7 +142,6 @@ struct WatchdogTimer {
         }
 
         m_clockDividerShift = kDividerShifts[WTCSR.CKSn];
-        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
 
     // 081  R    8        00        WTCNT   Watchdog Timer Counter
@@ -243,7 +246,6 @@ private:
 
     uint64 m_cycleCount;
     uint64 m_clockDividerShift; // derived from WTCSR.CKS
-    uint64 m_cycleCountMask;    // derived from WTCSR.CKS
 };
 
 } // namespace ymir::sh2

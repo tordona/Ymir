@@ -5,6 +5,8 @@
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/inline.hpp>
 
+#include <cassert>
+
 namespace ymir::sh2 {
 
 struct FreeRunningTimer {
@@ -29,20 +31,23 @@ struct FreeRunningTimer {
 
         m_cycleCount = 0;
         m_clockDividerShift = kDividerShifts[TCR.CKSn];
-        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
 
-    FORCE_INLINE Event Advance(uint64 cycles) {
+    // Advances the cycle counter to the specified amount
+    FORCE_INLINE Event AdvanceTo(uint64 cycles) {
         if (m_clockDividerShift >= 64) [[unlikely]] {
+            m_cycleCount = cycles;
             return Event::None;
         }
 
-        m_cycleCount += cycles;
-        const uint64 steps = m_cycleCount >> m_clockDividerShift;
+        // Must be monotonically increasing
+        assert(cycles >= m_cycleCount);
+
+        const uint64 steps = (cycles >> m_clockDividerShift) - (m_cycleCount >> m_clockDividerShift);
+        m_cycleCount = cycles;
         if (steps == 0) {
             return Event::None;
         }
-        m_cycleCount &= m_cycleCountMask;
 
         Event event = Event::None;
 
@@ -71,10 +76,6 @@ struct FreeRunningTimer {
         FRC = nextFRC;
 
         return event;
-    }
-
-    FORCE_INLINE uint64 CyclesUntilNextTick() const {
-        return (1ull << m_clockDividerShift) - (m_cycleCount & m_cycleCountMask);
     }
 
     // -------------------------------------------------------------------------
@@ -311,13 +312,11 @@ struct FreeRunningTimer {
         TCR.CKSn = bit::extract<0, 1>(value);
 
         m_clockDividerShift = kDividerShifts[TCR.CKSn];
-        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
 
     FORCE_INLINE void WriteTCR_CKSn(uint8 value) {
         TCR.CKSn = bit::extract<0, 1>(value);
         m_clockDividerShift = kDividerShifts[TCR.CKSn];
-        m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
     }
 
     // 017  R/W  8        E0        TOCR      Timer output compare control register
@@ -436,7 +435,6 @@ private:
 
     uint64 m_cycleCount;
     uint64 m_clockDividerShift; // derived from TCR.CKS
-    uint64 m_cycleCountMask;    // derived from TCR.CKS
 };
 
 } // namespace ymir::sh2

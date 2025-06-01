@@ -72,6 +72,8 @@ void serialize(Archive &ar, SH2State::WDT &s, const uint32 version) {
     // v5:
     // - New fields
     //   - WTCSR_mask = false
+    // - Changed fields
+    //   - cycleCount is now an absolute counter based on the scheduler counter
 
     ar(s.WTCSR, s.WTCNT, s.RSTCSR, s.cycleCount);
     if (version >= 5) {
@@ -99,6 +101,8 @@ void serialize(Archive &ar, SH2State::FRT &s, const uint32 version) {
     // v5:
     // - New fields
     //   - FTCSR_mask = 0x00
+    // - Changed fields
+    //   - cycleCount is now an absolute counter based on the scheduler counter
 
     ar(s.TIER, s.FTCSR, s.FRC, s.OCRA, s.OCRB, s.TCR, s.TOCR, s.ICR, s.TEMP, s.cycleCount);
     if (version >= 5) {
@@ -702,6 +706,14 @@ void serialize(Archive &ar, State &s, const uint32 version) {
     serialize(ar, s.vdp, version);
     serialize(ar, s.scsp, version);
     serialize(ar, s.cdblock, version);
+
+    if (version < 5) {
+        // Fixup FRT and WDT cycle counters which changed from local to global
+        s.msh2.frt.cycleCount += s.scheduler.currCount;
+        s.msh2.wdt.cycleCount += s.scheduler.currCount;
+        s.ssh2.frt.cycleCount += s.scheduler.currCount;
+        s.ssh2.wdt.cycleCount += s.scheduler.currCount;
+    }
 }
 
 } // namespace ymir::state

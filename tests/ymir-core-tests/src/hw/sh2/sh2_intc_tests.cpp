@@ -16,8 +16,9 @@ namespace sh2_intr {
 
 struct TestSubject : debug::ISH2Tracer {
     sys::SystemFeatures systemFeatures{};
+    core::Scheduler scheduler{};
     mutable sys::Bus bus{};
-    mutable sh2::SH2 sh2{bus, true, systemFeatures};
+    mutable sh2::SH2 sh2{scheduler, bus, true, systemFeatures};
     sh2::SH2::Probe &probe{sh2.GetProbe()};
 
     TestSubject() {

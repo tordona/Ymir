@@ -21,6 +21,7 @@
 #include <ymir/hw/scu/scu_internal_callbacks.hpp>
 #include <ymir/hw/sh2/sh2_internal_callbacks.hpp>
 
+#include <ymir/core/scheduler.hpp>
 #include <ymir/sys/bus.hpp>
 #include <ymir/sys/system_features.hpp>
 
@@ -41,7 +42,7 @@ namespace ymir::sh2 {
 
 class SH2 {
 public:
-    SH2(sys::Bus &bus, bool master, const sys::SystemFeatures &systemFeatures);
+    SH2(core::Scheduler &scheduler, sys::Bus &bus, bool master, const sys::SystemFeatures &systemFeatures);
 
     void Reset(bool hard, bool watchdogInitiated = false);
 
@@ -218,22 +219,12 @@ public:
             return m_sh2.FRT;
         }
 
-        // Advance FRT with side-effects
-        FORCE_INLINE void AdvanceFRT(uint64 cycles) {
-            m_sh2.AdvanceFRT(cycles);
-        }
-
         FORCE_INLINE WatchdogTimer &WDT() {
             return m_sh2.WDT;
         }
 
         FORCE_INLINE const WatchdogTimer &WDT() const {
             return m_sh2.WDT;
-        }
-
-        // Advance WDT with side-effects
-        FORCE_INLINE void AdvanceWDT(uint64 cycles) {
-            m_sh2.AdvanceWDT(cycles);
         }
 
         FORCE_INLINE DMAChannel &DMAC0() {
@@ -422,6 +413,17 @@ private:
     CBAcknowledgeExternalInterrupt m_cbAcknowledgeExternalInterrupt;
 
     // -------------------------------------------------------------------------
+    // Cycle counting
+
+    core::Scheduler &m_scheduler;
+
+    // Number of cycles executed in the current Advance invocation
+    uint64 m_cyclesExecuted;
+
+    // Retrieves the current absolute cycle count
+    uint64 GetCurrentCycleCount() const;
+
+    // -------------------------------------------------------------------------
     // Memory accessors
 
     sys::Bus &m_bus;
@@ -560,7 +562,7 @@ private:
 
     WatchdogTimer WDT;
 
-    void AdvanceWDT(uint64 cycles);
+    void AdvanceWDT();
 
     // --- Power-down module ---
 
@@ -583,7 +585,7 @@ private:
 
     FreeRunningTimer FRT;
 
-    void AdvanceFRT(uint64 cycles);
+    void AdvanceFRT();
 
     void TriggerFRTInputCapture();
 
