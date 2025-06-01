@@ -125,6 +125,9 @@ struct WatchdogTimer {
         WTCSR.WT_nIT = bit::test<6>(value);
         WTCSR.TME = bit::test<5>(value);
         WTCSR.CKSn = bit::extract<0, 2>(value);
+        if (!WTCSR.TME) {
+            WTCNT = 0;
+        }
 
         m_clockDividerShift = kDividerShifts[WTCSR.CKSn];
         m_cycleCountMask = (1ull << m_clockDividerShift) - 1;
@@ -144,7 +147,9 @@ struct WatchdogTimer {
     }
 
     FORCE_INLINE void WriteWTCNT(uint8 value) {
-        WTCNT = value;
+        if (WTCSR.TME) {
+            WTCNT = value;
+        }
     }
 
     // 083  R    8        1F        RSTCSR  Reset Control/Status Register
