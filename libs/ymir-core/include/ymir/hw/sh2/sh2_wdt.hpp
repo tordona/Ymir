@@ -50,7 +50,7 @@ struct WatchdogTimer {
         Event event = Event::None;
 
         uint64 nextCount = WTCNT + steps;
-        if (nextCount >= 0x10000) {
+        if (nextCount >= 0x100) {
             if (WTCSR.WT_nIT) {
                 // Watchdog timer mode
                 RSTCSR.WOVF = 1;
