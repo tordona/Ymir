@@ -3697,7 +3697,8 @@ FORCE_INLINE void Color888ShadowMasked(const std::span<Color888> pixels, const s
         shadowed_x4 = _mm_and_si128(shadowed_x4, _mm_set1_epi8(0x7F));
 
         // Blend with mask
-        const __m128i dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, shadowed_x4), _mm_andnot_ps(mask_x4, pixel_x4));
+        const __m128i dstColor_x4 =
+            _mm_or_si128(_mm_and_si128(mask_x4, shadowed_x4), _mm_andnot_si128(mask_x4, pixel_x4));
 
         // Write
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&pixels[i]), dstColor_x4);
@@ -3775,7 +3776,7 @@ FORCE_INLINE void Color888SatAddMasked(const std::span<Color888> dest, const std
         __m128i dstColor_x4 = _mm_adds_epu8(topColor_x4, btmColor_x4);
 
         // Blend with mask
-        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_ps(mask_x4, topColor_x4));
+        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_si128(mask_x4, topColor_x4));
 
         // Write
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
@@ -3863,7 +3864,7 @@ FORCE_INLINE void Color888AverageMasked(const std::span<Color888> dest, const st
 
         // Blend with mask
         const __m128i dstColor_x4 =
-            _mm_or_si128(_mm_and_si128(mask_x4, average_x4), _mm_andnot_ps(mask_x4, topColor_x4));
+            _mm_or_si128(_mm_and_si128(mask_x4, average_x4), _mm_andnot_si128(mask_x4, topColor_x4));
 
         // Write
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
@@ -3994,7 +3995,7 @@ FORCE_INLINE void Color888CompositeRatioPerPixelMasked(const std::span<Color888>
                                                _mm_and_si128(dstColor16hi, _mm_set1_epi16(0xFF)));
 
         // Blend with mask
-        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_ps(mask_x4, topColor_x4));
+        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_si128(mask_x4, topColor_x4));
 
         // Write
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
@@ -4138,7 +4139,7 @@ FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, c
                                                _mm_and_si128(dstColor16hi, _mm_set1_epi16(0xFF)));
 
         // Blend with mask
-        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_ps(mask_x4, topColor_x4));
+        dstColor_x4 = _mm_or_si128(_mm_and_si128(mask_x4, dstColor_x4), _mm_andnot_si128(mask_x4, topColor_x4));
 
         // Write
         _mm_storeu_si128(reinterpret_cast<__m128i *>(&dest[i]), dstColor_x4);
