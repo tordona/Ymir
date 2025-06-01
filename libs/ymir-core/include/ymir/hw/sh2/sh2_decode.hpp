@@ -57,24 +57,24 @@ enum class OpcodeType : uint16 {
     LDC_GBR_R,  // m    0110 mmmm 0001 1110   ldc      Rm,   GBR
     LDC_SR_R,   // m    0100 mmmm 0000 1110   ldc      Rm,   SR
     LDC_VBR_R,  // m    0110 mmmm 0010 1110   ldc      Rm,   VBR
-    LDC_GBR_M,  // m    0100 mmmm 0001 0111   ldc.l    @Rm+, GBR
-    LDC_SR_M,   // m    0100 mmmm 0000 0111   ldc.l    @Rm+, SR
-    LDC_VBR_M,  // m    0100 mmmm 0010 0111   ldc.l    @Rm+, VBR
     LDS_MACH_R, // m    0100 mmmm 0000 1010   lds      Rm,   MACH
     LDS_MACL_R, // m    0100 mmmm 0001 1010   lds      Rm,   MACL
     LDS_PR_R,   // m    0100 mmmm 0010 1010   lds      Rm,   PR
-    LDS_MACH_M, // m    0100 mmmm 0000 0110   lds.l    @Rm+, MACH
-    LDS_MACL_M, // m    0100 mmmm 0001 0110   lds.l    @Rm+, MACL
-    LDS_PR_M,   // m    0100 mmmm 0010 0110   lds.l    @Rm+, PR
     STC_GBR_R,  // n    0000 nnnn 0001 0010   stc      GBR,  Rn
     STC_SR_R,   // n    0000 nnnn 0000 0010   stc      SR,   Rn
     STC_VBR_R,  // n    0000 nnnn 0010 0010   stc      VBR,  Rn
-    STC_GBR_M,  // n    0100 nnnn 0001 0011   stc.l    GBR,  @-Rn
-    STC_SR_M,   // n    0100 nnnn 0000 0011   stc.l    SR,   @-Rn
-    STC_VBR_M,  // n    0100 nnnn 0010 0011   stc.l    VBR,  @-Rn
     STS_MACH_R, // n    0000 nnnn 0000 1010   sts      MACH, Rn
     STS_MACL_R, // n    0000 nnnn 0001 1010   sts      MACL, Rn
     STS_PR_R,   // n    0000 nnnn 0010 1010   sts      PR,   Rn
+    LDC_GBR_M,  // m    0100 mmmm 0001 0111   ldc.l    @Rm+, GBR
+    LDC_SR_M,   // m    0100 mmmm 0000 0111   ldc.l    @Rm+, SR
+    LDC_VBR_M,  // m    0100 mmmm 0010 0111   ldc.l    @Rm+, VBR
+    LDS_MACH_M, // m    0100 mmmm 0000 0110   lds.l    @Rm+, MACH
+    LDS_MACL_M, // m    0100 mmmm 0001 0110   lds.l    @Rm+, MACL
+    LDS_PR_M,   // m    0100 mmmm 0010 0110   lds.l    @Rm+, PR
+    STC_GBR_M,  // n    0100 nnnn 0001 0011   stc.l    GBR,  @-Rn
+    STC_SR_M,   // n    0100 nnnn 0000 0011   stc.l    SR,   @-Rn
+    STC_VBR_M,  // n    0100 nnnn 0010 0011   stc.l    VBR,  @-Rn
     STS_MACH_M, // n    0100 nnnn 0000 0010   sts.l    MACH, @-Rn
     STS_MACL_M, // n    0100 nnnn 0001 0010   sts.l    MACL, @-Rn
     STS_PR_M,   // n    0100 nnnn 0010 0010   sts.l    PR,   @-Rn
@@ -201,24 +201,24 @@ enum class OpcodeType : uint16 {
     Delay_LDC_GBR_R,  // m    0110 mmmm 0001 1110   ldc      Rm,   GBR
     Delay_LDC_SR_R,   // m    0100 mmmm 0000 1110   ldc      Rm,   SR
     Delay_LDC_VBR_R,  // m    0110 mmmm 0010 1110   ldc      Rm,   VBR
-    Delay_LDC_GBR_M,  // m    0100 mmmm 0001 0111   ldc.l    @Rm+, GBR
-    Delay_LDC_SR_M,   // m    0100 mmmm 0000 0111   ldc.l    @Rm+, SR
-    Delay_LDC_VBR_M,  // m    0100 mmmm 0010 0111   ldc.l    @Rm+, VBR
     Delay_LDS_MACH_R, // m    0100 mmmm 0000 1010   lds      Rm,   MACH
     Delay_LDS_MACL_R, // m    0100 mmmm 0001 1010   lds      Rm,   MACL
     Delay_LDS_PR_R,   // m    0100 mmmm 0010 1010   lds      Rm,   PR
-    Delay_LDS_MACH_M, // m    0100 mmmm 0000 0110   lds.l    @Rm+, MACH
-    Delay_LDS_MACL_M, // m    0100 mmmm 0001 0110   lds.l    @Rm+, MACL
-    Delay_LDS_PR_M,   // m    0100 mmmm 0010 0110   lds.l    @Rm+, PR
     Delay_STC_GBR_R,  // n    0000 nnnn 0001 0010   stc      GBR,  Rn
     Delay_STC_SR_R,   // n    0000 nnnn 0000 0010   stc      SR,   Rn
     Delay_STC_VBR_R,  // n    0000 nnnn 0010 0010   stc      VBR,  Rn
-    Delay_STC_GBR_M,  // n    0100 nnnn 0001 0011   stc.l    GBR,  @-Rn
-    Delay_STC_SR_M,   // n    0100 nnnn 0000 0010   stc.l    SR,   @-Rn
-    Delay_STC_VBR_M,  // n    0100 nnnn 0010 0011   stc.l    VBR,  @-Rn
     Delay_STS_MACH_R, // n    0000 nnnn 0000 1010   sts      MACH, Rn
     Delay_STS_MACL_R, // n    0000 nnnn 0001 1010   sts      MACL, Rn
     Delay_STS_PR_R,   // n    0000 nnnn 0010 1010   sts      PR,   Rn
+    Delay_LDC_GBR_M,  // m    0100 mmmm 0001 0111   ldc.l    @Rm+, GBR
+    Delay_LDC_SR_M,   // m    0100 mmmm 0000 0111   ldc.l    @Rm+, SR
+    Delay_LDC_VBR_M,  // m    0100 mmmm 0010 0111   ldc.l    @Rm+, VBR
+    Delay_LDS_MACH_M, // m    0100 mmmm 0000 0110   lds.l    @Rm+, MACH
+    Delay_LDS_MACL_M, // m    0100 mmmm 0001 0110   lds.l    @Rm+, MACL
+    Delay_LDS_PR_M,   // m    0100 mmmm 0010 0110   lds.l    @Rm+, PR
+    Delay_STC_GBR_M,  // n    0100 nnnn 0001 0011   stc.l    GBR,  @-Rn
+    Delay_STC_SR_M,   // n    0100 nnnn 0000 0010   stc.l    SR,   @-Rn
+    Delay_STC_VBR_M,  // n    0100 nnnn 0010 0011   stc.l    VBR,  @-Rn
     Delay_STS_MACH_M, // n    0100 nnnn 0000 0010   sts.l    MACH, @-Rn
     Delay_STS_MACL_M, // n    0100 nnnn 0001 0010   sts.l    MACL, @-Rn
     Delay_STS_PR_M,   // n    0100 nnnn 0010 0010   sts.l    PR,   @-Rn

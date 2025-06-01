@@ -509,6 +509,8 @@ private:
     template <mem_primitive T>
     T OpenBusSeqRead(uint32 address);
 
+    uint64 AccessCycles(uint32 address);
+
     // -------------------------------------------------------------------------
     // On-chip peripherals
 
@@ -646,8 +648,11 @@ private:
 
     void SetupDelaySlot(uint32 targetAddress);
 
+    template <bool delaySlot>
+    void AdvancePC();
+
     template <bool debug, bool enableCache>
-    void EnterException(uint8 vectorNumber);
+    uint64 EnterException(uint8 vectorNumber);
 
     // -------------------------------------------------------------------------
     // Instruction interpreters
@@ -661,159 +666,159 @@ private:
 #define TPL_TRAITS_DS template <bool debug, bool enableCache, bool delaySlot>
 #define TPL_DS template <bool delaySlot>
 
-    void NOP(); // nop
+    TPL_DS uint64 NOP(); // nop
 
-    void SLEEP(); // sleep
+    uint64 SLEEP(); // sleep
 
-    void MOV(const DecodedArgs &args);                 // mov   Rm, Rn
-    TPL_TRAITS void MOVBL(const DecodedArgs &args);    // mov.b @Rm, Rn
-    TPL_TRAITS void MOVWL(const DecodedArgs &args);    // mov.w @Rm, Rn
-    TPL_TRAITS void MOVLL(const DecodedArgs &args);    // mov.l @Rm, Rn
-    TPL_TRAITS void MOVBL0(const DecodedArgs &args);   // mov.b @(R0,Rm), Rn
-    TPL_TRAITS void MOVWL0(const DecodedArgs &args);   // mov.w @(R0,Rm), Rn
-    TPL_TRAITS void MOVLL0(const DecodedArgs &args);   // mov.l @(R0,Rm), Rn
-    TPL_TRAITS void MOVBL4(const DecodedArgs &args);   // mov.b @(disp,Rm), R0
-    TPL_TRAITS void MOVWL4(const DecodedArgs &args);   // mov.w @(disp,Rm), R0
-    TPL_TRAITS void MOVLL4(const DecodedArgs &args);   // mov.l @(disp,Rm), Rn
-    TPL_TRAITS void MOVBLG(const DecodedArgs &args);   // mov.b @(disp,GBR), R0
-    TPL_TRAITS void MOVWLG(const DecodedArgs &args);   // mov.w @(disp,GBR), R0
-    TPL_TRAITS void MOVLLG(const DecodedArgs &args);   // mov.l @(disp,GBR), R0
-    TPL_TRAITS void MOVBM(const DecodedArgs &args);    // mov.b Rm, @-Rn
-    TPL_TRAITS void MOVWM(const DecodedArgs &args);    // mov.w Rm, @-Rn
-    TPL_TRAITS void MOVLM(const DecodedArgs &args);    // mov.l Rm, @-Rn
-    TPL_TRAITS void MOVBP(const DecodedArgs &args);    // mov.b @Rm+, Rn
-    TPL_TRAITS void MOVWP(const DecodedArgs &args);    // mov.w @Rm+, Rn
-    TPL_TRAITS void MOVLP(const DecodedArgs &args);    // mov.l @Rm+, Rn
-    TPL_TRAITS void MOVBS(const DecodedArgs &args);    // mov.b Rm, @Rn
-    TPL_TRAITS void MOVWS(const DecodedArgs &args);    // mov.w Rm, @Rn
-    TPL_TRAITS void MOVLS(const DecodedArgs &args);    // mov.l Rm, @Rn
-    TPL_TRAITS void MOVBS0(const DecodedArgs &args);   // mov.b Rm, @(R0,Rn)
-    TPL_TRAITS void MOVWS0(const DecodedArgs &args);   // mov.w Rm, @(R0,Rn)
-    TPL_TRAITS void MOVLS0(const DecodedArgs &args);   // mov.l Rm, @(R0,Rn)
-    TPL_TRAITS void MOVBS4(const DecodedArgs &args);   // mov.b R0, @(disp,Rn)
-    TPL_TRAITS void MOVWS4(const DecodedArgs &args);   // mov.w R0, @(disp,Rn)
-    TPL_TRAITS void MOVLS4(const DecodedArgs &args);   // mov.l Rm, @(disp,Rn)
-    TPL_TRAITS void MOVBSG(const DecodedArgs &args);   // mov.b R0, @(disp,GBR)
-    TPL_TRAITS void MOVWSG(const DecodedArgs &args);   // mov.w R0, @(disp,GBR)
-    TPL_TRAITS void MOVLSG(const DecodedArgs &args);   // mov.l R0, @(disp,GBR)
-    void MOVI(const DecodedArgs &args);                // mov   #imm, Rn
-    TPL_TRAITS_DS void MOVWI(const DecodedArgs &args); // mov.w @(disp,PC), Rn
-    TPL_TRAITS_DS void MOVLI(const DecodedArgs &args); // mov.l @(disp,PC), Rn
-    TPL_DS void MOVA(const DecodedArgs &args);         // mova  @(disp,PC), R0
-    void MOVT(const DecodedArgs &args);                // movt  Rn
-    void CLRT();                                       // clrt
-    void SETT();                                       // sett
+    TPL_DS uint64 MOV(const DecodedArgs &args);           // mov   Rm, Rn
+    TPL_TRAITS_DS uint64 MOVBL(const DecodedArgs &args);  // mov.b @Rm, Rn
+    TPL_TRAITS_DS uint64 MOVWL(const DecodedArgs &args);  // mov.w @Rm, Rn
+    TPL_TRAITS_DS uint64 MOVLL(const DecodedArgs &args);  // mov.l @Rm, Rn
+    TPL_TRAITS_DS uint64 MOVBL0(const DecodedArgs &args); // mov.b @(R0,Rm), Rn
+    TPL_TRAITS_DS uint64 MOVWL0(const DecodedArgs &args); // mov.w @(R0,Rm), Rn
+    TPL_TRAITS_DS uint64 MOVLL0(const DecodedArgs &args); // mov.l @(R0,Rm), Rn
+    TPL_TRAITS_DS uint64 MOVBL4(const DecodedArgs &args); // mov.b @(disp,Rm), R0
+    TPL_TRAITS_DS uint64 MOVWL4(const DecodedArgs &args); // mov.w @(disp,Rm), R0
+    TPL_TRAITS_DS uint64 MOVLL4(const DecodedArgs &args); // mov.l @(disp,Rm), Rn
+    TPL_TRAITS_DS uint64 MOVBLG(const DecodedArgs &args); // mov.b @(disp,GBR), R0
+    TPL_TRAITS_DS uint64 MOVWLG(const DecodedArgs &args); // mov.w @(disp,GBR), R0
+    TPL_TRAITS_DS uint64 MOVLLG(const DecodedArgs &args); // mov.l @(disp,GBR), R0
+    TPL_TRAITS_DS uint64 MOVBM(const DecodedArgs &args);  // mov.b Rm, @-Rn
+    TPL_TRAITS_DS uint64 MOVWM(const DecodedArgs &args);  // mov.w Rm, @-Rn
+    TPL_TRAITS_DS uint64 MOVLM(const DecodedArgs &args);  // mov.l Rm, @-Rn
+    TPL_TRAITS_DS uint64 MOVBP(const DecodedArgs &args);  // mov.b @Rm+, Rn
+    TPL_TRAITS_DS uint64 MOVWP(const DecodedArgs &args);  // mov.w @Rm+, Rn
+    TPL_TRAITS_DS uint64 MOVLP(const DecodedArgs &args);  // mov.l @Rm+, Rn
+    TPL_TRAITS_DS uint64 MOVBS(const DecodedArgs &args);  // mov.b Rm, @Rn
+    TPL_TRAITS_DS uint64 MOVWS(const DecodedArgs &args);  // mov.w Rm, @Rn
+    TPL_TRAITS_DS uint64 MOVLS(const DecodedArgs &args);  // mov.l Rm, @Rn
+    TPL_TRAITS_DS uint64 MOVBS0(const DecodedArgs &args); // mov.b Rm, @(R0,Rn)
+    TPL_TRAITS_DS uint64 MOVWS0(const DecodedArgs &args); // mov.w Rm, @(R0,Rn)
+    TPL_TRAITS_DS uint64 MOVLS0(const DecodedArgs &args); // mov.l Rm, @(R0,Rn)
+    TPL_TRAITS_DS uint64 MOVBS4(const DecodedArgs &args); // mov.b R0, @(disp,Rn)
+    TPL_TRAITS_DS uint64 MOVWS4(const DecodedArgs &args); // mov.w R0, @(disp,Rn)
+    TPL_TRAITS_DS uint64 MOVLS4(const DecodedArgs &args); // mov.l Rm, @(disp,Rn)
+    TPL_TRAITS_DS uint64 MOVBSG(const DecodedArgs &args); // mov.b R0, @(disp,GBR)
+    TPL_TRAITS_DS uint64 MOVWSG(const DecodedArgs &args); // mov.w R0, @(disp,GBR)
+    TPL_TRAITS_DS uint64 MOVLSG(const DecodedArgs &args); // mov.l R0, @(disp,GBR)
+    TPL_DS uint64 MOVI(const DecodedArgs &args);          // mov   #imm, Rn
+    TPL_TRAITS_DS uint64 MOVWI(const DecodedArgs &args);  // mov.w @(disp,PC), Rn
+    TPL_TRAITS_DS uint64 MOVLI(const DecodedArgs &args);  // mov.l @(disp,PC), Rn
+    TPL_DS uint64 MOVA(const DecodedArgs &args);          // mova  @(disp,PC), R0
+    TPL_DS uint64 MOVT(const DecodedArgs &args);          // movt  Rn
+    TPL_DS uint64 CLRT();                                 // clrt
+    TPL_DS uint64 SETT();                                 // sett
 
-    void EXTSB(const DecodedArgs &args); // exts.b Rm, Rn
-    void EXTSW(const DecodedArgs &args); // exts.w Rm, Rn
-    void EXTUB(const DecodedArgs &args); // extu.b Rm, Rn
-    void EXTUW(const DecodedArgs &args); // extu.w Rm, Rn
-    void SWAPB(const DecodedArgs &args); // swap.b Rm, Rn
-    void SWAPW(const DecodedArgs &args); // swap.w Rm, Rn
-    void XTRCT(const DecodedArgs &args); // xtrct  Rm, Rn
+    TPL_DS uint64 EXTSB(const DecodedArgs &args); // exts.b Rm, Rn
+    TPL_DS uint64 EXTSW(const DecodedArgs &args); // exts.w Rm, Rn
+    TPL_DS uint64 EXTUB(const DecodedArgs &args); // extu.b Rm, Rn
+    TPL_DS uint64 EXTUW(const DecodedArgs &args); // extu.w Rm, Rn
+    TPL_DS uint64 SWAPB(const DecodedArgs &args); // swap.b Rm, Rn
+    TPL_DS uint64 SWAPW(const DecodedArgs &args); // swap.w Rm, Rn
+    TPL_DS uint64 XTRCT(const DecodedArgs &args); // xtrct  Rm, Rn
 
-    void LDCGBR(const DecodedArgs &args);              // ldc   Rm, GBR
-    void LDCSR(const DecodedArgs &args);               // ldc   Rm, SR
-    void LDCVBR(const DecodedArgs &args);              // ldc   Rm, VBR
-    TPL_TRAITS void LDCMGBR(const DecodedArgs &args);  // ldc.l @Rm+, GBR
-    TPL_TRAITS void LDCMSR(const DecodedArgs &args);   // ldc.l @Rm+, SR
-    TPL_TRAITS void LDCMVBR(const DecodedArgs &args);  // ldc.l @Rm+, VBR
-    void LDSMACH(const DecodedArgs &args);             // lds   Rm, MACH
-    void LDSMACL(const DecodedArgs &args);             // lds   Rm, MACL
-    void LDSPR(const DecodedArgs &args);               // lds   Rm, PR
-    TPL_TRAITS void LDSMMACH(const DecodedArgs &args); // lds.l @Rm+, MACH
-    TPL_TRAITS void LDSMMACL(const DecodedArgs &args); // lds.l @Rm+, MACL
-    TPL_TRAITS void LDSMPR(const DecodedArgs &args);   // lds.l @Rm+, PR
-    void STCGBR(const DecodedArgs &args);              // stc   GBR, Rn
-    void STCSR(const DecodedArgs &args);               // stc   SR, Rn
-    void STCVBR(const DecodedArgs &args);              // stc   VBR, Rn
-    TPL_TRAITS void STCMGBR(const DecodedArgs &args);  // stc.l GBR, @-Rn
-    TPL_TRAITS void STCMSR(const DecodedArgs &args);   // stc.l SR, @-Rn
-    TPL_TRAITS void STCMVBR(const DecodedArgs &args);  // stc.l VBR, @-Rn
-    void STSMACH(const DecodedArgs &args);             // sts   MACH, Rn
-    void STSMACL(const DecodedArgs &args);             // sts   MACL, Rn
-    void STSPR(const DecodedArgs &args);               // sts   PR, Rn
-    TPL_TRAITS void STSMMACH(const DecodedArgs &args); // sts.l MACH, @-Rn
-    TPL_TRAITS void STSMMACL(const DecodedArgs &args); // sts.l MACL, @-Rn
-    TPL_TRAITS void STSMPR(const DecodedArgs &args);   // sts.l PR, @-Rn
+    TPL_DS uint64 LDCGBR(const DecodedArgs &args);          // ldc   Rm, GBR
+    TPL_DS uint64 LDCSR(const DecodedArgs &args);           // ldc   Rm, SR
+    TPL_DS uint64 LDCVBR(const DecodedArgs &args);          // ldc   Rm, VBR
+    TPL_DS uint64 LDSMACH(const DecodedArgs &args);         // lds   Rm, MACH
+    TPL_DS uint64 LDSMACL(const DecodedArgs &args);         // lds   Rm, MACL
+    TPL_DS uint64 LDSPR(const DecodedArgs &args);           // lds   Rm, PR
+    TPL_DS uint64 STCGBR(const DecodedArgs &args);          // stc   GBR, Rn
+    TPL_DS uint64 STCSR(const DecodedArgs &args);           // stc   SR, Rn
+    TPL_DS uint64 STCVBR(const DecodedArgs &args);          // stc   VBR, Rn
+    TPL_DS uint64 STSMACH(const DecodedArgs &args);         // sts   MACH, Rn
+    TPL_DS uint64 STSMACL(const DecodedArgs &args);         // sts   MACL, Rn
+    TPL_DS uint64 STSPR(const DecodedArgs &args);           // sts   PR, Rn
+    TPL_TRAITS_DS uint64 LDCMGBR(const DecodedArgs &args);  // ldc.l @Rm+, GBR
+    TPL_TRAITS_DS uint64 LDCMSR(const DecodedArgs &args);   // ldc.l @Rm+, SR
+    TPL_TRAITS_DS uint64 LDCMVBR(const DecodedArgs &args);  // ldc.l @Rm+, VBR
+    TPL_TRAITS_DS uint64 LDSMMACH(const DecodedArgs &args); // lds.l @Rm+, MACH
+    TPL_TRAITS_DS uint64 LDSMMACL(const DecodedArgs &args); // lds.l @Rm+, MACL
+    TPL_TRAITS_DS uint64 LDSMPR(const DecodedArgs &args);   // lds.l @Rm+, PR
+    TPL_TRAITS_DS uint64 STCMGBR(const DecodedArgs &args);  // stc.l GBR, @-Rn
+    TPL_TRAITS_DS uint64 STCMSR(const DecodedArgs &args);   // stc.l SR, @-Rn
+    TPL_TRAITS_DS uint64 STCMVBR(const DecodedArgs &args);  // stc.l VBR, @-Rn
+    TPL_TRAITS_DS uint64 STSMMACH(const DecodedArgs &args); // sts.l MACH, @-Rn
+    TPL_TRAITS_DS uint64 STSMMACL(const DecodedArgs &args); // sts.l MACL, @-Rn
+    TPL_TRAITS_DS uint64 STSMPR(const DecodedArgs &args);   // sts.l PR, @-Rn
 
-    void ADD(const DecodedArgs &args);             // add    Rm, Rn
-    void ADDI(const DecodedArgs &args);            // add    imm, Rn
-    void ADDC(const DecodedArgs &args);            // addc   Rm, Rn
-    void ADDV(const DecodedArgs &args);            // addv   Rm, Rn
-    void AND(const DecodedArgs &args);             // and    Rm, Rn
-    void ANDI(const DecodedArgs &args);            // and    imm, R0
-    TPL_TRAITS void ANDM(const DecodedArgs &args); // and.   b imm, @(R0,GBR)
-    void NEG(const DecodedArgs &args);             // neg    Rm, Rn
-    void NEGC(const DecodedArgs &args);            // negc   Rm, Rn
-    void NOT(const DecodedArgs &args);             // not    Rm, Rn
-    void OR(const DecodedArgs &args);              // or     Rm, Rn
-    void ORI(const DecodedArgs &args);             // or     imm, Rn
-    TPL_TRAITS void ORM(const DecodedArgs &args);  // or.b   imm, @(R0,GBR)
-    void ROTCL(const DecodedArgs &args);           // rotcl  Rn
-    void ROTCR(const DecodedArgs &args);           // rotcr  Rn
-    void ROTL(const DecodedArgs &args);            // rotl   Rn
-    void ROTR(const DecodedArgs &args);            // rotr   Rn
-    void SHAL(const DecodedArgs &args);            // shal   Rn
-    void SHAR(const DecodedArgs &args);            // shar   Rn
-    void SHLL(const DecodedArgs &args);            // shll   Rn
-    void SHLL2(const DecodedArgs &args);           // shll2  Rn
-    void SHLL8(const DecodedArgs &args);           // shll8  Rn
-    void SHLL16(const DecodedArgs &args);          // shll16 Rn
-    void SHLR(const DecodedArgs &args);            // shlr   Rn
-    void SHLR2(const DecodedArgs &args);           // shlr2  Rn
-    void SHLR8(const DecodedArgs &args);           // shlr8  Rn
-    void SHLR16(const DecodedArgs &args);          // shlr16 Rn
-    void SUB(const DecodedArgs &args);             // sub    Rm, Rn
-    void SUBC(const DecodedArgs &args);            // subc   Rm, Rn
-    void SUBV(const DecodedArgs &args);            // subv   Rm, Rn
-    void XOR(const DecodedArgs &args);             // xor    Rm, Rn
-    void XORI(const DecodedArgs &args);            // xor    imm, Rn
-    TPL_TRAITS void XORM(const DecodedArgs &args); // xor.b  imm, @(R0,GBR)
+    TPL_DS uint64 ADD(const DecodedArgs &args);         // add    Rm, Rn
+    TPL_DS uint64 ADDI(const DecodedArgs &args);        // add    imm, Rn
+    TPL_DS uint64 ADDC(const DecodedArgs &args);        // addc   Rm, Rn
+    TPL_DS uint64 ADDV(const DecodedArgs &args);        // addv   Rm, Rn
+    TPL_DS uint64 AND(const DecodedArgs &args);         // and    Rm, Rn
+    TPL_DS uint64 ANDI(const DecodedArgs &args);        // and    imm, R0
+    TPL_TRAITS_DS uint64 ANDM(const DecodedArgs &args); // and.   b imm, @(R0,GBR)
+    TPL_DS uint64 NEG(const DecodedArgs &args);         // neg    Rm, Rn
+    TPL_DS uint64 NEGC(const DecodedArgs &args);        // negc   Rm, Rn
+    TPL_DS uint64 NOT(const DecodedArgs &args);         // not    Rm, Rn
+    TPL_DS uint64 OR(const DecodedArgs &args);          // or     Rm, Rn
+    TPL_DS uint64 ORI(const DecodedArgs &args);         // or     imm, Rn
+    TPL_TRAITS_DS uint64 ORM(const DecodedArgs &args);  // or.b   imm, @(R0,GBR)
+    TPL_DS uint64 ROTCL(const DecodedArgs &args);       // rotcl  Rn
+    TPL_DS uint64 ROTCR(const DecodedArgs &args);       // rotcr  Rn
+    TPL_DS uint64 ROTL(const DecodedArgs &args);        // rotl   Rn
+    TPL_DS uint64 ROTR(const DecodedArgs &args);        // rotr   Rn
+    TPL_DS uint64 SHAL(const DecodedArgs &args);        // shal   Rn
+    TPL_DS uint64 SHAR(const DecodedArgs &args);        // shar   Rn
+    TPL_DS uint64 SHLL(const DecodedArgs &args);        // shll   Rn
+    TPL_DS uint64 SHLL2(const DecodedArgs &args);       // shll2  Rn
+    TPL_DS uint64 SHLL8(const DecodedArgs &args);       // shll8  Rn
+    TPL_DS uint64 SHLL16(const DecodedArgs &args);      // shll16 Rn
+    TPL_DS uint64 SHLR(const DecodedArgs &args);        // shlr   Rn
+    TPL_DS uint64 SHLR2(const DecodedArgs &args);       // shlr2  Rn
+    TPL_DS uint64 SHLR8(const DecodedArgs &args);       // shlr8  Rn
+    TPL_DS uint64 SHLR16(const DecodedArgs &args);      // shlr16 Rn
+    TPL_DS uint64 SUB(const DecodedArgs &args);         // sub    Rm, Rn
+    TPL_DS uint64 SUBC(const DecodedArgs &args);        // subc   Rm, Rn
+    TPL_DS uint64 SUBV(const DecodedArgs &args);        // subv   Rm, Rn
+    TPL_DS uint64 XOR(const DecodedArgs &args);         // xor    Rm, Rn
+    TPL_DS uint64 XORI(const DecodedArgs &args);        // xor    imm, Rn
+    TPL_TRAITS_DS uint64 XORM(const DecodedArgs &args);    // xor.b  imm, @(R0,GBR)
 
-    void DT(const DecodedArgs &args); // dt Rn
+    TPL_DS uint64 DT(const DecodedArgs &args); // dt Rn
 
-    void CLRMAC();                                 // clrmac
-    TPL_TRAITS void MACW(const DecodedArgs &args); // mac.w   @Rm+, @Rn+
-    TPL_TRAITS void MACL(const DecodedArgs &args); // mac.l   @Rm+, @Rn+
-    void MULL(const DecodedArgs &args);            // mul.l   Rm, Rn
-    void MULS(const DecodedArgs &args);            // muls.w  Rm, Rn
-    void MULU(const DecodedArgs &args);            // mulu.w  Rm, Rn
-    void DMULS(const DecodedArgs &args);           // dmuls.l Rm, Rn
-    void DMULU(const DecodedArgs &args);           // dmulu.l Rm, Rn
+    TPL_DS uint64 CLRMAC();                             // clrmac
+    TPL_TRAITS_DS uint64 MACW(const DecodedArgs &args); // mac.w   @Rm+, @Rn+
+    TPL_TRAITS_DS uint64 MACL(const DecodedArgs &args); // mac.l   @Rm+, @Rn+
+    TPL_DS uint64 MULL(const DecodedArgs &args);        // mul.l   Rm, Rn
+    TPL_DS uint64 MULS(const DecodedArgs &args);        // muls.w  Rm, Rn
+    TPL_DS uint64 MULU(const DecodedArgs &args);        // mulu.w  Rm, Rn
+    TPL_DS uint64 DMULS(const DecodedArgs &args);       // dmuls.l Rm, Rn
+    TPL_DS uint64 DMULU(const DecodedArgs &args);       // dmulu.l Rm, Rn
 
-    void DIV0S(const DecodedArgs &args); // div0s Rm, Rn
-    void DIV0U();                        // div0u
-    void DIV1(const DecodedArgs &args);  // div1  Rm, Rn
+    TPL_DS uint64 DIV0S(const DecodedArgs &args); // div0s Rm, Rn
+    TPL_DS uint64 DIV0U();                        // div0u
+    TPL_DS uint64 DIV1(const DecodedArgs &args);  // div1  Rm, Rn
 
-    void CMPIM(const DecodedArgs &args);           // cmp/eq  imm, R0
-    void CMPEQ(const DecodedArgs &args);           // cmp/eq  Rm, Rn
-    void CMPGE(const DecodedArgs &args);           // cmp/ge  Rm, Rn
-    void CMPGT(const DecodedArgs &args);           // cmp/gt  Rm, Rn
-    void CMPHI(const DecodedArgs &args);           // cmp/hi  Rm, Rn
-    void CMPHS(const DecodedArgs &args);           // cmp/hs  Rm, Rn
-    void CMPPL(const DecodedArgs &args);           // cmp/pl  Rn
-    void CMPPZ(const DecodedArgs &args);           // cmp/pz  Rn
-    void CMPSTR(const DecodedArgs &args);          // cmp/str Rm, Rn
-    TPL_TRAITS void TAS(const DecodedArgs &args);  // tas.b   @Rn
-    void TST(const DecodedArgs &args);             // tst     Rm, Rn
-    void TSTI(const DecodedArgs &args);            // tst     imm, R0
-    TPL_TRAITS void TSTM(const DecodedArgs &args); // tst.b   imm, @(R0,GBR)
+    TPL_DS uint64 CMPIM(const DecodedArgs &args);       // cmp/eq  imm, R0
+    TPL_DS uint64 CMPEQ(const DecodedArgs &args);       // cmp/eq  Rm, Rn
+    TPL_DS uint64 CMPGE(const DecodedArgs &args);       // cmp/ge  Rm, Rn
+    TPL_DS uint64 CMPGT(const DecodedArgs &args);       // cmp/gt  Rm, Rn
+    TPL_DS uint64 CMPHI(const DecodedArgs &args);       // cmp/hi  Rm, Rn
+    TPL_DS uint64 CMPHS(const DecodedArgs &args);       // cmp/hs  Rm, Rn
+    TPL_DS uint64 CMPPL(const DecodedArgs &args);       // cmp/pl  Rn
+    TPL_DS uint64 CMPPZ(const DecodedArgs &args);       // cmp/pz  Rn
+    TPL_DS uint64 CMPSTR(const DecodedArgs &args);      // cmp/str Rm, Rn
+    TPL_TRAITS_DS uint64 TAS(const DecodedArgs &args);  // tas.b   @Rn
+    TPL_DS uint64 TST(const DecodedArgs &args);         // tst     Rm, Rn
+    TPL_DS uint64 TSTI(const DecodedArgs &args);        // tst     imm, R0
+    TPL_TRAITS_DS uint64 TSTM(const DecodedArgs &args); // tst.b   imm, @(R0,GBR)
 
-    uint64 BF(const DecodedArgs &args);             // bf    disp
-    uint64 BFS(const DecodedArgs &args);            // bf/s  disp
-    uint64 BT(const DecodedArgs &args);             // bt    disp
-    uint64 BTS(const DecodedArgs &args);            // bt/s  disp
-    void BRA(const DecodedArgs &args);              // bra   disp
-    void BRAF(const DecodedArgs &args);             // braf  Rm
-    void BSR(const DecodedArgs &args);              // bsr   disp
-    void BSRF(const DecodedArgs &args);             // bsrf  Rm
-    void JMP(const DecodedArgs &args);              // jmp   @Rm
-    void JSR(const DecodedArgs &args);              // jsr   @Rm
-    TPL_TRAITS void TRAPA(const DecodedArgs &args); // trapa imm
+    uint64 BF(const DecodedArgs &args);               // bf    disp
+    uint64 BFS(const DecodedArgs &args);              // bf/s  disp
+    uint64 BT(const DecodedArgs &args);               // bt    disp
+    uint64 BTS(const DecodedArgs &args);              // bt/s  disp
+    uint64 BRA(const DecodedArgs &args);              // bra   disp
+    uint64 BRAF(const DecodedArgs &args);             // braf  Rm
+    uint64 BSR(const DecodedArgs &args);              // bsr   disp
+    uint64 BSRF(const DecodedArgs &args);             // bsrf  Rm
+    uint64 JMP(const DecodedArgs &args);              // jmp   @Rm
+    uint64 JSR(const DecodedArgs &args);              // jsr   @Rm
+    TPL_TRAITS uint64 TRAPA(const DecodedArgs &args); // trapa imm
 
-    TPL_TRAITS void RTE(); // rte
-    void RTS();            // rts
+    TPL_TRAITS uint64 RTE(); // rte
+    uint64 RTS();            // rts
 
 #undef TPL_TRAITS
 #undef TPL_TRAITS_DS
