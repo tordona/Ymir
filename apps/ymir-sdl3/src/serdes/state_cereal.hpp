@@ -69,7 +69,6 @@ void serialize(Archive &ar, SH2State::DMAC::Channel &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SH2State::WDT &s, const uint32 version) {
-    // Version history:
     // v5:
     // - New fields
     //   - WTCSR_mask = false
@@ -84,7 +83,6 @@ void serialize(Archive &ar, SH2State::WDT &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, SH2State::DIVU &s, const uint32 version) {
-    // Version history:
     // v5:
     // - New fields
     //   - VCRDIV = INTC.vectors[static_cast<size_t>(InterruptSource::DIVU_OVFI)]
@@ -98,7 +96,6 @@ void serialize(Archive &ar, SH2State::DIVU &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, SH2State::FRT &s, const uint32 version) {
-    // Version history:
     // v5:
     // - New fields
     //   - FTCSR_mask = 0x00
@@ -128,7 +125,6 @@ void serialize(Archive &ar, SH2State::Cache::Entry &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SCUState &s, const uint32 version) {
-    // Version history:
     // v5:
     // - New fields
     //   - pendingIntrLevel = 0
@@ -250,7 +246,6 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState &s, const uint32 version) {
-    // Version history:
     // v5:
     // - New fields
     //   - erase = false
@@ -342,7 +337,6 @@ void serialize(Archive &ar, VDPState::VDPRendererState::VDP1RenderState &s, cons
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, const uint32 version) {
-    // Version history:
     // v4:
     // - Changed fields
     //   - fracScrollX and fracScrollY no longer include the values of SC[XY][ID]N#. Therefore, they need to be
@@ -391,7 +385,6 @@ void serialize(Archive &ar, M68KState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SCSPState &s, const uint32 version) {
-    // Version history:
     // v5:
     // - Changed fields
     //   - cddaBuffer array size reduced from 2048 * 75 to 2352 * 25; note that this is a circular buffer indexed by
@@ -477,7 +470,6 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
-    // Version history:
     // v4:
     // - New fields
     //   - MM = bit 15 of extra10 if available, otherwise false
@@ -611,7 +603,6 @@ void serialize(Archive &ar, SCSPTimer &s) {
 
 template <class Archive>
 void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
-    // Version history:
     // v5:
     // - New fields
     //   - enum CDBlockState::TransferType: added PutSector (= 6)
@@ -681,7 +672,6 @@ void serialize(Archive &ar, CDBlockState::BufferState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, CDBlockState::FilterState &s) {
-    // Version history:
     // v5:
     // - Changed fields:
     //   - trueOutput renamed to passOutput; no changes to value
