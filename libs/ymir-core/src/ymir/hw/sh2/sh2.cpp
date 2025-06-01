@@ -288,8 +288,8 @@ void SH2::DumpCacheAddressTag(std::ostream &out) const {
 }
 
 template <bool debug, bool enableCache>
-FLATTEN uint64 SH2::Advance(uint64 cycles) {
-    m_cyclesExecuted = 0;
+FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
+    m_cyclesExecuted = spilloverCycles;
     AdvanceWDT();
     AdvanceFRT();
     while (m_cyclesExecuted < cycles) {
@@ -312,10 +312,10 @@ FLATTEN uint64 SH2::Advance(uint64 cycles) {
     return m_cyclesExecuted;
 }
 
-template uint64 SH2::Advance<false, false>(uint64 cycles);
-template uint64 SH2::Advance<false, true>(uint64 cycles);
-template uint64 SH2::Advance<true, false>(uint64 cycles);
-template uint64 SH2::Advance<true, true>(uint64 cycles);
+template uint64 SH2::Advance<false, false>(uint64, uint64);
+template uint64 SH2::Advance<false, true>(uint64, uint64);
+template uint64 SH2::Advance<true, false>(uint64, uint64);
+template uint64 SH2::Advance<true, true>(uint64, uint64);
 
 template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Step() {

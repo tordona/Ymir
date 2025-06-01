@@ -60,8 +60,16 @@ public:
 
     // Advances the SH2 for at least the specified number of cycles.
     // Returns the total number of cycles executed.
+    //
+    
+    /// @brief Advances the SH2 for at least the specified number of cycles.
+    /// @tparam debug whether to enable debug features
+    /// @tparam enableCache whether to emulate the cache
+    /// @param[in] cycles the minimum number of cycles
+    /// @param[in] spilloverCycles cycles spilled over from the previous execution
+    /// @return the number of cycles actually executed
     template <bool debug, bool enableCache>
-    uint64 Advance(uint64 cycles);
+    uint64 Advance(uint64 cycles, uint64 spilloverCycles = 0);
 
     // Executes a single instruction.
     // Returns the number of cycles executed.

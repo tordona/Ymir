@@ -14,6 +14,8 @@
 - Media: Preliminary support for CHD files. (#48)
 - Media: Support multi-indexed audio tracks (BIN/CUE only). (#58)
 - SMPC: Set SF=0 on unimplemented commands so that games can move forward.
+- SH-2: Build infrastructure needed to honor memory access cycles for improved performance and accuracy.
+- SH-2: Slow down accesses to on-chip registers to 4 cycles.
 - VDP: Rewrite VDP2 frame composition code to use SIMD on x86 and ARM for improved performance. (@Wunkolo)
 
 ### Fixes
@@ -41,6 +43,7 @@
 - SH-2: Fixes and accuracy improvements to WDT (thanks to @celeriyacon).
 - SH-2: Lazily update WDT and FRT timers. Provides a 5-10% performance boost *and* improves accuracy!
 - SMPC: Various INTBACK handling adjustments. Partially fixes Assault Suit Leynos 2 no-boot issues.
+- System: Fix cycle counting on the main loop not taking into account the number of cycles taken by the CPUs, resulting in undercounting timers.
 - VDP1/2: Fix handling of 16-bit sprite data from VDP1 when VDP2 uses 8-bit sprite types. Fixes sprites in I Love Mickey Mouse/Donald Duck.
 - VDP2: Allow 8-bit reads and writes to VDP2 registers.
 - VDP2: Apply transparency to mixed-format sprite data when rendering the special value 0x8000. Fixes Assault Suit Leynos 2 black screen after loading.

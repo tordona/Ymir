@@ -691,6 +691,10 @@ void serialize(Archive &ar, CDBlockState::FilterState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, State &s, const uint32 version) {
+    // v5:
+    // - New fields:
+    //   - uint64 ssh2SpilloverCycles = 0
+
     // Reject version 0 and future versions
     if (version == 0 || version > kVersion) {
         return;
@@ -706,6 +710,12 @@ void serialize(Archive &ar, State &s, const uint32 version) {
     serialize(ar, s.vdp, version);
     serialize(ar, s.scsp, version);
     serialize(ar, s.cdblock, version);
+
+    if (version >= 5) {
+        ar(s.ssh2SpilloverCycles);
+    } else {
+        s.ssh2SpilloverCycles = 0;
+    }
 
     if (version < 5) {
         // Fixup FRT and WDT cycle counters which changed from local to global

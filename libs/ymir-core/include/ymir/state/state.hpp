@@ -21,6 +21,8 @@ struct State {
     VDPState vdp;
     SCSPState scsp;
     CDBlockState cdblock;
+
+    uint64 ssh2SpilloverCycles;
 };
 
 } // namespace ymir::state

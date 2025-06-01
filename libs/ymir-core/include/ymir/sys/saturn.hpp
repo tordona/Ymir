@@ -274,7 +274,7 @@ private:
     void UpdateVideoStandard(core::config::sys::VideoStandard videoStandard);
 
     // -------------------------------------------------------------------------
-    // Global components and state
+    // Global components and parameters
 
     /// @brief Global system parameters.
     sys::System m_system;
@@ -298,6 +298,11 @@ public:
     cdblock::CDBlock CDBlock; ///< CD block and media
 
 private:
+    // -------------------------------------------------------------------------
+    // Internal state
+
+    uint64 m_ssh2SpilloverCycles; ///< Slave SH-2 execution cycles spilled over between executions
+
     // -------------------------------------------------------------------------
     // System operations (SMPC) - smpc::ISMPCOperations implementation
 
