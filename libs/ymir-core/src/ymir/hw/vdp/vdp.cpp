@@ -3833,21 +3833,9 @@ FORCE_INLINE void Color888AverageMasked(const std::span<Color888> dest, const st
         const __m256i topColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&topColors[i]));
         const __m256i btmColor_x8 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(&btmColors[i]));
 
-        const __m256i topColor16lo = _mm256_unpacklo_epi8(topColor_x8, _mm256_setzero_si256());
-        const __m256i btmColor16lo = _mm256_unpacklo_epi8(btmColor_x8, _mm256_setzero_si256());
-
-        const __m256i topColor16hi = _mm256_unpackhi_epi8(topColor_x8, _mm256_setzero_si256());
-        const __m256i btmColor16hi = _mm256_unpackhi_epi8(btmColor_x8, _mm256_setzero_si256());
-
-        __m256i average16lo = _mm256_add_epi16(topColor16lo, btmColor16lo);
-        __m256i average16hi = _mm256_add_epi16(topColor16hi, btmColor16hi);
-
-        average16lo = _mm256_srli_epi16(average16lo, 1);
-        average16hi = _mm256_srli_epi16(average16hi, 1);
-
-        // Pack back into 8-bit values, be sure to truncate to avoid saturation
-        const __m256i average_x8 = _mm256_packus_epi16(_mm256_and_si256(average16lo, _mm256_set1_epi16(0xFF)),
-                                                       _mm256_and_si256(average16hi, _mm256_set1_epi16(0xFF)));
+        const __m256i average_x8 = _mm256_add_epi32(
+            _mm256_srli_epi32(_mm256_and_si256(_mm256_xor_si256(topColor_x8, btmColor_x8), _mm256_set1_epi8(0xFE)), 1),
+            _mm256_and_si256(topColor_x8, btmColor_x8));
 
         // Blend with mask
         const __m256i dstColor_x8 = _mm256_blendv_epi8(topColor_x8, average_x8, mask_x8);
@@ -3869,22 +3857,9 @@ FORCE_INLINE void Color888AverageMasked(const std::span<Color888> dest, const st
         const __m128i topColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&topColors[i]));
         const __m128i btmColor_x4 = _mm_loadu_si128(reinterpret_cast<const __m128i *>(&btmColors[i]));
 
-        // Use 16-bit arithmetic
-        const __m128i topColor16lo = _mm_unpacklo_epi8(topColor_x4, _mm_setzero_si128());
-        const __m128i btmColor16lo = _mm_unpacklo_epi8(btmColor_x4, _mm_setzero_si128());
-
-        const __m128i topColor16hi = _mm_unpackhi_epi8(topColor_x4, _mm_setzero_si128());
-        const __m128i btmColor16hi = _mm_unpackhi_epi8(btmColor_x4, _mm_setzero_si128());
-
-        __m128i average16lo = _mm_add_epi16(topColor16lo, btmColor16lo);
-        __m128i average16hi = _mm_add_epi16(topColor16hi, btmColor16hi);
-
-        average16lo = _mm_srli_epi16(average16lo, 1);
-        average16hi = _mm_srli_epi16(average16hi, 1);
-
-        // Pack back into 8-bit values, be sure to truncate to avoid saturation
-        const __m128i average_x4 = _mm_packus_epi16(_mm_and_si128(average16lo, _mm_set1_epi16(0xFF)),
-                                                    _mm_and_si128(average16hi, _mm_set1_epi16(0xFF)));
+        const __m128i average_x4 = _mm_add_epi32(
+            _mm_srli_epi32(_mm_and_si128(_mm_xor_si128(topColor_x4, btmColor_x4), _mm_set1_epi8(0xFE)), 1),
+            _mm_and_si128(topColor_x4, btmColor_x4));
 
         // Blend with mask
         const __m128i dstColor_x4 =
