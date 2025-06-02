@@ -139,6 +139,7 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
     // - New fields
     //   - enum SCUState::CartType: added ROM
 
+    ar(s.dma, s.dsp);
     ar(s.cartType);
 
     if (version >= 4) {
@@ -414,31 +415,42 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
         uint32 count = cddaWritePos - cddaReadPos;
         if (cddaWritePos < cddaReadPos) {
             count += 2048 * 75;
+        } else if (cddaWritePos == cddaReadPos && s.cddaReady) {
+            count = 2048 * 75;
         }
         if (count > s.cddaBuffer.size()) {
             cddaReadPos += count - s.cddaBuffer.size();
             if (cddaReadPos >= 2048 * 75) {
                 cddaReadPos -= 2048 * 75;
             }
+            count = s.cddaBuffer.size();
         }
 
         if (cddaWritePos < cddaReadPos) {
             // ======W-----R======
             s.cddaReadPos = 0;
             s.cddaWritePos = cddaWritePos - cddaReadPos + 2048 * 75;
+            if (s.cddaWritePos >= s.cddaBuffer.size()) {
+                s.cddaWritePos -= s.cddaBuffer.size();
+            }
             std::copy(cddaBuffer->begin() + cddaReadPos, cddaBuffer->end(), s.cddaBuffer.begin());
-            std::copy(cddaBuffer->begin(), cddaBuffer->begin() + cddaWritePos, s.cddaBuffer.begin() + cddaReadPos);
+            std::copy_n(cddaBuffer->begin(), cddaWritePos, s.cddaBuffer.begin() + (2048 * 75 - cddaReadPos));
         } else if (cddaWritePos > cddaReadPos) {
             // ------R=====W------
             s.cddaReadPos = 0;
             s.cddaWritePos = cddaWritePos - cddaReadPos;
-            std::copy(cddaBuffer->begin(), cddaBuffer->begin() + s.cddaWritePos, s.cddaBuffer.begin());
+            if (s.cddaWritePos >= s.cddaBuffer.size()) {
+                s.cddaWritePos -= s.cddaBuffer.size();
+            }
+            std::copy(cddaBuffer->begin() + cddaReadPos, cddaBuffer->begin() + cddaWritePos, s.cddaBuffer.begin());
         } else if (s.cddaReady) {
             // Buffer is full
+            // NOTE: this case should never happen since the target buffer is smaller than the source buffer and the
+            // copy length is clamped before reaching this if-else chain
             std::copy(cddaBuffer->begin() + cddaReadPos, cddaBuffer->end(), s.cddaBuffer.begin());
             std::copy(cddaBuffer->begin(), cddaBuffer->begin() + cddaWritePos, s.cddaBuffer.begin() + cddaReadPos);
             s.cddaReadPos = 0;
-            s.cddaWritePos = 2048 * 75;
+            s.cddaWritePos = 0;
         } else {
             // Buffer is empty
             s.cddaBuffer.fill(0);
@@ -719,10 +731,10 @@ void serialize(Archive &ar, State &s, const uint32 version) {
 
     if (version < 5) {
         // Fixup FRT and WDT cycle counters which changed from local to global
-        s.msh2.frt.cycleCount += s.scheduler.currCount;
-        s.msh2.wdt.cycleCount += s.scheduler.currCount;
-        s.ssh2.frt.cycleCount += s.scheduler.currCount;
-        s.ssh2.wdt.cycleCount += s.scheduler.currCount;
+        s.msh2.frt.cycleCount = s.scheduler.currCount - s.msh2.frt.cycleCount;
+        s.msh2.wdt.cycleCount = s.scheduler.currCount - s.msh2.wdt.cycleCount;
+        s.ssh2.frt.cycleCount = s.scheduler.currCount - s.ssh2.frt.cycleCount;
+        s.ssh2.wdt.cycleCount = s.scheduler.currCount - s.ssh2.wdt.cycleCount;
     }
 }
 
