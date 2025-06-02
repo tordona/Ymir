@@ -262,8 +262,17 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
 
 void SH2::MapMemory(sys::Bus &bus) {
     const uint32 addressOffset = !BCR1.MASTER * 0x80'0000;
+
+    // Map MINIT/SINIT area
     bus.MapNormal(
         0x100'0000 + addressOffset, 0x17F'FFFF + addressOffset, this,
+
+        // Reads are prohibited
+        [](uint32 address, void *) -> uint8 { return 0; }, [](uint32 address, void *) -> uint16 { return 0; },
+        [](uint32 address, void *) -> uint32 { return 0; },
+
+        // Writes trigger FRT ICI
+        // - 8-bit writes only work on odd addresses
         [](uint32 address, uint8, void *ctx) {
             if (address & 1) {
                 static_cast<SH2 *>(ctx)->TriggerFRTInputCapture();
@@ -1061,6 +1070,15 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
 
     case 0x71: m_dmaChannels[0].WriteDRCR(value); break;
     case 0x72: m_dmaChannels[1].WriteDRCR(value); break;
+
+    case 0x80: [[fallthrough]];
+    case 0x88: break; // WDT.WTCNT/WTCSR only accept 16-bit writes
+
+    case 0x81: [[fallthrough]];
+    case 0x89: break; // WDT.WTCNT/WTCSR only accept 16-bit writes
+
+    case 0x83: [[fallthrough]];
+    case 0x8B: break; // WDT.RSTCSR only accepts 16-bit writes
 
     case 0x91: SBYCR.u8 = value & 0xDF; break;
     case 0x92: m_cache.WriteCCR<poke>(value); break;
