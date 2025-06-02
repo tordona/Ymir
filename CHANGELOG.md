@@ -37,7 +37,7 @@
 - SCU: Set ALU = AC before running DSP operations. Fixes Quake crash on boot. (#156)
 - SCU: Timer enable flag applies to both timers. Fixes background priority issues in Need for Speed.
 - SH-2: Fix PC offsets for exceptions, interrupts, TRAPA and RTE. Fixes some game boot issues.
-- SH-2: Fix PC offsets for `mova`, `mov.w` and `mov.l` with `@(disp,PC)` operand  (thanks to @celeriyacon).
+- SH-2: Fix PC offsets for `mova`, `mov.w` and `mov.l` with `@(disp,PC)` operand (thanks to @celeriyacon).
 - SH-2: Fixes and accuracy improvements to DIVU (thanks to @celeriyacon).
 - SH-2: Fixes and accuracy improvements to FRT (thanks to @celeriyacon). Fixes freezes in Daytona USA. (#7)
 - SH-2: Fixes and accuracy improvements to WDT (thanks to @celeriyacon).
