@@ -138,6 +138,7 @@ struct WatchdogTimer {
         WTCSR.CKSn = bit::extract<0, 2>(value);
         if (!WTCSR.TME) {
             WTCNT = 0;
+            WTCSR.OVF = 0;
         }
 
         m_clockDividerShift = kDividerShifts[WTCSR.CKSn];
