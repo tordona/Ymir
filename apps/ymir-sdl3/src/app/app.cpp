@@ -1334,6 +1334,14 @@ void App::RunEmulator() {
                     }
                 }
                 break;
+
+            case SDL_EVENT_DROP_FILE: //
+            {
+                std::string fileStr = evt.drop.data;
+                const std::u8string u8File{fileStr.begin(), fileStr.end()};
+                m_context.EnqueueEvent(events::emu::LoadDisc(u8File));
+                break;
+            }
             }
         }
 
@@ -2193,12 +2201,19 @@ void App::EmulatorThread() {
                 break;
             case LoadDisc: //
             {
+                auto path = std::get<std::filesystem::path>(evt.value);
                 // LoadDiscImage locks the disc mutex
-                LoadDiscImage(std::get<std::filesystem::path>(evt.value));
-                LoadSaveStates();
-                auto iplLoadResult = LoadIPLROM();
-                if (!iplLoadResult.succeeded) {
-                    OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
+                if (LoadDiscImage(path)) {
+                    LoadSaveStates();
+                    auto iplLoadResult = LoadIPLROM();
+                    if (!iplLoadResult.succeeded) {
+                        OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
+                    }
+                } else {
+                    // TODO: improve user feedback
+                    // - image loaders should return error messages
+                    // - LoadDiscImage should propagate those errors
+                    OpenSimpleErrorModal(fmt::format("Could not load {} as a game disc image.", path));
                 }
                 break;
             }

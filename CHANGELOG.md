@@ -4,6 +4,8 @@
 
 ### New features and improvements
 
+- App: You can now drag and drop CCD, CHD, CUE, ISO or MDS files into the emulator window to load games.
+
 ### Fixes
 
 
