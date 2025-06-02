@@ -1,11 +1,19 @@
 # Ymir changelog
 
+## Version 0.1.5
+
+### New features and improvements
+
+### Fixes
+
+
 ## Version 0.1.4
 
 ### New features and improvements
 
 - App: Added option to pause emulator when the window loses focus. (#181)
 - App: Added shadow under playback indicators to make them visible on white backgrounds.
+- App: Automatically adjust scaling when system-wide DPI is changed. (@Wunkolo)
 - App: Changed background color around screen to black on windowed mode.
 - CD Block: Implement Put Sector command, used by After Burner II. (#78)
 - Core: Performance improvements, especially for ARM builds. (@Wunkolo)
@@ -20,7 +28,6 @@
 
 ### Fixes
 
-- App: Automatically adjust scaling when system-wide DPI is changed. (@Wunkolo)
 - App: Customized profile paths are now created at the specified location instead of the default. (#119, #126; @lvsweat)
 - CD Block: Clear partitions and filters on soft resets triggered by Initialize CD System command. Fixes some game boot issues.
 - CD Block: Clear the "paused due to buffer exhausted" flag when SeekDisc command pauses playback. Fixes Sakura Taisen 2 read errors after FMVs.
