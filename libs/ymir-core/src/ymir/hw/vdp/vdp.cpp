@@ -3414,8 +3414,8 @@ FORCE_INLINE bool AllZeroU8(std::span<const uint8> values) {
         // Compare to zero
         vec16 = _mm_cmpeq_epi8(vec16, _mm_setzero_si128());
 
-        // Extract MSB all into a 16-bit mask, if any bit is set, then we have a true value
-        if (_mm_movemask_epi8(vec16) != 0x0) {
+        // Extract MSB all into a 16-bit mask, if any bit is clear, then we have a true value
+        if (_mm_movemask_epi8(vec16) != 0xFFFF) {
             return false;
         }
     }
