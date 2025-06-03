@@ -1,12 +1,14 @@
 # Ymir changelog
 
-## Version 0.1.5
+## Version 0.1.4+1
 
 ### New features and improvements
 
 - App: You can now drag and drop CCD, CHD, CUE, ISO or MDS files into the emulator window to load games.
 
 ### Fixes
+
+- VDP2: Fix black screen on SSE2 builds.
 
 
 ## Version 0.1.4
