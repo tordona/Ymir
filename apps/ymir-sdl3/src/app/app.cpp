@@ -246,6 +246,7 @@ int App::Run(const CommandLineOptions &options) {
     }
 
     LoadSaveStates();
+    LoadRecentDiscs();
 
     RunEmulator();
 
@@ -1537,6 +1538,23 @@ void App::RunEmulator() {
                     if (ImGui::MenuItem("Load disc image",
                                         input::ToShortcut(inputContext, actions::cd_drive::LoadDisc).c_str())) {
                         OpenLoadDiscDialog();
+                    }
+                    if (ImGui::BeginMenu("Recent disc images")) {
+                        if (m_context.state.recentDiscs.empty()) {
+                            ImGui::TextDisabled("(empty)");
+                        } else {
+                            for (auto &path : m_context.state.recentDiscs) {
+                                if (ImGui::MenuItem(fmt::format("{}", path).c_str())) {
+                                    m_context.EnqueueEvent(events::emu::LoadDisc(path));
+                                }
+                            }
+                            ImGui::Separator();
+                            if (ImGui::MenuItem("Clear")) {
+                                m_context.state.recentDiscs.clear();
+                                SaveRecentDiscs();
+                            }
+                        }
+                        ImGui::EndMenu();
                     }
                     if (ImGui::MenuItem("Open/close tray",
                                         input::ToShortcut(inputContext, actions::cd_drive::OpenCloseTray).c_str())) {
@@ -3000,6 +3018,7 @@ void App::ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, i
 }
 
 bool App::LoadDiscImage(std::filesystem::path path) {
+    // Try to load disc image from specified path
     devlog::info<grp::base>("Loading disc image from {}", path);
     ymir::media::Disc disc{};
     if (!ymir::media::LoadDisc(path, disc, m_context.settings.general.preloadDiscImagesToRAM)) {
@@ -3008,12 +3027,30 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     }
     devlog::info<grp::base>("Disc image loaded succesfully");
 
+    // Insert disc into the Saturn drive
     {
         std::unique_lock lock{m_context.locks.disc};
         m_context.saturn.LoadDisc(std::move(disc));
-        m_context.state.loadedDiscImagePath = path;
     }
 
+    // Update currently loaded disc path
+    m_context.state.loadedDiscImagePath = path;
+
+    // Add to recent games list
+    if (auto it = std::find(m_context.state.recentDiscs.begin(), m_context.state.recentDiscs.end(), path);
+        it != m_context.state.recentDiscs.end()) {
+        m_context.state.recentDiscs.erase(it);
+    }
+    m_context.state.recentDiscs.push_front(path);
+
+    // Limit to 10 entries
+    if (m_context.state.recentDiscs.size() > 10) {
+        m_context.state.recentDiscs.resize(10);
+    }
+
+    SaveRecentDiscs();
+
+    // Load cartridge
     if (m_context.settings.cartridge.autoLoadGameCarts) {
         LoadRecommendedCartridge();
     } else {
@@ -3022,6 +3059,31 @@ bool App::LoadDiscImage(std::filesystem::path path) {
 
     m_context.rewindBuffer.Reset();
     return true;
+}
+
+void App::LoadRecentDiscs() {
+    auto listPath = m_context.profile.GetPath(ProfilePath::PersistentState) / "recent_discs.txt";
+    std::ifstream in{listPath};
+    if (!in) {
+        return;
+    }
+
+    m_context.state.recentDiscs.clear();
+    while (in) {
+        std::filesystem::path path;
+        in >> path;
+        if (!path.empty()) {
+            m_context.state.recentDiscs.push_back(path);
+        }
+    }
+}
+
+void App::SaveRecentDiscs() {
+    auto listPath = m_context.profile.GetPath(ProfilePath::PersistentState) / "recent_discs.txt";
+    std::ofstream out{listPath};
+    for (auto &path : m_context.state.recentDiscs) {
+        out << path << "\n";
+    }
 }
 
 void App::OpenBackupMemoryCartFileDialog() {

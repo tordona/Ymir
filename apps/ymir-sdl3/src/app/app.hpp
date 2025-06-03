@@ -101,6 +101,8 @@ private:
     void OpenLoadDiscDialog();
     void ProcessOpenDiscImageFileDialogSelection(const char *const *filelist, int filter);
     bool LoadDiscImage(std::filesystem::path path);
+    void LoadRecentDiscs();
+    void SaveRecentDiscs();
 
     void OpenBackupMemoryCartFileDialog();
     void ProcessOpenBackupMemoryCartFileDialogSelection(const char *const *filelist, int filter);

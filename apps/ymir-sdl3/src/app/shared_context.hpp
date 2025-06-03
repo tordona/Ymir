@@ -26,6 +26,7 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <deque>
 
 namespace app {
 
@@ -165,6 +166,7 @@ struct SharedContext {
 
     struct State {
         std::filesystem::path loadedDiscImagePath;
+        std::deque<std::filesystem::path> recentDiscs;
     } state;
 
     struct Tracers {

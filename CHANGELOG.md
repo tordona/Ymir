@@ -4,7 +4,8 @@
 
 ### New features and improvements
 
-App: Double-click background to toggle fullscreen. (#197)
+- App: Added option to to toggle fullscreen by double-clicking the display. (#197)
+- App: Added recent games list to File menu. (#196)
 
 ### Fixes
 
