@@ -61,7 +61,7 @@ public:
     // Advances the SH2 for at least the specified number of cycles.
     // Returns the total number of cycles executed.
     //
-    
+
     /// @brief Advances the SH2 for at least the specified number of cycles.
     /// @tparam debug whether to enable debug features
     /// @tparam enableCache whether to emulate the cache
@@ -517,6 +517,7 @@ private:
     template <mem_primitive T>
     T OpenBusSeqRead(uint32 address);
 
+    template <bool enableCache>
     uint64 AccessCycles(uint32 address);
 
     // -------------------------------------------------------------------------
@@ -782,7 +783,7 @@ private:
     TPL_DS uint64 SUBV(const DecodedArgs &args);        // subv   Rm, Rn
     TPL_DS uint64 XOR(const DecodedArgs &args);         // xor    Rm, Rn
     TPL_DS uint64 XORI(const DecodedArgs &args);        // xor    imm, Rn
-    TPL_TRAITS_DS uint64 XORM(const DecodedArgs &args);    // xor.b  imm, @(R0,GBR)
+    TPL_TRAITS_DS uint64 XORM(const DecodedArgs &args); // xor.b  imm, @(R0,GBR)
 
     TPL_DS uint64 DT(const DecodedArgs &args); // dt Rn
 
