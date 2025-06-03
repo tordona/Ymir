@@ -58,6 +58,8 @@ void VideoSettingsView::Display() {
         settings.fullScreen = fullScreen;
     }
 
+    MakeDirty(ImGui::Checkbox("Double-click to toggle full screen", &settings.doubleClickToFullScreen));
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);

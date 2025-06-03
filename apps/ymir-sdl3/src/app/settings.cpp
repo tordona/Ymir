@@ -551,6 +551,7 @@ void Settings::ResetToDefaults() {
     video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
     video.fullScreen = false;
+    video.doubleClickToFullScreen = false;
 
     audio.volume = 0.8;
     audio.mute = false;
@@ -767,6 +768,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
         Parse(tblVideo, "FullScreen", video.fullScreen);
+        Parse(tblVideo, "DoubleClickToFullScreen", video.doubleClickToFullScreen);
 
         Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
     }
@@ -1013,6 +1015,7 @@ SettingsSaveResult Settings::Save() {
             {"AutoResizeWindow", video.autoResizeWindow},
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
             {"FullScreen", video.fullScreen.Get()},
+            {"DoubleClickToFullScreen", video.doubleClickToFullScreen},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
         }}},
 

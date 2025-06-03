@@ -1211,7 +1211,8 @@ void App::RunEmulator() {
             case SDL_EVENT_MOUSE_BUTTON_DOWN: [[fallthrough]];
             case SDL_EVENT_MOUSE_BUTTON_UP:
                 if (!io.WantCaptureMouse) {
-                    if (evt.button.clicks % 2 == 0 && evt.button.down) {
+                    if (m_context.settings.video.doubleClickToFullScreen && evt.button.clicks % 2 == 0 &&
+                        evt.button.down) {
                         m_context.settings.video.fullScreen = !m_context.settings.video.fullScreen;
                         m_context.settings.MakeDirty();
                     }

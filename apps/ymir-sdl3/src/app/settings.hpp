@@ -267,6 +267,7 @@ public:
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;
         util::Observable<bool> fullScreen;
+        bool doubleClickToFullScreen;
     } video;
 
     struct Audio {
