@@ -1210,6 +1210,12 @@ void App::RunEmulator() {
                 break;
             case SDL_EVENT_MOUSE_BUTTON_DOWN: [[fallthrough]];
             case SDL_EVENT_MOUSE_BUTTON_UP:
+                if (!io.WantCaptureMouse) {
+                    if (evt.button.clicks % 2 == 0 && evt.button.down) {
+                        m_context.settings.video.fullScreen = !m_context.settings.video.fullScreen;
+                        m_context.settings.MakeDirty();
+                    }
+                }
                 /*if (!io.WantCaptureMouse || inputContext.IsCapturing()) {
                     // TODO: consider supporting multiple mice (evt.button.which)
                     // TODO: evt.button.clicks?

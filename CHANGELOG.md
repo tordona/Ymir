@@ -4,6 +4,8 @@
 
 ### New features and improvements
 
+App: Double-click background to toggle fullscreen. (#197)
+
 ### Fixes
 
 
