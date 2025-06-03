@@ -149,7 +149,7 @@ void AboutWindow::DrawAboutTab() {
     ImGui::TextUnformatted("Ymir");
     ImGui::PopFont();
     ImGui::PushFont(m_context.fonts.sansSerif.xlarge.bold);
-    ImGui::TextUnformatted("Version " Ymir_VERSION);
+    ImGui::TextUnformatted("Version " Ymir_FULL_VERSION);
     ImGui::PopFont();
 #if Ymir_DEV_BUILD
     ImGui::SameLine();
