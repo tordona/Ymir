@@ -52,9 +52,10 @@ jobs:
         id: strings
         shell: bash
         run: |
+          export BUILD_VERSION=${GITHUB_REF_NAME//+/_}
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.x86_simd_ext.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Configure MSVC
         if: ${{ matrix.c_compiler == 'cl' }}
@@ -167,9 +168,10 @@ jobs:
         id: strings
         shell: bash
         run: |
+          export BUILD_VERSION=${GITHUB_REF_NAME//+/_}
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.x86_simd_ext.name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.x86_simd_ext.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Install SDL3 Dependencies
         run: |
@@ -279,9 +281,10 @@ jobs:
         id: strings
         shell: bash
         run: |
+          export BUILD_VERSION=${GITHUB_REF_NAME//+/_}
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-macos-${{ matrix.arch.isa_name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-macos-${{ matrix.arch.isa_name }}-${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-macos-${{ matrix.arch.isa_name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-macos-${{ matrix.arch.isa_name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Configure CMake
         run: >
