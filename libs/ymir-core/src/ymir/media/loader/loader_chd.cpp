@@ -178,7 +178,6 @@ bool Load(std::filesystem::path chdPath, Disc &disc, bool preloadToRAM) {
     uint8 resultflags;
     uint32 metaIndex = 0;
     uint32 frameAddress = 150;
-    uint32 numTracks = 0;
     uintmax_t byteOffset = 0;
     bool foundTrack = false;
     while (true) {

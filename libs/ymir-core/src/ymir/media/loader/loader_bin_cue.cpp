@@ -371,7 +371,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
 
                 // Add new index to current track
                 auto &index = track.indices.emplace_back();
-                track.indices[indexNum - 1].startFrameAddress = track.startFrameAddress + indexFrameAddress;
+                index.startFrameAddress = track.startFrameAddress + indexFrameAddress;
             }
 
             prevM = m;

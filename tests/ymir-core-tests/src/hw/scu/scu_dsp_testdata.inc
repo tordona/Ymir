@@ -1,7 +1,7 @@
 TestData{
     .name = "ALU - AND",
     .initialState = {
-        .programRAM = {0x4000000},
+        .programRAM = {{{0x4000000}}},
         .dataRAM = {{
             {},
             {},
@@ -25,7 +25,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x4000000},
+        .programRAM = {{{0x4000000}}},
         .dataRAM = {{
             {},
             {},
@@ -53,7 +53,7 @@ TestData{
 TestData{
     .name = "ALU - OR",
     .initialState = {
-        .programRAM = {0x8000000},
+        .programRAM = {{{0x8000000}}},
         .dataRAM = {{
             {},
             {},
@@ -77,7 +77,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8000000},
+        .programRAM = {{{0x8000000}}},
         .dataRAM = {{
             {},
             {},
@@ -105,7 +105,7 @@ TestData{
 TestData{
     .name = "ALU - XOR",
     .initialState = {
-        .programRAM = {0xC000000},
+        .programRAM = {{{0xC000000}}},
         .dataRAM = {{
             {},
             {},
@@ -129,7 +129,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xC000000},
+        .programRAM = {{{0xC000000}}},
         .dataRAM = {{
             {},
             {},
@@ -157,7 +157,7 @@ TestData{
 TestData{
     .name = "ALU - ADD",
     .initialState = {
-        .programRAM = {0x10000000},
+        .programRAM = {{{0x10000000}}},
         .dataRAM = {{
             {},
             {},
@@ -181,7 +181,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x10000000},
+        .programRAM = {{{0x10000000}}},
         .dataRAM = {{
             {},
             {},
@@ -209,7 +209,7 @@ TestData{
 TestData{
     .name = "ALU - SUB",
     .initialState = {
-        .programRAM = {0x14000000},
+        .programRAM = {{{0x14000000}}},
         .dataRAM = {{
             {},
             {},
@@ -233,7 +233,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x14000000},
+        .programRAM = {{{0x14000000}}},
         .dataRAM = {{
             {},
             {},
@@ -261,7 +261,7 @@ TestData{
 TestData{
     .name = "ALU - AD2",
     .initialState = {
-        .programRAM = {0x18000000},
+        .programRAM = {{{0x18000000}}},
         .dataRAM = {{
             {},
             {},
@@ -285,7 +285,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x18000000},
+        .programRAM = {{{0x18000000}}},
         .dataRAM = {{
             {},
             {},
@@ -313,7 +313,7 @@ TestData{
 TestData{
     .name = "ALU - SR",
     .initialState = {
-        .programRAM = {0x20000000},
+        .programRAM = {{{0x20000000}}},
         .dataRAM = {{
             {},
             {},
@@ -337,7 +337,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x20000000},
+        .programRAM = {{{0x20000000}}},
         .dataRAM = {{
             {},
             {},
@@ -365,7 +365,7 @@ TestData{
 TestData{
     .name = "ALU - RR",
     .initialState = {
-        .programRAM = {0x24000000},
+        .programRAM = {{{0x24000000}}},
         .dataRAM = {{
             {},
             {},
@@ -389,7 +389,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x24000000},
+        .programRAM = {{{0x24000000}}},
         .dataRAM = {{
             {},
             {},
@@ -417,7 +417,7 @@ TestData{
 TestData{
     .name = "ALU - SL",
     .initialState = {
-        .programRAM = {0x28000000},
+        .programRAM = {{{0x28000000}}},
         .dataRAM = {{
             {},
             {},
@@ -441,7 +441,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x28000000},
+        .programRAM = {{{0x28000000}}},
         .dataRAM = {{
             {},
             {},
@@ -469,7 +469,7 @@ TestData{
 TestData{
     .name = "ALU - RL",
     .initialState = {
-        .programRAM = {0x2C000000},
+        .programRAM = {{{0x2C000000}}},
         .dataRAM = {{
             {},
             {},
@@ -493,7 +493,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x2C000000},
+        .programRAM = {{{0x2C000000}}},
         .dataRAM = {{
             {},
             {},
@@ -521,7 +521,7 @@ TestData{
 TestData{
     .name = "ALU - RL8",
     .initialState = {
-        .programRAM = {0x3C000000},
+        .programRAM = {{{0x3C000000}}},
         .dataRAM = {{
             {},
             {},
@@ -545,7 +545,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x3C000000},
+        .programRAM = {{{0x3C000000}}},
         .dataRAM = {{
             {},
             {},
@@ -573,7 +573,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MUL,P (basic)",
     .initialState = {
-        .programRAM = {0x01000000},
+        .programRAM = {{{0x01000000}}},
         .dataRAM = {{
             {},
             {},
@@ -597,7 +597,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01000000},
+        .programRAM = {{{0x01000000}}},
         .dataRAM = {{
             {},
             {},
@@ -625,7 +625,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MUL,P (large values)",
     .initialState = {
-        .programRAM = {0x01000000},
+        .programRAM = {{{0x01000000}}},
         .dataRAM = {{
             {},
             {},
@@ -649,7 +649,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01000000},
+        .programRAM = {{{0x01000000}}},
         .dataRAM = {{
             {},
             {},
@@ -677,7 +677,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MUL,P (negative result)",
     .initialState = {
-        .programRAM = {0x01000000},
+        .programRAM = {{{0x01000000}}},
         .dataRAM = {{
             {},
             {},
@@ -701,7 +701,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01000000},
+        .programRAM = {{{0x01000000}}},
         .dataRAM = {{
             {},
             {},
@@ -729,7 +729,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M0,P",
     .initialState = {
-        .programRAM = {0x01800000},
+        .programRAM = {{{0x01800000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -753,7 +753,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01800000},
+        .programRAM = {{{0x01800000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -781,7 +781,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M1,P",
     .initialState = {
-        .programRAM = {0x01900000},
+        .programRAM = {{{0x01900000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -805,7 +805,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01900000},
+        .programRAM = {{{0x01900000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -833,7 +833,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M2,P",
     .initialState = {
-        .programRAM = {0x01A00000},
+        .programRAM = {{{0x01A00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -857,7 +857,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01A00000},
+        .programRAM = {{{0x01A00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -885,7 +885,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M3,P",
     .initialState = {
-        .programRAM = {0x01B00000},
+        .programRAM = {{{0x01B00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -909,7 +909,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01B00000},
+        .programRAM = {{{0x01B00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -937,7 +937,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC0,P",
     .initialState = {
-        .programRAM = {0x01C00000},
+        .programRAM = {{{0x01C00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -961,7 +961,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01C00000},
+        .programRAM = {{{0x01C00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -989,7 +989,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC1,P",
     .initialState = {
-        .programRAM = {0x01D00000},
+        .programRAM = {{{0x01D00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1013,7 +1013,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01D00000},
+        .programRAM = {{{0x01D00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1041,7 +1041,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC2,P",
     .initialState = {
-        .programRAM = {0x01E00000},
+        .programRAM = {{{0x01E00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1065,7 +1065,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01E00000},
+        .programRAM = {{{0x01E00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1093,7 +1093,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC3,P",
     .initialState = {
-        .programRAM = {0x01F00000},
+        .programRAM = {{{0x01F00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1117,7 +1117,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01F00000},
+        .programRAM = {{{0x01F00000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1145,7 +1145,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M0,X",
     .initialState = {
-        .programRAM = {0x02000000},
+        .programRAM = {{{0x02000000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1169,7 +1169,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02000000},
+        .programRAM = {{{0x02000000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1197,7 +1197,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M1,X",
     .initialState = {
-        .programRAM = {0x02100000},
+        .programRAM = {{{0x02100000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1221,7 +1221,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02100000},
+        .programRAM = {{{0x02100000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1249,7 +1249,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M2,X",
     .initialState = {
-        .programRAM = {0x02200000},
+        .programRAM = {{{0x02200000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1273,7 +1273,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02200000},
+        .programRAM = {{{0x02200000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1301,7 +1301,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV M3,X",
     .initialState = {
-        .programRAM = {0x02300000},
+        .programRAM = {{{0x02300000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1325,7 +1325,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02300000},
+        .programRAM = {{{0x02300000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1353,7 +1353,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC0,X",
     .initialState = {
-        .programRAM = {0x02400000},
+        .programRAM = {{{0x02400000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1377,7 +1377,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02400000},
+        .programRAM = {{{0x02400000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1405,7 +1405,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC1,X",
     .initialState = {
-        .programRAM = {0x02500000},
+        .programRAM = {{{0x02500000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1429,7 +1429,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02500000},
+        .programRAM = {{{0x02500000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1457,7 +1457,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC2,X",
     .initialState = {
-        .programRAM = {0x02600000},
+        .programRAM = {{{0x02600000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1481,7 +1481,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02600000},
+        .programRAM = {{{0x02600000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1509,7 +1509,7 @@ TestData{
 TestData{
     .name = "X-Bus - MOV MC3,X",
     .initialState = {
-        .programRAM = {0x02700000},
+        .programRAM = {{{0x02700000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1533,7 +1533,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02700000},
+        .programRAM = {{{0x02700000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1561,7 +1561,7 @@ TestData{
 TestData{
     .name = "Y-Bus - CLR A",
     .initialState = {
-        .programRAM = {0x00020000},
+        .programRAM = {{{0x00020000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1585,7 +1585,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00020000},
+        .programRAM = {{{0x00020000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1613,7 +1613,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV ALU,A",
     .initialState = {
-        .programRAM = {0x00040000},
+        .programRAM = {{{0x00040000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1637,7 +1637,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00040000},
+        .programRAM = {{{0x00040000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1665,7 +1665,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M0,A",
     .initialState = {
-        .programRAM = {0x00060000},
+        .programRAM = {{{0x00060000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1689,7 +1689,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00060000},
+        .programRAM = {{{0x00060000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1717,7 +1717,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M1,A",
     .initialState = {
-        .programRAM = {0x00064000},
+        .programRAM = {{{0x00064000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1741,7 +1741,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00064000},
+        .programRAM = {{{0x00064000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1769,7 +1769,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M2,A",
     .initialState = {
-        .programRAM = {0x00068000},
+        .programRAM = {{{0x00068000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1793,7 +1793,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00068000},
+        .programRAM = {{{0x00068000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1821,7 +1821,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M3,A",
     .initialState = {
-        .programRAM = {0x0006C000},
+        .programRAM = {{{0x0006C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1845,7 +1845,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x0006C000},
+        .programRAM = {{{0x0006C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1873,7 +1873,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC0,A",
     .initialState = {
-        .programRAM = {0x00070000},
+        .programRAM = {{{0x00070000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1897,7 +1897,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00070000},
+        .programRAM = {{{0x00070000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1925,7 +1925,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC1,A",
     .initialState = {
-        .programRAM = {0x00074000},
+        .programRAM = {{{0x00074000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1949,7 +1949,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00074000},
+        .programRAM = {{{0x00074000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -1977,7 +1977,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC2,A",
     .initialState = {
-        .programRAM = {0x00078000},
+        .programRAM = {{{0x00078000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2001,7 +2001,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00078000},
+        .programRAM = {{{0x00078000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2029,7 +2029,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC3,A",
     .initialState = {
-        .programRAM = {0x0007C000},
+        .programRAM = {{{0x0007C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2053,7 +2053,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x0007C000},
+        .programRAM = {{{0x0007C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2081,7 +2081,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M0,Y",
     .initialState = {
-        .programRAM = {0x00080000},
+        .programRAM = {{{0x00080000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2105,7 +2105,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00080000},
+        .programRAM = {{{0x00080000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2133,7 +2133,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M1,Y",
     .initialState = {
-        .programRAM = {0x00084000},
+        .programRAM = {{{0x00084000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2157,7 +2157,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00084000},
+        .programRAM = {{{0x00084000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2185,7 +2185,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M2,Y",
     .initialState = {
-        .programRAM = {0x00088000},
+        .programRAM = {{{0x00088000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2209,7 +2209,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00088000},
+        .programRAM = {{{0x00088000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2237,7 +2237,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV M3,Y",
     .initialState = {
-        .programRAM = {0x0008C000},
+        .programRAM = {{{0x0008C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2261,7 +2261,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x0008C000},
+        .programRAM = {{{0x0008C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2289,7 +2289,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC0,Y",
     .initialState = {
-        .programRAM = {0x00090000},
+        .programRAM = {{{0x00090000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2313,7 +2313,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00090000},
+        .programRAM = {{{0x00090000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2341,7 +2341,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC1,Y",
     .initialState = {
-        .programRAM = {0x00094000},
+        .programRAM = {{{0x00094000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2365,7 +2365,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00094000},
+        .programRAM = {{{0x00094000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2393,7 +2393,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC2,Y",
     .initialState = {
-        .programRAM = {0x00098000},
+        .programRAM = {{{0x00098000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2417,7 +2417,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00098000},
+        .programRAM = {{{0x00098000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2445,7 +2445,7 @@ TestData{
 TestData{
     .name = "Y-Bus - MOV MC3,Y",
     .initialState = {
-        .programRAM = {0x0009C000},
+        .programRAM = {{{0x0009C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2469,7 +2469,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x0009C000},
+        .programRAM = {{{0x0009C000}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2497,7 +2497,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,MC0",
     .initialState = {
-        .programRAM = {0x000010A5},
+        .programRAM = {{{0x000010A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2521,7 +2521,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000010A5},
+        .programRAM = {{{0x000010A5}}},
         .dataRAM = {{
             {0xFFFFFFA5},
             {2, 3},
@@ -2549,7 +2549,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,MC1",
     .initialState = {
-        .programRAM = {0x000011A5},
+        .programRAM = {{{0x000011A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2573,7 +2573,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000011A5},
+        .programRAM = {{{0x000011A5}}},
         .dataRAM = {{
             {1},
             {2, 0xFFFFFFA5},
@@ -2601,7 +2601,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,MC2",
     .initialState = {
-        .programRAM = {0x000012A5},
+        .programRAM = {{{0x000012A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2625,7 +2625,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000012A5},
+        .programRAM = {{{0x000012A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2653,7 +2653,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,MC3",
     .initialState = {
-        .programRAM = {0x000013A5},
+        .programRAM = {{{0x000013A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2677,7 +2677,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000013A5},
+        .programRAM = {{{0x000013A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2705,7 +2705,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,RX",
     .initialState = {
-        .programRAM = {0x000014A5},
+        .programRAM = {{{0x000014A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2729,7 +2729,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000014A5},
+        .programRAM = {{{0x000014A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2757,7 +2757,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,PL",
     .initialState = {
-        .programRAM = {0x000015A5},
+        .programRAM = {{{0x000015A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2781,7 +2781,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000015A5},
+        .programRAM = {{{0x000015A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2809,7 +2809,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,RA0",
     .initialState = {
-        .programRAM = {0x000016A5},
+        .programRAM = {{{0x000016A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2833,7 +2833,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000016A5},
+        .programRAM = {{{0x000016A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2861,7 +2861,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,WA0",
     .initialState = {
-        .programRAM = {0x000017A5},
+        .programRAM = {{{0x000017A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2885,7 +2885,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x000017A5},
+        .programRAM = {{{0x000017A5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2913,7 +2913,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,LOP",
     .initialState = {
-        .programRAM = {0x00001AA5},
+        .programRAM = {{{0x00001AA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2937,7 +2937,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00001AA5},
+        .programRAM = {{{0x00001AA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2965,7 +2965,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,TOP",
     .initialState = {
-        .programRAM = {0x00001BA5},
+        .programRAM = {{{0x00001BA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -2989,7 +2989,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00001BA5},
+        .programRAM = {{{0x00001BA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3017,7 +3017,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,CT0",
     .initialState = {
-        .programRAM = {0x00001CA5},
+        .programRAM = {{{0x00001CA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3041,7 +3041,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00001CA5},
+        .programRAM = {{{0x00001CA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3069,7 +3069,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,CT1",
     .initialState = {
-        .programRAM = {0x00001DA5},
+        .programRAM = {{{0x00001DA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3093,7 +3093,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00001DA5},
+        .programRAM = {{{0x00001DA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3121,7 +3121,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,CT2",
     .initialState = {
-        .programRAM = {0x00001EA5},
+        .programRAM = {{{0x00001EA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3145,7 +3145,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00001EA5},
+        .programRAM = {{{0x00001EA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3173,7 +3173,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV #0xA5,CT3",
     .initialState = {
-        .programRAM = {0x00001FA5},
+        .programRAM = {{{0x00001FA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3197,7 +3197,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00001FA5},
+        .programRAM = {{{0x00001FA5}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3225,7 +3225,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV M0,PL",
     .initialState = {
-        .programRAM = {0x00003500},
+        .programRAM = {{{0x00003500}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3249,7 +3249,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003500},
+        .programRAM = {{{0x00003500}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3277,7 +3277,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV M1,PL",
     .initialState = {
-        .programRAM = {0x00003501},
+        .programRAM = {{{0x00003501}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3301,7 +3301,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003501},
+        .programRAM = {{{0x00003501}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3329,7 +3329,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV M2,PL",
     .initialState = {
-        .programRAM = {0x00003502},
+        .programRAM = {{{0x00003502}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3353,7 +3353,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003502},
+        .programRAM = {{{0x00003502}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3381,7 +3381,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV M3,PL",
     .initialState = {
-        .programRAM = {0x00003503},
+        .programRAM = {{{0x00003503}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3405,7 +3405,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003503},
+        .programRAM = {{{0x00003503}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3433,7 +3433,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV MC0,PL",
     .initialState = {
-        .programRAM = {0x00003504},
+        .programRAM = {{{0x00003504}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3457,7 +3457,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003504},
+        .programRAM = {{{0x00003504}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3485,7 +3485,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV MC1,PL",
     .initialState = {
-        .programRAM = {0x00003505},
+        .programRAM = {{{0x00003505}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3509,7 +3509,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003505},
+        .programRAM = {{{0x00003505}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3537,7 +3537,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV MC2,PL",
     .initialState = {
-        .programRAM = {0x00003506},
+        .programRAM = {{{0x00003506}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3561,7 +3561,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003506},
+        .programRAM = {{{0x00003506}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3589,7 +3589,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV MC3,PL",
     .initialState = {
-        .programRAM = {0x00003507},
+        .programRAM = {{{0x00003507}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3613,7 +3613,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003507},
+        .programRAM = {{{0x00003507}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3641,7 +3641,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV ALL,PL",
     .initialState = {
-        .programRAM = {0x00003509},
+        .programRAM = {{{0x00003509}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3665,7 +3665,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003509},
+        .programRAM = {{{0x00003509}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3693,7 +3693,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV ALH,PL",
     .initialState = {
-        .programRAM = {0x0000350A},
+        .programRAM = {{{0x0000350A}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3717,7 +3717,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x0000350A},
+        .programRAM = {{{0x0000350A}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3745,7 +3745,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV MC3,MC3",
     .initialState = {
-        .programRAM = {0x00003307},
+        .programRAM = {{{0x00003307}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3769,7 +3769,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003307},
+        .programRAM = {{{0x00003307}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3797,7 +3797,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV MC3,MC0",
     .initialState = {
-        .programRAM = {0x00003007},
+        .programRAM = {{{0x00003007}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3821,7 +3821,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003007},
+        .programRAM = {{{0x00003007}}},
         .dataRAM = {{
             {10},
             {2, 3},
@@ -3849,7 +3849,7 @@ TestData{
 TestData{
     .name = "D1-Bus - MOV M3,M0",
     .initialState = {
-        .programRAM = {0x00003C03},
+        .programRAM = {{{0x00003C03}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3873,7 +3873,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x00003C03},
+        .programRAM = {{{0x00003C03}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3901,7 +3901,7 @@ TestData{
 TestData{
     .name = "Six instructions - AD2  MOV MUL,P  MOV MC0,X  MOV ALU,A  MOV CT1,Y  MOV ALUH,RA0",
     .initialState = {
-        .programRAM = {0x1B4C760A},
+        .programRAM = {{{0x1B4C760A}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3925,7 +3925,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x1B4C760A},
+        .programRAM = {{{0x1B4C760A}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3953,7 +3953,7 @@ TestData{
 TestData{
     .name = "Repeated MCs - MOV MC0,X  MOV MC0,Y  MOV MC0,P",
     .initialState = {
-        .programRAM = {0x02493504},
+        .programRAM = {{{0x02493504}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -3977,7 +3977,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02493504},
+        .programRAM = {{{0x02493504}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4005,7 +4005,7 @@ TestData{
 TestData{
     .name = "Distinct MCs - MOV MC0,X  MOV MC1,Y  MOV MC2,P",
     .initialState = {
-        .programRAM = {0x02497506},
+        .programRAM = {{{0x02497506}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4029,7 +4029,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02497506},
+        .programRAM = {{{0x02497506}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4057,7 +4057,7 @@ TestData{
 TestData{
     .name = "Multiple writes to RX - MOV CT0,X  MOV CT1,RX",
     .initialState = {
-        .programRAM = {0x02003401},
+        .programRAM = {{{0x02003401}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4081,7 +4081,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x02003401},
+        .programRAM = {{{0x02003401}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4109,7 +4109,7 @@ TestData{
 TestData{
     .name = "Multiple writes to P - MOV CT0,P  MOV CT1,P",
     .initialState = {
-        .programRAM = {0x01803501},
+        .programRAM = {{{0x01803501}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4133,7 +4133,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x01803501},
+        .programRAM = {{{0x01803501}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4161,7 +4161,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,MC0",
     .initialState = {
-        .programRAM = {0x81234567},
+        .programRAM = {{{0x81234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4185,7 +4185,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x81234567},
+        .programRAM = {{{0x81234567}}},
         .dataRAM = {{
             {0xFF234567},
             {2, 3},
@@ -4213,7 +4213,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,MC1",
     .initialState = {
-        .programRAM = {0x85234567},
+        .programRAM = {{{0x85234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4237,7 +4237,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x85234567},
+        .programRAM = {{{0x85234567}}},
         .dataRAM = {{
             {1},
             {2, 0xFF234567},
@@ -4265,7 +4265,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,MC2",
     .initialState = {
-        .programRAM = {0x89234567},
+        .programRAM = {{{0x89234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4289,7 +4289,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x89234567},
+        .programRAM = {{{0x89234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4317,7 +4317,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,MC3",
     .initialState = {
-        .programRAM = {0x8D234567},
+        .programRAM = {{{0x8D234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4341,7 +4341,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8D234567},
+        .programRAM = {{{0x8D234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4369,7 +4369,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,RX",
     .initialState = {
-        .programRAM = {0x91234567},
+        .programRAM = {{{0x91234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4393,7 +4393,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x91234567},
+        .programRAM = {{{0x91234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4421,7 +4421,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,PL",
     .initialState = {
-        .programRAM = {0x95234567},
+        .programRAM = {{{0x95234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4445,7 +4445,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x95234567},
+        .programRAM = {{{0x95234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4473,7 +4473,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,RA0",
     .initialState = {
-        .programRAM = {0x99234567},
+        .programRAM = {{{0x99234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4497,7 +4497,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x99234567},
+        .programRAM = {{{0x99234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4525,7 +4525,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,WA0",
     .initialState = {
-        .programRAM = {0x9D234567},
+        .programRAM = {{{0x9D234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4549,7 +4549,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x9D234567},
+        .programRAM = {{{0x9D234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4577,7 +4577,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,LOP",
     .initialState = {
-        .programRAM = {0xA9234567},
+        .programRAM = {{{0xA9234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4601,7 +4601,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xA9234567},
+        .programRAM = {{{0xA9234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4629,7 +4629,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,PC (step 1)",
     .initialState = {
-        .programRAM = {0xB1234567},
+        .programRAM = {{{0xB1234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4653,7 +4653,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xB1234567},
+        .programRAM = {{{0xB1234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4681,7 +4681,7 @@ TestData{
 TestData{
     .name = "MVI #0xFF234567,PC (step 2)",
     .initialState = {
-        .programRAM = {0xB1234567},
+        .programRAM = {{{0xB1234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4705,7 +4705,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xB1234567},
+        .programRAM = {{{0xB1234567}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4733,7 +4733,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NZ (pass)",
     .initialState = {
-        .programRAM = {0x8E0C3210},
+        .programRAM = {{{0x8E0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4757,7 +4757,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E0C3210},
+        .programRAM = {{{0x8E0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4785,7 +4785,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NZ (fail)",
     .initialState = {
-        .programRAM = {0x8E0C3210},
+        .programRAM = {{{0x8E0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4809,7 +4809,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E0C3210},
+        .programRAM = {{{0x8E0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4837,7 +4837,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NS (pass)",
     .initialState = {
-        .programRAM = {0x8E0C3210},
+        .programRAM = {{{0x8E0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4861,7 +4861,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E0C3210},
+        .programRAM = {{{0x8E0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4889,7 +4889,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NS (fail)",
     .initialState = {
-        .programRAM = {0x8E143210},
+        .programRAM = {{{0x8E143210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4913,7 +4913,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E143210},
+        .programRAM = {{{0x8E143210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4941,7 +4941,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NZS (pass)",
     .initialState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4965,7 +4965,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -4993,7 +4993,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NZS (fail Z)",
     .initialState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5017,7 +5017,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5045,7 +5045,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NZS (fail S)",
     .initialState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5069,7 +5069,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5097,7 +5097,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NZS (fail ZS)",
     .initialState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5121,7 +5121,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E1C3210},
+        .programRAM = {{{0x8E1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5149,7 +5149,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NC (pass)",
     .initialState = {
-        .programRAM = {0x8E243210},
+        .programRAM = {{{0x8E243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5173,7 +5173,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E243210},
+        .programRAM = {{{0x8E243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5201,7 +5201,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,NC (fail)",
     .initialState = {
-        .programRAM = {0x8E243210},
+        .programRAM = {{{0x8E243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5225,7 +5225,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8E243210},
+        .programRAM = {{{0x8E243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5253,7 +5253,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,Z (pass)",
     .initialState = {
-        .programRAM = {0x8F0C3210},
+        .programRAM = {{{0x8F0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5277,7 +5277,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F0C3210},
+        .programRAM = {{{0x8F0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5305,7 +5305,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,Z (fail)",
     .initialState = {
-        .programRAM = {0x8F0C3210},
+        .programRAM = {{{0x8F0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5329,7 +5329,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F0C3210},
+        .programRAM = {{{0x8F0C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5357,7 +5357,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,S (pass)",
     .initialState = {
-        .programRAM = {0x8F143210},
+        .programRAM = {{{0x8F143210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5381,7 +5381,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F143210},
+        .programRAM = {{{0x8F143210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5409,7 +5409,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,S (fail)",
     .initialState = {
-        .programRAM = {0x8F143210},
+        .programRAM = {{{0x8F143210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5433,7 +5433,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F143210},
+        .programRAM = {{{0x8F143210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5461,7 +5461,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,ZS (pass ZS)",
     .initialState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5485,7 +5485,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5513,7 +5513,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,ZS (pass Z)",
     .initialState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5537,7 +5537,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5565,7 +5565,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,ZS (pass S)",
     .initialState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5589,7 +5589,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5617,7 +5617,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,ZS (fail ZS)",
     .initialState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5641,7 +5641,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F1C3210},
+        .programRAM = {{{0x8F1C3210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5669,7 +5669,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,C (pass)",
     .initialState = {
-        .programRAM = {0x8F243210},
+        .programRAM = {{{0x8F243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5693,7 +5693,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F243210},
+        .programRAM = {{{0x8F243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5721,7 +5721,7 @@ TestData{
 TestData{
     .name = "MVI #0xFFFC3210,MC3,C (fail)",
     .initialState = {
-        .programRAM = {0x8F243210},
+        .programRAM = {{{0x8F243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5745,7 +5745,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0x8F243210},
+        .programRAM = {{{0x8F243210}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5773,7 +5773,7 @@ TestData{
 TestData{
     .name = "JMP #0x10 (step 1)",
     .initialState = {
-        .programRAM = {0xD0000010},
+        .programRAM = {{{0xD0000010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5797,7 +5797,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xD0000010},
+        .programRAM = {{{0xD0000010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5825,7 +5825,7 @@ TestData{
 TestData{
     .name = "JMP #0x10 (step 2)",
     .initialState = {
-        .programRAM = {0xD0000010},
+        .programRAM = {{{0xD0000010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5849,7 +5849,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xD0000010},
+        .programRAM = {{{0xD0000010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5877,7 +5877,7 @@ TestData{
 TestData{
     .name = "JMP Z,#0x10 (step 1, pass)",
     .initialState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5901,7 +5901,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5929,7 +5929,7 @@ TestData{
 TestData{
     .name = "JMP Z,#0x10 (step 2, pass)",
     .initialState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5953,7 +5953,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -5981,7 +5981,7 @@ TestData{
 TestData{
     .name = "JMP Z,#0x10 (step 1, fail)",
     .initialState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -6005,7 +6005,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -6033,7 +6033,7 @@ TestData{
 TestData{
     .name = "JMP Z,#0x10 (step 2, fail)",
     .initialState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},
@@ -6057,7 +6057,7 @@ TestData{
         .WA0 = 0,
     },
     .finalState = {
-        .programRAM = {0xD1080010},
+        .programRAM = {{{0xD1080010}}},
         .dataRAM = {{
             {1},
             {2, 3},

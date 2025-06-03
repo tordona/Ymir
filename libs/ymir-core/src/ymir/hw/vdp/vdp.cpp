@@ -5036,7 +5036,6 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     const uint32 planeY = (bit::extract<9, planeMSB>(scrollY) >> pageShiftV) & planeMask;
     const uint32 plane = planeX + planeY * planeWidth;
     const uint32 pageBaseAddress = pageBaseAddresses[plane];
-    const uint32 pageBank = (pageBaseAddress >> 17u) & 3u;
 
     // Determine page index from the scroll coordinates
     const uint32 pageX = bit::extract<9>(scrollX) & pageShiftH;

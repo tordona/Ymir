@@ -78,7 +78,6 @@ public:
 private:
     const PeripheralType m_type;
     uint8 m_typeCode;
-    uint8 m_reportLength;
 
 protected:
     friend class PeripheralPort;

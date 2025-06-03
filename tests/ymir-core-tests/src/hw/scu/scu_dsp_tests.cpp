@@ -1130,12 +1130,12 @@ constexpr auto testdata = {
         .name = "NOP",
         .initialState =
             {
-                .programRAM = {0x00000000},
+                .programRAM = {{{0x00000000}}},
                 .PC = 0,
             },
         .finalState =
             {
-                .programRAM = {0x00000000},
+                .programRAM = {{{0x00000000}}},
                 .PC = 1,
             },
         .numSteps = 1,

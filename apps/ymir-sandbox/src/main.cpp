@@ -884,7 +884,6 @@ void runInputSandbox() {
     auto tNext = t + 16666667ns;
     uint64 frames = 0;
     bool running = true;
-    bool showHelp = true;
 
     bool pressed = false;
 

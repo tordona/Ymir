@@ -230,7 +230,6 @@ EmuEvent Insert32MbitDRAMCartridge() {
 EmuEvent InsertROMCartridge(std::filesystem::path path) {
     return RunFunction([=](SharedContext &ctx) {
         // TODO: deduplicate code
-        auto &settings = ctx.settings.cartridge.rom;
 
         // Don't even bother if no path was specified
         if (path.empty()) {

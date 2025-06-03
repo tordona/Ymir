@@ -1010,7 +1010,7 @@ void App::RunEmulator() {
 
         auto registerAnalogStick = [&](input::Action action) {
             inputContext.SetAxis2DHandler(action,
-                                          [this](void *context, const input::InputElement &element, float x, float y) {
+                                          [](void *context, const input::InputElement &element, float x, float y) {
                                               auto &input = *reinterpret_cast<SharedContext::AnalogPadInput *>(context);
                                               auto &analogInput = input.analogStickInputs[element];
                                               analogInput.x = x;
@@ -1021,7 +1021,7 @@ void App::RunEmulator() {
 
         auto registerDigitalTrigger = [&](input::Action action, bool which /*false=L, true=R*/) {
             inputContext.SetButtonHandler(action,
-                                          [=, this](void *context, const input::InputElement &element, bool actuated) {
+                                          [=](void *context, const input::InputElement &element, bool actuated) {
                                               auto &input = *reinterpret_cast<SharedContext::AnalogPadInput *>(context);
                                               auto &map = which ? input.analogRInputs : input.analogLInputs;
                                               if (actuated) {
@@ -1034,17 +1034,17 @@ void App::RunEmulator() {
         };
 
         auto registerAnalogTrigger = [&](input::Action action, bool which /*false=L, true=R*/) {
-            inputContext.SetAxis1DHandler(
-                action, [this, which](void *context, const input::InputElement &element, float value) {
-                    auto &input = *reinterpret_cast<SharedContext::AnalogPadInput *>(context);
-                    auto &map = which ? input.analogRInputs : input.analogLInputs;
-                    map[element] = value;
-                    input.UpdateAnalogTriggers();
-                });
+            inputContext.SetAxis1DHandler(action,
+                                          [which](void *context, const input::InputElement &element, float value) {
+                                              auto &input = *reinterpret_cast<SharedContext::AnalogPadInput *>(context);
+                                              auto &map = which ? input.analogRInputs : input.analogLInputs;
+                                              map[element] = value;
+                                              input.UpdateAnalogTriggers();
+                                          });
         };
 
         auto registerModeSwitch = [&](input::Action action) {
-            inputContext.SetTriggerHandler(action, [this](void *context, const input::InputElement &element) {
+            inputContext.SetTriggerHandler(action, [](void *context, const input::InputElement &element) {
                 auto &input = *reinterpret_cast<SharedContext::AnalogPadInput *>(context);
                 input.analogMode ^= true;
             });
