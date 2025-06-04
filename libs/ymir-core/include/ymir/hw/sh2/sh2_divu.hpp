@@ -176,37 +176,32 @@ struct DivisionUnit {
         sint64 dividend = (static_cast<sint64>(DVDNTH) << 32ll) | static_cast<sint64>(DVDNTL);
         const sint32 divisor = static_cast<sint32>(DVSR);
 
-        bool overflow = divisor == 0;
-
-        if (dividend == -0x80000000ll && (divisor == 1 || divisor == -1)) {
+        bool overflow = false;
+        if (divisor == 0) {
+            overflow = true;
+        } else if (dividend == -0x80000000ll && (divisor == 1 || divisor == -1)) {
             DVDNTH = DVDNTUH = 0;
             DVDNT = DVDNTL = DVDNTUL = 0x80000000;
             return;
-        }
+        } else if (dividend == kMinValue64 && divisor == -1) [[unlikely]] {
+            // Handle extreme case
+            overflow = true;
+        } else {
+            const sint64 quotient = dividend / divisor;
+            const sint32 remainder = dividend % divisor;
 
-        if (!overflow) {
-            if (dividend == kMinValue64 && divisor == -1) [[unlikely]] {
+            if ((quotient == kMinValue32 && divisor > 0) || (quotient == 0x80000000 && divisor < 0) && remainder == 0)
+                [[unlikely]] {
+                // TODO: schedule event to run this after 39 cycles
+                DVDNTL = DVDNT = quotient;
+                DVDNTH = remainder;
+            } else if (quotient <= kMinValue32 || quotient > kMaxValue32) [[unlikely]] {
+                // Overflow cases
                 overflow = true;
             } else {
-                const sint64 quotient = dividend / divisor;
-                const sint32 remainder = dividend % divisor;
-
-                if ((quotient == kMinValue32 && divisor > 0) ||
-                    (quotient == 0x80000000 && divisor < 0) && remainder == 0) [[unlikely]] {
-                    // TODO: schedule event to run this after 39 cycles
-                    DVDNTL = DVDNT = quotient;
-                    DVDNTH = remainder;
-                } else if (quotient <= kMinValue32 || quotient > kMaxValue32) [[unlikely]] {
-                    // Overflow cases
-                    overflow = true;
-                } else if (dividend == kMinValue64 && divisor == -1) [[unlikely]] {
-                    // Handle extreme case
-                    overflow = true;
-                } else {
-                    // TODO: schedule event to run this after 39 cycles
-                    DVDNTL = DVDNT = quotient;
-                    DVDNTH = remainder;
-                }
+                // TODO: schedule event to run this after 39 cycles
+                DVDNTL = DVDNT = quotient;
+                DVDNTH = remainder;
             }
         }
 
