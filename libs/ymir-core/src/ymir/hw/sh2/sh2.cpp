@@ -299,8 +299,8 @@ void SH2::DumpCacheAddressTag(std::ostream &out) const {
 template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
     m_cyclesExecuted = spilloverCycles;
-    AdvanceWDT();
-    AdvanceFRT();
+    AdvanceWDT<false>();
+    AdvanceFRT<false>();
     while (m_cyclesExecuted < cycles) {
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         m_cyclesExecuted += InterpretNext<debug, enableCache>();
@@ -329,8 +329,8 @@ template uint64 SH2::Advance<true, true>(uint64, uint64);
 template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Step() {
     m_cyclesExecuted = InterpretNext<debug, enableCache>();
-    AdvanceWDT();
-    AdvanceFRT();
+    AdvanceWDT<false>();
+    AdvanceFRT<false>();
     return m_cyclesExecuted;
 }
 
@@ -796,12 +796,12 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x10: return FRT.ReadTIER();
     case 0x11:
         if constexpr (!peek) {
-            AdvanceFRT();
+            AdvanceFRT<false>();
         }
         return FRT.ReadFTCSR();
     case 0x12:
         if constexpr (!peek) {
-            AdvanceFRT();
+            AdvanceFRT<false>();
         }
         return FRT.ReadFRCH<peek>();
     case 0x13: return FRT.ReadFRCL<peek>();
@@ -831,7 +831,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
         if constexpr (peek) {
             return WDT.ReadWTCSR();
         } else {
-            AdvanceWDT();
+            AdvanceWDT<false>();
             return m_WDTBusValue = WDT.ReadWTCSR();
         }
 
@@ -840,7 +840,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
         if constexpr (peek) {
             return WDT.ReadWTCNT();
         } else {
-            AdvanceWDT();
+            AdvanceWDT<false>();
             return m_WDTBusValue = WDT.ReadWTCNT();
         }
 
@@ -849,7 +849,7 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
         if constexpr (peek) {
             return WDT.ReadRSTCSR();
         } else {
-            AdvanceWDT();
+            AdvanceWDT<false>();
             return m_WDTBusValue = WDT.ReadRSTCSR();
         }
 
@@ -1070,7 +1070,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         break;
     case 0x11:
         if constexpr (!poke) {
-            AdvanceFRT();
+            AdvanceFRT<true>();
         }
         FRT.WriteFTCSR<poke>(value);
         if (INTC.pending.source == InterruptSource::FRT_OVI || INTC.pending.source == InterruptSource::FRT_OCI ||
@@ -1081,7 +1081,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x12: FRT.WriteFRCH<poke>(value); break;
     case 0x13:
         if constexpr (!poke) {
-            AdvanceFRT();
+            AdvanceFRT<true>();
         }
         FRT.WriteFRCL<poke>(value);
         break;
@@ -1089,7 +1089,7 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x15: FRT.WriteOCRL<poke>(value); break;
     case 0x16:
         if constexpr (!poke) {
-            AdvanceFRT();
+            AdvanceFRT<true>();
         }
         FRT.WriteTCR(value);
         break;
@@ -1214,12 +1214,12 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
         }
         if ((value >> 8u) == 0x5A) {
             if constexpr (!poke) {
-                AdvanceWDT();
+                AdvanceWDT<true>();
             }
             WDT.WriteWTCNT(value);
         } else if ((value >> 8u) == 0xA5) {
             if constexpr (!poke) {
-                AdvanceWDT();
+                AdvanceWDT<true>();
             }
             WDT.WriteWTCSR<poke>(value);
         }
@@ -1531,8 +1531,9 @@ void SH2::RunDMAC(uint32 channel) {
     }
 }
 
+template <bool write>
 FORCE_INLINE void SH2::AdvanceWDT() {
-    const uint64 cycles = GetCurrentCycleCount();
+    const uint64 cycles = GetCurrentCycleCount() + (write ? 4 : 0);
 
     switch (WDT.AdvanceTo(cycles)) {
     case WatchdogTimer::Event::None: break;
@@ -1565,8 +1566,9 @@ FORCE_INLINE void SH2::ExecuteDiv64() {
     }
 }
 
+template <bool write>
 FORCE_INLINE void SH2::AdvanceFRT() {
-    const uint64 cycles = GetCurrentCycleCount();
+    const uint64 cycles = GetCurrentCycleCount() + (write ? 4 : 0);
 
     switch (FRT.AdvanceTo(cycles)) {
     case FreeRunningTimer::Event::None: break;

@@ -574,6 +574,7 @@ private:
     WatchdogTimer WDT;
     uint8 m_WDTBusValue;
 
+    template <bool write>
     void AdvanceWDT();
 
     // --- Power-down module ---
@@ -597,6 +598,7 @@ private:
 
     FreeRunningTimer FRT;
 
+    template <bool write>
     void AdvanceFRT();
 
     void TriggerFRTInputCapture();
