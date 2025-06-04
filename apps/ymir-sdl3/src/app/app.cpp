@@ -212,6 +212,10 @@ int App::Run(const CommandLineOptions &options) {
 
     util::BoostCurrentProcessPriority(m_context.settings.general.boostProcessPriority);
 
+    // Load recent discs list.
+    // Must be done before LoadDiscImage because it saves the recent list to the file.
+    LoadRecentDiscs();
+
     // Load disc image if provided
     if (!options.gameDiscPath.empty()) {
         LoadDiscImage(options.gameDiscPath);
@@ -246,7 +250,6 @@ int App::Run(const CommandLineOptions &options) {
     }
 
     LoadSaveStates();
-    LoadRecentDiscs();
 
     RunEmulator();
 
