@@ -794,8 +794,16 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     switch (address) {
     case 0x04: return 0; // TODO: SCI SSR
     case 0x10: return FRT.ReadTIER();
-    case 0x11: AdvanceFRT(); return FRT.ReadFTCSR();
-    case 0x12: AdvanceFRT(); return FRT.ReadFRCH<peek>();
+    case 0x11:
+        if constexpr (!peek) {
+            AdvanceFRT();
+        }
+        return FRT.ReadFTCSR();
+    case 0x12:
+        if constexpr (!peek) {
+            AdvanceFRT();
+        }
+        return FRT.ReadFRCH<peek>();
     case 0x13: return FRT.ReadFRCL<peek>();
     case 0x14: return FRT.ReadOCRH();
     case 0x15: return FRT.ReadOCRL();
@@ -819,24 +827,42 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x72: return m_dmaChannels[1].ReadDRCR();
 
     case 0x80: [[fallthrough]];
-    case 0x88: AdvanceWDT(); return m_WDTBusValue = WDT.ReadWTCSR();
+    case 0x88:
+        if constexpr (peek) {
+            return WDT.ReadWTCSR();
+        } else {
+            AdvanceWDT();
+            return m_WDTBusValue = WDT.ReadWTCSR();
+        }
 
     case 0x81: [[fallthrough]];
-    case 0x89: AdvanceWDT(); return m_WDTBusValue = WDT.ReadWTCNT();
+    case 0x89:
+        if constexpr (peek) {
+            return WDT.ReadWTCNT();
+        } else {
+            AdvanceWDT();
+            return m_WDTBusValue = WDT.ReadWTCNT();
+        }
 
     case 0x83: [[fallthrough]];
-    case 0x8B: AdvanceWDT(); return m_WDTBusValue = WDT.ReadRSTCSR();
+    case 0x8B:
+        if constexpr (peek) {
+            return WDT.ReadRSTCSR();
+        } else {
+            AdvanceWDT();
+            return m_WDTBusValue = WDT.ReadRSTCSR();
+        }
 
-    case 0x82: return 0xFF;
-    case 0x84: return m_WDTBusValue;
-    case 0x85: return 0xFF;
-    case 0x86: return 0xFF;
-    case 0x87: return 0xFF;
-    case 0x8A: return 0xFF;
-    case 0x8C: return m_WDTBusValue;
-    case 0x8D: return 0xFF;
-    case 0x8E: return 0xFF;
+    case 0x82: [[fallthrough]];
+    case 0x85: [[fallthrough]];
+    case 0x86: [[fallthrough]];
+    case 0x87: [[fallthrough]];
+    case 0x8A: [[fallthrough]];
+    case 0x8D: [[fallthrough]];
+    case 0x8E: [[fallthrough]];
     case 0x8F: return 0xFF;
+    case 0x84: [[fallthrough]];
+    case 0x8C: return m_WDTBusValue;
 
     case 0x91: return SBYCR.u8;
 
@@ -874,16 +900,20 @@ template <bool peek>
 FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
     if (address < 0x100) {
         switch (address) {
-        case 0x82: m_WDTBusValue = 0xFF; return 0xFFFF;
-        case 0x84: return (m_WDTBusValue << 8u) | m_WDTBusValue;
-        case 0x85: m_WDTBusValue = 0xFF; return 0xFFFF;
-        case 0x86: m_WDTBusValue = 0xFF; return 0xFFFF;
-        case 0x87: m_WDTBusValue = 0xFF; return 0xFFFF;
-        case 0x8A: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x82: [[fallthrough]];
+        case 0x85: [[fallthrough]];
+        case 0x86: [[fallthrough]];
+        case 0x87: [[fallthrough]];
+        case 0x8A: [[fallthrough]];
+        case 0x8D: [[fallthrough]];
+        case 0x8E: [[fallthrough]];
+        case 0x8F:
+            if constexpr (!peek) {
+                m_WDTBusValue = 0xFF;
+            }
+            return 0xFFFF;
+        case 0x84: [[fallthrough]];
         case 0x8C: return (m_WDTBusValue << 8u) | m_WDTBusValue;
-        case 0x8D: m_WDTBusValue = 0xFF; return 0xFFFF;
-        case 0x8E: m_WDTBusValue = 0xFF; return 0xFFFF;
-        case 0x8F: m_WDTBusValue = 0xFF; return 0xFFFF;
 
         case 0xE0: return INTC.ReadICR();
         }
@@ -1039,7 +1069,9 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         }
         break;
     case 0x11:
-        AdvanceFRT();
+        if constexpr (!poke) {
+            AdvanceFRT();
+        }
         FRT.WriteFTCSR<poke>(value);
         if (INTC.pending.source == InterruptSource::FRT_OVI || INTC.pending.source == InterruptSource::FRT_OCI ||
             INTC.pending.source == InterruptSource::FRT_ICI) {
@@ -1048,13 +1080,17 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
         break;
     case 0x12: FRT.WriteFRCH<poke>(value); break;
     case 0x13:
-        AdvanceFRT();
+        if constexpr (!poke) {
+            AdvanceFRT();
+        }
         FRT.WriteFRCL<poke>(value);
         break;
     case 0x14: FRT.WriteOCRH<poke>(value); break;
     case 0x15: FRT.WriteOCRL<poke>(value); break;
     case 0x16:
-        AdvanceFRT();
+        if constexpr (!poke) {
+            AdvanceFRT();
+        }
         FRT.WriteTCR(value);
         break;
     case 0x17: FRT.WriteTOCR(value); break;
@@ -1105,7 +1141,11 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x8C: [[fallthrough]];
     case 0x8D: [[fallthrough]];
     case 0x8E: [[fallthrough]];
-    case 0x8F: m_WDTBusValue = value; break;
+    case 0x8F:
+        if constexpr (!poke) {
+            m_WDTBusValue = value;
+        }
+        break;
 
     case 0x91: SBYCR.u8 = value & 0xDF; break;
     case 0x92: m_cache.WriteCCR<poke>(value); break;
@@ -1169,19 +1209,27 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
 
     case 0x80: [[fallthrough]];
     case 0x88:
-        m_WDTBusValue = value;
+        if constexpr (!poke) {
+            m_WDTBusValue = value;
+        }
         if ((value >> 8u) == 0x5A) {
-            AdvanceWDT();
+            if constexpr (!poke) {
+                AdvanceWDT();
+            }
             WDT.WriteWTCNT(value);
         } else if ((value >> 8u) == 0xA5) {
-            AdvanceWDT();
+            if constexpr (!poke) {
+                AdvanceWDT();
+            }
             WDT.WriteWTCSR<poke>(value);
         }
         break;
 
     case 0x82: [[fallthrough]];
     case 0x8A:
-        m_WDTBusValue = value;
+        if constexpr (!poke) {
+            m_WDTBusValue = value;
+        }
         if ((value >> 8u) == 0x5A) {
             WDT.WriteRSTE_RSTS(value);
         } else if ((value >> 8u) == 0xA5) {
@@ -1198,9 +1246,17 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
     case 0x8B: [[fallthrough]];
     case 0x8D: [[fallthrough]];
     case 0x8E: [[fallthrough]];
-    case 0x8F: m_WDTBusValue = value; break;
+    case 0x8F:
+        if constexpr (!poke) {
+            m_WDTBusValue = value;
+        }
+        break;
     case 0x84: [[fallthrough]];
-    case 0x8C: m_WDTBusValue = value >> 8u; break;
+    case 0x8C:
+        if constexpr (!poke) {
+            m_WDTBusValue = value >> 8u;
+        }
+        break;
 
     case 0x92: m_cache.WriteCCR<poke>(value); break;
 
