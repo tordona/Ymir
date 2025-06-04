@@ -9,6 +9,7 @@
 
 ### Fixes
 
+- SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 
 
 ## Version 0.1.4+1
