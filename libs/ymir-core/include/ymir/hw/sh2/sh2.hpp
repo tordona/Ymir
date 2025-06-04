@@ -572,6 +572,7 @@ private:
     // --- WDT module ---
 
     WatchdogTimer WDT;
+    uint8 m_WDTBusValue;
 
     void AdvanceWDT();
 

@@ -381,6 +381,7 @@ void SH2::SaveState(state::SH2State &state) const {
     m_dmaChannels[0].SaveState(state.dmac.channels[0]);
     m_dmaChannels[1].SaveState(state.dmac.channels[1]);
     WDT.SaveState(state.wdt);
+    state.wdt.busValue = m_WDTBusValue;
     DIVU.SaveState(state.divu);
     FRT.SaveState(state.frt);
     INTC.SaveState(state.intc);
@@ -416,6 +417,7 @@ void SH2::LoadState(const state::SH2State &state) {
     m_dmaChannels[0].LoadState(state.dmac.channels[0]);
     m_dmaChannels[1].LoadState(state.dmac.channels[1]);
     WDT.LoadState(state.wdt);
+    m_WDTBusValue = state.wdt.busValue;
     DIVU.LoadState(state.divu);
     FRT.LoadState(state.frt);
     INTC.LoadState(state.intc);
@@ -817,19 +819,21 @@ FORCE_INLINE uint8 SH2::OnChipRegReadByte(uint32 address) {
     case 0x72: return m_dmaChannels[1].ReadDRCR();
 
     case 0x80: [[fallthrough]];
-    case 0x88: AdvanceWDT(); return WDT.ReadWTCSR();
+    case 0x88: AdvanceWDT(); return m_WDTBusValue = WDT.ReadWTCSR();
 
     case 0x81: [[fallthrough]];
-    case 0x89: AdvanceWDT(); return WDT.ReadWTCNT();
+    case 0x89: AdvanceWDT(); return m_WDTBusValue = WDT.ReadWTCNT();
 
     case 0x83: [[fallthrough]];
-    case 0x8B: AdvanceWDT(); return WDT.ReadRSTCSR();
+    case 0x8B: AdvanceWDT(); return m_WDTBusValue = WDT.ReadRSTCSR();
 
     case 0x82: return 0xFF;
+    case 0x84: return m_WDTBusValue;
     case 0x85: return 0xFF;
     case 0x86: return 0xFF;
     case 0x87: return 0xFF;
     case 0x8A: return 0xFF;
+    case 0x8C: return m_WDTBusValue;
     case 0x8D: return 0xFF;
     case 0x8E: return 0xFF;
     case 0x8F: return 0xFF;
@@ -870,14 +874,16 @@ template <bool peek>
 FORCE_INLINE uint16 SH2::OnChipRegReadWord(uint32 address) {
     if (address < 0x100) {
         switch (address) {
-        case 0x82: return 0xFFFF;
-        case 0x85: return 0xFFFF;
-        case 0x86: return 0xFFFF;
-        case 0x87: return 0xFFFF;
-        case 0x8A: return 0xFFFF;
-        case 0x8D: return 0xFFFF;
-        case 0x8E: return 0xFFFF;
-        case 0x8F: return 0xFFFF;
+        case 0x82: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x84: return (m_WDTBusValue << 8u) | m_WDTBusValue;
+        case 0x85: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x86: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x87: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x8A: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x8C: return (m_WDTBusValue << 8u) | m_WDTBusValue;
+        case 0x8D: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x8E: m_WDTBusValue = 0xFF; return 0xFFFF;
+        case 0x8F: m_WDTBusValue = 0xFF; return 0xFFFF;
 
         case 0xE0: return INTC.ReadICR();
         }
@@ -1084,14 +1090,22 @@ FORCE_INLINE void SH2::OnChipRegWriteByte(uint32 address, uint8 value) {
     case 0x71: m_dmaChannels[0].WriteDRCR(value); break;
     case 0x72: m_dmaChannels[1].WriteDRCR(value); break;
 
-    case 0x80: [[fallthrough]];
-    case 0x88: break; // WDT.WTCNT/WTCSR only accept 16-bit writes
-
+    case 0x80: [[fallthrough]]; // WDT registers only accept 16-bit writes
     case 0x81: [[fallthrough]];
-    case 0x89: break; // WDT.WTCNT/WTCSR only accept 16-bit writes
-
+    case 0x82: [[fallthrough]];
     case 0x83: [[fallthrough]];
-    case 0x8B: break; // WDT.RSTCSR only accepts 16-bit writes
+    case 0x84: [[fallthrough]];
+    case 0x85: [[fallthrough]];
+    case 0x86: [[fallthrough]];
+    case 0x87: [[fallthrough]];
+    case 0x88: [[fallthrough]];
+    case 0x89: [[fallthrough]];
+    case 0x8A: [[fallthrough]];
+    case 0x8B: [[fallthrough]];
+    case 0x8C: [[fallthrough]];
+    case 0x8D: [[fallthrough]];
+    case 0x8E: [[fallthrough]];
+    case 0x8F: m_WDTBusValue = value; break;
 
     case 0x91: SBYCR.u8 = value & 0xDF; break;
     case 0x92: m_cache.WriteCCR<poke>(value); break;
@@ -1155,6 +1169,7 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
 
     case 0x80: [[fallthrough]];
     case 0x88:
+        m_WDTBusValue = value;
         if ((value >> 8u) == 0x5A) {
             AdvanceWDT();
             WDT.WriteWTCNT(value);
@@ -1166,12 +1181,26 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
 
     case 0x82: [[fallthrough]];
     case 0x8A:
+        m_WDTBusValue = value;
         if ((value >> 8u) == 0x5A) {
             WDT.WriteRSTE_RSTS(value);
         } else if ((value >> 8u) == 0xA5) {
             WDT.WriteWOVF<poke>(value);
         }
         break;
+
+    case 0x81: [[fallthrough]];
+    case 0x83: [[fallthrough]];
+    case 0x85: [[fallthrough]];
+    case 0x86: [[fallthrough]];
+    case 0x87: [[fallthrough]];
+    case 0x89: [[fallthrough]];
+    case 0x8B: [[fallthrough]];
+    case 0x8D: [[fallthrough]];
+    case 0x8E: [[fallthrough]];
+    case 0x8F: m_WDTBusValue = value; break;
+    case 0x84: [[fallthrough]];
+    case 0x8C: m_WDTBusValue = value >> 8u; break;
 
     case 0x92: m_cache.WriteCCR<poke>(value); break;
 

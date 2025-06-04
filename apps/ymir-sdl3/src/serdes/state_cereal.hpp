@@ -12,7 +12,7 @@ namespace ymir::state {
 // Current save state format version.
 // Increment once per release if there are any changes to the serializers.
 // Remember to document every change!
-inline constexpr uint32 kVersion = 5;
+inline constexpr uint32 kVersion = 6;
 
 } // namespace ymir::state
 
@@ -69,6 +69,9 @@ void serialize(Archive &ar, SH2State::DMAC::Channel &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SH2State::WDT &s, const uint32 version) {
+    // v6:
+    // - New fields
+    //   - uint8 busValue = 0
     // v5:
     // - New fields
     //   - WTCSR_mask = false
@@ -80,6 +83,11 @@ void serialize(Archive &ar, SH2State::WDT &s, const uint32 version) {
         ar(s.WTCSR_mask);
     } else {
         s.WTCSR_mask = false;
+    }
+    if (version >= 6) {
+        ar(s.busValue);
+    } else {
+        s.busValue = 0;
     }
 }
 

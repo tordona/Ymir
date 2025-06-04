@@ -52,6 +52,7 @@ struct SH2State {
         uint8 RSTCSR;
         uint64 cycleCount;
         bool WTCSR_mask;
+        uint8 busValue;
     } wdt;
 
     struct DIVU {
