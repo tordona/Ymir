@@ -16,7 +16,7 @@ namespace sh2_intr {
 
 struct TestSubject : debug::ISH2Tracer {
     sys::SystemFeatures systemFeatures{};
-    core::Scheduler scheduler{};
+    mutable core::Scheduler scheduler{};
     mutable sys::Bus bus{};
     mutable sh2::SH2 sh2{scheduler, bus, true, systemFeatures};
     sh2::SH2::Probe &probe{sh2.GetProbe()};
@@ -38,6 +38,7 @@ struct TestSubject : debug::ISH2Tracer {
     }
 
     void ClearAll() const {
+        scheduler.Reset();
         sh2.Reset(true);
         ClearCaptures();
         ClearMemoryMocks();
@@ -230,7 +231,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(probe.CheckInterrupts());
 
     // Jump to interrupt handler
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
@@ -259,7 +260,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // Execute first instruction in the interrupt handler (should be a NOP)
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - no interrupts
@@ -280,7 +281,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the RTE instruction
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - no interrupts
@@ -305,7 +306,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the NOP instruction in the delay slot
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - no interrupts
@@ -332,7 +333,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     REQUIRE(probe.CheckInterrupts());
 
     // Jump to interrupt handler
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - one interrupt of the specified vector+level at the starting PC
@@ -361,7 +362,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // Execute first instruction in the interrupt handler (should be a NOP)
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - no interrupts
@@ -382,7 +383,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the RTE instruction
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - no interrupts
@@ -407,7 +408,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupt flow works correctly", 
     ClearCaptures();
 
     // This should be the NOP instruction in the delay slot
-    sh2.Step<true, false>();
+    scheduler.Advance(sh2.Step<true, false>());
 
     // Check results:
     // - no interrupts
@@ -493,7 +494,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         REQUIRE(probe.CheckInterrupts());
 
         // Enter interrupt handler
-        sh2.Step<true, false>();
+        scheduler.Advance(sh2.Step<true, false>());
 
         // Check results:
         // - FRT OVI interrupt at starting PC
@@ -529,7 +530,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         ClearCaptures();
 
         // Step through RTE instruction
-        sh2.Step<true, false>();
+        scheduler.Advance(sh2.Step<true, false>());
 
         // Check results:
         // - no interrupts
@@ -807,7 +808,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are not serviced in de
     probe.PR() = startPC; // point PR to start of program
 
     // Step once; should be in delay slot
-    sh2.Step<false, false>();
+    scheduler.Advance(sh2.Step<false, false>());
 
     REQUIRE(probe.IsInDelaySlot() == true);
 
@@ -823,7 +824,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are not serviced in de
     CHECK(intc.pending.level == 5);
 
     // Step once more; should be back to start of program
-    sh2.Step<false, false>();
+    scheduler.Advance(sh2.Step<false, false>());
 
     REQUIRE(probe.IsInDelaySlot() == false);
 
