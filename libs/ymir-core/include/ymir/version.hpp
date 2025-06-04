@@ -25,9 +25,9 @@ inline constexpr auto string = Ymir_VERSION;
 /// prerelease and build components. It also adds a `-dev` suffix for development builds.
 inline constexpr auto fullstring = Ymir_FULL_VERSION;
 
-inline constexpr auto major = Ymir_VERSION_MAJOR;           ///< The library's major version
-inline constexpr auto minor = Ymir_VERSION_MINOR;           ///< The library's minor version
-inline constexpr auto patch = Ymir_VERSION_PATCH;           ///< The library's patch version
+inline constexpr auto major = (unsigned)Ymir_VERSION_MAJOR; ///< The library's major version
+inline constexpr auto minor = (unsigned)Ymir_VERSION_MINOR; ///< The library's minor version
+inline constexpr auto patch = (unsigned)Ymir_VERSION_PATCH; ///< The library's patch version
 inline constexpr auto prerelease = Ymir_VERSION_PRERELEASE; ///< The library's prerelease version
 inline constexpr auto build = Ymir_VERSION_BUILD;           ///< The library's build version
 
