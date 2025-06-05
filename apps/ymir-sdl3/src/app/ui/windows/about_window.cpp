@@ -184,7 +184,7 @@ void AboutWindow::DrawAboutTab() {
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("Discord server", "https://discord.gg/NN3A7n5dzn");
 
-    ImGui::TextUnformatted("Support my work on ");
+    ImGui::TextUnformatted("Consider supporting my work on ");
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("Patreon", "https://www.patreon.com/StrikerX3");
 }
