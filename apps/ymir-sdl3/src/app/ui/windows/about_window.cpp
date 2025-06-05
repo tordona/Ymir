@@ -175,7 +175,6 @@ void AboutWindow::DrawAboutTab() {
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("GPLv3", "https://www.gnu.org/licenses/gpl-3.0.en.html");
 
-    ImGui::NewLine();
     ImGui::TextUnformatted("The source code can be found at ");
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("https://github.com/StrikerX3/Ymir");
@@ -184,6 +183,10 @@ void AboutWindow::DrawAboutTab() {
     ImGui::TextUnformatted("Join the official ");
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("Discord server", "https://discord.gg/NN3A7n5dzn");
+
+    ImGui::TextUnformatted("Support my work on ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("Patreon", "https://www.patreon.com/StrikerX3");
 }
 
 void AboutWindow::DrawDependenciesTab() {
