@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-windows:
-    name: windows-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}
+    name: windows-${{ matrix.c_compiler }}-${{ matrix.architecture.name }}-${{ matrix.subsystem.name }}
     runs-on: windows-latest
 
     strategy:
@@ -24,10 +24,10 @@ jobs:
           - name: Win32
             enable_devlog_option: "OFF"
             build_ymdasm_option: "OFF"
-        x86_simd_ext:
-          - name: "SSE2"
+        architecture:
+          - name: "x86_64-SSE2"
             enable_avx2_option: "OFF"
-          - name: "AVX2"
+          - name: "x86_64-AVX2"
             enable_avx2_option: "ON"
         include:
           - c_compiler: clang
@@ -54,8 +54,8 @@ jobs:
         run: |
           export BUILD_VERSION=${GITHUB_REF_NAME//+/_}
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-windows-${{ matrix.x86_simd_ext.name }}-${{ matrix.subsystem.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.x86_simd_ext.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-windows-${{ matrix.architecture.name }}-${{ matrix.subsystem.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-windows-${{ matrix.architecture.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Configure MSVC
         if: ${{ matrix.c_compiler == 'cl' }}
@@ -70,7 +70,7 @@ jobs:
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_SHARED_LIBS=OFF
-          -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
+          -DYmir_AVX2=${{ matrix.architecture.enable_avx2_option }}
           -DYmir_ENABLE_IPO=ON
           -DYmir_ENABLE_DEVLOG=${{ matrix.subsystem.enable_devlog_option }}
           -DYmir_ENABLE_IMGUI_DEMO=OFF
@@ -132,8 +132,8 @@ jobs:
           path: ${{ steps.strings.outputs.ymdasm-artifact-name }}.zip
 
   build-linux:
-    name: linux-${{ matrix.c_compiler }}-${{ matrix.x86_simd_ext.name }}
-    runs-on: ubuntu-22.04
+    name: linux-${{ matrix.c_compiler }}-${{ matrix.architecture.name }}
+    runs-on: ${{ matrix.architecture.runner }}
 
     strategy:
       fail-fast: false
@@ -143,11 +143,16 @@ jobs:
         # Notes about compilers:
         # - GCC (gcc) gets stuck building sh2.cpp (didn't finish after 12+ hours)
         c_compiler: [clang] # [clang, gcc]
-        x86_simd_ext:
-          - name: "SSE2"
+        architecture:
+          - name: "x86_64-SSE2"
             enable_avx2_option: "OFF"
-          - name: "AVX2"
+            runner: ubuntu-22.04
+          - name: "x86_64-AVX2"
             enable_avx2_option: "ON"
+            runner: ubuntu-22.04
+          - name: "AArch64-NEON"
+            enable_avx2_option: "OFF"  # doesn't matter actually
+            runner: ubuntu-22.04
         include:
           - c_compiler: clang
             cpp_compiler: clang++
@@ -170,8 +175,8 @@ jobs:
         run: |
           export BUILD_VERSION=${GITHUB_REF_NAME//+/_}
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-linux-${{ matrix.x86_simd_ext.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
-          echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.x86_simd_ext.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-linux-${{ matrix.architecture.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymdasm-artifact-name=ymdasm-linux-${{ matrix.architecture.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Install SDL3 Dependencies
         run: |
@@ -194,7 +199,7 @@ jobs:
           -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_SHARED_LIBS=OFF
-          -DYmir_AVX2=${{ matrix.x86_simd_ext.enable_avx2_option }}
+          -DYmir_AVX2=${{ matrix.architecture.enable_avx2_option }}
           -DYmir_ENABLE_IPO=ON
           -DYmir_ENABLE_DEVLOG=OFF
           -DYmir_ENABLE_IMGUI_DEMO=OFF
@@ -261,9 +266,9 @@ jobs:
         build_type: [Release]
         arch:
           - name: "arm64"
-            isa_name: "a64"
+            isa_name: "AArch64"
           - name: "x86_64"
-            isa_name: "x64"
+            isa_name: "x86_64"
 
     steps:
       - name: Parse semver string
