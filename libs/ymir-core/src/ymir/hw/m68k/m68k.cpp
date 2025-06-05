@@ -165,7 +165,7 @@ FORCE_INLINE void MC68EC000::HandleExceptionCommon(ExceptionVector vector, uint8
 
 FORCE_INLINE bool MC68EC000::CheckPrivilege() {
     if (!SR.S) {
-        PC -= 2;
+        PC -= 4;
         EnterException(ExceptionVector::PrivilegeViolation);
         return false;
     }
@@ -1040,9 +1040,7 @@ FORCE_INLINE void MC68EC000::Instr_Move_EA_CCR(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Move_EA_SR(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         const uint16 Xn = bit::extract<0, 2>(instr);
         const uint16 M = bit::extract<3, 5>(instr);
         const uint16 value = ReadEffectiveAddress<uint16>(M, Xn);
@@ -1069,9 +1067,7 @@ FORCE_INLINE void MC68EC000::Instr_Move_SR_EA(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Move_An_USP(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         const uint16 An = bit::extract<0, 2>(instr);
         SP_swap = regs.A[An];
 
@@ -1080,9 +1076,7 @@ FORCE_INLINE void MC68EC000::Instr_Move_An_USP(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Move_USP_An(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         const uint16 An = bit::extract<0, 2>(instr);
         regs.A[An] = SP_swap;
 
@@ -1641,9 +1635,7 @@ FORCE_INLINE void MC68EC000::Instr_AndI_CCR(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_AndI_SR(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         const uint16 value = PrefetchNext();
         const uint16 newSR = SR.u16 & value;
         PC -= 2;
@@ -1698,9 +1690,7 @@ FORCE_INLINE void MC68EC000::Instr_EorI_CCR(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_EorI_SR(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         const uint16 value = PrefetchNext();
         const uint16 newSR = SR.u16 ^ value;
         PC -= 2;
@@ -1816,9 +1806,7 @@ FORCE_INLINE void MC68EC000::Instr_OrI_CCR(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_OrI_SR(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         const uint16 value = PrefetchNext();
         const uint16 newSR = SR.u16 | value;
         PC -= 2;
@@ -3094,7 +3082,6 @@ FORCE_INLINE void MC68EC000::Instr_Jmp(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_RTE(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
         uint32 SP = regs.SP;
         SetSR(MemRead<uint16, false>(SP));
@@ -3141,9 +3128,7 @@ FORCE_INLINE void MC68EC000::Instr_Chk(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Reset(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         // TODO: assert RESET signal, causing all external devices to be reset
         Reset(false);
         // PrefetchTransfer();
@@ -3151,9 +3136,7 @@ FORCE_INLINE void MC68EC000::Instr_Reset(uint16 instr) {
 }
 
 FORCE_INLINE void MC68EC000::Instr_Stop(uint16 instr) {
-    PC -= 2;
     if (CheckPrivilege()) {
-        PC += 2;
         SetSR(m_prefetchQueue[0]);
         // TODO: stop CPU; should resume when a trace, interrupt or reset exception occurs
     }
