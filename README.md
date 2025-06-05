@@ -65,3 +65,12 @@ Ymir can load game disc images from MAME CHD, BIN+CUE, IMG+CCD, MDF+MDS or ISO f
 ## Compiling
 
 See [COMPILING.md](COMPILING.md).
+
+
+## Support my work
+
+If you enjoy my projects and want to help me keep developing them, consider supporting me:
+- [Patreon](https://www.patreon.com/StrikerX3) for ongoing support
+- PIX for one-time donations in Brazil: ask me on Discord.
+
+Your support is completely optional but genuinely appreciated. It helps me dedicate more time and energy to these passion projects while keeping everything open-source and free for everyone. Thank you!
