@@ -591,6 +591,7 @@ void Slot::SaveState(state::SCSPSlotState &state) const {
     }
 
     state.egLevel = egLevel;
+    state.egAttackBug = egAttackBug;
 
     state.sampleCount = sampleCount;
     state.currSample = currSample;
@@ -743,6 +744,7 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     }
 
     egLevel = state.egLevel & 0x3FF;
+    egAttackBug = state.egAttackBug;
 
     sampleCount = state.sampleCount;
     currSample = state.currSample;

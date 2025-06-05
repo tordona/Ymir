@@ -398,6 +398,11 @@ void serialize(Archive &ar, M68KState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SCSPState &s, const uint32 version) {
+    // v6:
+    // - New fields
+    //   - SCILV = {0,0,0}
+    //     (unfortunately the data is missing, so old save states will never restore properly)
+    //   - reuseSCILV = true if version < 6, false otherwise; not stored in save state binary
     // v5:
     // - Changed fields
     //   - cddaBuffer array size reduced from 2048 * 75 to 2352 * 25; note that this is a circular buffer indexed by
@@ -479,6 +484,13 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     ar(s.timers);
     ar(s.MCIEB, s.MCIPD);
     ar(s.SCIEB, s.SCIPD);
+    if (version >= 6) {
+        ar(s.SCILV);
+        s.reuseSCILV = false;
+    } else {
+        s.SCILV.fill(0);
+        s.reuseSCILV = true;
+    }
     ar(s.DEXE, s.DDIR, s.DGATE, s.DMEA, s.DRGA, s.DTLG);
     ar(s.SOUS, s.soundStackIndex);
     ar(s.dsp);

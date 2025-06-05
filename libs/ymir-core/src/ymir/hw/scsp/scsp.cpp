@@ -261,6 +261,8 @@ void SCSP::SaveState(state::SCSPState &state) const {
     state.MCIPD = m_scuPendingInterrupts;
     state.SCIEB = m_m68kEnabledInterrupts;
     state.SCIPD = m_m68kPendingInterrupts;
+    state.SCILV = m_m68kInterruptLevels;
+    state.reuseSCILV = false;
 
     state.DEXE = m_dmaExec;
     state.DDIR = m_dmaXferToMem;
@@ -338,6 +340,9 @@ void SCSP::LoadState(const state::SCSPState &state) {
     m_scuPendingInterrupts = state.MCIPD & 0x7FF;
     m_m68kEnabledInterrupts = state.SCIEB & 0x7FF;
     m_m68kPendingInterrupts = state.SCIPD & 0x7FF;
+    if (!state.reuseSCILV) {
+        m_m68kInterruptLevels = state.SCILV;
+    }
 
     m_dmaExec = state.DEXE;
     m_dmaXferToMem = state.DDIR;

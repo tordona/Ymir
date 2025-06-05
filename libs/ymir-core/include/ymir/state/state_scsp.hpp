@@ -41,6 +41,10 @@ struct SCSPState {
     uint16 MCIPD;
     uint16 SCIEB;
     uint16 SCIPD;
+    std::array<uint8, 3> SCILV;
+    // HACK to preserve old savestate behavior which was missing SCILV.
+    // Causes SCSP to reuse current SCILV settings instead of loading from save state.
+    bool reuseSCILV;
 
     bool DEXE;
     bool DDIR;
