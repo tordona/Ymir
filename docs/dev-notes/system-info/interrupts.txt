@@ -69,3 +69,73 @@ SCU interrupts
   29   5D     1  A-Bus   External Interrupt 0D
   30   5E     1  A-Bus   External Interrupt 0E
   31   5F     1  A-Bus   External Interrupt 0F
+
+
+
+M68K interrupts
+---------------
+vec ofs name
+00  00  Reset SP value
+01  04  Reset PC value
+02  08  Bus error
+03  0C  Address error
+04  10  Illegal instruction
+05  14  Divide by zero
+06  18  CHK
+07  1C  TRAPV
+08  20  Privilege violation
+09  24  Trace
+0A  28  1010 line emulation
+0B  2C  1111 line emulation
+0C  30  (reserved)
+0D  34  Coprocessor protocol violation
+0E  38  Format error
+0F  3C  Uninitialized interrupt
+10  40  (reserved)
+11  44  (reserved)
+12  48  (reserved)
+13  4C  (reserved)
+14  50  (reserved)
+15  54  (reserved)
+16  58  (reserved)
+17  5C  (reserved)
+18  60  Spurious interrupt
+19  64  Level 1 interrupt autovector
+1A  68  Level 2 interrupt autovector
+1B  6C  Level 3 interrupt autovector
+1C  70  Level 4 interrupt autovector
+1D  74  Level 5 interrupt autovector
+1E  78  Level 6 interrupt autovector
+1F  7C  Level 7 interrupt autovector
+20  80  TRAP #0
+21  84  TRAP #1
+22  88  TRAP #2
+23  8C  TRAP #3
+24  90  TRAP #4
+25  94  TRAP #5
+26  98  TRAP #6
+27  9C  TRAP #7
+28  A0  TRAP #8
+29  A4  TRAP #9
+2A  A8  TRAP #10
+2B  AC  TRAP #11
+2C  B0  TRAP #12
+2D  B4  TRAP #13
+2E  B8  TRAP #14
+2F  BC  TRAP #15
+30  C0  (unused)
+31  C4  (unused)
+32  C8  (unused)
+33  CC  (unused)
+34  D0  (unused)
+35  D4  (unused)
+36  D8  (unused)
+37  DC  (unused)
+38  E0  (unused)
+39  E4  (unused)
+3A  E8  (unused)
+3B  EC  (reserved)
+3C  F0  (reserved)
+3D  F4  (reserved)
+3E  F8  (reserved)
+3F  FC  (reserved)
