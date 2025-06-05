@@ -11,23 +11,25 @@ Ymir has been successfully compiled with the following toolchains:
 - Clang 14.0.0 on WSL Ubuntu 22.04.5 LTS (`clang`)
 - Clang 15.0.7 on WSL Ubuntu 22.04.5 LTS (`clang-15`)
 - Clang 19.1.1 on Ubuntu 24.04.2 LTS (`clang-19`)
+- Apple Clang 17 on macOS 15 Sequoia
 
-The project has been compiled for x86_64 Windows and Linux platforms only. It may or may not compile for ARM64 or macOS.
+The project has been compiled for x86_64 and ARM64 Windows, Linux and macOS platforms.
 
 
 ## Build configuration
 
 You can tune the build with following CMake options:
 
-- `Ymir_AVX2` (`BOOL`): Set to `ON` to use AVX2 extensions. `OFF` uses the platform's default instruction set, typically SSE2. Disabled by default.
+- `Ymir_AVX2` (`BOOL`): Set to `ON` to use AVX2 extensions (on x86_64 platforms only). `OFF` uses the platform's default instruction set, typically SSE2. ARM64 platforms will always use NEON. Disabled by default.
 - `Ymir_ENABLE_TESTS` (`BOOL`): Includes the unit test project in the build. Enabled by default if this is the top level CMake project.
 - `Ymir_ENABLE_SANDBOX` (`BOOL`): Includes the sandbox project in the build. Enabled by default if this is the top level CMake project.
 - `Ymir_ENABLE_YMDASM` (`BOOL`): Includes the disassembly tool project in the build. Enabled by default if this is the top level CMake project.
 - `Ymir_ENABLE_IPO` (`BOOL`): Enables interprocedural optimizations (also called link-time optimizations) on all projects. Enabled by default.
 - `Ymir_ENABLE_DEVLOG` (`BOOL`): Enables logs meant to aid development. Enabled by default.
 - `Ymir_ENABLE_IMGUI_DEMO` (`BOOL`): Enables the ImGui demo window, useful as a reference when developing new UI elements. Enabled by default.
+- `Ymir_EXTRA_INLINING` (`BOOL`): Enables more aggressive inlining, which slows down the build in exchange for better runtime performance. Disabled by default.
 
-For a Release build, you might want to disable the devlog and ImGui demo window to maximize performance and reduce the binary size.
+For a Release build, you might want to disable the devlog and ImGui demo window and enable extra inlining to maximize performance and reduce the binary size.
 
 It is highly recommended to use [Ninja](https://ninja-build.org/) as it greatly accelerates the build process, especially on machines with high CPU core counts.
 
@@ -48,6 +50,23 @@ Both methods work, but opening the directory allows Visual Studio to use Ninja f
 To build Ymir on Linux, first you will need to install SDL3's required dependencies. Follow the instructions on [this page](https://wiki.libsdl.org/SDL3/README/linux) to install them.
 
 The compiler of choice for this platform is Clang. GCC is not currently supported as there seems to be a bug which causes it to take an extremely long time to compile `sh2.cpp`.
+
+Use CMake to generate a Makefile or (preferably) a Ninja build script:
+
+```sh
+cmake -S . -B build -G Ninja
+```
+
+Pass additional `-D<option>=<value>` parameters to tune the build. See the [Build configuration](#build-configuration) section above for details.
+
+You can use CMake to build the project, regardless of generator:
+
+```sh
+cmake --build build --parallel
+```
+
+
+## Building on macOS
 
 Use CMake to generate a Makefile or (preferably) a Ninja build script:
 
