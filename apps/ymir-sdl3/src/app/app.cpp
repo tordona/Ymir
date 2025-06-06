@@ -689,8 +689,11 @@ void App::RunEmulator() {
 
     auto &inputContext = m_context.inputContext;
 
-    bool paused = false; // TODO: this should be updated by the emulator thread via events
+    bool paused = m_options.startPaused; // TODO: this should be updated by the emulator thread via events
     bool pausedByLostFocus = false;
+    if (paused) {
+        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+    }
 
     // General
     {

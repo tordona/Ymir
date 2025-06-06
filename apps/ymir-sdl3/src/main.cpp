@@ -16,6 +16,7 @@ int main(int argc, char **argv) {
     options.add_options()("h,help", "Display help text", cxxopts::value(showHelp)->default_value("false"));
     options.add_options()("f,fullscreen", "Start in fullscreen mode",
                           cxxopts::value(progOpts.fullScreen)->default_value("false"));
+    options.add_options()("P,paused", "Start paused", cxxopts::value(progOpts.startPaused)->default_value("false"));
     options.parse_positional({"disc"});
 
     try {
