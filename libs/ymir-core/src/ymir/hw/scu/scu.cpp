@@ -538,11 +538,11 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
     //    4   44     B  SCU     Timer 1
     //    5   45     A  SCU     DSP End
     //    6   46     9  SCSP    Sound Request
-    //    7   47     8  SM      System Manager
-    //    8   48     8  PAD     PAD Interrupt
-    //    9   49     6  A-Bus   Level 2 DMA End
-    //   10   4A     6  A-Bus   Level 1 DMA End
-    //   11   4B     5  A-Bus   Level 0 DMA End
+    //    7   47     8  SMPC    System Manager
+    //    8   48     8  SMPC    PAD Interrupt
+    //    9   49     6  SCU     Level 2 DMA End
+    //   10   4A     6  SCU     Level 1 DMA End
+    //   11   4B     5  SCU     Level 0 DMA End
     //   12   4C     3  SCU     DMA-illegal
     //   13   4D     2  VDP1    Sprite Draw End
     //   14   -

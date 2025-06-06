@@ -55,7 +55,7 @@ union InterruptStatus {
         uint32 SCU_DSPEnd : 1;
         uint32 SCSP_SoundRequest : 1;
         uint32 SMPC_SystemManager : 1;
-        uint32 PAD_PADInterrupt : 1;
+        uint32 SMPC_PADInterrupt : 1;
         uint32 ABus_Level2DMAEnd : 1;
         uint32 ABus_Level1DMAEnd : 1;
         uint32 ABus_Level0DMAEnd : 1;
@@ -99,7 +99,7 @@ union InterruptMask {
         uint32 SCU_DSPEnd : 1;
         uint32 SCSP_SoundRequest : 1;
         uint32 SMPC_SystemManager : 1;
-        uint32 PAD_PADInterrupt : 1;
+        uint32 SMPC_PADInterrupt : 1;
         uint32 ABus_Level2DMAEnd : 1;
         uint32 ABus_Level1DMAEnd : 1;
         uint32 ABus_Level0DMAEnd : 1;

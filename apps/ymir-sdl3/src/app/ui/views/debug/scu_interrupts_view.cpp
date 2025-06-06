@@ -93,9 +93,9 @@ void SCUInterruptsView::DisplayInternalInterrupts() {
         drawRow(6, "SCSP", "Sound Request", 0x46, 0x9);
         drawRow(7, "SMPC", "System Manager", 0x47, 0x8);
         drawRow(8, "SMPC", "PAD Interrupt", 0x48, 0x8);
-        drawRow(9, "A-Bus", "Level 2 DMA End", 0x49, 0x6);
-        drawRow(10, "A-Bus", "Level 1 DMA End", 0x4A, 0x6);
-        drawRow(11, "A-Bus", "Level 0 DMA End", 0x4B, 0x5);
+        drawRow(9, "SCU", "Level 2 DMA End", 0x49, 0x6);
+        drawRow(10, "SCU", "Level 1 DMA End", 0x4A, 0x6);
+        drawRow(11, "SCU", "Level 0 DMA End", 0x4B, 0x5);
         drawRow(12, "SCU", "DMA-illegal", 0x4C, 0x3);
         drawRow(13, "VDP1", "Sprite Draw End", 0x4D, 0x2);
 
