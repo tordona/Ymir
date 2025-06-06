@@ -529,41 +529,6 @@ void SCU::WriteCartridge(uint32 address, T value) {
 }
 
 FORCE_INLINE void SCU::UpdateInterruptLevel() {
-    // SCU interrupts
-    //  bit  vec   lvl  source  reason
-    //    0   40     F  VDP2    VBlank IN
-    //    1   41     E  VDP2    VBlank OUT
-    //    2   42     D  VDP2    HBlank IN
-    //    3   43     C  SCU     Timer 0
-    //    4   44     B  SCU     Timer 1
-    //    5   45     A  SCU     DSP End
-    //    6   46     9  SCSP    Sound Request
-    //    7   47     8  SMPC    System Manager
-    //    8   48     8  SMPC    PAD Interrupt
-    //    9   49     6  SCU     Level 2 DMA End
-    //   10   4A     6  SCU     Level 1 DMA End
-    //   11   4B     5  SCU     Level 0 DMA End
-    //   12   4C     3  SCU     DMA-illegal
-    //   13   4D     2  VDP1    Sprite Draw End
-    //   14   -
-    //   15   -
-    //   16   50     7  A-Bus   External Interrupt 00
-    //   17   51     7  A-Bus   External Interrupt 01
-    //   18   52     7  A-Bus   External Interrupt 02
-    //   19   53     7  A-Bus   External Interrupt 03
-    //   20   54     4  A-Bus   External Interrupt 04
-    //   21   55     4  A-Bus   External Interrupt 05
-    //   22   56     4  A-Bus   External Interrupt 06
-    //   23   57     4  A-Bus   External Interrupt 07
-    //   24   58     1  A-Bus   External Interrupt 08
-    //   25   59     1  A-Bus   External Interrupt 09
-    //   26   5A     1  A-Bus   External Interrupt 0A
-    //   27   5B     1  A-Bus   External Interrupt 0B
-    //   28   5C     1  A-Bus   External Interrupt 0C
-    //   29   5D     1  A-Bus   External Interrupt 0D
-    //   30   5E     1  A-Bus   External Interrupt 0E
-    //   31   5F     1  A-Bus   External Interrupt 0F
-
     // FIXME: Enabling this breaks Panzer Dragoon.
     // Rayman works with or without this.
     // What exactly is supposed to happen then?
