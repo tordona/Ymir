@@ -333,8 +333,8 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
                     std::vector<uint8> sector{};
                     sector.resize(track.sectorSize);
                     bool isPregapSilent = true;
-                    for (uintmax_t frame = pregapStart; frame < pregapEnd; frame++) {
-                        binaryReader->Read(frame * track.sectorSize, track.sectorSize, sector);
+                    for (uintmax_t frame = 0; frame < pregapLength; ++frame) {
+                        binaryReader->Read(binFileOffset + frame * track.sectorSize, track.sectorSize, sector);
                         if (std::any_of(sector.begin(), sector.end(), [](uint8 v) { return v != 0; })) {
                             isPregapSilent = false;
                             break;

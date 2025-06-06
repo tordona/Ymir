@@ -10,6 +10,7 @@
 
 ### Fixes
 
+- Media: Fix pregap handling in single BIN images.
 - SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 
 
