@@ -1222,7 +1222,7 @@ FORCE_INLINE void SH2::OnChipRegWriteWord(uint32 address, uint16 value) {
                 AdvanceWDT<true>();
             }
             WDT.WriteWTCSR<poke>(value);
-            if (!WDT.WTCSR.TME) {
+            if (!WDT.WTCSR.TME || !WDT.WTCSR.OVF) {
                 LowerInterrupt(InterruptSource::WDT_ITI);
             }
         }
