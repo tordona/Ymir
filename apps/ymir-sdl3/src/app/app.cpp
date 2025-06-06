@@ -1549,12 +1549,14 @@ void App::RunEmulator() {
                         if (m_context.state.recentDiscs.empty()) {
                             ImGui::TextDisabled("(empty)");
                         } else {
-                            for (auto &path : m_context.state.recentDiscs) {
+                            for (int i = 0; auto &path : m_context.state.recentDiscs) {
                                 std::string fullPathStr = fmt::format("{}", path);
                                 std::string pathStr = fullPathStr;
                                 bool shorten = pathStr.length() > 60;
                                 if (shorten) {
-                                    pathStr = fmt::format("[...]/{}", path.filename());
+                                    pathStr =
+                                        fmt::format("[...]{}{}##{}", (char)std::filesystem::path::preferred_separator,
+                                                    path.filename(), i);
                                 }
                                 if (ImGui::MenuItem(pathStr.c_str())) {
                                     m_context.EnqueueEvent(events::emu::LoadDisc(path));
@@ -1567,6 +1569,7 @@ void App::RunEmulator() {
                                         ImGui::EndTooltip();
                                     }
                                 }
+                                ++i;
                             }
                             ImGui::Separator();
                             if (ImGui::MenuItem("Clear")) {
