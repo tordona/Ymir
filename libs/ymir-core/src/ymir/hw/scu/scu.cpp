@@ -267,7 +267,7 @@ void SCU::AcknowledgeExternalInterrupt() {
 
         m_pendingIntrLevel = 0;
 
-        // m_intrMask.u32 = 0xBFFF;
+        m_intrMask.u32 = 0xBFFF;
     }
 
     m_cbExternalMasterInterrupt(0, 0);
