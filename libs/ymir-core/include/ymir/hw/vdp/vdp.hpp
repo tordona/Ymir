@@ -988,33 +988,40 @@ private:
     // Ends the current VDP1 frame.
     void VDP1EndFrame();
 
+#define TPL_DEINTERLACE template <bool deinterlace>
+
     // Processes a single commmand from the VDP1 command table.
-    void VDP1ProcessCommand();
+    TPL_DEINTERLACE void VDP1ProcessCommand();
 
-    bool VDP1IsPixelUserClipped(CoordS32 coord) const;
-    bool VDP1IsPixelSystemClipped(CoordS32 coord) const;
-    bool VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const;
-    bool VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const;
+    TPL_DEINTERLACE bool VDP1IsPixelUserClipped(CoordS32 coord) const;
+    TPL_DEINTERLACE bool VDP1IsPixelSystemClipped(CoordS32 coord) const;
+    TPL_DEINTERLACE bool VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const;
+    TPL_DEINTERLACE bool VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3,
+                                                 CoordS32 coord4) const;
 
-    void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams, const VDP1GouraudParams &gouraudParams);
-    void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
-                      VDP1GouraudParams &gouraudParams);
-    void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
-                              VDP1GouraudParams &gouraudParams);
+    TPL_DEINTERLACE void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
+                                       const VDP1GouraudParams &gouraudParams);
+    TPL_DEINTERLACE void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
+                                      VDP1GouraudParams &gouraudParams);
+    TPL_DEINTERLACE void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2,
+                                              const VDP1TexturedLineParams &lineParams,
+                                              VDP1GouraudParams &gouraudParams);
 
     // Individual VDP1 command processors
 
-    void VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control);
-    void VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control);
-    void VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_DEINTERLACE void VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_DEINTERLACE void VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_DEINTERLACE void VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control);
 
-    void VDP1Cmd_DrawPolygon(uint32 cmdAddress);
-    void VDP1Cmd_DrawPolylines(uint32 cmdAddress);
-    void VDP1Cmd_DrawLine(uint32 cmdAddress);
+    TPL_DEINTERLACE void VDP1Cmd_DrawPolygon(uint32 cmdAddress);
+    TPL_DEINTERLACE void VDP1Cmd_DrawPolylines(uint32 cmdAddress);
+    TPL_DEINTERLACE void VDP1Cmd_DrawLine(uint32 cmdAddress);
 
     void VDP1Cmd_SetSystemClipping(uint32 cmdAddress);
     void VDP1Cmd_SetUserClipping(uint32 cmdAddress);
     void VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress);
+
+#undef TPL_DEINTERLACE
 
     // -------------------------------------------------------------------------
     // VDP2

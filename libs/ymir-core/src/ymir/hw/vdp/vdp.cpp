@@ -336,8 +336,14 @@ void VDP::Advance(uint64 cycles) {
         const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
         m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
 
-        for (uint64 i = 0; i < steps; i++) {
-            VDP1ProcessCommand();
+        if (m_deinterlaceRender) {
+            for (uint64 i = 0; i < steps; i++) {
+                VDP1ProcessCommand<true>();
+            }
+        } else {
+            for (uint64 i = 0; i < steps; i++) {
+                VDP1ProcessCommand<false>();
+            }
         }
     }
 }
@@ -1405,8 +1411,14 @@ void VDP::VDPRenderThread() {
                 break;
             case EvtType::VDP1BeginFrame:
                 m_VDPRenderContext.vdp1Done = false;
-                for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
-                    VDP1ProcessCommand();
+                if (m_deinterlaceRender) {
+                    for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
+                        VDP1ProcessCommand<true>();
+                    }
+                } else {
+                    for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
+                        VDP1ProcessCommand<false>();
+                    }
                 }
                 break;
             /*case EvtType::VDP1ProcessCommands:
@@ -1585,8 +1597,6 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     auto &fb = m_spriteFB[fbIndex];
     auto &altFB = m_altSpriteFB[fbIndex];
 
-    const bool mirror = m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
-
     // Horizontal scale is doubled in hi-res modes or when targeting rotation background
     const uint32 scaleH = (regs2.TVMD.HRESOn & 0b010) || regs1.fbRotEnable ? 1 : 0;
     // Vertical scale is doubled in double-interlace mode
@@ -1602,6 +1612,8 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     const uint32 x3 = std::min<uint32>(regs1.eraseX3, maxH) << scaleH;
     const uint32 y1 = std::min<uint32>(regs1.eraseY1, maxV) << scaleV;
     const uint32 y3 = std::min<uint32>(regs1.eraseY3, maxV) << scaleV;
+
+    const bool mirror = m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
 
     for (uint32 y = y1; y <= y3; y++) {
         const uint32 fbOffset = y * regs1.fbSizeH;
@@ -1672,6 +1684,7 @@ void VDP::VDP1EndFrame() {
     }
 }
 
+template <bool deinterlace>
 void VDP::VDP1ProcessCommand() {
     static constexpr uint32 kNoReturn = ~0;
 
@@ -1691,15 +1704,15 @@ void VDP::VDP1ProcessCommand() {
         using enum VDP1Command::CommandType;
 
         switch (control.command) {
-        case DrawNormalSprite: VDP1Cmd_DrawNormalSprite(cmdAddress, control); break;
-        case DrawScaledSprite: VDP1Cmd_DrawScaledSprite(cmdAddress, control); break;
+        case DrawNormalSprite: VDP1Cmd_DrawNormalSprite<deinterlace>(cmdAddress, control); break;
+        case DrawScaledSprite: VDP1Cmd_DrawScaledSprite<deinterlace>(cmdAddress, control); break;
         case DrawDistortedSprite: [[fallthrough]];
-        case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite(cmdAddress, control); break;
+        case DrawDistortedSpriteAlt: VDP1Cmd_DrawDistortedSprite<deinterlace>(cmdAddress, control); break;
 
-        case DrawPolygon: VDP1Cmd_DrawPolygon(cmdAddress); break;
+        case DrawPolygon: VDP1Cmd_DrawPolygon<deinterlace>(cmdAddress); break;
         case DrawPolylines: [[fallthrough]];
-        case DrawPolylinesAlt: VDP1Cmd_DrawPolylines(cmdAddress); break;
-        case DrawLine: VDP1Cmd_DrawLine(cmdAddress); break;
+        case DrawPolylinesAlt: VDP1Cmd_DrawPolylines<deinterlace>(cmdAddress); break;
+        case DrawLine: VDP1Cmd_DrawLine<deinterlace>(cmdAddress); break;
 
         case UserClipping: [[fallthrough]];
         case UserClippingAlt: VDP1Cmd_SetUserClipping(cmdAddress); break;
@@ -1757,11 +1770,11 @@ void VDP::VDP1ProcessCommand() {
     }
 }
 
+template <bool deinterlace>
 FORCE_INLINE bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
     if (x < ctx.userClipX0 || x > ctx.userClipX1) {
@@ -1773,11 +1786,11 @@ FORCE_INLINE bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
     return false;
 }
 
+template <bool deinterlace>
 FORCE_INLINE bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
     if (x < 0 || x > ctx.sysClipH) {
@@ -1789,11 +1802,11 @@ FORCE_INLINE bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
     return false;
 }
 
+template <bool deinterlace>
 FORCE_INLINE bool VDP::VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const {
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x1, y1] = coord1;
     auto [x2, y2] = coord2;
     const auto &ctx = m_VDP1RenderContext;
@@ -1812,11 +1825,11 @@ FORCE_INLINE bool VDP::VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2)
     return false;
 }
 
+template <bool deinterlace>
 bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const {
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x1, y1] = coord1;
     auto [x2, y2] = coord2;
     auto [x3, y3] = coord3;
@@ -1838,6 +1851,7 @@ bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coo
     return false;
 }
 
+template <bool deinterlace>
 FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
                                      const VDP1GouraudParams &gouraudParams) {
     const VDP1Regs &regs1 = VDP1GetRegs();
@@ -1850,18 +1864,18 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     }
 
     const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
-    const bool altFB = m_deinterlaceRender && doubleDensity && (y & 1);
+    const bool altFB = deinterlace && doubleDensity && (y & 1);
     if (doubleDensity) {
-        if (!m_deinterlaceRender && regs1.dblInterlaceEnable && (y & 1) == regs1.dblInterlaceDrawLine) {
+        if (!deinterlace && regs1.dblInterlaceEnable && (y & 1) == regs1.dblInterlaceDrawLine) {
             return;
         }
-        if (m_deinterlaceRender || regs1.dblInterlaceEnable) {
+        if (deinterlace || regs1.dblInterlaceEnable) {
             y >>= 1;
         }
     }
 
     // Reject pixels outside of clipping area
-    if (VDP1IsPixelSystemClipped(coord)) {
+    if (VDP1IsPixelSystemClipped<deinterlace>(coord)) {
         return;
     }
     if (pixelParams.mode.userClippingEnable) {
@@ -1869,7 +1883,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
         // clippingMode = true -> draw outside, reject inside
         // The function returns true if the pixel is clipped, therefore we want to reject pixels that return the
         // opposite of clippingMode on that function.
-        if (VDP1IsPixelUserClipped(coord) != pixelParams.mode.clippingMode) {
+        if (VDP1IsPixelUserClipped<deinterlace>(coord) != pixelParams.mode.clippingMode) {
             return;
         }
     }
@@ -1973,17 +1987,19 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     }
 }
 
+template <bool deinterlace>
 FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
                                     VDP1GouraudParams &gouraudParams) {
     for (LineStepper line{coord1, coord2}; line.CanStep(); line.Step()) {
         gouraudParams.U = line.FracPos();
-        VDP1PlotPixel(line.Coord(), pixelParams, gouraudParams);
+        VDP1PlotPixel<deinterlace>(line.Coord(), pixelParams, gouraudParams);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AACoord(), pixelParams, gouraudParams);
+            VDP1PlotPixel<deinterlace>(line.AACoord(), pixelParams, gouraudParams);
         }
     }
 }
 
+template <bool deinterlace>
 void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
                                VDP1GouraudParams &gouraudParams) {
     const VDP1Regs &regs = VDP1GetRegs();
@@ -2084,13 +2100,14 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             gouraudParams.U /= charSizeH;
         }
 
-        VDP1PlotPixel(line.Coord(), pixelParams, gouraudParams);
+        VDP1PlotPixel<deinterlace>(line.Coord(), pixelParams, gouraudParams);
         if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel(line.AACoord(), pixelParams, gouraudParams);
+            VDP1PlotPixel<deinterlace>(line.AACoord(), pixelParams, gouraudParams);
         }
     }
 }
 
+template <bool deinterlace>
 void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
@@ -2111,8 +2128,7 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
 
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{lx, ty << doubleV};
     const CoordS32 coordB{rx, ty << doubleV};
     const CoordS32 coordC{rx, by << doubleV};
@@ -2123,7 +2139,7 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
         "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
         lx, ty, rx, ty, rx, by, lx, by, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
-    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
+    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
     }
 
@@ -2158,10 +2174,11 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
         const CoordS32 coordL{edge.LX(), edge.LY()};
         const CoordS32 coordR{edge.RX(), edge.RY()};
         lineParams.texFracV = edge.FracV();
-        VDP1PlotTexturedLine(coordL, coordR, lineParams, gouraudParams);
+        VDP1PlotTexturedLine<deinterlace>(coordL, coordR, lineParams, gouraudParams);
     }
 }
 
+template <bool deinterlace>
 void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
@@ -2265,8 +2282,7 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
 
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{qxa, qya << doubleV};
     const CoordS32 coordB{qxb, qyb << doubleV};
     const CoordS32 coordC{qxc, qyc << doubleV};
@@ -2277,7 +2293,7 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
         "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
         qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
-    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
+    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
     }
 
@@ -2312,10 +2328,11 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
         const CoordS32 coordL{edge.LX(), edge.LY()};
         const CoordS32 coordR{edge.RX(), edge.RY()};
         lineParams.texFracV = edge.FracV();
-        VDP1PlotTexturedLine(coordL, coordR, lineParams, gouraudParams);
+        VDP1PlotTexturedLine<deinterlace>(coordL, coordR, lineParams, gouraudParams);
     }
 }
 
+template <bool deinterlace>
 void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
@@ -2337,8 +2354,7 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
 
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
     const CoordS32 coordC{xc, yc << doubleV};
@@ -2349,7 +2365,7 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
         "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
         xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
 
-    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
+    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
     }
 
@@ -2384,10 +2400,11 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
         const CoordS32 coordL{edge.LX(), edge.LY()};
         const CoordS32 coordR{edge.RX(), edge.RY()};
         lineParams.texFracV = edge.FracV();
-        VDP1PlotTexturedLine(coordL, coordR, lineParams, gouraudParams);
+        VDP1PlotTexturedLine<deinterlace>(coordL, coordR, lineParams, gouraudParams);
     }
 }
 
+template <bool deinterlace>
 void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
@@ -2405,8 +2422,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
 
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
     const CoordS32 coordC{xc, yc << doubleV};
@@ -2416,7 +2432,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
         "Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
         xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
-    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
+    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
     }
 
@@ -2440,10 +2456,11 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
         gouraudParams.V = edge.FracPos();
 
         // Plot lines between the interpolated points
-        VDP1PlotLine(coordL, coordR, pixelParams, gouraudParams);
+        VDP1PlotLine<deinterlace>(coordL, coordR, pixelParams, gouraudParams);
     }
 }
 
+template <bool deinterlace>
 void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
@@ -2461,8 +2478,7 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
 
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
     const CoordS32 coordC{xc, yc << doubleV};
@@ -2472,7 +2488,7 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
         "Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb,
         yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
-    if (VDP1IsQuadSystemClipped(coordA, coordB, coordC, coordD)) {
+    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
     }
 
@@ -2491,12 +2507,13 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     VDP1GouraudParams gouraudParamsCD{.colorA = C, .colorB = D, .V = 0};
     VDP1GouraudParams gouraudParamsDA{.colorA = D, .colorB = A, .V = 0};
 
-    VDP1PlotLine(coordA, coordB, pixelParams, gouraudParamsAB);
-    VDP1PlotLine(coordB, coordC, pixelParams, gouraudParamsBC);
-    VDP1PlotLine(coordC, coordD, pixelParams, gouraudParamsCD);
-    VDP1PlotLine(coordD, coordA, pixelParams, gouraudParamsDA);
+    VDP1PlotLine<deinterlace>(coordA, coordB, pixelParams, gouraudParamsAB);
+    VDP1PlotLine<deinterlace>(coordB, coordC, pixelParams, gouraudParamsBC);
+    VDP1PlotLine<deinterlace>(coordC, coordD, pixelParams, gouraudParamsCD);
+    VDP1PlotLine<deinterlace>(coordD, coordA, pixelParams, gouraudParamsDA);
 }
 
+template <bool deinterlace>
 void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
@@ -2510,15 +2527,14 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
 
     const auto &regs1 = VDP1GetRegs();
     const auto &regs2 = VDP2GetRegs();
-    const bool doubleV =
-        m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
 
     devlog::trace<grp::vdp1_render>("Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa,
                                     ya, xb, yb, color, gouraudTable, mode.u16);
 
-    if (VDP1IsLineSystemClipped(coordA, coordB)) {
+    if (VDP1IsLineSystemClipped<deinterlace>(coordA, coordB)) {
         return;
     }
 
@@ -2533,7 +2549,7 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
         .V = 0,
     };
 
-    VDP1PlotLine(coordA, coordB, pixelParams, gouraudParams);
+    VDP1PlotLine<deinterlace>(coordA, coordB, pixelParams, gouraudParams);
 }
 
 void VDP::VDP1Cmd_SetSystemClipping(uint32 cmdAddress) {
