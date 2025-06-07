@@ -265,11 +265,6 @@ void SCU::AcknowledgeExternalInterrupt() {
                                  (m_pendingIntrIndex <= 15 ? "internal" : "external"), m_pendingIntrIndex);
         TraceAcknowledgeInterrupt(m_tracer, m_pendingIntrIndex);
 
-        if (m_pendingIntrIndex <= 15) {
-            m_intrStatus.internal &= ~(1u << m_pendingIntrIndex);
-        } else {
-            m_intrStatus.external &= ~(1u << (m_pendingIntrIndex - 16));
-        }
         m_pendingIntrLevel = 0;
 
         // m_intrMask.u32 = 0xBFFF;
@@ -553,6 +548,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
 
         m_pendingIntrLevel = internalLevel;
         m_pendingIntrIndex = internalIndex;
+        m_intrStatus.internal &= ~(1u << internalIndex);
 
         // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
         if (internalIndex == 0) {
@@ -568,6 +564,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
 
         m_pendingIntrLevel = externalLevel;
         m_pendingIntrIndex = externalIndex + 16;
+        m_intrStatus.external &= ~(1u << externalIndex);
 
         m_abusIntrAck = false;
         m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
