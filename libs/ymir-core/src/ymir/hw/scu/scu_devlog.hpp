@@ -11,6 +11,7 @@ namespace ymir::scu::grp {
 //
 // base
 //   regs
+//   intr
 //   dma
 //   debug
 //   dsp
@@ -23,6 +24,10 @@ struct base {
 
 struct regs : public base {
     static constexpr std::string_view name = "SCU-Regs";
+};
+
+struct intr : public base {
+    static constexpr std::string_view name = "SCU-Interrupt";
 };
 
 struct dma : public base {

@@ -275,7 +275,7 @@ void SCU::TriggerExternalInterrupt0() {
 
 void SCU::AcknowledgeExternalInterrupt() {
     if (m_pendingIntrLevel > 0) {
-        devlog::trace<grp::base>("Acknowledging {} interrupt {:X}",
+        devlog::trace<grp::intr>("Acknowledging {} interrupt {:X}",
                                  (m_pendingIntrIndex <= 15 ? "internal" : "external"), m_pendingIntrIndex);
         TraceAcknowledgeInterrupt(m_tracer, m_pendingIntrIndex);
 
@@ -553,16 +553,16 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
                                                  0x0};
     const uint8 internalLevel = kInternalLevels[internalIndex];
     const uint8 externalLevel = kExternalLevels[externalIndex];
-    devlog::trace<grp::base>("Intr states:  {:04X} {:04X}", m_intrStatus.internal, m_intrStatus.external);
-    devlog::trace<grp::base>("Intr masks:   {:04X} {:04X} {}", (uint16)m_intrMask.internal,
+    devlog::trace<grp::intr>("Intr states:  {:04X} {:04X}", m_intrStatus.internal, m_intrStatus.external);
+    devlog::trace<grp::intr>("Intr masks:   {:04X} {:04X} {}", (uint16)m_intrMask.internal,
                              m_intrMask.ABus_ExtIntrs * 0xFFFF, m_abusIntrAck);
-    devlog::trace<grp::base>("Intr bits:    {:04X} {:04X}", internalBits, externalBits);
-    devlog::trace<grp::base>("Intr indices: {:X} {:X}", internalIndex, externalIndex);
-    devlog::trace<grp::base>("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
+    devlog::trace<grp::intr>("Intr bits:    {:04X} {:04X}", internalBits, externalBits);
+    devlog::trace<grp::intr>("Intr indices: {:X} {:X}", internalIndex, externalIndex);
+    devlog::trace<grp::intr>("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
 
     if (internalLevel >= externalLevel) {
         m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
-        devlog::trace<grp::base>("Raising internal interrupt {:X}, level {:X}", internalIndex, internalLevel);
+        devlog::trace<grp::intr>("Raising internal interrupt {:X}, level {:X}", internalIndex, internalLevel);
         TraceRaiseInterrupt(m_tracer, internalIndex, internalLevel);
 
         m_pendingIntrLevel = internalLevel;
@@ -577,7 +577,7 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
             m_cbExternalSlaveInterrupt(0, 0);
         }
     } else if (m_abusIntrAck) {
-        devlog::trace<grp::base>("Raising external interrupt {:X}, level {:X}", externalIndex, externalLevel);
+        devlog::trace<grp::intr>("Raising external interrupt {:X}, level {:X}", externalIndex, externalLevel);
         TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
 
         m_pendingIntrLevel = externalLevel;
