@@ -319,6 +319,9 @@ public:
         const InterruptStatus &GetInterruptStatus() const;
         const bool &GetABusInterruptAcknowledge() const;
 
+        uint8 GetPendingInterruptLevel() const;
+        uint8 GetPendingInterruptIndex() const;
+
         // ---------------------------------------------------------------------
         // Timers
 

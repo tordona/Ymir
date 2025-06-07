@@ -539,13 +539,14 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
     devlog::trace<grp::intr>("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
 
     if (internalLevel >= externalLevel) {
-        m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
         devlog::trace<grp::intr>("Raising internal interrupt {:X}, level {:X}", internalIndex, internalLevel);
         TraceRaiseInterrupt(m_tracer, internalIndex, internalLevel);
 
         m_pendingIntrLevel = internalLevel;
         m_pendingIntrIndex = internalIndex;
         m_intrStatus.internal &= ~(1u << internalIndex);
+
+        m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
 
         // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
         if (internalIndex == 0) {
@@ -1257,6 +1258,14 @@ const InterruptStatus &SCU::Probe::GetInterruptStatus() const {
 
 const bool &SCU::Probe::GetABusInterruptAcknowledge() const {
     return m_scu.m_abusIntrAck;
+}
+
+uint8 SCU::Probe::GetPendingInterruptLevel() const {
+    return m_scu.m_pendingIntrLevel;
+}
+
+uint8 SCU::Probe::GetPendingInterruptIndex() const {
+    return m_scu.m_pendingIntrIndex;
 }
 
 // Timers

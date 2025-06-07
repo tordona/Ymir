@@ -21,6 +21,25 @@ void SCUInterruptsView::Display() {
 
         ImGui::EndTable();
     }
+
+    auto &probe = m_scu.GetProbe();
+    const uint8 pendingIntrLevel = probe.GetPendingInterruptLevel();
+    if (pendingIntrLevel > 0) {
+        const uint8 index = probe.GetPendingInterruptIndex();
+        if (index < 16) {
+            static constexpr const char *kNames[] = {
+                "VDP2 VBlank IN",     "VDP2 VBlank OUT",      "VDP2 HBlank IN",      "SCU Timer 0",
+                "SCU Timer 1",        "SCU DSP End",          "SCSP Sound Request",  "SMPC System Manager",
+                "SMPC PAD Interrupt", "SCU Level 2 DMA End",  "SCU Level 1 DMA End", "SCU Level 0 DMA End",
+                "SCU DMA-illegal",    "VDP1 Sprite Draw End", "Unknown (14)",        "Unknown (15)",
+            };
+            ImGui::Text("Pending interrupt: %s, level %X", kNames[index], pendingIntrLevel);
+        } else {
+            ImGui::Text("Pending interrupt: External %X, level %X", index, pendingIntrLevel - 16);
+        }
+    } else {
+        ImGui::TextDisabled("No pending interrupt");
+    }
 }
 
 void SCUInterruptsView::DisplayInternalInterrupts() {
