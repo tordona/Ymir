@@ -1066,8 +1066,9 @@ private:
     //
     // y is the scanline to draw
     //
+    // deinterlace determines whether to deinterlace video output
     // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <bool altField>
+    template <bool deinterlace, bool altField>
     void VDP2CalcWindows(uint32 y);
 
     // Precalculates window state for a given set of parameters.
@@ -1106,6 +1107,9 @@ private:
     // Draws the specified VDP2 scanline.
     //
     // y is the scanline to draw
+    //
+    // deinterlace determines whether to deinterlace video output
+    template <bool deinterlace>
     void VDP2DrawLine(uint32 y);
 
     // Draws the line color and back screens.
@@ -1129,8 +1133,9 @@ private:
     // colorMode is the CRAM color mode.
     //
     // bgIndex specifies the normal background index, from 0 to 3.
+    // deinterlace determines whether to deinterlace video output
     // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <uint32 bgIndex>
+    template <uint32 bgIndex, bool deinterlace, bool altField>
     void VDP2DrawNormalBG(uint32 y, uint32 colorMode);
 
     // Draws the current VDP2 scanline of the specified rotation background layer.
@@ -1139,7 +1144,6 @@ private:
     // colorMode is the CRAM color mode.
     //
     // bgIndex specifies the rotation background index, from 0 to 1.
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
     template <uint32 bgIndex>
     void VDP2DrawRotationBG(uint32 y, uint32 colorMode);
 
@@ -1147,8 +1151,9 @@ private:
     //
     // y is the scanline to draw
     //
+    // deinterlace determines whether to deinterlace video output
     // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <bool altField>
+    template <bool deinterlace, bool altField>
     void VDP2ComposeLine(uint32 y);
 
     // Draws a normal scroll BG scanline.
@@ -1163,7 +1168,8 @@ private:
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+    // deinterlace determines whether to deinterlace video output
+    template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
     void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
                                 const std::array<bool, kMaxResH> &windowState);
 
@@ -1177,7 +1183,8 @@ private:
     //
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
-    template <ColorFormat colorFormat, uint32 colorMode>
+    // deinterlace determines whether to deinterlace video output
+    template <ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
     void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
                                 const std::array<bool, kMaxResH> &windowState);
 
@@ -1332,6 +1339,9 @@ private:
     // Retrieves the Y display coordinate based on the current interlace mode.
     //
     // y is the Y coordinate to translate
+    //
+    // deinterlace determines whether to deinterlace video output
+    template <bool deinterlace>
     uint32 VDP2GetY(uint32 y) const;
 
 public:
