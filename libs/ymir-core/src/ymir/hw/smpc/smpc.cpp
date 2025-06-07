@@ -488,6 +488,7 @@ FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
     COMREG = static_cast<Command>(value);
 
     if constexpr (!poke) {
+        devlog::trace<grp::regs>("Scheduling command {:02X}", static_cast<uint8>(COMREG));
         if (COMREG == Command::SYSRES || COMREG == Command::CKCHG352 || COMREG == Command::CKCHG320) {
             // TODO: these should take ~100ms (about 2.8 million SH-2 cycles) to complete
             // Doing a shorter delay here to make it snappier
@@ -706,15 +707,18 @@ void SMPC::INTBACK() {
             // TODO: does SMPC reject the command in this case?
         }
 
+        const bool getStatus = IREG[0] == 0x01;
         m_optimize = bit::test<1>(IREG[1]);
         m_getPeripheralData = bit::test<3>(IREG[1]);
         m_port1mode = bit::extract<4, 5>(IREG[1]);
         m_port2mode = bit::extract<6, 7>(IREG[1]);
 
+        devlog::trace<grp::base>("Init INTBACK: optimize={} status={} periph={} modes={:X} {:X}", m_optimize, getStatus,
+                                 m_getPeripheralData, m_port1mode, m_port2mode);
+
         m_intbackInProgress = m_getPeripheralData;
 
-        const bool getSMPCStatus = IREG[0] == 0x01;
-        if (getSMPCStatus) {
+        if (getStatus) {
             WriteINTBACKStatusReport();
         } else if (m_getPeripheralData) {
             WriteINTBACKPeripheralReport();
