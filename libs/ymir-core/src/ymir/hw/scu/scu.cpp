@@ -159,10 +159,10 @@ void SCU::UpdateHBlank(bool level) {
         m_intrStatus.VDP2_HBlankIN = level;
         UpdateInterruptLevel();
         if (level && m_timerEnable) {
-            m_timer0Counter++;
             if (m_timer0Counter == m_timer0Compare) {
                 TriggerTimer0();
             }
+            ++m_timer0Counter;
             m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
             TriggerDMATransfer(DMATrigger::HBlankIN);
         }
