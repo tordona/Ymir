@@ -952,7 +952,7 @@ void CDBlock::ProcessDriveStatePlay() {
 
                     devlog::trace<grp::play>("Sector {:06X} sent to SCSP", frameAddress);
                 } else if (m_partitionManager.GetFreeBufferCount() == 0) [[unlikely]] {
-                    devlog::debug<grp::play>("No free buffer available");
+                    devlog::trace<grp::play>("No free buffer available");
 
                     // TODO: what is the correct status code here?
                     // TODO: there really should be a separate state machine for handling this...
