@@ -382,8 +382,12 @@ void SCSP::SetInterrupt(uint16 intr, bool level) {
     m_m68kPendingInterrupts &= ~(1 << intr);
     m_m68kPendingInterrupts |= level << intr;
 
+    const uint16 prev = m_scuPendingInterrupts;
     m_scuPendingInterrupts &= ~(1 << intr);
     m_scuPendingInterrupts |= level << intr;
+    if ((prev ^ m_scuPendingInterrupts) & m_scuEnabledInterrupts & (1 << intr)) {
+        UpdateSCUInterrupts();
+    }
 }
 
 void SCSP::UpdateM68KInterrupts() {
@@ -494,7 +498,6 @@ FORCE_INLINE void SCSP::Tick() {
     GenerateSample();
     UpdateTimers();
     UpdateM68KInterrupts();
-    UpdateSCUInterrupts();
 }
 
 FORCE_INLINE void SCSP::RunM68K() {
