@@ -2696,6 +2696,7 @@ void VDP::VDP2UpdateEnabledBGs() {
     }
 }
 
+template <bool update>
 FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState) {
     uint32 address = bgState.lineScrollTableAddress;
     auto read = [&] {
@@ -2721,8 +2722,10 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
             bgState.scrollIncH = bit::extract<8, 18>(read());
         }
     }
-    if (y > 0 && (y & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
-        bgState.lineScrollTableAddress = address;
+    if constexpr (update) {
+        if (y > 0 && (y & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
+            bgState.lineScrollTableAddress = address;
+        }
     }
 }
 
@@ -3177,6 +3180,7 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     const uint32 colorMode = regs2.vramControl.colorRAMMode;
     const bool rotate = regs1.fbRotEnable;
+    const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
 
     // Precalculate window state
     VDP2CalcWindows<deinterlace, false>(y);
@@ -3197,11 +3201,18 @@ void VDP::VDP2DrawLine(uint32 y) {
         VDP2DrawRotationBG<0>(y, colorMode); // RBG0
         VDP2DrawRotationBG<1>(y, colorMode); // RBG1
     } else {
-        VDP2DrawRotationBG<0>(y, colorMode);                   // RBG0
-        VDP2DrawNormalBG<0, deinterlace, false>(y, colorMode); // NBG0
-        VDP2DrawNormalBG<1, deinterlace, false>(y, colorMode); // NBG1
-        VDP2DrawNormalBG<2, deinterlace, false>(y, colorMode); // NBG2
-        VDP2DrawNormalBG<3, deinterlace, false>(y, colorMode); // NBG3
+        VDP2DrawRotationBG<0>(y, colorMode); // RBG0
+        if (doubleDensity) {
+            VDP2DrawNormalBG<0, deinterlace, false>(y, colorMode); // NBG0
+            VDP2DrawNormalBG<1, deinterlace, false>(y, colorMode); // NBG1
+            VDP2DrawNormalBG<2, deinterlace, false>(y, colorMode); // NBG2
+            VDP2DrawNormalBG<3, deinterlace, false>(y, colorMode); // NBG3
+        } else {
+            VDP2DrawNormalBG<0, false, false>(y, colorMode); // NBG0
+            VDP2DrawNormalBG<1, false, false>(y, colorMode); // NBG1
+            VDP2DrawNormalBG<2, false, false>(y, colorMode); // NBG2
+            VDP2DrawNormalBG<3, false, false>(y, colorMode); // NBG3
+        }
     }
 
     // Compose image
@@ -3209,7 +3220,6 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     // Draw complementary field if deinterlace is enabled while in double-density interlace mode
     if constexpr (deinterlace) {
-        const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
         if (doubleDensity) {
             // Precalculate window state
             VDP2CalcWindows<true, true>(y);
@@ -3399,8 +3409,8 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
     const auto &windowState = m_bgWindows[bgIndex + 1];
 
-    if constexpr (bgIndex < 2 && !altField) {
-        VDP2UpdateLineScreenScroll(y, bgParams, bgState);
+    if constexpr (bgIndex < 2) {
+        VDP2UpdateLineScreenScroll<!deinterlace || altField>(y, bgParams, bgState);
     }
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
