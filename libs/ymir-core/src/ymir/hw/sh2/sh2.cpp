@@ -1761,7 +1761,11 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
 
         // Acknowledge interrupt
         switch (INTC.pending.source) {
-        case InterruptSource::IRL: m_cbAcknowledgeExternalInterrupt(); break;
+        case InterruptSource::IRL:
+            if (INTC.ICR.VECMD) {
+                m_cbAcknowledgeExternalInterrupt();
+            }
+            break;
         case InterruptSource::NMI:
             INTC.NMI = false;
             LowerInterrupt(InterruptSource::NMI);
