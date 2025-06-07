@@ -116,7 +116,7 @@ public:
     // -------------------------------------------------------------------------
     // External interrupt triggers
 
-    void UpdateHBlank(bool level);
+    void TriggerHBlank();
     void UpdateVBlank(bool level);
     void TriggerTimer0();
     void TriggerTimer1();
@@ -274,8 +274,7 @@ public:
     const sh2::CBAcknowledgeExternalInterrupt CbAckExtIntr =
         util::MakeClassMemberRequiredCallback<&SCU::AcknowledgeExternalInterrupt>(this);
 
-    const vdp::CBHVBlankStateChange CbHBlankStateChange =
-        util::MakeClassMemberRequiredCallback<&SCU::UpdateHBlank>(this);
+    const vdp::CBTriggerEvent CbTriggerHBlank = util::MakeClassMemberRequiredCallback<&SCU::TriggerHBlank>(this);
     const vdp::CBHVBlankStateChange CbVBlankStateChange =
         util::MakeClassMemberRequiredCallback<&SCU::UpdateVBlank>(this);
     const vdp::CBTriggerEvent CbTriggerSpriteDrawEnd =

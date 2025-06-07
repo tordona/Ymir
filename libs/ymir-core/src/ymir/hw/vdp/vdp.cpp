@@ -1228,7 +1228,7 @@ void VDP::BeginHPhaseRightBorder() {
     devlog::trace<grp::base>("## HBlank IN {:3d}", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 1;
-    m_cbHBlankStateChange(true);
+    m_cbHBlank();
 
     // Start erasing if we just entered VBlank IN
     if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
@@ -1296,7 +1296,6 @@ void VDP::BeginHPhaseLeftBorder() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_VCounter);
 
     m_VDP2.TVSTAT.HBLANK = 0;
-    m_cbHBlankStateChange(false);
 
     // TODO: draw border
 }
