@@ -223,25 +223,33 @@ void SCU::TriggerDMAEnd(uint32 level) {
     assert(level < 3);
     switch (level) {
     case 0:
-        if (m_intrStatus.ABus_Level0DMAEnd == 1) {
+        if (m_intrStatus.SCU_Level0DMAEnd == 1) {
             return;
         }
-        m_intrStatus.ABus_Level0DMAEnd = 1;
+        m_intrStatus.SCU_Level0DMAEnd = 1;
         break;
     case 1:
-        if (m_intrStatus.ABus_Level1DMAEnd == 1) {
+        if (m_intrStatus.SCU_Level1DMAEnd == 1) {
             return;
         }
-        m_intrStatus.ABus_Level1DMAEnd = 1;
+        m_intrStatus.SCU_Level1DMAEnd = 1;
         break;
     case 2:
-        if (m_intrStatus.ABus_Level2DMAEnd == 1) {
+        if (m_intrStatus.SCU_Level2DMAEnd == 1) {
             return;
         }
-        m_intrStatus.ABus_Level2DMAEnd = 1;
+        m_intrStatus.SCU_Level2DMAEnd = 1;
         break;
     }
     UpdateInterruptLevel();
+}
+
+void SCU::TriggerDMAIllegal() {
+    if (m_intrStatus.SCU_DMAIllegal != 1) {
+        m_intrStatus.SCU_DMAIllegal = 1;
+        UpdateInterruptLevel();
+        TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
+    }
 }
 
 void SCU::TriggerSpriteDrawEnd() {
@@ -685,12 +693,18 @@ void SCU::RunDMA() {
 
             devlog::trace<grp::dma>("SCU DMA{}: Addresses incremented to {:08X}, {:08X}", level, ch.currSrcAddr,
                                     ch.currDstAddr);
-        } else if (srcBus == dstBus) {
-            devlog::trace<grp::dma>("SCU DMA{}: Invalid same-bus transfer; ignored", level);
-        } else if (srcBus == BusID::None) {
-            devlog::trace<grp::dma>("SCU DMA{}: Invalid source bus; transfer ignored", level);
-        } else if (dstBus == BusID::None) {
-            devlog::trace<grp::dma>("SCU DMA{}: Invalid destination bus; transfer ignored", level);
+        } else {
+            if (srcBus == dstBus) {
+                devlog::trace<grp::dma>("SCU DMA{}: Invalid same-bus transfer; ignored", level);
+            } else if (srcBus == BusID::None) {
+                devlog::trace<grp::dma>("SCU DMA{}: Invalid source bus; transfer ignored", level);
+            } else if (dstBus == BusID::None) {
+                devlog::trace<grp::dma>("SCU DMA{}: Invalid destination bus; transfer ignored", level);
+            }
+            ch.active = false;
+            TriggerDMAIllegal();
+            RecalcDMAChannel();
+            break;
         }
 
         if (ch.currXferCount > sizeof(uint32)) {

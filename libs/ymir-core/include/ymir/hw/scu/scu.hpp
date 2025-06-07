@@ -124,6 +124,7 @@ public:
     void TriggerSoundRequest(bool level);
     void TriggerSystemManager();
     void TriggerDMAEnd(uint32 level);
+    void TriggerDMAIllegal();
     void TriggerSpriteDrawEnd();
 
     void TriggerExternalInterrupt0();
