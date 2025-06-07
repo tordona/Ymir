@@ -730,7 +730,7 @@ void SMPC::TriggerOptimizedINTBACKRead() {
     if (m_optimize) {
         m_optimize = false;
 
-        if (m_getPeripheralData) {
+        if (m_intbackInProgress && m_getPeripheralData) {
             devlog::trace<grp::base>("Optimized INTBACK triggered");
             m_scheduler.ScheduleFromNow(m_commandEvent, 0);
         }
