@@ -219,6 +219,13 @@ void SCU::TriggerSystemManager() {
     }
 }
 
+void SCU::TriggerPad() {
+    if (m_intrStatus.SMPC_Pad != 1) {
+        m_intrStatus.SMPC_Pad = 1;
+        UpdateInterruptLevel();
+    }
+}
+
 void SCU::TriggerDMAEnd(uint32 level) {
     assert(level < 3);
     switch (level) {

@@ -123,6 +123,7 @@ public:
     void TriggerDSPEnd();
     void TriggerSoundRequest(bool level);
     void TriggerSystemManager();
+    void TriggerPad();
     void TriggerDMAEnd(uint32 level);
     void TriggerDMAIllegal();
     void TriggerSpriteDrawEnd();
@@ -284,8 +285,9 @@ public:
     const scsp::CBTriggerSoundRequestInterrupt CbTriggerSoundRequest =
         util::MakeClassMemberRequiredCallback<&SCU::TriggerSoundRequest>(this);
 
-    const smpc::CBSystemManagerInterruptCallback CbTriggerSystemManager =
+    const smpc::CBInterruptCallback CbTriggerSystemManager =
         util::MakeClassMemberRequiredCallback<&SCU::TriggerSystemManager>(this);
+    const smpc::CBInterruptCallback CbTriggerPad = util::MakeClassMemberRequiredCallback<&SCU::TriggerPad>(this);
 
     const CBTriggerDSPEnd CbTriggerDSPEnd = util::MakeClassMemberRequiredCallback<&SCU::TriggerDSPEnd>(this);
 

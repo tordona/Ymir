@@ -27,8 +27,9 @@ public:
     void Reset(bool hard);
     void FactoryReset();
 
-    void MapCallbacks(CBSystemManagerInterruptCallback callback) {
-        m_cbSystemManagerInterruptCallback = callback;
+    void MapCallbacks(CBInterruptCallback smCallback, CBInterruptCallback padCallback) {
+        m_cbSystemManagerInterruptCallback = smCallback;
+        m_cbPadInterruptCallback = padCallback;
     }
 
     void MapMemory(sys::Bus &bus);
@@ -105,7 +106,8 @@ private:
     // 0x0 and 0xF are prohibited; all others are reserved
     uint8 m_areaCode;
 
-    CBSystemManagerInterruptCallback m_cbSystemManagerInterruptCallback;
+    CBInterruptCallback m_cbSystemManagerInterruptCallback;
+    CBInterruptCallback m_cbPadInterruptCallback;
 
     ISMPCOperations &m_smpcOps;
     core::Scheduler &m_scheduler;

@@ -11,8 +11,8 @@
 
 namespace ymir::smpc {
 
-/// @brief Type of callback invoked when INTBACK finishes processing to raise the SCU System Manager interrupt signal.
-using CBSystemManagerInterruptCallback = util::RequiredCallback<void()>;
+/// @brief Type of callback invoked when the SMPC raises the SCU System Manager or PAD interrupt signals.
+using CBInterruptCallback = util::RequiredCallback<void()>;
 
 /// @brief The subset of system operations used by the SMPC.
 class ISMPCOperations {
