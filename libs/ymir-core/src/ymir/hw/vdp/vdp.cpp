@@ -1412,11 +1412,11 @@ void VDP::VDPRenderThread() {
             case EvtType::VDP1BeginFrame:
                 m_VDPRenderContext.vdp1Done = false;
                 if (m_deinterlaceRender) {
-                    for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
+                    for (int i = 0; i < 10000 && m_VDP1RenderContext.rendering; i++) {
                         VDP1ProcessCommand<true>();
                     }
                 } else {
-                    for (int i = 0; i < 100000 && m_VDP1RenderContext.rendering; i++) {
+                    for (int i = 0; i < 10000 && m_VDP1RenderContext.rendering; i++) {
                         VDP1ProcessCommand<false>();
                     }
                 }
