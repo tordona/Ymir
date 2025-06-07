@@ -510,12 +510,9 @@ void SCU::WriteCartridge(uint32 address, T value) {
 }
 
 FORCE_INLINE void SCU::UpdateInterruptLevel() {
-    // FIXME: Enabling this breaks Panzer Dragoon.
-    // Rayman works with or without this.
-    // What exactly is supposed to happen then?
-    /*if (m_pendingIntrLevel > 0) {
+    if (m_pendingIntrLevel > 0) {
         return;
-    }*/
+    }
 
     const uint16 internalBits = m_intrStatus.internal & ~m_intrMask.internal;
     const uint16 externalBits = m_intrMask.ABus_ExtIntrs ? m_intrStatus.external : 0u;

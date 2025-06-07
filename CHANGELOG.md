@@ -11,8 +11,8 @@
 ### Fixes
 
 - Media: Fix pregap handling in single BIN images.
-- SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 - SCU, SH-2, SMPC: Numerous fixes to interrupt handling (thanks to @celeriyacon).
+- SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 - SMPC: Eliminate spurious INTBACK interrupts.
 
 ## Version 0.1.4+1
