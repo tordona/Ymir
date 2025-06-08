@@ -143,19 +143,19 @@ public:
 
     /// @brief Retrieves the current value of the primary cycle counter.
     /// @return the current cycle count
-    uint64 CurrentCount() const {
+    FORCE_INLINE uint64 CurrentCount() const {
         return m_currCount;
     }
 
     /// @brief Retrieves the absolute cycle count of the earliest scheduled event.
     /// @return the cycle count of the next event to trigger
-    uint64 NextCount() const {
+    FORCE_INLINE uint64 NextCount() const {
         return m_nextCount;
     }
 
     /// @brief Retrieves a pointer to the absolute cycle count of the earliest scheduled event.
     /// @return a pointer to the cycle count of the next event to trigger
-    const uint64 *NextCountPtr() const {
+    FORCE_INLINE const uint64 *NextCountPtr() const {
         return &m_nextCount;
     }
 
@@ -163,14 +163,14 @@ public:
     ///
     /// If the result is negative, an event is late.
     /// @return the number of cycles until the next event
-    sint64 RemainingCount() const {
+    FORCE_INLINE sint64 RemainingCount() const {
         return (sint64)m_nextCount - (sint64)m_currCount;
     }
 
     /// @brief Schedules the specified event to happen `interval` cycles from the current count.
     /// @param[in] id the event ID
     /// @param[in] interval the interval in cycles from the current cycle count
-    void ScheduleFromNow(EventID id, uint64 interval) {
+    FORCE_INLINE void ScheduleFromNow(EventID id, uint64 interval) {
         assert(id < kNumScheduledEvents);
         Event &event = m_events[id];
         const uint64 scaledCount = m_currCount * event.countNumerator / event.countDenominator;
@@ -180,17 +180,30 @@ public:
     /// @brief Schedules the specified event to happen at the specified cycle count.
     /// @param[in] id the event ID
     /// @param[in] target the absolute cycle count
-    void ScheduleAt(EventID id, uint64 target) {
+    FORCE_INLINE void ScheduleAt(EventID id, uint64 target) {
         assert(id < kNumScheduledEvents);
         ScheduleEvent(id, target);
     }
 
     /// @brief Removes the specified event from the schedule.
     /// @param[in] id the event ID
-    void Cancel(EventID id) {
+    FORCE_INLINE void Cancel(EventID id) {
         assert(id < kNumScheduledEvents);
         Event &event = m_events[id];
         event.target = kNoDeadline;
+    }
+
+    /// @brief Checks if the specified event is scheduled to be triggered.
+    /// @param[in] id the event ID
+    /// @return `true` if the event was scheduled and has not yet triggered
+    FORCE_INLINE bool IsScheduled(EventID id) const {
+        assert(id < kNumScheduledEvents);
+        const Event &event = m_events[id];
+        if (event.target == kNoDeadline) {
+            return false;
+        }
+        const uint64 scaledCurrCount = m_currCount * event.countNumerator / event.countDenominator;
+        return scaledCurrCount < event.target;
     }
 
     /// @brief Advances the scheduler by the specified count and fire scheduled events.

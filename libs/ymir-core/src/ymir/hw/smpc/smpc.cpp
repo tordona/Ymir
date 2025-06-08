@@ -346,9 +346,9 @@ void SMPC::Write(uint32 address, uint8 value) {
                     devlog::trace<grp::base>("INTBACK continue request");
                     // HACK: delay by a long while to fix Virtua Racing which expects the status report before VBlank
                     // OUT and the peripheral reports after VBlank OUT
+                    SF = true;
                     m_scheduler.ScheduleFromNow(m_commandEvent, 100000);
                     // INTBACK();
-                    SF = true;
                 }
             }
         }
@@ -485,6 +485,15 @@ FORCE_INLINE void SMPC::WriteIREG(uint8 offset, uint8 value) {
 
 template <bool poke>
 FORCE_INLINE void SMPC::WriteCOMREG(uint8 value) {
+    if constexpr (!poke) {
+        // Reject if a command is already scheduled
+        if (m_scheduler.IsScheduled(m_commandEvent)) {
+            devlog::debug<grp::regs>("Attempted to write {:02X} to COMREG while a command is being processed; ignoring",
+                                     value);
+            return;
+        }
+    }
+
     COMREG = static_cast<Command>(value);
 
     if constexpr (!poke) {
