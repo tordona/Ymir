@@ -89,40 +89,14 @@ VDP::~VDP() {
 }
 
 void VDP::Reset(bool hard) {
+    m_state.Reset(hard);
     if (hard) {
-        for (uint32 addr = 0; addr < m_VRAM1.size(); addr++) {
-            if ((addr & 0x1F) == 0) {
-                m_VRAM1[addr] = 0x80;
-            } else if ((addr & 0x1F) == 1) {
-                m_VRAM1[addr] = 0x00;
-            } else if ((addr & 2) == 2) {
-                m_VRAM1[addr] = 0x55;
-            } else {
-                m_VRAM1[addr] = 0xAA;
-            }
-        }
-
-        m_VRAM2.fill(0);
-        m_CRAM.fill(0);
         m_CRAMCache.fill({});
-        for (auto &fb : m_spriteFB) {
-            fb.fill(0);
-        }
-        m_displayFB = 0;
     }
-
-    m_VDP1.Reset();
-    m_VDP2.Reset();
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Reset());
     }
-
-    m_HPhase = HorizontalPhase::Active;
-    m_VPhase = VerticalPhase::Active;
-    m_VCounter = 0;
-    m_HRes = 320;
-    m_VRes = 224;
 
     m_VDP1RenderContext.Reset();
 
@@ -352,23 +326,25 @@ template void VDP::Advance<false>(uint64 cycles);
 template void VDP::Advance<true>(uint64 cycles);
 
 void VDP::DumpVDP1VRAM(std::ostream &out) const {
-    out.write((const char *)m_VRAM1.data(), m_VRAM1.size());
+    out.write((const char *)m_state.VRAM1.data(), m_state.VRAM1.size());
 }
 
 void VDP::DumpVDP2VRAM(std::ostream &out) const {
-    out.write((const char *)m_VRAM2.data(), m_VRAM2.size());
+    out.write((const char *)m_state.VRAM2.data(), m_state.VRAM2.size());
 }
 
 void VDP::DumpVDP2CRAM(std::ostream &out) const {
-    out.write((const char *)m_CRAM.data(), m_CRAM.size());
+    out.write((const char *)m_state.CRAM.data(), m_state.CRAM.size());
 }
 
 void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
-    out.write((const char *)m_spriteFB[m_displayFB ^ 1].data(), m_spriteFB[m_displayFB ^ 1].size());
-    out.write((const char *)m_spriteFB[m_displayFB].data(), m_spriteFB[m_displayFB].size());
+    const uint8 dispFB = m_state.displayFB;
+    const uint8 drawFB = dispFB ^ 1;
+    out.write((const char *)m_state.spriteFB[drawFB].data(), m_state.spriteFB[drawFB].size());
+    out.write((const char *)m_state.spriteFB[dispFB].data(), m_state.spriteFB[dispFB].size());
     if (m_deinterlaceRender) {
-        out.write((const char *)m_altSpriteFB[m_displayFB ^ 1].data(), m_altSpriteFB[m_displayFB ^ 1].size());
-        out.write((const char *)m_altSpriteFB[m_displayFB].data(), m_altSpriteFB[m_displayFB].size());
+        out.write((const char *)m_altSpriteFB[drawFB].data(), m_altSpriteFB[drawFB].size());
+        out.write((const char *)m_altSpriteFB[dispFB].data(), m_altSpriteFB[dispFB].size());
     }
 }
 
@@ -378,188 +354,7 @@ void VDP::SaveState(state::VDPState &state) const {
         m_VDPRenderContext.preSaveSyncSignal.Wait(true);
     }
 
-    state.VRAM1 = m_VRAM1;
-    state.VRAM2 = m_VRAM2;
-    state.CRAM = m_CRAM;
-    state.spriteFB = m_spriteFB;
-    state.displayFB = m_displayFB;
-
-    state.regs1.TVMR = m_VDP1.ReadTVMR();
-    state.regs1.FBCR = m_VDP1.ReadFBCR();
-    state.regs1.PTMR = m_VDP1.ReadPTMR();
-    state.regs1.EWDR = m_VDP1.ReadEWDR();
-    state.regs1.EWLR = m_VDP1.ReadEWLR();
-    state.regs1.EWRR = m_VDP1.ReadEWRR();
-    state.regs1.EDSR = m_VDP1.ReadEDSR();
-    state.regs1.LOPR = m_VDP1.ReadLOPR();
-    state.regs1.COPR = m_VDP1.ReadCOPR();
-    state.regs1.MODR = m_VDP1.ReadMODR();
-    state.regs1.manualSwap = m_VDP1.fbManualSwap;
-    state.regs1.manualErase = m_VDP1.fbManualErase;
-
-    state.regs2.TVMD = m_VDP2.ReadTVMD();
-    state.regs2.EXTEN = m_VDP2.ReadEXTEN();
-    state.regs2.TVSTAT = m_VDP2.ReadTVSTAT();
-    state.regs2.VRSIZE = m_VDP2.ReadVRSIZE();
-    state.regs2.HCNT = m_VDP2.ReadHCNT();
-    state.regs2.VCNT = m_VDP2.ReadVCNT();
-    state.regs2.RAMCTL = m_VDP2.ReadRAMCTL();
-    state.regs2.CYCA0L = m_VDP2.ReadCYCA0L();
-    state.regs2.CYCA0U = m_VDP2.ReadCYCA0U();
-    state.regs2.CYCA1L = m_VDP2.ReadCYCA1L();
-    state.regs2.CYCA1U = m_VDP2.ReadCYCA1U();
-    state.regs2.CYCB0L = m_VDP2.ReadCYCB0L();
-    state.regs2.CYCB0U = m_VDP2.ReadCYCB0U();
-    state.regs2.CYCB1L = m_VDP2.ReadCYCB1L();
-    state.regs2.CYCB1U = m_VDP2.ReadCYCB1U();
-    state.regs2.BGON = m_VDP2.ReadBGON();
-    state.regs2.MZCTL = m_VDP2.ReadMZCTL();
-    state.regs2.SFSEL = m_VDP2.ReadSFSEL();
-    state.regs2.SFCODE = m_VDP2.ReadSFCODE();
-    state.regs2.CHCTLA = m_VDP2.ReadCHCTLA();
-    state.regs2.CHCTLB = m_VDP2.ReadCHCTLB();
-    state.regs2.BMPNA = m_VDP2.ReadBMPNA();
-    state.regs2.BMPNB = m_VDP2.ReadBMPNB();
-    state.regs2.PNCNA = m_VDP2.ReadPNCNA();
-    state.regs2.PNCNB = m_VDP2.ReadPNCNB();
-    state.regs2.PNCNC = m_VDP2.ReadPNCNC();
-    state.regs2.PNCND = m_VDP2.ReadPNCND();
-    state.regs2.PNCR = m_VDP2.ReadPNCR();
-    state.regs2.PLSZ = m_VDP2.ReadPLSZ();
-    state.regs2.MPOFN = m_VDP2.ReadMPOFN();
-    state.regs2.MPOFR = m_VDP2.ReadMPOFR();
-    state.regs2.MPABN0 = m_VDP2.ReadMPABN0();
-    state.regs2.MPCDN0 = m_VDP2.ReadMPCDN0();
-    state.regs2.MPABN1 = m_VDP2.ReadMPABN1();
-    state.regs2.MPCDN1 = m_VDP2.ReadMPCDN1();
-    state.regs2.MPABN2 = m_VDP2.ReadMPABN2();
-    state.regs2.MPCDN2 = m_VDP2.ReadMPCDN2();
-    state.regs2.MPABN3 = m_VDP2.ReadMPABN3();
-    state.regs2.MPCDN3 = m_VDP2.ReadMPCDN3();
-    state.regs2.MPABRA = m_VDP2.ReadMPABRA();
-    state.regs2.MPCDRA = m_VDP2.ReadMPCDRA();
-    state.regs2.MPEFRA = m_VDP2.ReadMPEFRA();
-    state.regs2.MPGHRA = m_VDP2.ReadMPGHRA();
-    state.regs2.MPIJRA = m_VDP2.ReadMPIJRA();
-    state.regs2.MPKLRA = m_VDP2.ReadMPKLRA();
-    state.regs2.MPMNRA = m_VDP2.ReadMPMNRA();
-    state.regs2.MPOPRA = m_VDP2.ReadMPOPRA();
-    state.regs2.MPABRB = m_VDP2.ReadMPABRB();
-    state.regs2.MPCDRB = m_VDP2.ReadMPCDRB();
-    state.regs2.MPEFRB = m_VDP2.ReadMPEFRB();
-    state.regs2.MPGHRB = m_VDP2.ReadMPGHRB();
-    state.regs2.MPIJRB = m_VDP2.ReadMPIJRB();
-    state.regs2.MPKLRB = m_VDP2.ReadMPKLRB();
-    state.regs2.MPMNRB = m_VDP2.ReadMPMNRB();
-    state.regs2.MPOPRB = m_VDP2.ReadMPOPRB();
-    state.regs2.SCXIN0 = m_VDP2.ReadSCXIN0();
-    state.regs2.SCXDN0 = m_VDP2.ReadSCXDN0();
-    state.regs2.SCYIN0 = m_VDP2.ReadSCYIN0();
-    state.regs2.SCYDN0 = m_VDP2.ReadSCYDN0();
-    state.regs2.ZMXIN0 = m_VDP2.ReadZMXIN0();
-    state.regs2.ZMXDN0 = m_VDP2.ReadZMXDN0();
-    state.regs2.ZMYIN0 = m_VDP2.ReadZMYIN0();
-    state.regs2.ZMYDN0 = m_VDP2.ReadZMYDN0();
-    state.regs2.SCXIN1 = m_VDP2.ReadSCXIN1();
-    state.regs2.SCXDN1 = m_VDP2.ReadSCXDN1();
-    state.regs2.SCYIN1 = m_VDP2.ReadSCYIN1();
-    state.regs2.SCYDN1 = m_VDP2.ReadSCYDN1();
-    state.regs2.ZMXIN1 = m_VDP2.ReadZMXIN1();
-    state.regs2.ZMXDN1 = m_VDP2.ReadZMXDN1();
-    state.regs2.ZMYIN1 = m_VDP2.ReadZMYIN1();
-    state.regs2.ZMYDN1 = m_VDP2.ReadZMYDN1();
-    state.regs2.SCXIN2 = m_VDP2.ReadSCXN2();
-    state.regs2.SCYIN2 = m_VDP2.ReadSCYN2();
-    state.regs2.SCXIN3 = m_VDP2.ReadSCXN3();
-    state.regs2.SCYIN3 = m_VDP2.ReadSCYN3();
-    state.regs2.ZMCTL = m_VDP2.ReadZMCTL();
-    state.regs2.SCRCTL = m_VDP2.ReadSCRCTL();
-    state.regs2.VCSTAU = m_VDP2.ReadVCSTAU();
-    state.regs2.VCSTAL = m_VDP2.ReadVCSTAL();
-    state.regs2.LSTA0U = m_VDP2.ReadLSTA0U();
-    state.regs2.LSTA0L = m_VDP2.ReadLSTA0L();
-    state.regs2.LSTA1U = m_VDP2.ReadLSTA1U();
-    state.regs2.LSTA1L = m_VDP2.ReadLSTA1L();
-    state.regs2.LCTAU = m_VDP2.ReadLCTAU();
-    state.regs2.LCTAL = m_VDP2.ReadLCTAL();
-    state.regs2.BKTAU = m_VDP2.ReadBKTAU();
-    state.regs2.BKTAL = m_VDP2.ReadBKTAL();
-    state.regs2.RPMD = m_VDP2.ReadRPMD();
-    state.regs2.RPRCTL = m_VDP2.ReadRPRCTL();
-    state.regs2.KTCTL = m_VDP2.ReadKTCTL();
-    state.regs2.KTAOF = m_VDP2.ReadKTAOF();
-    state.regs2.OVPNRA = m_VDP2.ReadOVPNRA();
-    state.regs2.OVPNRB = m_VDP2.ReadOVPNRB();
-    state.regs2.RPTAU = m_VDP2.ReadRPTAU();
-    state.regs2.RPTAL = m_VDP2.ReadRPTAL();
-    state.regs2.WPSX0 = m_VDP2.ReadWPSX0();
-    state.regs2.WPSY0 = m_VDP2.ReadWPSY0();
-    state.regs2.WPEX0 = m_VDP2.ReadWPEX0();
-    state.regs2.WPEY0 = m_VDP2.ReadWPEY0();
-    state.regs2.WPSX1 = m_VDP2.ReadWPSX1();
-    state.regs2.WPSY1 = m_VDP2.ReadWPSY1();
-    state.regs2.WPEX1 = m_VDP2.ReadWPEX1();
-    state.regs2.WPEY1 = m_VDP2.ReadWPEY1();
-    state.regs2.WCTLA = m_VDP2.ReadWCTLA();
-    state.regs2.WCTLB = m_VDP2.ReadWCTLB();
-    state.regs2.WCTLC = m_VDP2.ReadWCTLC();
-    state.regs2.WCTLD = m_VDP2.ReadWCTLD();
-    state.regs2.LWTA0U = m_VDP2.ReadLWTA0U();
-    state.regs2.LWTA0L = m_VDP2.ReadLWTA0L();
-    state.regs2.LWTA1U = m_VDP2.ReadLWTA1U();
-    state.regs2.LWTA1L = m_VDP2.ReadLWTA1L();
-    state.regs2.SPCTL = m_VDP2.ReadSPCTL();
-    state.regs2.SDCTL = m_VDP2.ReadSDCTL();
-    state.regs2.CRAOFA = m_VDP2.ReadCRAOFA();
-    state.regs2.CRAOFB = m_VDP2.ReadCRAOFB();
-    state.regs2.LNCLEN = m_VDP2.ReadLNCLEN();
-    state.regs2.SFPRMD = m_VDP2.ReadSFPRMD();
-    state.regs2.CCCTL = m_VDP2.ReadCCCTL();
-    state.regs2.SFCCMD = m_VDP2.ReadSFCCMD();
-    state.regs2.PRISA = m_VDP2.ReadPRISA();
-    state.regs2.PRISB = m_VDP2.ReadPRISB();
-    state.regs2.PRISC = m_VDP2.ReadPRISC();
-    state.regs2.PRISD = m_VDP2.ReadPRISD();
-    state.regs2.PRINA = m_VDP2.ReadPRINA();
-    state.regs2.PRINB = m_VDP2.ReadPRINB();
-    state.regs2.PRIR = m_VDP2.ReadPRIR();
-    state.regs2.CCRSA = m_VDP2.ReadCCRSA();
-    state.regs2.CCRSB = m_VDP2.ReadCCRSB();
-    state.regs2.CCRSC = m_VDP2.ReadCCRSC();
-    state.regs2.CCRSD = m_VDP2.ReadCCRSD();
-    state.regs2.CCRNA = m_VDP2.ReadCCRNA();
-    state.regs2.CCRNB = m_VDP2.ReadCCRNB();
-    state.regs2.CCRR = m_VDP2.ReadCCRR();
-    state.regs2.CCRLB = m_VDP2.ReadCCRLB();
-    state.regs2.CLOFEN = m_VDP2.ReadCLOFEN();
-    state.regs2.CLOFSL = m_VDP2.ReadCLOFSL();
-    state.regs2.COAR = m_VDP2.ReadCOAR();
-    state.regs2.COAG = m_VDP2.ReadCOAG();
-    state.regs2.COAB = m_VDP2.ReadCOAB();
-    state.regs2.COBR = m_VDP2.ReadCOBR();
-    state.regs2.COBG = m_VDP2.ReadCOBG();
-    state.regs2.COBB = m_VDP2.ReadCOBB();
-
-    switch (m_HPhase) {
-    default:
-    case HorizontalPhase::Active: state.HPhase = state::VDPState::HorizontalPhase::Active; break;
-    case HorizontalPhase::RightBorder: state.HPhase = state::VDPState::HorizontalPhase::RightBorder; break;
-    case HorizontalPhase::Sync: state.HPhase = state::VDPState::HorizontalPhase::Sync; break;
-    case HorizontalPhase::VBlankOut: state.HPhase = state::VDPState::HorizontalPhase::VBlankOut; break;
-    case HorizontalPhase::LeftBorder: state.HPhase = state::VDPState::HorizontalPhase::LeftBorder; break;
-    case HorizontalPhase::LastDot: state.HPhase = state::VDPState::HorizontalPhase::LastDot; break;
-    }
-
-    switch (m_VPhase) {
-    default:
-    case VerticalPhase::Active: state.VPhase = state::VDPState::VerticalPhase::Active; break;
-    case VerticalPhase::BottomBorder: state.VPhase = state::VDPState::VerticalPhase::BottomBorder; break;
-    case VerticalPhase::BlankingAndSync: state.VPhase = state::VDPState::VerticalPhase::BlankingAndSync; break;
-    case VerticalPhase::TopBorder: state.VPhase = state::VDPState::VerticalPhase::TopBorder; break;
-    case VerticalPhase::LastLine: state.VPhase = state::VDPState::VerticalPhase::LastLine; break;
-    }
-
-    state.VCounter = m_VCounter;
+    m_state.SaveState(state);
 
     state.renderer.vdp1State.sysClipH = m_VDP1RenderContext.sysClipH;
     state.renderer.vdp1State.sysClipV = m_VDP1RenderContext.sysClipV;
@@ -598,213 +393,14 @@ void VDP::SaveState(state::VDPState &state) const {
 }
 
 bool VDP::ValidateState(const state::VDPState &state) const {
-    switch (state.HPhase) {
-    case state::VDPState::HorizontalPhase::Active: break;
-    case state::VDPState::HorizontalPhase::RightBorder: break;
-    case state::VDPState::HorizontalPhase::Sync: break;
-    case state::VDPState::HorizontalPhase::VBlankOut: break;
-    case state::VDPState::HorizontalPhase::LeftBorder: break;
-    case state::VDPState::HorizontalPhase::LastDot: break;
-    default: return false;
+    if (!m_state.ValidateState(state)) {
+        return false;
     }
-
-    switch (state.VPhase) {
-    case state::VDPState::VerticalPhase::Active: break;
-    case state::VDPState::VerticalPhase::BottomBorder: break;
-    case state::VDPState::VerticalPhase::BlankingAndSync: break;
-    case state::VDPState::VerticalPhase::TopBorder: break;
-    case state::VDPState::VerticalPhase::LastLine: break;
-    default: return false;
-    }
-
     return true;
 }
 
 void VDP::LoadState(const state::VDPState &state) {
-    m_VRAM1 = state.VRAM1;
-    m_VRAM2 = state.VRAM2;
-    m_CRAM = state.CRAM;
-    m_spriteFB = state.spriteFB;
-    m_displayFB = state.displayFB;
-
-    m_VDP1.WriteTVMR(state.regs1.TVMR);
-    m_VDP1.WriteFBCR(state.regs1.FBCR);
-    m_VDP1.WritePTMR(state.regs1.PTMR);
-    m_VDP1.WriteEWDR(state.regs1.EWDR);
-    m_VDP1.WriteEWLR(state.regs1.EWLR);
-    m_VDP1.WriteEWRR(state.regs1.EWRR);
-    m_VDP1.WriteEDSR(state.regs1.EDSR);
-    m_VDP1.WriteLOPR(state.regs1.LOPR);
-    m_VDP1.WriteCOPR(state.regs1.COPR);
-    m_VDP1.WriteMODR(state.regs1.MODR);
-    m_VDP1.fbManualSwap = state.regs1.manualSwap;
-    m_VDP1.fbManualErase = state.regs1.manualErase;
-
-    m_VDP2.WriteTVMD(state.regs2.TVMD);
-    m_VDP2.WriteEXTEN(state.regs2.EXTEN);
-    m_VDP2.WriteTVSTAT(state.regs2.TVSTAT);
-    m_VDP2.WriteVRSIZE(state.regs2.VRSIZE);
-    m_VDP2.WriteHCNT(state.regs2.HCNT);
-    m_VDP2.WriteVCNT(state.regs2.VCNT);
-    m_VDP2.WriteRAMCTL(state.regs2.RAMCTL);
-    m_VDP2.WriteCYCA0L(state.regs2.CYCA0L);
-    m_VDP2.WriteCYCA0U(state.regs2.CYCA0U);
-    m_VDP2.WriteCYCA1L(state.regs2.CYCA1L);
-    m_VDP2.WriteCYCA1U(state.regs2.CYCA1U);
-    m_VDP2.WriteCYCB0L(state.regs2.CYCB0L);
-    m_VDP2.WriteCYCB0U(state.regs2.CYCB0U);
-    m_VDP2.WriteCYCB1L(state.regs2.CYCB1L);
-    m_VDP2.WriteCYCB1U(state.regs2.CYCB1U);
-    m_VDP2.WriteBGON(state.regs2.BGON);
-    m_VDP2.WriteMZCTL(state.regs2.MZCTL);
-    m_VDP2.WriteSFSEL(state.regs2.SFSEL);
-    m_VDP2.WriteSFCODE(state.regs2.SFCODE);
-    m_VDP2.WriteCHCTLA(state.regs2.CHCTLA);
-    m_VDP2.WriteCHCTLB(state.regs2.CHCTLB);
-    m_VDP2.WriteBMPNA(state.regs2.BMPNA);
-    m_VDP2.WriteBMPNB(state.regs2.BMPNB);
-    m_VDP2.WritePNCNA(state.regs2.PNCNA);
-    m_VDP2.WritePNCNB(state.regs2.PNCNB);
-    m_VDP2.WritePNCNC(state.regs2.PNCNC);
-    m_VDP2.WritePNCND(state.regs2.PNCND);
-    m_VDP2.WritePNCR(state.regs2.PNCR);
-    m_VDP2.WritePLSZ(state.regs2.PLSZ);
-    m_VDP2.WriteMPOFN(state.regs2.MPOFN);
-    m_VDP2.WriteMPOFR(state.regs2.MPOFR);
-    m_VDP2.WriteMPABN0(state.regs2.MPABN0);
-    m_VDP2.WriteMPCDN0(state.regs2.MPCDN0);
-    m_VDP2.WriteMPABN1(state.regs2.MPABN1);
-    m_VDP2.WriteMPCDN1(state.regs2.MPCDN1);
-    m_VDP2.WriteMPABN2(state.regs2.MPABN2);
-    m_VDP2.WriteMPCDN2(state.regs2.MPCDN2);
-    m_VDP2.WriteMPABN3(state.regs2.MPABN3);
-    m_VDP2.WriteMPCDN3(state.regs2.MPCDN3);
-    m_VDP2.WriteMPABRA(state.regs2.MPABRA);
-    m_VDP2.WriteMPCDRA(state.regs2.MPCDRA);
-    m_VDP2.WriteMPEFRA(state.regs2.MPEFRA);
-    m_VDP2.WriteMPGHRA(state.regs2.MPGHRA);
-    m_VDP2.WriteMPIJRA(state.regs2.MPIJRA);
-    m_VDP2.WriteMPKLRA(state.regs2.MPKLRA);
-    m_VDP2.WriteMPMNRA(state.regs2.MPMNRA);
-    m_VDP2.WriteMPOPRA(state.regs2.MPOPRA);
-    m_VDP2.WriteMPABRB(state.regs2.MPABRB);
-    m_VDP2.WriteMPCDRB(state.regs2.MPCDRB);
-    m_VDP2.WriteMPEFRB(state.regs2.MPEFRB);
-    m_VDP2.WriteMPGHRB(state.regs2.MPGHRB);
-    m_VDP2.WriteMPIJRB(state.regs2.MPIJRB);
-    m_VDP2.WriteMPKLRB(state.regs2.MPKLRB);
-    m_VDP2.WriteMPMNRB(state.regs2.MPMNRB);
-    m_VDP2.WriteMPOPRB(state.regs2.MPOPRB);
-    m_VDP2.WriteSCXIN0(state.regs2.SCXIN0);
-    m_VDP2.WriteSCXDN0(state.regs2.SCXDN0);
-    m_VDP2.WriteSCYIN0(state.regs2.SCYIN0);
-    m_VDP2.WriteSCYDN0(state.regs2.SCYDN0);
-    m_VDP2.WriteZMXIN0(state.regs2.ZMXIN0);
-    m_VDP2.WriteZMXDN0(state.regs2.ZMXDN0);
-    m_VDP2.WriteZMYIN0(state.regs2.ZMYIN0);
-    m_VDP2.WriteZMYDN0(state.regs2.ZMYDN0);
-    m_VDP2.WriteSCXIN1(state.regs2.SCXIN1);
-    m_VDP2.WriteSCXDN1(state.regs2.SCXDN1);
-    m_VDP2.WriteSCYIN1(state.regs2.SCYIN1);
-    m_VDP2.WriteSCYDN1(state.regs2.SCYDN1);
-    m_VDP2.WriteZMXIN1(state.regs2.ZMXIN1);
-    m_VDP2.WriteZMXDN1(state.regs2.ZMXDN1);
-    m_VDP2.WriteZMYIN1(state.regs2.ZMYIN1);
-    m_VDP2.WriteZMYDN1(state.regs2.ZMYDN1);
-    m_VDP2.WriteSCXN2(state.regs2.SCXIN2);
-    m_VDP2.WriteSCYN2(state.regs2.SCYIN2);
-    m_VDP2.WriteSCXN3(state.regs2.SCXIN3);
-    m_VDP2.WriteSCYN3(state.regs2.SCYIN3);
-    m_VDP2.WriteZMCTL(state.regs2.ZMCTL);
-    m_VDP2.WriteSCRCTL(state.regs2.SCRCTL);
-    m_VDP2.WriteVCSTAU(state.regs2.VCSTAU);
-    m_VDP2.WriteVCSTAL(state.regs2.VCSTAL);
-    m_VDP2.WriteLSTA0U(state.regs2.LSTA0U);
-    m_VDP2.WriteLSTA0L(state.regs2.LSTA0L);
-    m_VDP2.WriteLSTA1U(state.regs2.LSTA1U);
-    m_VDP2.WriteLSTA1L(state.regs2.LSTA1L);
-    m_VDP2.WriteLCTAU(state.regs2.LCTAU);
-    m_VDP2.WriteLCTAL(state.regs2.LCTAL);
-    m_VDP2.WriteBKTAU(state.regs2.BKTAU);
-    m_VDP2.WriteBKTAL(state.regs2.BKTAL);
-    m_VDP2.WriteRPMD(state.regs2.RPMD);
-    m_VDP2.WriteRPRCTL(state.regs2.RPRCTL);
-    m_VDP2.WriteKTCTL(state.regs2.KTCTL);
-    m_VDP2.WriteKTAOF(state.regs2.KTAOF);
-    m_VDP2.WriteOVPNRA(state.regs2.OVPNRA);
-    m_VDP2.WriteOVPNRB(state.regs2.OVPNRB);
-    m_VDP2.WriteRPTAU(state.regs2.RPTAU);
-    m_VDP2.WriteRPTAL(state.regs2.RPTAL);
-    m_VDP2.WriteWPSX0(state.regs2.WPSX0);
-    m_VDP2.WriteWPSY0(state.regs2.WPSY0);
-    m_VDP2.WriteWPEX0(state.regs2.WPEX0);
-    m_VDP2.WriteWPEY0(state.regs2.WPEY0);
-    m_VDP2.WriteWPSX1(state.regs2.WPSX1);
-    m_VDP2.WriteWPSY1(state.regs2.WPSY1);
-    m_VDP2.WriteWPEX1(state.regs2.WPEX1);
-    m_VDP2.WriteWPEY1(state.regs2.WPEY1);
-    m_VDP2.WriteWCTLA(state.regs2.WCTLA);
-    m_VDP2.WriteWCTLB(state.regs2.WCTLB);
-    m_VDP2.WriteWCTLC(state.regs2.WCTLC);
-    m_VDP2.WriteWCTLD(state.regs2.WCTLD);
-    m_VDP2.WriteLWTA0U(state.regs2.LWTA0U);
-    m_VDP2.WriteLWTA0L(state.regs2.LWTA0L);
-    m_VDP2.WriteLWTA1U(state.regs2.LWTA1U);
-    m_VDP2.WriteLWTA1L(state.regs2.LWTA1L);
-    m_VDP2.WriteSPCTL(state.regs2.SPCTL);
-    m_VDP2.WriteSDCTL(state.regs2.SDCTL);
-    m_VDP2.WriteCRAOFA(state.regs2.CRAOFA);
-    m_VDP2.WriteCRAOFB(state.regs2.CRAOFB);
-    m_VDP2.WriteLNCLEN(state.regs2.LNCLEN);
-    m_VDP2.WriteSFPRMD(state.regs2.SFPRMD);
-    m_VDP2.WriteCCCTL(state.regs2.CCCTL);
-    m_VDP2.WriteSFCCMD(state.regs2.SFCCMD);
-    m_VDP2.WritePRISA(state.regs2.PRISA);
-    m_VDP2.WritePRISB(state.regs2.PRISB);
-    m_VDP2.WritePRISC(state.regs2.PRISC);
-    m_VDP2.WritePRISD(state.regs2.PRISD);
-    m_VDP2.WritePRINA(state.regs2.PRINA);
-    m_VDP2.WritePRINB(state.regs2.PRINB);
-    m_VDP2.WritePRIR(state.regs2.PRIR);
-    m_VDP2.WriteCCRSA(state.regs2.CCRSA);
-    m_VDP2.WriteCCRSB(state.regs2.CCRSB);
-    m_VDP2.WriteCCRSC(state.regs2.CCRSC);
-    m_VDP2.WriteCCRSD(state.regs2.CCRSD);
-    m_VDP2.WriteCCRNA(state.regs2.CCRNA);
-    m_VDP2.WriteCCRNB(state.regs2.CCRNB);
-    m_VDP2.WriteCCRR(state.regs2.CCRR);
-    m_VDP2.WriteCCRLB(state.regs2.CCRLB);
-    m_VDP2.WriteCLOFEN(state.regs2.CLOFEN);
-    m_VDP2.WriteCLOFSL(state.regs2.CLOFSL);
-    m_VDP2.WriteCOAR(state.regs2.COAR);
-    m_VDP2.WriteCOAG(state.regs2.COAG);
-    m_VDP2.WriteCOAB(state.regs2.COAB);
-    m_VDP2.WriteCOBR(state.regs2.COBR);
-    m_VDP2.WriteCOBG(state.regs2.COBG);
-    m_VDP2.WriteCOBB(state.regs2.COBB);
-
-    m_VDP2.cyclePatterns.dirty = true;
-
-    switch (state.HPhase) {
-    default:
-    case state::VDPState::HorizontalPhase::Active: m_HPhase = HorizontalPhase::Active; break;
-    case state::VDPState::HorizontalPhase::RightBorder: m_HPhase = HorizontalPhase::RightBorder; break;
-    case state::VDPState::HorizontalPhase::Sync: m_HPhase = HorizontalPhase::Sync; break;
-    case state::VDPState::HorizontalPhase::VBlankOut: m_HPhase = HorizontalPhase::VBlankOut; break;
-    case state::VDPState::HorizontalPhase::LeftBorder: m_HPhase = HorizontalPhase::LeftBorder; break;
-    case state::VDPState::HorizontalPhase::LastDot: m_HPhase = HorizontalPhase::LastDot; break;
-    }
-
-    switch (state.VPhase) {
-    default:
-    case state::VDPState::VerticalPhase::Active: m_VPhase = VerticalPhase::Active; break;
-    case state::VDPState::VerticalPhase::BottomBorder: m_VPhase = VerticalPhase::BottomBorder; break;
-    case state::VDPState::VerticalPhase::BlankingAndSync: m_VPhase = VerticalPhase::BlankingAndSync; break;
-    case state::VDPState::VerticalPhase::TopBorder: m_VPhase = VerticalPhase::TopBorder; break;
-    case state::VDPState::VerticalPhase::LastLine: m_VPhase = VerticalPhase::LastLine; break;
-    }
-
-    m_VCounter = state.VCounter;
+    m_state.LoadState(state);
 
     for (uint32 address = 0; address < kVDP2CRAMSize; address += 2) {
         VDP2UpdateCRAMCache<uint16>(address);
@@ -870,9 +466,9 @@ void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext
 
 void VDP::SetVideoStandard(VideoStandard videoStandard) {
     const bool pal = videoStandard == VideoStandard::PAL;
-    if (m_VDP2.TVSTAT.PAL != pal) {
-        m_VDP2.TVSTAT.PAL = pal;
-        m_VDP2.TVMDDirty = true;
+    if (m_state.regs2.TVSTAT.PAL != pal) {
+        m_state.regs2.TVSTAT.PAL = pal;
+        m_state.regs2.TVMDDirty = true;
     }
 }
 
@@ -903,13 +499,13 @@ void VDP::EnableThreadedVDP(bool enable) {
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) {
     address &= 0x7FFFF;
-    return util::ReadBE<T>(&m_VRAM1[address]);
+    return util::ReadBE<T>(&m_state.VRAM1[address]);
 }
 
 template <mem_primitive T>
 FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
     address &= 0x7FFFF;
-    util::WriteBE<T>(&m_VRAM1[address], value);
+    util::WriteBE<T>(&m_state.VRAM1[address], value);
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
     }
@@ -918,15 +514,15 @@ FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) {
     address &= 0x3FFFF;
-    return util::ReadBE<T>(&m_spriteFB[m_displayFB ^ 1][address]);
+    return util::ReadBE<T>(&m_state.spriteFB[m_state.displayFB ^ 1][address]);
 }
 
 template <mem_primitive T>
 FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
     address &= 0x3FFFF;
-    util::WriteBE<T>(&m_spriteFB[m_displayFB ^ 1][address], value);
+    util::WriteBE<T>(&m_state.spriteFB[m_state.displayFB ^ 1][address], value);
     if (m_deinterlaceRender) {
-        util::WriteBE<T>(&m_altSpriteFB[m_displayFB ^ 1][address & 0x3FFFF], value);
+        util::WriteBE<T>(&m_altSpriteFB[m_state.displayFB ^ 1][address & 0x3FFFF], value);
     }
     // if (m_threadedVDPRendering) {
     //     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
@@ -936,7 +532,7 @@ FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
 template <bool peek>
 FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) {
     address &= 0x7FFFF;
-    return m_VDP1.Read<peek>(address);
+    return m_state.regs1.Read<peek>(address);
 }
 
 template <bool poke>
@@ -945,29 +541,29 @@ FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
     }
-    m_VDP1.Write<poke>(address, value);
+    m_state.regs1.Write<poke>(address, value);
 
     switch (address) {
     case 0x00:
         if constexpr (!poke) {
-            devlog::trace<grp::vdp1_regs>("Write to TVM={:d}{:d}{:d}", m_VDP1.hdtvEnable, m_VDP1.fbRotEnable,
-                                          m_VDP1.pixel8Bits);
-            devlog::trace<grp::vdp1_regs>("Write to VBE={:d}", m_VDP1.vblankErase);
+            devlog::trace<grp::vdp1_regs>("Write to TVM={:d}{:d}{:d}", m_state.regs1.hdtvEnable,
+                                          m_state.regs1.fbRotEnable, m_state.regs1.pixel8Bits);
+            devlog::trace<grp::vdp1_regs>("Write to VBE={:d}", m_state.regs1.vblankErase);
         }
         break;
     case 0x02:
         if constexpr (!poke) {
-            devlog::trace<grp::vdp1_regs>("Write to DIE={:d} DIL={:d}", m_VDP1.dblInterlaceEnable,
-                                          m_VDP1.dblInterlaceDrawLine);
+            devlog::trace<grp::vdp1_regs>("Write to DIE={:d} DIL={:d}", m_state.regs1.dblInterlaceEnable,
+                                          m_state.regs1.dblInterlaceDrawLine);
             devlog::trace<grp::vdp1_regs>("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}",
-                                          m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap,
-                                          m_VDP1.fbManualErase);
+                                          m_state.regs1.fbSwapMode, m_state.regs1.fbSwapTrigger,
+                                          m_state.regs1.fbManualSwap, m_state.regs1.fbManualErase);
         }
         break;
     case 0x04:
         if constexpr (!poke) {
-            devlog::trace<grp::vdp1_regs>("Write to PTM={:d}", m_VDP1.plotTrigger);
-            if (m_VDP1.plotTrigger == 0b01) {
+            devlog::trace<grp::vdp1_regs>("Write to PTM={:d}", m_state.regs1.plotTrigger);
+            if (m_state.regs1.plotTrigger == 0b01) {
                 VDP1BeginFrame();
             }
         }
@@ -983,14 +579,14 @@ template <mem_primitive T>
 FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
-    return util::ReadBE<T>(&m_VRAM2[address]);
+    return util::ReadBE<T>(&m_state.VRAM2[address]);
 }
 
 template <mem_primitive T>
 FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
-    util::WriteBE<T>(&m_VRAM2[address], value);
+    util::WriteBE<T>(&m_state.VRAM2[address], value);
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2VRAMWrite<T>(address, value));
     }
@@ -1005,7 +601,7 @@ FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) {
     }
 
     address = MapCRAMAddress(address);
-    T value = util::ReadBE<T>(&m_CRAM[address]);
+    T value = util::ReadBE<T>(&m_state.CRAM[address]);
     if constexpr (!peek) {
         devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
     }
@@ -1024,16 +620,16 @@ FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
     if constexpr (!poke) {
         devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
     }
-    util::WriteBE<T>(&m_CRAM[address], value);
+    util::WriteBE<T>(&m_state.CRAM[address], value);
     VDP2UpdateCRAMCache<T>(address);
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
     }
-    if (m_VDP2.vramControl.colorRAMMode == 0) {
+    if (m_state.regs2.vramControl.colorRAMMode == 0) {
         if constexpr (!poke) {
             devlog::trace<grp::vdp2_regs>("   replicated to {:05X}", address ^ 0x800);
         }
-        util::WriteBE<T>(&m_CRAM[address ^ 0x800], value);
+        util::WriteBE<T>(&m_state.CRAM[address ^ 0x800], value);
         VDP2UpdateCRAMCache<T>(address);
         if (m_threadedVDPRendering) {
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
@@ -1044,17 +640,17 @@ FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
 template <mem_primitive T>
 FORCE_INLINE void VDP::VDP2UpdateCRAMCache(uint32 address) {
     address &= ~1;
-    const Color555 color5{.u16 = util::ReadBE<uint16>(&m_CRAM[address])};
+    const Color555 color5{.u16 = util::ReadBE<uint16>(&m_state.CRAM[address])};
     m_CRAMCache[address / sizeof(uint16)] = ConvertRGB555to888(color5);
     if constexpr (std::is_same_v<T, uint32>) {
-        const Color555 color5{.u16 = util::ReadBE<uint16>(&m_CRAM[address + 2])};
+        const Color555 color5{.u16 = util::ReadBE<uint16>(&m_state.CRAM[address + 2])};
         m_CRAMCache[(address + 2) / sizeof(uint16)] = ConvertRGB555to888(color5);
     }
 }
 
 FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) {
     address &= 0x1FF;
-    return m_VDP2.Read(address);
+    return m_state.regs2.Read(address);
 }
 
 FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
@@ -1062,15 +658,16 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2RegWrite(address, value));
     }
-    m_VDP2.Write(address, value);
+    m_state.regs2.Write(address, value);
     devlog::trace<grp::vdp2_regs>("VDP2 register write to {:03X} = {:04X}", address, value);
 
     switch (address) {
     case 0x000:
         devlog::trace<grp::vdp2_regs>("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}",
-                                      m_VDP2.TVMD.u16, (uint16)m_VDP2.TVMD.HRESOn, (uint16)m_VDP2.TVMD.VRESOn,
-                                      (uint16)m_VDP2.TVMD.LSMDn, (uint16)m_VDP2.TVMD.BDCLMD, (uint16)m_VDP2.TVMD.DISP,
-                                      (m_VDP2.TVMDDirty ? " (dirty)" : ""));
+                                      m_state.regs2.TVMD.u16, (uint16)m_state.regs2.TVMD.HRESOn,
+                                      (uint16)m_state.regs2.TVMD.VRESOn, (uint16)m_state.regs2.TVMD.LSMDn,
+                                      (uint16)m_state.regs2.TVMD.BDCLMD, (uint16)m_state.regs2.TVMD.DISP,
+                                      (m_state.regs2.TVMDDirty ? " (dirty)" : ""));
         break;
     case 0x020: [[fallthrough]]; // BGON
     case 0x028: [[fallthrough]]; // CHCTLA
@@ -1081,13 +678,13 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
 }
 
 FORCE_INLINE void VDP::UpdatePhase() {
-    auto nextPhase = static_cast<uint32>(m_HPhase) + 1;
+    auto nextPhase = static_cast<uint32>(m_state.HPhase) + 1;
     if (nextPhase == m_HTimings.size()) {
         nextPhase = 0;
     }
 
-    m_HPhase = static_cast<HorizontalPhase>(nextPhase);
-    switch (m_HPhase) {
+    m_state.HPhase = static_cast<HorizontalPhase>(nextPhase);
+    switch (m_state.HPhase) {
     case HorizontalPhase::Active: BeginHPhaseActiveDisplay(); break;
     case HorizontalPhase::RightBorder: BeginHPhaseRightBorder(); break;
     case HorizontalPhase::Sync: BeginHPhaseSync(); break;
@@ -1098,16 +695,16 @@ FORCE_INLINE void VDP::UpdatePhase() {
 }
 
 FORCE_INLINE uint64 VDP::GetPhaseCycles() const {
-    return m_HTimings[static_cast<uint32>(m_HPhase)];
+    return m_HTimings[static_cast<uint32>(m_state.HPhase)];
 }
 
 template <bool verbose>
 void VDP::UpdateResolution() {
-    if (!m_VDP2.TVMDDirty) {
+    if (!m_state.regs2.TVMDDirty) {
         return;
     }
 
-    m_VDP2.TVMDDirty = false;
+    m_state.regs2.TVMDDirty = false;
 
     // Horizontal/vertical resolution tables
     // NTSC uses the first two vRes entries, PAL uses the full table, and exclusive monitors use 480 lines
@@ -1116,9 +713,9 @@ void VDP::UpdateResolution() {
 
     // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
     // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
-    m_HRes = hRes[m_VDP2.TVMD.HRESOn];
-    m_VRes = vRes[m_VDP2.TVMD.VRESOn & (m_VDP2.TVSTAT.PAL ? 3 : 1)];
-    if (m_VDP2.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
+    m_HRes = hRes[m_state.regs2.TVMD.HRESOn];
+    m_VRes = vRes[m_state.regs2.TVMD.VRESOn & (m_state.regs2.TVSTAT.PAL ? 3 : 1)];
+    if (m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         // Double-density interlace doubles the vertical resolution
         m_VRes *= 2;
     }
@@ -1140,7 +737,7 @@ void VDP::UpdateResolution() {
         {640, 54, 54, 52, 52, 2}, // {640, 694, 748, 800, 852, 854},
         {704, 46, 56, 58, 44, 2}, // {704, 750, 806, 864, 908, 910},
     }};
-    m_HTimings = hTimings[m_VDP2.TVMD.HRESOn & 3]; // TODO: check exclusive monitor timings
+    m_HTimings = hTimings[m_state.regs2.TVMD.HRESOn & 3]; // TODO: check exclusive monitor timings
 
     // Vertical phase timings (to reach):
     //   BBd = Bottom Border
@@ -1167,37 +764,38 @@ void VDP::UpdateResolution() {
             {256, 272, 297, 312, 313},
         }},
     }};
-    m_VTimings = vTimings[m_VDP2.TVSTAT.PAL][m_VDP2.TVMD.VRESOn];
+    m_VTimings = vTimings[m_state.regs2.TVSTAT.PAL][m_state.regs2.TVMD.VRESOn];
 
     // Adjust for dot clock
-    const uint32 dotClockMult = (m_VDP2.TVMD.HRESOn & 2) ? 2 : 4;
+    const uint32 dotClockMult = (m_state.regs2.TVMD.HRESOn & 2) ? 2 : 4;
     for (auto &timing : m_HTimings) {
         timing *= dotClockMult;
     }
 
     if constexpr (verbose) {
         devlog::info<grp::vdp2>("Screen resolution set to {}x{}", m_HRes, m_VRes);
-        switch (m_VDP2.TVMD.LSMDn) {
+        switch (m_state.regs2.TVMD.LSMDn) {
         case InterlaceMode::None: devlog::info<grp::vdp2>("Non-interlace mode"); break;
         case InterlaceMode::Invalid: devlog::info<grp::vdp2>("Invalid interlace mode"); break;
         case InterlaceMode::SingleDensity: devlog::info<grp::vdp2>("Single-density interlace mode"); break;
         case InterlaceMode::DoubleDensity: devlog::info<grp::vdp2>("Double-density interlace mode"); break;
         }
-        devlog::info<grp::vdp2>("Dot clock mult = {}, display {}", dotClockMult, (m_VDP2.TVMD.DISP ? "ON" : "OFF"));
+        devlog::info<grp::vdp2>("Dot clock mult = {}, display {}", dotClockMult,
+                                (m_state.regs2.TVMD.DISP ? "ON" : "OFF"));
     }
 }
 
 FORCE_INLINE void VDP::IncrementVCounter() {
-    ++m_VCounter;
-    while (m_VCounter >= m_VTimings[static_cast<uint32>(m_VPhase)]) {
-        auto nextPhase = static_cast<uint32>(m_VPhase) + 1;
+    ++m_state.VCounter;
+    while (m_state.VCounter >= m_VTimings[static_cast<uint32>(m_state.VPhase)]) {
+        auto nextPhase = static_cast<uint32>(m_state.VPhase) + 1;
         if (nextPhase == m_VTimings.size()) {
-            m_VCounter = 0;
+            m_state.VCounter = 0;
             nextPhase = 0;
         }
 
-        m_VPhase = static_cast<VerticalPhase>(nextPhase);
-        switch (m_VPhase) {
+        m_state.VPhase = static_cast<VerticalPhase>(nextPhase);
+        switch (m_state.VPhase) {
         case VerticalPhase::Active: BeginVPhaseActiveDisplay(); break;
         case VerticalPhase::BottomBorder: BeginVPhaseBottomBorder(); break;
         case VerticalPhase::BlankingAndSync: BeginVPhaseBlankingAndSync(); break;
@@ -1210,45 +808,45 @@ FORCE_INLINE void VDP::IncrementVCounter() {
 // ----
 
 void VDP::BeginHPhaseActiveDisplay() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_VCounter);
-    if (m_VPhase == VerticalPhase::Active) {
-        if (m_VCounter == 0) {
-            devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_displayFB);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_state.VCounter);
+    if (m_state.VPhase == VerticalPhase::Active) {
+        if (m_state.VCounter == 0) {
+            devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
 
             VDP2InitFrame();
-        } else if (m_VCounter == 210) { // ~1ms before VBlank IN
+        } else if (m_state.VCounter == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
 
         if (m_threadedVDPRendering) {
             if (m_VDPRenderContext.vdp1Done) {
-                m_VDP1.currFrameEnded = true;
+                m_state.regs1.currFrameEnded = true;
                 m_cbTriggerSpriteDrawEnd();
                 m_cbVDP1FrameComplete();
                 m_VDPRenderContext.vdp1Done = false;
             }
 
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_VCounter));
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_state.VCounter));
         } else {
-            m_deinterlaceRender ? VDP2DrawLine<true>(m_VCounter) : VDP2DrawLine<false>(m_VCounter);
+            m_deinterlaceRender ? VDP2DrawLine<true>(m_state.VCounter) : VDP2DrawLine<false>(m_state.VCounter);
         }
     }
 }
 
 void VDP::BeginHPhaseRightBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering right border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering right border phase", m_state.VCounter);
 
-    devlog::trace<grp::base>("## HBlank IN {:3d}", m_VCounter);
+    devlog::trace<grp::base>("## HBlank IN {:3d}", m_state.VCounter);
 
-    m_VDP2.TVSTAT.HBLANK = 1;
+    m_state.regs2.TVSTAT.HBLANK = 1;
     m_cbHBlank();
 
     // Start erasing if we just entered VBlank IN
-    if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
-        devlog::trace<grp::base>("## HBlank IN + VBlank IN  VBE={:d} manualerase={:d}", m_VDP1.vblankErase,
-                                 m_VDP1.fbManualErase);
+    if (m_state.VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
+        devlog::trace<grp::base>("## HBlank IN + VBlank IN  VBE={:d} manualerase={:d}", m_state.regs1.vblankErase,
+                                 m_state.regs1.fbManualErase);
 
-        if (m_VDP1.vblankErase || !m_VDP1.fbSwapMode) {
+        if (m_state.regs1.vblankErase || !m_state.regs1.fbSwapMode) {
             // TODO: cycle-count the erase process, starting here
             if (m_threadedVDPRendering) {
                 m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
@@ -1263,15 +861,16 @@ void VDP::BeginHPhaseRightBorder() {
 
 void VDP::BeginHPhaseSync() {
     IncrementVCounter();
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal sync phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal sync phase", m_state.VCounter);
 }
 
 void VDP::BeginHPhaseVBlankOut() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_state.VCounter);
 
-    if (m_VPhase == VerticalPhase::LastLine) {
+    if (m_state.VPhase == VerticalPhase::LastLine) {
         devlog::trace<grp::base>("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
-                                 m_VDP1.fbSwapMode, m_VDP1.fbSwapTrigger, m_VDP1.fbManualSwap, m_VDP1.plotTrigger);
+                                 m_state.regs1.fbSwapMode, m_state.regs1.fbSwapTrigger, m_state.regs1.fbManualSwap,
+                                 m_state.regs1.plotTrigger);
 
         // FIXME: this breaks several games:
         // - After Burner II and OutRun: erases data used by VDP2 graphics tiles
@@ -1291,44 +890,44 @@ void VDP::BeginHPhaseVBlankOut() {
         }
 
         // If manual erase is requested, schedule it for the next frame
-        if (m_VDP1.fbManualErase) {
-            m_VDP1.fbManualErase = false;
+        if (m_state.regs1.fbManualErase) {
+            m_state.regs1.fbManualErase = false;
             m_VDP1RenderContext.erase = true;
         }
         */
 
         // Swap framebuffer in manual swap requested or in 1-cycle mode
-        if (!m_VDP1.fbSwapMode || m_VDP1.fbManualSwap) {
-            m_VDP1.fbManualSwap = false;
+        if (!m_state.regs1.fbSwapMode || m_state.regs1.fbManualSwap) {
+            m_state.regs1.fbManualSwap = false;
             VDP1SwapFramebuffer();
         }
     }
 }
 
 void VDP::BeginHPhaseLeftBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.VCounter);
 
-    m_VDP2.TVSTAT.HBLANK = 0;
+    m_state.regs2.TVSTAT.HBLANK = 0;
 
     // TODO: draw border
 }
 
 void VDP::BeginHPhaseLastDot() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last dot phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last dot phase", m_state.VCounter);
 
     // If we just entered the bottom blanking vertical phase, switch fields
-    if (m_VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
-        if (m_VDP2.TVMD.LSMDn != InterlaceMode::None) {
-            m_VDP2.TVSTAT.ODD ^= 1;
-            devlog::trace<grp::base>("Switched to {} field", (m_VDP2.TVSTAT.ODD ? "odd" : "even"));
+    if (m_state.VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
+        if (m_state.regs2.TVMD.LSMDn != InterlaceMode::None) {
+            m_state.regs2.TVSTAT.ODD ^= 1;
+            devlog::trace<grp::base>("Switched to {} field", (m_state.regs2.TVSTAT.ODD ? "odd" : "even"));
             if (m_threadedVDPRendering) {
-                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
+                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
             }
         } else {
-            if (m_VDP2.TVSTAT.ODD != 1) {
-                m_VDP2.TVSTAT.ODD = 1;
+            if (m_state.regs2.TVSTAT.ODD != 1) {
+                m_state.regs2.TVSTAT.ODD = 1;
                 if (m_threadedVDPRendering) {
-                    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_VDP2.TVSTAT.ODD));
+                    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
                 }
             }
         }
@@ -1338,22 +937,22 @@ void VDP::BeginHPhaseLastDot() {
 // ----
 
 void VDP::BeginVPhaseActiveDisplay() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering vertical active display phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering vertical active display phase", m_state.VCounter);
 }
 
 void VDP::BeginVPhaseBottomBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering bottom border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering bottom border phase", m_state.VCounter);
 
     devlog::trace<grp::base>("## VBlank IN");
 
-    m_VDP2.TVSTAT.VBLANK = 1;
+    m_state.regs2.TVSTAT.VBLANK = 1;
     m_cbVBlankStateChange(true);
 
     // TODO: draw border
 }
 
 void VDP::BeginVPhaseBlankingAndSync() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_state.VCounter);
 
     // End frame
     devlog::trace<grp::base>("End VDP2 frame");
@@ -1365,7 +964,7 @@ void VDP::BeginVPhaseBlankingAndSync() {
 }
 
 void VDP::BeginVPhaseTopBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering top border phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering top border phase", m_state.VCounter);
 
     UpdateResolution<true>();
 
@@ -1373,11 +972,11 @@ void VDP::BeginVPhaseTopBorder() {
 }
 
 void VDP::BeginVPhaseLastLine() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_state.VCounter);
 
     devlog::trace<grp::base>("## VBlank OUT");
 
-    m_VDP2.TVSTAT.VBLANK = 0;
+    m_state.regs2.TVSTAT.VBLANK = 0;
     m_cbVBlankStateChange(false);
 }
 
@@ -1498,11 +1097,11 @@ void VDP::VDPRenderThread() {
 
             case EvtType::PreSaveStateSync: rctx.preSaveSyncSignal.Set(); break;
             case EvtType::PostLoadStateSync:
-                rctx.vdp1.regs = m_VDP1;
-                rctx.vdp1.VRAM = m_VRAM1;
-                rctx.vdp2.regs = m_VDP2;
-                rctx.vdp2.VRAM = m_VRAM2;
-                rctx.vdp2.CRAM = m_CRAM;
+                rctx.vdp1.regs = m_state.regs1;
+                rctx.vdp1.VRAM = m_state.VRAM1;
+                rctx.vdp2.regs = m_state.regs2;
+                rctx.vdp2.VRAM = m_state.VRAM2;
+                rctx.vdp2.CRAM = m_state.CRAM;
                 rctx.postLoadSyncSignal.Set();
                 for (uint32 addr = 0; addr < rctx.vdp2.CRAM.size(); addr += sizeof(uint16)) {
                     const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(addr);
@@ -1568,7 +1167,7 @@ FORCE_INLINE VDP1Regs &VDP::VDP1GetRegs() {
     if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp1.regs;
     } else {
-        return m_VDP1;
+        return m_state.regs1;
     }
 }
 
@@ -1576,7 +1175,7 @@ FORCE_INLINE const VDP1Regs &VDP::VDP1GetRegs() const {
     if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp1.regs;
     } else {
-        return m_VDP1;
+        return m_state.regs1;
     }
 }
 
@@ -1584,7 +1183,7 @@ FORCE_INLINE uint8 VDP::VDP1GetDisplayFBIndex() const {
     if (m_threadedVDPRendering) {
         return m_VDPRenderContext.displayFB;
     } else {
-        return m_displayFB;
+        return m_state.displayFB;
     }
 }
 
@@ -1592,12 +1191,12 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
 
-    devlog::trace<grp::vdp1_render>("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit", m_displayFB,
-                                    regs1.eraseX1, regs1.eraseY1, regs1.eraseX3, regs1.eraseY3, regs1.eraseWriteValue,
-                                    regs1.fbSizeH, regs1.fbSizeV, (regs1.pixel8Bits ? 8 : 16));
+    devlog::trace<grp::vdp1_render>("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit",
+                                    m_state.displayFB, regs1.eraseX1, regs1.eraseY1, regs1.eraseX3, regs1.eraseY3,
+                                    regs1.eraseWriteValue, regs1.fbSizeH, regs1.fbSizeV, (regs1.pixel8Bits ? 8 : 16));
 
     const uint8 fbIndex = VDP1GetDisplayFBIndex();
-    auto &fb = m_spriteFB[fbIndex];
+    auto &fb = m_state.spriteFB[fbIndex];
     auto &altFB = m_altSpriteFB[fbIndex];
 
     // Horizontal scale is doubled in hi-res modes or when targeting rotation background
@@ -1631,12 +1230,13 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
 }
 
 FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
-    devlog::trace<grp::vdp1_render>("Swapping framebuffers - draw {}, display {}", m_displayFB, m_displayFB ^ 1);
+    devlog::trace<grp::vdp1_render>("Swapping framebuffers - draw {}, display {}", m_state.displayFB,
+                                    m_state.displayFB ^ 1);
 
     // FIXME: FCM=1 FCT=0 should erase regardless of framebuffer swap, otherwise I Love Mickey Mouse/Donald Duck leaves
     // behind sprites in some screens
-    if (m_VDP1.fbManualErase) {
-        m_VDP1.fbManualErase = false;
+    if (m_state.regs1.fbManualErase) {
+        m_state.regs1.fbManualErase = false;
         if (m_threadedVDPRendering) {
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
         } else {
@@ -1649,9 +1249,9 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
         m_VDPRenderContext.framebufferSwapSignal.Wait(true);
     }
 
-    m_displayFB ^= 1;
+    m_state.displayFB ^= 1;
 
-    if (bit::test<1>(m_VDP1.plotTrigger)) {
+    if (bit::test<1>(m_state.regs1.plotTrigger)) {
         VDP1BeginFrame();
     }
 }
@@ -1662,11 +1262,11 @@ void VDP::VDP1BeginFrame() {
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
 
-    m_VDP1.prevCommandAddress = m_VDP1.currCommandAddress;
-    m_VDP1.currCommandAddress = 0;
-    m_VDP1.returnAddress = ~0;
-    m_VDP1.prevFrameEnded = m_VDP1.currFrameEnded;
-    m_VDP1.currFrameEnded = false;
+    m_state.regs1.prevCommandAddress = m_state.regs1.currCommandAddress;
+    m_state.regs1.currCommandAddress = 0;
+    m_state.regs1.returnAddress = ~0;
+    m_state.regs1.prevFrameEnded = m_state.regs1.currFrameEnded;
+    m_state.regs1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
     if (m_threadedVDPRendering) {
@@ -1681,7 +1281,7 @@ void VDP::VDP1EndFrame() {
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.vdp1Done = true;
     } else {
-        m_VDP1.currFrameEnded = true;
+        m_state.regs1.currFrameEnded = true;
         m_cbTriggerSpriteDrawEnd();
         m_cbVDP1FrameComplete();
     }
@@ -1695,7 +1295,7 @@ void VDP::VDP1ProcessCommand() {
         return;
     }
 
-    auto &cmdAddress = m_VDP1.currCommandAddress;
+    auto &cmdAddress = m_state.regs1.currCommandAddress;
 
     const VDP1Command::Control control{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress)};
     devlog::trace<grp::vdp1_render>("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
@@ -1750,8 +1350,8 @@ void VDP::VDP1ProcessCommand() {
         }
         case Call: {
             // Nested calls seem to not update the return address
-            if (m_VDP1.returnAddress == kNoReturn) {
-                m_VDP1.returnAddress = cmdAddress + 0x20;
+            if (m_state.regs1.returnAddress == kNoReturn) {
+                m_state.regs1.returnAddress = cmdAddress + 0x20;
             }
             cmdAddress = (VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
             devlog::trace<grp::vdp1_render>("Call {:05X}", cmdAddress);
@@ -1759,9 +1359,9 @@ void VDP::VDP1ProcessCommand() {
         }
         case Return: {
             // Return seems to only return if there was a previous Call
-            if (m_VDP1.returnAddress != kNoReturn) {
-                cmdAddress = m_VDP1.returnAddress;
-                m_VDP1.returnAddress = kNoReturn;
+            if (m_state.regs1.returnAddress != kNoReturn) {
+                cmdAddress = m_state.regs1.returnAddress;
+                m_state.regs1.returnAddress = kNoReturn;
             } else {
                 cmdAddress += 0x20;
             }
@@ -1894,7 +1494,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     // TODO: pixelParams.mode.preClippingDisable
 
     const uint32 fbOffset = y * regs1.fbSizeH + x;
-    auto &drawFB = (altFB ? m_altSpriteFB : m_spriteFB)[VDP1GetDisplayFBIndex() ^ 1];
+    auto &drawFB = (altFB ? m_altSpriteFB : m_state.spriteFB)[VDP1GetDisplayFBIndex() ^ 1];
     if (regs1.pixel8Bits) {
         // TODO: what happens if pixelParams.mode.colorCalcBits/gouraudEnable != 0?
         if (pixelParams.mode.msbOn) {
@@ -2586,7 +2186,7 @@ FORCE_INLINE VDP2Regs &VDP::VDP2GetRegs() {
     if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp2.regs;
     } else {
-        return m_VDP2;
+        return m_state.regs2;
     }
 }
 
@@ -2594,7 +2194,7 @@ FORCE_INLINE const VDP2Regs &VDP::VDP2GetRegs() const {
     if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp2.regs;
     } else {
-        return m_VDP2;
+        return m_state.regs2;
     }
 }
 
@@ -2602,12 +2202,12 @@ FORCE_INLINE std::array<uint8, kVDP2VRAMSize> &VDP::VDP2GetVRAM() {
     if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp2.VRAM;
     } else {
-        return m_VRAM2;
+        return m_state.VRAM2;
     }
 }
 
 void VDP::VDP2InitFrame() {
-    if (m_VDP2.bgEnabled[5]) {
+    if (m_state.regs2.bgEnabled[5]) {
         VDP2InitRotationBG<0>();
         VDP2InitRotationBG<1>();
     } else {
@@ -2623,15 +2223,15 @@ template <uint32 index>
 FORCE_INLINE void VDP::VDP2InitNormalBG() {
     static_assert(index < 4, "Invalid NBG index");
 
-    if (!m_VDP2.bgEnabled[index]) {
+    if (!m_state.regs2.bgEnabled[index]) {
         return;
     }
 
-    const BGParams &bgParams = m_VDP2.bgParams[index + 1];
+    const BGParams &bgParams = m_state.regs2.bgParams[index + 1];
     NormBGLayerState &bgState = m_normBGLayerStates[index];
     bgState.fracScrollX = 0;
     bgState.fracScrollY = 0;
-    if (!m_deinterlaceRender && m_VDP2.TVMD.LSMDn == InterlaceMode::DoubleDensity && m_VDP2.TVSTAT.ODD) {
+    if (!m_deinterlaceRender && m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && m_state.regs2.TVSTAT.ODD) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
@@ -2646,16 +2246,16 @@ template <uint32 index>
 FORCE_INLINE void VDP::VDP2InitRotationBG() {
     static_assert(index < 2, "Invalid RBG index");
 
-    if (!m_VDP2.bgEnabled[index + 4]) {
+    if (!m_state.regs2.bgEnabled[index + 4]) {
         return;
     }
 
-    const BGParams &bgParams = m_VDP2.bgParams[index];
+    const BGParams &bgParams = m_state.regs2.bgParams[index];
     const bool cellSizeShift = bgParams.cellSizeShift;
     const bool twoWordChar = bgParams.twoWordChar;
 
     for (int param = 0; param < 2; param++) {
-        const RotationParams &rotParam = m_VDP2.rotParams[param];
+        const RotationParams &rotParam = m_state.regs2.rotParams[param];
         auto &pageBaseAddresses = m_rotParamStates[param].pageBaseAddresses;
         const uint16 plsz = rotParam.plsz;
         for (int plane = 0; plane < 16; plane++) {
@@ -2669,7 +2269,7 @@ void VDP::VDP2UpdateEnabledBGs() {
     // Sprite layer is always enabled, unless forcibly disabled
     m_layerStates[0].enabled = m_layerStates[0].rendered;
 
-    if (m_VDP2.bgEnabled[5]) {
+    if (m_state.regs2.bgEnabled[5]) {
         m_layerStates[1].enabled = m_layerStates[1].rendered; // RBG0
         m_layerStates[2].enabled = m_layerStates[2].rendered; // RBG1
         m_layerStates[3].enabled = false;                     // EXBG
@@ -2680,19 +2280,19 @@ void VDP::VDP2UpdateEnabledBGs() {
         // - NBG1 is disabled when NBG0 uses 8:8:8 RGB
         // - NBG2 is disabled when NBG0 uses 2048 color palette or any RGB format
         // - NBG3 is disabled when NBG0 uses 8:8:8 RGB or NBG1 uses 2048 color palette or 5:5:5 RGB color format
-        const ColorFormat colorFormatNBG0 = m_VDP2.bgParams[1].colorFormat;
-        const ColorFormat colorFormatNBG1 = m_VDP2.bgParams[2].colorFormat;
+        const ColorFormat colorFormatNBG0 = m_state.regs2.bgParams[1].colorFormat;
+        const ColorFormat colorFormatNBG1 = m_state.regs2.bgParams[2].colorFormat;
         const bool disableNBG1 = colorFormatNBG0 == ColorFormat::RGB888;
         const bool disableNBG2 = colorFormatNBG0 == ColorFormat::Palette2048 ||
                                  colorFormatNBG0 == ColorFormat::RGB555 || colorFormatNBG0 == ColorFormat::RGB888;
         const bool disableNBG3 = colorFormatNBG0 == ColorFormat::RGB888 ||
                                  colorFormatNBG1 == ColorFormat::Palette2048 || colorFormatNBG1 == ColorFormat::RGB555;
 
-        m_layerStates[1].enabled = m_layerStates[1].rendered && m_VDP2.bgEnabled[4];                 // RBG0
-        m_layerStates[2].enabled = m_layerStates[2].rendered && m_VDP2.bgEnabled[0];                 // NBG0
-        m_layerStates[3].enabled = m_layerStates[3].rendered && m_VDP2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
-        m_layerStates[4].enabled = m_layerStates[4].rendered && m_VDP2.bgEnabled[2] && !disableNBG2; // NBG2
-        m_layerStates[5].enabled = m_layerStates[5].rendered && m_VDP2.bgEnabled[3] && !disableNBG3; // NBG3
+        m_layerStates[1].enabled = m_layerStates[1].rendered && m_state.regs2.bgEnabled[4];                 // RBG0
+        m_layerStates[2].enabled = m_layerStates[2].rendered && m_state.regs2.bgEnabled[0];                 // NBG0
+        m_layerStates[3].enabled = m_layerStates[3].rendered && m_state.regs2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
+        m_layerStates[4].enabled = m_layerStates[4].rendered && m_state.regs2.bgEnabled[2] && !disableNBG2; // NBG2
+        m_layerStates[5].enabled = m_layerStates[5].rendered && m_state.regs2.bgEnabled[3] && !disableNBG3; // NBG3
     }
 }
 
@@ -3288,7 +2888,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     for (uint32 x = 0; x < maxX; x++) {
         const uint32 xx = x << xShift;
 
-        const auto &spriteFB = altField ? m_altSpriteFB[VDP1GetDisplayFBIndex()] : m_spriteFB[VDP1GetDisplayFBIndex()];
+        const auto &spriteFB =
+            altField ? m_altSpriteFB[VDP1GetDisplayFBIndex()] : m_state.spriteFB[VDP1GetDisplayFBIndex()];
         const uint32 spriteFBOffset = [&] {
             if constexpr (rotate) {
                 const auto &rotParamState = m_rotParamStates[0];
@@ -5499,7 +5100,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type
     const VDP2Regs &regs = VDP2GetRegs();
 
     const uint8 fbIndex = VDP1GetDisplayFBIndex();
-    auto &fb = altField ? m_altSpriteFB[fbIndex] : m_spriteFB[fbIndex];
+    auto &fb = altField ? m_altSpriteFB[fbIndex] : m_state.spriteFB[fbIndex];
     const uint16 rawData = util::ReadBE<uint16>(&fb[fbOffset & 0x3FFFE]);
 
     SpriteData data{};
@@ -5569,7 +5170,7 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type
     const VDP2Regs &regs = VDP2GetRegs();
 
     const uint8 fbIndex = VDP1GetDisplayFBIndex();
-    auto &fb = altField ? m_altSpriteFB[fbIndex] : m_spriteFB[fbIndex];
+    auto &fb = altField ? m_altSpriteFB[fbIndex] : m_state.spriteFB[fbIndex];
     const uint8 rawData = fb[fbOffset & 0x3FFFF];
 
     SpriteData data{};
@@ -5649,7 +5250,7 @@ Dimensions VDP::Probe::GetResolution() const {
 }
 
 InterlaceMode VDP::Probe::GetInterlaceMode() const {
-    return m_vdp.m_VDP2.TVMD.LSMDn;
+    return m_vdp.m_state.regs2.TVMD.LSMDn;
 }
 
 } // namespace ymir::vdp

@@ -5,10 +5,7 @@
 @brief VDP1 and VDP2 implementation.
 */
 
-#include "vdp_defs.hpp"
-
-#include "vdp1_regs.hpp"
-#include "vdp2_regs.hpp"
+#include "vdp_state.hpp"
 
 #include "vdp_callbacks.hpp"
 #include "vdp_internal_callbacks.hpp"
@@ -83,7 +80,7 @@ public:
     void DumpVDP1Framebuffers(std::ostream &out) const;
 
     bool InLastLinePhase() const {
-        return m_VPhase == VerticalPhase::LastLine;
+        return m_state.VPhase == VerticalPhase::LastLine;
     }
 
     // -------------------------------------------------------------------------
@@ -107,11 +104,7 @@ public:
     bool IsLayerEnabled(Layer layer) const;
 
 private:
-    alignas(16) std::array<uint8, kVDP1VRAMSize> m_VRAM1;
-    alignas(16) std::array<uint8, kVDP2VRAMSize> m_VRAM2; // 4x 128 KiB banks: A0, A1, B0, B1
-    alignas(16) std::array<uint8, kVDP2CRAMSize> m_CRAM;
-    alignas(16) std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> m_spriteFB;
-    uint8 m_displayFB; // index of current sprite display buffer, CPU-accessible; opposite buffer is drawn into
+    VDPState m_state;
 
     // Cached CRAM colors converted from RGB555 to RGB888.
     // Only valid when color RAM mode is one of the RGB555 modes.
@@ -186,12 +179,6 @@ private:
     CBFrameComplete m_cbFrameComplete;
 
     // -------------------------------------------------------------------------
-    // Registers
-
-    VDP1Regs m_VDP1;
-    VDP2Regs m_VDP2;
-
-    // -------------------------------------------------------------------------
 
     static constexpr auto kCRAMAddressMapping = [] {
         std::array<std::array<uint32, 4096>, 2> addrs{};
@@ -206,7 +193,7 @@ private:
     //   10 09 08 07 06 05 04 03 02 01 11 00
     //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
     FORCE_INLINE uint32 MapCRAMAddress(uint32 address) const {
-        return kCRAMAddressMapping[m_VDP2.vramControl.colorRAMMode >> 1][address & 0xFFF];
+        return kCRAMAddressMapping[m_state.regs2.vramControl.colorRAMMode >> 1][address & 0xFFF];
     }
 
     // RAMCTL.CRMD modes 2 and 3 shuffle address bits as follows:
@@ -218,89 +205,6 @@ private:
 
     // -------------------------------------------------------------------------
     // Timings and signals
-
-    // Based on https://github.com/srg320/Saturn_hw/blob/main/VDP2/VDP2.xlsx
-
-    // Horizontal display phases:
-    // NOTE: each dot takes 4 system (SH-2) cycles on standard resolutions, 2 system cycles on hi-res modes
-    // NOTE: hi-res modes doubles all HCNTs
-    //
-    //   320 352  dots
-    // --------------------------------
-    //     0   0  Active display area
-    //   320 352  Right border
-    //   347 375  Horizontal sync
-    //   374 403  VBlank OUT
-    //   400 432  Left border
-    //   426 454  Last dot
-    //   427 455  Total HCNT
-    //
-    // Vertical display phases:
-    // NOTE: bottom blanking, vertical sync and top blanking are consolidated into a single phase since no important
-    // events happen other than not drawing the border
-    //
-    //    NTSC    --  PAL  --
-    //   224 240  224 240 256  lines
-    // ---------------------------------------------
-    //     0   0    0   0   0  Active display area
-    //   224 240  224 240 256  Bottom border
-    //   232 240  256 264 272  Bottom blanking | these are
-    //   237 245  259 267 275  Vertical sync   | merged into
-    //   240 248  262 270 278  Top blanking    | one phase
-    //   255 255  281 289 297  Top border
-    //   262 262  312 312 312  Last line
-    //   263 263  313 313 313  Total VCNT
-    //
-    // Events:
-    //   VBLANK signal is raised when entering bottom border V phase
-    //   VBLANK signal is lowered when entering VBlank clear H phase during last line V phase
-    //
-    //   HBLANK signal is raised when entering right border H phase (closest match, 4 cycles early)
-    //   HBLANK signal is lowered when entering left border H phase (closest match, 10 cycles early)
-    //
-    //   Even/odd field flag is flipped when entering last dot H phase during first line of bottom border V phase
-    //
-    //   VBlank IN/OUT interrupts are raised when the VBLANK signal is raised/lowered
-    //   HBlank IN interrupt is raised when the HBLANK signal is raised
-    //
-    //   Drawing happens when in both active display area phases
-    //   Border drawing happens when in any of the border phases
-
-    enum class HorizontalPhase { Active, RightBorder, Sync, VBlankOut, LeftBorder, LastDot };
-    HorizontalPhase m_HPhase; // Current horizontal display phase
-
-    enum class VerticalPhase { Active, BottomBorder, BlankingAndSync, TopBorder, LastLine };
-    VerticalPhase m_VPhase; // Current vertical display phase
-
-    // 180008   HCNT    H Counter
-    //
-    //   bits   r/w  code          description
-    //  15-10        -             Reserved, must be zero
-    //    9-0   R    HCT9-0        H Counter Value
-    //
-    // Notes
-    // - Counter layout depends on screen mode:
-    //     Normal: bits 8-0 shifted left by 1; HCT0 is invalid
-    //     Hi-Res: bits 9-0
-    //     Excl. Normal: bits 8-0 (no shift); HCT9 is invalid
-    //     Excl. Hi-Res: bits 9-1 shifted right by 1; HCT9 is invalid
-    //
-    // 18000A   VCNT    V Counter
-    //
-    //   bits   r/w  code          description
-    //  15-10        -             Reserved, must be zero
-    //    9-0   R    VCT9-0        V Counter Value
-    //
-    // Notes
-    // - Counter layout depends on screen mode:
-    //     Exclusive Monitor: bits 9-0
-    //     Normal Hi-Res double-density interlace:
-    //       bits 8-0 shifted left by 1
-    //       bit 0 contains interlaced field (0=odd, 1=even)
-    //     All other modes: bits 8-0 shifted left by 1; VCT0 is invalid
-
-    // TODO: store latched H/V counters
-    uint16 m_VCounter;
 
     // Display resolution (derived from TVMODE)
     uint32 m_HRes; // Horizontal display resolution

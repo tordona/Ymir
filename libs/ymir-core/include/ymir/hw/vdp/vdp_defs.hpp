@@ -127,6 +127,9 @@ struct Dimensions {
     uint32 height;
 };
 
+enum class HorizontalPhase { Active, RightBorder, Sync, VBlankOut, LeftBorder, LastDot };
+enum class VerticalPhase { Active, BottomBorder, BlankingAndSync, TopBorder, LastLine };
+
 } // namespace ymir::vdp
 
 namespace std {
@@ -138,4 +141,5 @@ struct tuple_size<Coord<T>> : integral_constant<size_t, 2> {};
 
 template <size_t I, std::integral T>
 struct tuple_element<I, Coord<T>> : tuple_element<I, decltype(Coord<T>::elements)> {};
+
 } // namespace std
