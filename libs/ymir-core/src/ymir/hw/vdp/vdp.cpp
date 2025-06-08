@@ -19,6 +19,15 @@
 
 namespace ymir::vdp {
 
+namespace static_config {
+
+    // Render VDP1 in VDP2 thread.
+    // Disable this option to improve compatibility with some games.
+    // Enable for increased performance.
+    inline constexpr bool vdp1_in_vdp2_thread = false;
+
+} // namespace static_config
+
 namespace grp {
 
     // -----------------------------------------------------------------------------
@@ -303,7 +312,7 @@ void VDP::MapMemory(sys::Bus &bus) {
 
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
-    if (!m_threadedVDPRendering) {
+    if (!static_config::vdp1_in_vdp2_thread || !m_threadedVDPRendering) {
         // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
         // TODO: use this counter in the threaded renderer
         // TODO: proper cycle counting
@@ -509,7 +518,7 @@ template <mem_primitive T>
 FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
     address &= 0x7FFFF;
     util::WriteBE<T>(&m_state.VRAM1[address], value);
-    if (m_threadedVDPRendering) {
+    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
     }
 }
@@ -527,7 +536,7 @@ FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
     if (m_deinterlaceRender) {
         util::WriteBE<T>(&m_altSpriteFB[m_state.displayFB ^ 1][address & 0x3FFFF], value);
     }
-    // if (m_threadedVDPRendering) {
+    // if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
     //     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
     // }
 }
@@ -541,7 +550,7 @@ FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) {
 template <bool poke>
 FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     address &= 0x7FFFF;
-    if (m_threadedVDPRendering) {
+    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
     }
     m_state.regs1.Write<poke>(address, value);
@@ -822,7 +831,7 @@ void VDP::BeginHPhaseActiveDisplay() {
         }
 
         if (m_threadedVDPRendering) {
-            if (m_VDPRenderContext.vdp1Done) {
+            if (static_config::vdp1_in_vdp2_thread && m_VDPRenderContext.vdp1Done) {
                 m_state.regs1.currFrameEnded = true;
                 m_cbTriggerSpriteDrawEnd();
                 m_cbVDP1FrameComplete();
@@ -853,6 +862,10 @@ void VDP::BeginHPhaseRightBorder() {
             // TODO: cycle-count the erase process, starting here
             if (m_threadedVDPRendering) {
                 m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+                if constexpr (!static_config::vdp1_in_vdp2_thread) {
+                    m_VDPRenderContext.eraseFramebufferReadySignal.Wait(true);
+                    VDP1EraseFramebuffer();
+                }
             } else {
                 VDP1EraseFramebuffer();
             }
@@ -885,7 +898,7 @@ void VDP::BeginHPhaseVBlankOut() {
         // Erase frame if manually requested in previous frame
         if (m_VDP1RenderContext.erase) {
             m_VDP1RenderContext.erase = false;
-            if (m_threadedVDPRendering) {
+            if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
                 m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
             } else {
                 VDP1EraseFramebuffer();
@@ -1006,7 +1019,13 @@ void VDP::VDPRenderThread() {
                 m_framebuffer.fill(0xFF000000);
                 break;
             case EvtType::OddField: rctx.vdp2.regs.TVSTAT.ODD = event.oddField.odd; break;
-            case EvtType::VDP1EraseFramebuffer: VDP1EraseFramebuffer(); break;
+            case EvtType::VDP1EraseFramebuffer:
+                if constexpr (static_config::vdp1_in_vdp2_thread) {
+                    VDP1EraseFramebuffer();
+                } else {
+                    rctx.eraseFramebufferReadySignal.Set();
+                }
+                break;
             case EvtType::VDP1SwapFramebuffer:
                 rctx.displayFB ^= 1;
                 rctx.framebufferSwapSignal.Set();
@@ -1121,7 +1140,7 @@ void VDP::VDPRenderThread() {
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadRendererVRAM(uint32 address) {
-    if (m_threadedVDPRendering) {
+    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
         return util::ReadBE<T>(&m_VDPRenderContext.vdp1.VRAM[address & 0x7FFFF]);
     } else {
         return VDP1ReadVRAM<T>(address);
@@ -1191,14 +1210,14 @@ FORCE_INLINE uint8 VDP::VDP1GetDisplayFBIndex() const {
 }
 
 FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
-    const VDP1Regs &regs1 = VDP1GetRegs();
-    const VDP2Regs &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
 
     devlog::trace<grp::vdp1_render>("Erasing framebuffer {} - {}x{} to {}x{} -> {:04X}  {}x{}  {}-bit",
                                     m_state.displayFB, regs1.eraseX1, regs1.eraseY1, regs1.eraseX3, regs1.eraseY3,
                                     regs1.eraseWriteValue, regs1.fbSizeH, regs1.fbSizeV, (regs1.pixel8Bits ? 8 : 16));
 
-    const uint8 fbIndex = VDP1GetDisplayFBIndex();
+    const uint8 fbIndex = static_config::vdp1_in_vdp2_thread ? VDP1GetDisplayFBIndex() : m_state.displayFB;
     auto &fb = m_state.spriteFB[fbIndex];
     auto &altFB = m_altSpriteFB[fbIndex];
 
@@ -1242,6 +1261,10 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
         m_state.regs1.fbManualErase = false;
         if (m_threadedVDPRendering) {
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
+            if constexpr (!static_config::vdp1_in_vdp2_thread) {
+                m_VDPRenderContext.eraseFramebufferReadySignal.Wait(true);
+                VDP1EraseFramebuffer();
+            }
         } else {
             VDP1EraseFramebuffer();
         }
@@ -1260,7 +1283,9 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
 }
 
 void VDP::VDP1BeginFrame() {
-    devlog::trace<grp::vdp1_render>("Begin VDP1 frame on framebuffer {}", VDP1GetDisplayFBIndex() ^ 1);
+    devlog::trace<grp::vdp1_render>("Begin VDP1 frame on framebuffer {}",
+                                    (static_config::vdp1_in_vdp2_thread ? VDP1GetDisplayFBIndex() : m_state.displayFB) ^
+                                        1);
 
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
@@ -1272,16 +1297,18 @@ void VDP::VDP1BeginFrame() {
     m_state.regs1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
-    if (m_threadedVDPRendering) {
+    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1BeginFrame());
     }
 }
 
 void VDP::VDP1EndFrame() {
-    devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}", VDP1GetDisplayFBIndex() ^ 1);
+    devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}",
+                                    (static_config::vdp1_in_vdp2_thread ? VDP1GetDisplayFBIndex() : m_state.displayFB) ^
+                                        1);
     m_VDP1RenderContext.rendering = false;
 
-    if (m_threadedVDPRendering) {
+    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
         m_VDPRenderContext.vdp1Done = true;
     } else {
         m_state.regs1.currFrameEnded = true;
@@ -1378,8 +1405,8 @@ void VDP::VDP1ProcessCommand() {
 
 template <bool deinterlace>
 FORCE_INLINE bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
@@ -1394,8 +1421,8 @@ FORCE_INLINE bool VDP::VDP1IsPixelUserClipped(CoordS32 coord) const {
 
 template <bool deinterlace>
 FORCE_INLINE bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x, y] = coord;
     const auto &ctx = m_VDP1RenderContext;
@@ -1410,8 +1437,8 @@ FORCE_INLINE bool VDP::VDP1IsPixelSystemClipped(CoordS32 coord) const {
 
 template <bool deinterlace>
 FORCE_INLINE bool VDP::VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2) const {
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x1, y1] = coord1;
     auto [x2, y2] = coord2;
@@ -1433,8 +1460,8 @@ FORCE_INLINE bool VDP::VDP1IsLineSystemClipped(CoordS32 coord1, CoordS32 coord2)
 
 template <bool deinterlace>
 bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3, CoordS32 coord4) const {
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     auto [x1, y1] = coord1;
     auto [x2, y2] = coord2;
@@ -1460,8 +1487,8 @@ bool VDP::VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coo
 template <bool deinterlace>
 FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
                                      const VDP1GouraudParams &gouraudParams) {
-    const VDP1Regs &regs1 = VDP1GetRegs();
-    const VDP2Regs &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
 
     auto [x, y] = coord;
 
@@ -1497,7 +1524,8 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     // TODO: pixelParams.mode.preClippingDisable
 
     const uint32 fbOffset = y * regs1.fbSizeH + x;
-    auto &drawFB = (altFB ? m_altSpriteFB : m_state.spriteFB)[VDP1GetDisplayFBIndex() ^ 1];
+    const auto fbIndex = (static_config::vdp1_in_vdp2_thread ? VDP1GetDisplayFBIndex() : m_state.displayFB) ^ 1;
+    auto &drawFB = (altFB ? m_altSpriteFB : m_state.spriteFB)[fbIndex];
     if (regs1.pixel8Bits) {
         // TODO: what happens if pixelParams.mode.colorCalcBits/gouraudEnable != 0?
         if (pixelParams.mode.msbOn) {
@@ -1608,7 +1636,7 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
 template <bool deinterlace>
 void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
                                VDP1GouraudParams &gouraudParams) {
-    const VDP1Regs &regs = VDP1GetRegs();
+    const VDP1Regs &regs = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
 
     const uint32 charSizeH = lineParams.charSizeH;
     const uint32 charSizeV = lineParams.charSizeV;
@@ -1732,8 +1760,8 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     const sint32 rx = xa + std::max(charSizeH, 1u) - 1u; // right X
     const sint32 by = ya + std::max(charSizeV, 1u) - 1u; // bottom Y
 
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{lx, ty << doubleV};
     const CoordS32 coordB{rx, ty << doubleV};
@@ -1886,8 +1914,8 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
     qxd += ctx.localCoordX;
     qyd += ctx.localCoordY;
 
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{qxa, qya << doubleV};
     const CoordS32 coordB{qxb, qyb << doubleV};
@@ -1958,8 +1986,8 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
     const uint32 charSizeH = size.H * 8;
     const uint32 charSizeV = size.V;
 
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
@@ -2026,8 +2054,8 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     const sint32 yd = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
@@ -2082,8 +2110,8 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     const sint32 yd = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
@@ -2131,8 +2159,8 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     const sint32 yb = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x12)) + ctx.localCoordY;
     const uint32 gouraudTable = static_cast<uint32>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
 
-    const auto &regs1 = VDP1GetRegs();
-    const auto &regs2 = VDP2GetRegs();
+    const VDP1Regs &regs1 = static_config::vdp1_in_vdp2_thread ? VDP1GetRegs() : m_state.regs1;
+    const VDP2Regs &regs2 = static_config::vdp1_in_vdp2_thread ? VDP2GetRegs() : m_state.regs2;
     const bool doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};

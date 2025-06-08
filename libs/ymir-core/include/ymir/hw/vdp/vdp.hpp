@@ -438,6 +438,7 @@ private:
         moodycamel::ConsumerToken cTok{eventQueue};
         util::Event renderFinishedSignal{false};
         util::Event framebufferSwapSignal{false};
+        util::Event eraseFramebufferReadySignal{false};
         util::Event preSaveSyncSignal{false};
         util::Event postLoadSyncSignal{false};
 
