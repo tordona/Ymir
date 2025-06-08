@@ -915,7 +915,7 @@ void CDBlock::ProcessDriveStatePlay() {
 
             // Sanity check: is the track valid?
             if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
-                devlog::trace<grp::play>("Read {} bytes from frame address {:06X}", buffer.size, buffer.frameAddress);
+                devlog::trace<grp::play>("Read {} bytes from frame address {:06X}", m_getSectorLength, frameAddress);
 
                 if (track->controlADR == 0x01) {
                     // If playing an audio track, send to SCSP
@@ -2995,7 +2995,7 @@ void CDBlock::CmdAuthenticateDevice() {
     devlog::trace<grp::base>("-> Authenticate device");
 
     // Input structure:
-    // 0xE1    <blank>
+    // 0xE0    <blank>
     // authentication type (0x0000=CD, 0x0001=MPEG)
     // <blank>
     // <blank>
@@ -3032,7 +3032,7 @@ void CDBlock::CmdIsDeviceAuthenticated() {
     devlog::trace<grp::base>("-> Is device authenticated");
 
     // Input structure:
-    // 0xE2    <blank>
+    // 0xE1    <blank>
     // authentication type (0x0000=CD, 0x0001=MPEG)
     // <blank>
     // <blank>
