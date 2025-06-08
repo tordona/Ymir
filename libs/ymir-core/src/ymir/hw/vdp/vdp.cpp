@@ -89,6 +89,9 @@ VDP::~VDP() {
 }
 
 void VDP::Reset(bool hard) {
+    m_HRes = 320;
+    m_VRes = 224;
+
     m_state.Reset(hard);
     if (hard) {
         m_CRAMCache.fill({});
