@@ -623,12 +623,14 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblSystem, "PreferredRegionOrder", emuConfig.system.preferredRegionOrder);
         Parse(tblSystem, "EmulateSH2Cache", emuConfig.system.emulateSH2Cache);
         Parse(tblSystem, "InternalBackupRAMImagePath", system.internalBackupRAMImagePath);
+        system.internalBackupRAMImagePath = Absolute(ProfilePath::PersistentState, system.internalBackupRAMImagePath);
 
         auto &ipl = system.ipl;
         if (auto tblIPL = tblSystem["IPL"]) {
             Parse(tblIPL, "Override", ipl.overrideImage);
             Parse(tblIPL, "Path", ipl.path);
             Parse(tblIPL, "Variant", ipl.variant);
+            ipl.path = Absolute(ProfilePath::IPLROMImages, ipl.path);
         }
 
         auto &rtc = emuConfig.rtc;
@@ -787,12 +789,14 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         if (auto tblBackupRAM = tblCart["BackupRAM"]) {
             Parse(tblBackupRAM, "ImagePath", cartridge.backupRAM.imagePath);
             Parse(tblBackupRAM, "Capacity", cartridge.backupRAM.capacity);
+            cartridge.backupRAM.imagePath = Absolute(ProfilePath::PersistentState, cartridge.backupRAM.imagePath);
         }
         if (auto tblDRAM = tblCart["DRAM"]) {
             Parse(tblDRAM, "Capacity", cartridge.dram.capacity);
         }
         if (auto tblROM = tblCart["ROM"]) {
             Parse(tblROM, "ImagePath", cartridge.rom.imagePath);
+            cartridge.rom.imagePath = Absolute(ProfilePath::ROMCartImages, cartridge.rom.imagePath);
         }
         Parse(tblCart, "AutoLoadGameCarts", cartridge.autoLoadGameCarts);
     }
@@ -841,11 +845,11 @@ SettingsSaveResult Settings::Save() {
             {"AutoDetectRegion", emuConfig.system.autodetectRegion},
             {"PreferredRegionOrder", ToTOML(emuConfig.system.preferredRegionOrder.Get())},
             {"EmulateSH2Cache", emuConfig.system.emulateSH2Cache.Get()},
-            {"InternalBackupRAMImagePath", system.internalBackupRAMImagePath.native()},
+            {"InternalBackupRAMImagePath", Proximate(ProfilePath::PersistentState, system.internalBackupRAMImagePath).native()},
         
             {"IPL", toml::table{{
                 {"Override", system.ipl.overrideImage},
-                {"Path", system.ipl.path.native()},
+                {"Path", Proximate(ProfilePath::IPLROMImages, system.ipl.path).native()},
                 {"Variant", ToTOML(system.ipl.variant)},
             }}},
 
@@ -1032,14 +1036,14 @@ SettingsSaveResult Settings::Save() {
         {"Cartridge", toml::table{{
             {"Type", ToTOML(cartridge.type)},
             {"BackupRAM", toml::table{{
-                {"ImagePath", cartridge.backupRAM.imagePath.native()},
+                {"ImagePath", Proximate(ProfilePath::PersistentState, cartridge.backupRAM.imagePath).native()},
                 {"Capacity", ToTOML(cartridge.backupRAM.capacity)},
             }}},
             {"DRAM", toml::table{{
                 {"Capacity", ToTOML(cartridge.dram.capacity)},
             }}},
             {"ROM", toml::table{{
-                {"ImagePath", cartridge.rom.imagePath.native()},
+                {"ImagePath", Proximate(ProfilePath::ROMCartImages, cartridge.rom.imagePath).native()},
             }}},
             {"AutoLoadGameCarts", cartridge.autoLoadGameCarts},
         }}},
@@ -1542,6 +1546,17 @@ Settings::InputMap &Settings::GetInputMapForContext(void *context) {
         // Hotkeys
         return m_actionInputs;
     }
+}
+
+std::filesystem::path Settings::Proximate(ProfilePath base, std::filesystem::path path) const {
+    return std::filesystem::proximate(path, m_context.profile.GetPath(base));
+}
+
+std::filesystem::path Settings::Absolute(ProfilePath base, std::filesystem::path path) const {
+    if (path.is_absolute()) {
+        return path;
+    }
+    return m_context.profile.GetPath(base) / path;
 }
 
 const char *BupCapacityLongName(Settings::Cartridge::BackupRAM::Capacity capacity) {

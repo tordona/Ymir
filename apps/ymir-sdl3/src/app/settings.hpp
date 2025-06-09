@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 #include <ymir/core/configuration.hpp>
 
@@ -12,6 +11,8 @@
 #include <app/input/input_bind.hpp>
 #include <app/input/input_context.hpp>
 #include <app/input/input_events.hpp>
+
+#include <app/profile.hpp>
 
 #include <app/actions.hpp>
 
@@ -341,6 +342,9 @@ private:
     InputMap m_port2AnalogPadInputs;
 
     InputMap &GetInputMapForContext(void *context);
+
+    std::filesystem::path Proximate(ProfilePath base, std::filesystem::path path) const;
+    std::filesystem::path Absolute(ProfilePath base, std::filesystem::path path) const;
 };
 
 const char *BupCapacityShortName(Settings::Cartridge::BackupRAM::Capacity capacity);
