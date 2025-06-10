@@ -127,6 +127,7 @@ private:
     // Configuration
 
     void EnableThreadedVDP(bool enable);
+    void IncludeVDP1RenderInVDPThread(bool enable);
 
     // -------------------------------------------------------------------------
     // VDP1 memory/register access
@@ -272,6 +273,9 @@ private:
 
             PreSaveStateSync,
             PostLoadStateSync,
+            VDP1StateSync,
+
+            UpdateEffectiveRenderingFlags,
 
             Shutdown,
         };
@@ -420,6 +424,14 @@ private:
             return {Type::PostLoadStateSync};
         }
 
+        static VDPRenderEvent VDP1StateSync() {
+            return {Type::VDP1StateSync};
+        }
+
+        static VDPRenderEvent UpdateEffectiveRenderingFlags() {
+            return {Type::UpdateEffectiveRenderingFlags};
+        }
+
         static VDPRenderEvent Shutdown() {
             return {Type::Shutdown};
         }
@@ -525,6 +537,13 @@ private:
 
     std::thread m_VDPRenderThread;
     bool m_threadedVDPRendering = false;
+    bool m_renderVDP1OnVDP2Thread = false;
+
+    // Managed by the render thread.
+    // == m_threadedVDPRendering && m_renderVDP1OnVDP2Thread
+    bool m_effectiveRenderVDP1InVDP2Thread = false;
+
+    void UpdateEffectiveRenderingFlags();
 
     void VDPRenderThread();
 

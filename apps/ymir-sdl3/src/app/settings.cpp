@@ -777,6 +777,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "Deinterlace", video.deinterlace);
 
         Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
+        Parse(tblVideo, "IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread);
     }
 
     if (auto tblAudio = data["Audio"]) {
@@ -1027,6 +1028,7 @@ SettingsSaveResult Settings::Save() {
             {"DoubleClickToFullScreen", video.doubleClickToFullScreen},
             {"Deinterlace", video.deinterlace.Get()},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
+            {"IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread.Get()},
         }}},
 
         {"Audio", toml::table{{

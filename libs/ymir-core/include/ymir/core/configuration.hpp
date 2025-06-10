@@ -73,6 +73,10 @@ struct Configuration {
 
         /// @brief Runs the VDP renderer in a dedicated thread.
         util::Observable<bool> threadedVDP = true;
+
+        /// @brief Also renders VDP1 in the dedicated thread.
+        /// Lowers compatibility in exchange for performance.
+        util::Observable<bool> includeVDP1InRenderThread = true;
     } video;
 
     /// @brief SCSP and audio rendering configuration.

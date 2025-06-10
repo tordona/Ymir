@@ -19,15 +19,6 @@
 
 namespace ymir::vdp {
 
-namespace static_config {
-
-    // Render VDP1 in VDP2 thread.
-    // Disable this option to improve compatibility with some games.
-    // Enable for increased performance.
-    inline constexpr bool vdp1_in_vdp2_thread = true;
-
-} // namespace static_config
-
 namespace grp {
 
     // -----------------------------------------------------------------------------
@@ -82,6 +73,7 @@ VDP::VDP(core::Scheduler &scheduler, core::Configuration &config)
 
     config.system.videoStandard.Observe([&](VideoStandard videoStandard) { SetVideoStandard(videoStandard); });
     config.video.threadedVDP.Observe([&](bool value) { EnableThreadedVDP(value); });
+    config.video.includeVDP1InRenderThread.Observe([&](bool value) { IncludeVDP1RenderInVDPThread(value); });
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
 
@@ -312,7 +304,7 @@ void VDP::MapMemory(sys::Bus &bus) {
 
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
-    if (!static_config::vdp1_in_vdp2_thread || !m_threadedVDPRendering) {
+    if (!m_effectiveRenderVDP1InVDP2Thread) {
         // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
         // TODO: use this counter in the threaded renderer
         // TODO: proper cycle counting
@@ -493,6 +485,7 @@ void VDP::EnableThreadedVDP(bool enable) {
 
     m_threadedVDPRendering = enable;
     if (enable) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::UpdateEffectiveRenderingFlags());
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::PostLoadStateSync());
         m_VDPRenderThread = std::thread{[&] { VDPRenderThread(); }};
         m_VDPRenderContext.postLoadSyncSignal.Wait(true);
@@ -508,6 +501,15 @@ void VDP::EnableThreadedVDP(bool enable) {
     }
 }
 
+void VDP::IncludeVDP1RenderInVDPThread(bool enable) {
+    if (m_threadedVDPRendering) {
+        m_renderVDP1OnVDP2Thread = enable;
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::UpdateEffectiveRenderingFlags());
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1StateSync());
+        m_VDPRenderContext.postLoadSyncSignal.Wait(true);
+    }
+}
+
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) {
     address &= 0x7FFFF;
@@ -518,7 +520,7 @@ template <mem_primitive T>
 FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
     address &= 0x7FFFF;
     util::WriteBE<T>(&m_state.VRAM1[address], value);
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
     }
 }
@@ -536,7 +538,7 @@ FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
     if (m_deinterlaceRender) {
         util::WriteBE<T>(&m_altSpriteFB[m_state.displayFB ^ 1][address & 0x3FFFF], value);
     }
-    // if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    // if (m_effectiveRenderVDP1InVDP2Thread) {
     //     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
     // }
 }
@@ -550,7 +552,7 @@ FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) {
 template <bool poke>
 FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     address &= 0x7FFFF;
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
     }
     m_state.regs1.Write<poke>(address, value);
@@ -831,7 +833,7 @@ void VDP::BeginHPhaseActiveDisplay() {
         }
 
         if (m_threadedVDPRendering) {
-            if (static_config::vdp1_in_vdp2_thread && m_VDPRenderContext.vdp1Done) {
+            if (m_effectiveRenderVDP1InVDP2Thread && m_VDPRenderContext.vdp1Done) {
                 m_state.regs1.currFrameEnded = true;
                 m_cbTriggerSpriteDrawEnd();
                 m_cbVDP1FrameComplete();
@@ -862,7 +864,7 @@ void VDP::BeginHPhaseRightBorder() {
             // TODO: cycle-count the erase process, starting here
             if (m_threadedVDPRendering) {
                 m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
-                if constexpr (!static_config::vdp1_in_vdp2_thread) {
+                if (!m_effectiveRenderVDP1InVDP2Thread) {
                     m_VDPRenderContext.eraseFramebufferReadySignal.Wait(true);
                     VDP1EraseFramebuffer();
                 }
@@ -898,7 +900,7 @@ void VDP::BeginHPhaseVBlankOut() {
         // Erase frame if manually requested in previous frame
         if (m_VDP1RenderContext.erase) {
             m_VDP1RenderContext.erase = false;
-            if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+            if (m_effectiveRenderVDP1InVDP2Thread) {
                 m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
             } else {
                 VDP1EraseFramebuffer();
@@ -999,6 +1001,10 @@ void VDP::BeginVPhaseLastLine() {
 // -----------------------------------------------------------------------------
 // Rendering
 
+void VDP::UpdateEffectiveRenderingFlags() {
+    m_effectiveRenderVDP1InVDP2Thread = m_threadedVDPRendering && m_renderVDP1OnVDP2Thread;
+}
+
 void VDP::VDPRenderThread() {
     util::SetCurrentThreadName("VDP render thread");
 
@@ -1020,7 +1026,7 @@ void VDP::VDPRenderThread() {
                 break;
             case EvtType::OddField: rctx.vdp2.regs.TVSTAT.ODD = event.oddField.odd; break;
             case EvtType::VDP1EraseFramebuffer:
-                if constexpr (static_config::vdp1_in_vdp2_thread) {
+                if (m_effectiveRenderVDP1InVDP2Thread) {
                     VDP1EraseFramebuffer();
                 } else {
                     rctx.eraseFramebufferReadySignal.Set();
@@ -1131,6 +1137,13 @@ void VDP::VDPRenderThread() {
                     rctx.vdp2.CRAMCache[addr / sizeof(uint16)] = ConvertRGB555to888(color5);
                 }
                 break;
+            case EvtType::VDP1StateSync:
+                rctx.vdp1.regs = m_state.regs1;
+                rctx.vdp1.VRAM = m_state.VRAM1;
+                rctx.postLoadSyncSignal.Set();
+                break;
+
+            case EvtType::UpdateEffectiveRenderingFlags: UpdateEffectiveRenderingFlags(); break;
 
             case EvtType::Shutdown: running = false; break;
             }
@@ -1140,7 +1153,7 @@ void VDP::VDPRenderThread() {
 
 template <mem_primitive T>
 FORCE_INLINE T VDP::VDP1ReadRendererVRAM(uint32 address) {
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         return util::ReadBE<T>(&m_VDPRenderContext.vdp1.VRAM[address & 0x7FFFF]);
     } else {
         return VDP1ReadVRAM<T>(address);
@@ -1186,7 +1199,7 @@ FORCE_INLINE Color888 VDP::VDP2ReadRendererColor5to8(uint32 address) {
 // VDP1
 
 FORCE_INLINE VDP1Regs &VDP::VDP1GetRegs() {
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         return m_VDPRenderContext.vdp1.regs;
     } else {
         return m_state.regs1;
@@ -1194,7 +1207,7 @@ FORCE_INLINE VDP1Regs &VDP::VDP1GetRegs() {
 }
 
 FORCE_INLINE const VDP1Regs &VDP::VDP1GetRegs() const {
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         return m_VDPRenderContext.vdp1.regs;
     } else {
         return m_state.regs1;
@@ -1202,7 +1215,7 @@ FORCE_INLINE const VDP1Regs &VDP::VDP1GetRegs() const {
 }
 
 FORCE_INLINE uint8 VDP::VDP1GetDisplayFBIndex() const {
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         return m_VDPRenderContext.displayFB;
     } else {
         return m_state.displayFB;
@@ -1261,7 +1274,7 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
         m_state.regs1.fbManualErase = false;
         if (m_threadedVDPRendering) {
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
-            if constexpr (!static_config::vdp1_in_vdp2_thread) {
+            if (!m_effectiveRenderVDP1InVDP2Thread) {
                 m_VDPRenderContext.eraseFramebufferReadySignal.Wait(true);
                 VDP1EraseFramebuffer();
             }
@@ -1295,7 +1308,7 @@ void VDP::VDP1BeginFrame() {
     m_state.regs1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1BeginFrame());
     }
 }
@@ -1304,7 +1317,7 @@ void VDP::VDP1EndFrame() {
     devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}", VDP1GetDisplayFBIndex() ^ 1);
     m_VDP1RenderContext.rendering = false;
 
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.vdp1Done = true;
     } else {
         m_state.regs1.currFrameEnded = true;
@@ -2210,7 +2223,7 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
 // VDP2
 
 FORCE_INLINE VDP2Regs &VDP::VDP2GetRegs() {
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         return m_VDPRenderContext.vdp2.regs;
     } else {
         return m_state.regs2;
@@ -2218,7 +2231,7 @@ FORCE_INLINE VDP2Regs &VDP::VDP2GetRegs() {
 }
 
 FORCE_INLINE const VDP2Regs &VDP::VDP2GetRegs() const {
-    if (static_config::vdp1_in_vdp2_thread && m_threadedVDPRendering) {
+    if (m_effectiveRenderVDP1InVDP2Thread) {
         return m_VDPRenderContext.vdp2.regs;
     } else {
         return m_state.regs2;
@@ -2258,7 +2271,7 @@ FORCE_INLINE void VDP::VDP2InitNormalBG() {
     NormBGLayerState &bgState = m_normBGLayerStates[index];
     bgState.fracScrollX = 0;
     bgState.fracScrollY = 0;
-    if (!m_deinterlaceRender && m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && m_state.regs2.TVSTAT.ODD) {
+    if (!m_deinterlaceRender && m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && VDP2GetRegs().TVSTAT.ODD) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 

@@ -471,6 +471,10 @@ EmuEvent EnableThreadedVDP(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP = enable; });
 }
 
+EmuEvent IncludeVDP1InVDPRenderThread(bool enable) {
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.includeVDP1InRenderThread = enable; });
+}
+
 EmuEvent EnableThreadedSCSP(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = enable; });
 }

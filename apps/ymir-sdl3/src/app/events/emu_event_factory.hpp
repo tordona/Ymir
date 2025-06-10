@@ -104,6 +104,7 @@ EmuEvent LoadInternalBackupMemory();
 EmuEvent SetEmulateSH2Cache(bool enable);
 
 EmuEvent EnableThreadedVDP(bool enable);
+EmuEvent IncludeVDP1InVDPRenderThread(bool enable);
 EmuEvent EnableThreadedSCSP(bool enable);
 
 EmuEvent LoadState(uint32 slot);
