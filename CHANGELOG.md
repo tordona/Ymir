@@ -12,12 +12,13 @@
 
 ### Fixes
 
+- App: Prevent loading internal backup memory image as backup RAM cartridge image.
 - Media: Fix pregap handling in single BIN images.
 - SCU, SH-2, SMPC, SCSP, VDP: Numerous fixes to interrupt handling (thanks to @celeriyacon). Fixes intermittent Rayman inputs and some audio glitches.
 - SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 - SMPC: Eliminate spurious INTBACK interrupts.
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
-- VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table.
+- VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 
 
 ## Version 0.1.4+1

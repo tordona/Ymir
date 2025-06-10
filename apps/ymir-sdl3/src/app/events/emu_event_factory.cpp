@@ -196,6 +196,14 @@ EmuEvent InsertPort2Peripheral(peripheral::PeripheralType type) {
 
 EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
     return RunFunction([=](SharedContext &ctx) {
+        // Prevent loading the internal backup RAM file as backup memory cartridge
+        if (std::filesystem::absolute(path) ==
+            std::filesystem::absolute(ctx.settings.system.internalBackupRAMImagePath)) {
+            ctx.EnqueueEvent(events::gui::ShowError(fmt::format(
+                "Failed to load external backup memory: file {} is already in use as internal backup memory", path)));
+            return;
+        }
+
         std::error_code error{};
         bup::BackupMemory bupMem{};
         const auto result = bupMem.LoadFrom(path, error);
@@ -210,15 +218,19 @@ EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
         }
         case bup::BackupMemoryImageLoadResult::FilesystemError:
             if (error) {
-                devlog::warn<grp::base>("Failed to load external backup memory: {}", error.message());
+                ctx.EnqueueEvent(
+                    events::gui::ShowError(fmt::format("Failed to load external backup memory: {}", error.message())));
             } else {
-                devlog::warn<grp::base>("Failed to load external backup memory: Unspecified file system error");
+                ctx.EnqueueEvent(
+                    events::gui::ShowError("Failed to load external backup memory: Unspecified file system error"));
             }
             break;
         case bup::BackupMemoryImageLoadResult::InvalidSize:
-            devlog::warn<grp::base>("Failed to load external backup memory: Invalid image size");
+            ctx.EnqueueEvent(events::gui::ShowError("Failed to load external backup memory: Invalid image size"));
             break;
-        default: devlog::warn<grp::base>("Failed to load external backup memory: Unexpected error"); break;
+        default:
+            ctx.EnqueueEvent(events::gui::ShowError("Failed to load external backup memory: Unexpected error"));
+            break;
         };
     });
 }
@@ -288,6 +300,15 @@ EmuEvent InsertCartridgeFromSettings() {
             break;
 
         case Settings::Cartridge::Type::BackupRAM: {
+            // Prevent loading the internal backup RAM file as backup memory cartridge
+            if (std::filesystem::absolute(settings.backupRAM.imagePath) ==
+                std::filesystem::absolute(ctx.settings.system.internalBackupRAMImagePath)) {
+                ctx.EnqueueEvent(events::gui::ShowError(fmt::format(
+                    "Failed to load external backup memory: file {} is already in use as internal backup memory",
+                    settings.backupRAM.imagePath)));
+                return;
+            }
+
             // If a backup RAM cartridge is inserted, remove it first to unlock the file and reinsert the previous
             // cartridge in case of failure
             std::filesystem::path prevPath = "";
