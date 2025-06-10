@@ -133,6 +133,7 @@ public:
 
     struct System {
         std::filesystem::path internalBackupRAMImagePath;
+        bool internalBackupRAMPerGame;
         struct IPL {
             bool overrideImage;
             std::filesystem::path path;

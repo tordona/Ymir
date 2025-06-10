@@ -439,10 +439,18 @@ EmuEvent FormatBackupMemory(bool external) {
 
 EmuEvent LoadInternalBackupMemory() {
     return RunFunction([](SharedContext &ctx) {
-        std::filesystem::path path = ctx.settings.system.internalBackupRAMImagePath;
-        if (path.empty()) {
-            path = ctx.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
+        std::filesystem::path path;
+        if (ctx.settings.system.internalBackupRAMPerGame) {
+            const std::filesystem::path basePath = ctx.profile.GetPath(ProfilePath::BackupMemory) / "games";
+            std::filesystem::create_directories(basePath);
+            path = basePath / fmt::format("bup-int-{}.bin", ToString(ctx.saturn.GetDiscHash()));
+        } else {
+            path = ctx.settings.system.internalBackupRAMImagePath;
+            if (path.empty()) {
+                path = ctx.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
+            }
         }
+
         std::error_code error{};
         if (ctx.saturn.LoadInternalBackupMemoryImage(path, error); error) {
             devlog::warn<grp::base>("Failed to load internal backup memory from {}: {}", path, error.message());

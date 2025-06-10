@@ -522,6 +522,7 @@ void Settings::ResetToDefaults() {
     general.pauseWhenUnfocused = false;
 
     system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
+    system.internalBackupRAMPerGame = false;
 
     system.ipl.overrideImage = false;
     system.ipl.path = "";
@@ -623,6 +624,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblSystem, "PreferredRegionOrder", emuConfig.system.preferredRegionOrder);
         Parse(tblSystem, "EmulateSH2Cache", emuConfig.system.emulateSH2Cache);
         Parse(tblSystem, "InternalBackupRAMImagePath", system.internalBackupRAMImagePath);
+        Parse(tblSystem, "InternalBackupRAMPerGame", system.internalBackupRAMPerGame);
         system.internalBackupRAMImagePath = Absolute(ProfilePath::PersistentState, system.internalBackupRAMImagePath);
 
         auto &ipl = system.ipl;
@@ -846,6 +848,7 @@ SettingsSaveResult Settings::Save() {
             {"PreferredRegionOrder", ToTOML(emuConfig.system.preferredRegionOrder.Get())},
             {"EmulateSH2Cache", emuConfig.system.emulateSH2Cache.Get()},
             {"InternalBackupRAMImagePath", Proximate(ProfilePath::PersistentState, system.internalBackupRAMImagePath).native()},
+            {"InternalBackupRAMPerGame", system.internalBackupRAMPerGame},
         
             {"IPL", toml::table{{
                 {"Override", system.ipl.overrideImage},

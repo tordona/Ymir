@@ -2273,6 +2273,9 @@ void App::EmulatorThread() {
                 std::unique_lock lock{m_context.locks.disc};
                 m_context.saturn.EjectDisc();
                 m_context.state.loadedDiscImagePath.clear();
+                if (m_context.settings.system.internalBackupRAMPerGame) {
+                    m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
+                }
                 break;
             }
             case RemoveCartridge: //
@@ -3057,6 +3060,11 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     {
         std::unique_lock lock{m_context.locks.disc};
         m_context.saturn.LoadDisc(std::move(disc));
+    }
+
+    // Load new internal backup memory image if using per-game images
+    if (m_context.settings.system.internalBackupRAMPerGame) {
+        m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
     }
 
     // Update currently loaded disc path

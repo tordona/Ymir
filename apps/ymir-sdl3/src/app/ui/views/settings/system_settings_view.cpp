@@ -17,6 +17,8 @@
 #include <fmt/format.h>
 #include <fmt/std.h>
 
+#include <SDL3/SDL_misc.h>
+
 #include <set>
 
 using namespace ymir;
@@ -240,6 +242,19 @@ void SystemSettingsView::Display() {
     ImGui::SeparatorText("Internal backup memory");
     ImGui::PopFont();
 
+    if (MakeDirty(
+            ImGui::Checkbox("Create internal backup memory images per game", &settings.internalBackupRAMPerGame))) {
+        m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
+    }
+    widgets::ExplanationTooltip(
+        fmt::format("When enabled, separate internal backup memory images will be created for each game at {}",
+                    m_context.profile.GetPath(ProfilePath::BackupMemory) / "games" / "bup-int-<hash>.bin")
+            .c_str(),
+        m_context.displayScale);
+
+    if (settings.internalBackupRAMPerGame) {
+        ImGui::BeginDisabled();
+    }
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Image path");
     ImGui::SameLine();
@@ -263,6 +278,9 @@ void SystemSettingsView::Display() {
                                                           &SystemSettingsView::ProcessLoadBackupImageError>,
         }));
     }
+    if (settings.internalBackupRAMPerGame) {
+        ImGui::EndDisabled();
+    }
 
     const bool dirty = m_bupSettingsDirty;
     if (!dirty) {
@@ -278,6 +296,18 @@ void SystemSettingsView::Display() {
     ImGui::SameLine();
     if (ImGui::Button("Open backup memory manager")) {
         m_context.EnqueueEvent(events::gui::OpenBackupMemoryManager());
+    }
+
+    if (settings.internalBackupRAMPerGame) {
+        std::unique_lock lock{m_context.locks.disc};
+        auto intBupPath = m_context.profile.GetPath(ProfilePath::BackupMemory) / "games" /
+                          fmt::format("bup-int-{}.bin", ToString(m_context.saturn.GetDiscHash()));
+        ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
+        ImGui::Text("Currently using internal backup memory image from %s", fmt::format("{}", intBupPath).c_str());
+        ImGui::PopTextWrapPos();
+        if (ImGui::Button("Open containing directory##int_bup")) {
+            SDL_OpenURL(fmt::format("file:///{}", intBupPath.parent_path()).c_str());
+        }
     }
 }
 

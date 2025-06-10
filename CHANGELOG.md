@@ -4,9 +4,10 @@
 
 ### New features and improvements
 
-- App: Added option to to toggle fullscreen by double-clicking the display. (#197)
-- App: Added recent games list to File menu. (#196)
 - App: Added command-line option `-P` to force emulator to start paused.
+- App: Added option to create internal backup RAM files per game. (#99)
+- App: Added option to toggle fullscreen by double-clicking the display. (#197)
+- App: Added recent games list to File menu. (#196)
 - App: Store relative paths in Ymir.toml. (#207)
 - VDP: Added option to deinterlace video. (#66)
 
