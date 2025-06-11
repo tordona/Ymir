@@ -86,6 +86,8 @@ void SMPC::Reset(bool hard) {
     m_intbackReportOffset = 0;
 
     m_intbackInProgress = false;
+
+    m_scheduler.Cancel(m_commandEvent);
 }
 
 void SMPC::FactoryReset() {
