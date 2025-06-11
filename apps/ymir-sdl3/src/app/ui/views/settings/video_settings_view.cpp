@@ -87,21 +87,34 @@ void VideoSettingsView::Display() {
     if (MakeDirty(ImGui::Checkbox("Threaded VDP2 renderer", &threadedVDP))) {
         m_context.EnqueueEvent(events::emu::EnableThreadedVDP(threadedVDP));
     }
-    widgets::ExplanationTooltip("Runs the software VDP2 renderer in a dedicated thread.\n"
-                                "Greatly improves performance at the cost of accuracy.\n"
-                                "A few select games may break when this option is enabled.\n"
-                                "When disabled, VDP2 rendering is done on the emulator thread.",
-                                m_context.displayScale);
+    widgets::ExplanationTooltip(
+        "Runs the software VDP2 renderer in a dedicated thread.\n"
+        "Greatly improves performance and seems to cause no issues to games.\n"
+        "When disabled, VDP2 rendering is done on the emulator thread.\n"
+        "\n"
+        "It is HIGHLY recommended to leave this option enabled as there are no known drawbacks.",
+        m_context.displayScale);
 
+    if (!threadedVDP) {
+        ImGui::BeginDisabled();
+    }
+    ImGui::Indent();
     bool includeVDP1InRenderThread = config.includeVDP1InRenderThread;
     if (MakeDirty(ImGui::Checkbox("Include VDP1 rendering in VDP2 renderer thread", &includeVDP1InRenderThread))) {
         m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(includeVDP1InRenderThread));
     }
-    widgets::ExplanationTooltip("Runs the software VDP1 renderer in the dedicated VDP2 rendering thread.\n"
-                                "Improves performance at the cost of accuracy.\n"
-                                "A few select games may break when this option is enabled.\n"
-                                "When disabled, VDP1 rendering is done on the emulator thread.",
-                                m_context.displayScale);
+    widgets::ExplanationTooltip(
+        "If VDP2 rendering is running on a dedicated thread, move the software VDP1 renderer to that thread.\n"
+        "Improves performance by about 10% at the cost of accuracy.\n"
+        "A few select games may freeze or refuse to start when this option is enabled.\n"
+        "When this option or Threaded VDP2 renderer is disabled, VDP1 rendering is done on the emulator thread.\n"
+        "\n"
+        "Try enabling this option if you need to squeeze a bit more performance.",
+        m_context.displayScale);
+    ImGui::Unindent();
+    if (!threadedVDP) {
+        ImGui::EndDisabled();
+    }
 }
 
 } // namespace app::ui

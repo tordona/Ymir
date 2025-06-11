@@ -71,12 +71,13 @@ struct Configuration {
     struct Video {
         // TODO: renderer backend options
 
-        /// @brief Runs the VDP renderer in a dedicated thread.
+        /// @brief Runs the VDP2 renderer in a dedicated thread.
         util::Observable<bool> threadedVDP = true;
 
-        /// @brief Also renders VDP1 in the dedicated thread.
+        /// @brief Render VDP1 in the dedicated VDP2 rendering thread if that is enabled.
         /// Lowers compatibility in exchange for performance.
-        util::Observable<bool> includeVDP1InRenderThread = true;
+        /// Some games stop working when this option is enabled.
+        util::Observable<bool> includeVDP1InRenderThread = false;
     } video;
 
     /// @brief SCSP and audio rendering configuration.
