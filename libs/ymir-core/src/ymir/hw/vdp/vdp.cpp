@@ -2223,7 +2223,7 @@ void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
 // VDP2
 
 FORCE_INLINE VDP2Regs &VDP::VDP2GetRegs() {
-    if (m_effectiveRenderVDP1InVDP2Thread) {
+    if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp2.regs;
     } else {
         return m_state.regs2;
@@ -2231,7 +2231,7 @@ FORCE_INLINE VDP2Regs &VDP::VDP2GetRegs() {
 }
 
 FORCE_INLINE const VDP2Regs &VDP::VDP2GetRegs() const {
-    if (m_effectiveRenderVDP1InVDP2Thread) {
+    if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp2.regs;
     } else {
         return m_state.regs2;
