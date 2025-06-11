@@ -241,6 +241,13 @@ void BackupMemory::Format() {
     // Clear cached file parameters
     m_fileParams.clear();
 
+    // Fill even bytes with FFs if the file is interleaved
+    if (m_addressShift > 0) {
+        for (uint32 i = 0; i < m_backupRAM.size(); i += 2) {
+            m_backupRAM[i] = 0xFF;
+        }
+    }
+
     m_dirty = false;
 }
 
