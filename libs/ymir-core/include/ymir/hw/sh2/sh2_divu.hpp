@@ -190,7 +190,7 @@ struct DivisionUnit {
             const sint64 quotient = dividend / divisor;
             const sint32 remainder = dividend % divisor;
 
-            if ((quotient == kMinValue32 && divisor > 0) || (quotient == 0x80000000 && divisor < 0) && remainder == 0)
+            if (((quotient == kMinValue32 && divisor > 0) || (quotient == 0x80000000 && divisor < 0)) && remainder == 0)
                 [[unlikely]] {
                 // TODO: schedule event to run this after 39 cycles
                 DVDNTL = DVDNT = quotient;
