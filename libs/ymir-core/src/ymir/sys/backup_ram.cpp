@@ -1,6 +1,7 @@
 #include <ymir/sys/backup_ram.hpp>
 
 #include <ymir/util/data_ops.hpp>
+#include <ymir/util/inline.hpp>
 #include <ymir/util/size_ops.hpp>
 
 #include <string_view>
@@ -107,16 +108,16 @@ void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySiz
         return;
     }
 
+    // Update parameters
+    m_addressMask = m_backupRAM.size() - 1;
+    m_blockSize = kBlockSizes[static_cast<size_t>(size)];
+    m_blockBitmap.resize(GetTotalBlocks() / 64);
+
     // Check if it has a valid header
     m_headerValid = CheckHeader();
     if (!m_headerValid) {
         format = true;
     }
-
-    // Update parameters
-    m_addressMask = m_backupRAM.size() - 1;
-    m_blockSize = kBlockSizes[static_cast<size_t>(size)];
-    m_blockBitmap.resize(GetTotalBlocks() / 64);
 
     // Format if requested
     if (format) {
@@ -150,51 +151,36 @@ std::filesystem::path BackupMemory::GetPath() const {
 }
 
 uint8 BackupMemory::ReadByte(uint32 address) const {
-    if ((address & 1) && m_addressMask != 0) {
-        return m_backupRAM[(address >> 1) & m_addressMask];
-    } else {
-        return 0xFFu;
-    }
+    return DataReadByte(address >> 1);
 }
 
 uint16 BackupMemory::ReadWord(uint32 address) const {
-    if (m_addressMask != 0) {
-        return 0xFF00u | m_backupRAM[(address >> 1) & m_addressMask];
-    } else {
-        return 0xFFFFu;
-    }
+    return 0xFF00u | DataReadByte(address >> 1);
 }
 
 uint32 BackupMemory::ReadLong(uint32 address) const {
-    uint32 value = ReadWord(address + 0) << 16u;
-    value |= ReadWord(address + 2) << 0u;
-    return value;
+    return 0xFF00FF00u | (DataReadByte((address >> 1) + 0) << 16u) | DataReadWord((address >> 1) + 2);
 }
 
 void BackupMemory::WriteByte(uint32 address, uint8 value) {
-    if ((address & 1) && m_addressMask != 0) {
-        m_backupRAM[(address >> 1) & m_addressMask] = value;
-        m_dirty = true;
-    }
+    DataWriteByte(address >> 1, value);
 }
 
 void BackupMemory::WriteWord(uint32 address, uint16 value) {
-    if (m_addressMask != 0) {
-        m_backupRAM[(address >> 1) & m_addressMask] = value;
-        m_dirty = true;
-    }
+    DataWriteByte(address >> 1, value); // "Byte" is not a typo!
 }
 
 void BackupMemory::WriteLong(uint32 address, uint32 value) {
-    if (m_addressMask != 0) {
-        m_backupRAM[((address + 0) >> 1) & m_addressMask] = value >> 16u;
-        m_backupRAM[((address + 2) >> 1) & m_addressMask] = value >> 0u;
-        m_dirty = true;
-    }
+    // "Byte" is not a typo!
+    DataWriteByte((address >> 1) + 0, value >> 16u);
+    DataWriteByte((address >> 1) + 2, value >> 0u);
 }
 
 std::vector<uint8> BackupMemory::ReadAll() const {
-    return {m_backupRAM.begin(), m_backupRAM.end()};
+    std::vector<uint8> data{};
+    data.resize(Size());
+    DataReadString(0, data.data(), Size());
+    return data;
 }
 
 bool BackupMemory::IsHeaderValid() const {
@@ -239,11 +225,11 @@ void BackupMemory::Format() {
 
     // Fill first block with the header
     for (uint32 i = 0; i < m_blockSize; i += 0x10) {
-        std::copy_n(kHeader.begin(), 0x10, m_backupRAM.begin() + i);
+        DataWriteString(i, kHeader.data(), kHeader.size());
     }
 
     // Fill the rest with zeros
-    std::fill(m_backupRAM.begin() + m_blockSize, m_backupRAM.end(), 0);
+    DataFill(m_blockSize, 0u, Size() - m_blockSize);
 
     // Reset bitmap
     std::fill(m_blockBitmap.begin(), m_blockBitmap.end(), 0);
@@ -386,26 +372,23 @@ BackupFileImportResult BackupMemory::Import(const BackupFile &file, bool overwri
 
         // Write "in use" marker and padding on first block
         if (blockListIndex == 0) {
-            m_backupRAM[blockOffset + 0] = 0x80;
-            m_backupRAM[blockOffset + 1] = 0x00;
-            m_backupRAM[blockOffset + 2] = 0x00;
-            m_backupRAM[blockOffset + 3] = 0x00;
+            DataWriteLong(blockOffset, 0x80000000);
         }
         blockListIndex++;
 
         // Write header
         if (!headerWritten) {
-            std::fill_n(&m_backupRAM[blockOffset + 0x04], 11, '\0');
-            std::copy_n(file.header.filename.begin(), std::min<size_t>(file.header.filename.size(), 11),
-                        &m_backupRAM[blockOffset + 0x04]);
+            DataFill(blockOffset + 0x04, '\0', 11);
+            DataWriteString(blockOffset + 0x04, file.header.filename.data(),
+                            std::min<size_t>(file.header.filename.size(), 11));
 
-            std::fill_n(&m_backupRAM[blockOffset + 0x10], 10, '\0');
-            std::copy_n(file.header.comment.begin(), std::min<size_t>(file.header.comment.size(), 10),
-                        &m_backupRAM[blockOffset + 0x10]);
+            DataFill(blockOffset + 0x10, '\0', 10);
+            DataWriteString(blockOffset + 0x10, file.header.comment.data(),
+                            std::min<size_t>(file.header.comment.size(), 10));
 
-            m_backupRAM[blockOffset + 0x0F] = static_cast<char>(file.header.language);
-            util::WriteBE<uint32>((uint8 *)&m_backupRAM[blockOffset + 0x1A], file.header.date);
-            util::WriteBE<uint32>((uint8 *)&m_backupRAM[blockOffset + 0x1E], file.data.size());
+            DataWriteByte(blockOffset + 0x0F, static_cast<uint8>(file.header.language));
+            DataWriteLong(blockOffset + 0x1A, file.header.date);
+            DataWriteLong(blockOffset + 0x1E, file.data.size());
 
             blockOffset += 30;
             remainingInBlock -= 30;
@@ -425,9 +408,9 @@ BackupFileImportResult BackupMemory::Import(const BackupFile &file, bool overwri
             // is not written here. We still write blockList.size() entries so that we can write the last one as 0000.
             for (uint32 i = 0; i < entriesToWrite; i++) {
                 if (blockListWriteIndex < blockList.size()) {
-                    util::WriteBE<uint16>((uint8 *)&m_backupRAM[blockOffset + i * 2], blockList[blockListWriteIndex++]);
+                    DataWriteWord(blockOffset + i * 2, blockList[blockListWriteIndex++]);
                 } else {
-                    util::WriteBE<uint16>((uint8 *)&m_backupRAM[blockOffset + i * 2], 0x0000);
+                    DataWriteWord(blockOffset + i * 2, 0x0000);
                 }
             }
 
@@ -439,7 +422,7 @@ BackupFileImportResult BackupMemory::Import(const BackupFile &file, bool overwri
 
         // Write data
         const uint32 dataToWrite = std::min(remainingInBlock, remaining);
-        std::copy_n(&file.data[fileDataOffset], dataToWrite, &m_backupRAM[blockOffset]);
+        DataWriteString(blockOffset, &file.data[fileDataOffset], dataToWrite);
         fileDataOffset += dataToWrite;
         blockOffset += dataToWrite;
 
@@ -449,7 +432,7 @@ BackupFileImportResult BackupMemory::Import(const BackupFile &file, bool overwri
 
         // Pad the rest of the final block with zeros
         if (remaining == 0) {
-            std::fill(&m_backupRAM[blockOffset], &m_backupRAM[(blockIndex + 1) * m_blockSize], 0);
+            DataFill(blockOffset, 0u, (blockIndex + 1) * m_blockSize - blockOffset);
         }
     }
 
@@ -473,7 +456,7 @@ bool BackupMemory::Delete(std::string_view filename) {
     for (auto it = m_fileParams.begin(); it != m_fileParams.end(); it++) {
         auto &params = *it;
         if (params.info.header.filename == filename) {
-            m_backupRAM[params.blocks[0] * m_blockSize] &= ~0x80;
+            DataWriteByte(params.blocks[0] * m_blockSize, DataReadByte(params.blocks[0] * m_blockSize) & ~0x80);
 
             // Free all blocks in the bitmap
             for (uint16 blockIndex : params.blocks) {
@@ -511,14 +494,14 @@ void BackupMemory::RebuildFileList(bool force) {
     for (uint32 i = 2; i < totalBlocks; i++) {
         const uint32 offset = i * m_blockSize;
 
-        if ((m_backupRAM[offset] & 0x80) == 0x00) {
+        if ((DataReadByte(offset) & 0x80) == 0x00) {
             continue;
         }
 
         auto &params = m_fileParams.emplace_back();
         params.blocks = ReadBlockList(i);
         ReadHeader(i, params.info.header);
-        params.info.size = util::ReadBE<uint32>((const uint8 *)&m_backupRAM[offset + 0x1E]);
+        params.info.size = DataReadLong(offset + 0x1E);
         params.info.numBlocks = params.blocks.size();
 
         // Mark blocks as used
@@ -535,14 +518,14 @@ void BackupMemory::RebuildFileList(bool force) const {
 bool BackupMemory::CheckHeader() const {
     // Check that the first block contains the header
     for (uint32 i = 0; i < m_blockSize; i++) {
-        if (m_backupRAM[i] != kHeader[i & 0xF]) {
+        if (DataReadByte(i) != kHeader[i & 0xF]) {
             return false;
         }
     }
 
     // Check that the second block is entirely empty
     for (uint32 i = m_blockSize; i < m_blockSize * 2; i++) {
-        if (m_backupRAM[i] != 0x00) {
+        if (DataReadByte(i) != 0x00) {
             return false;
         }
     }
@@ -567,10 +550,12 @@ const BackupMemory::BackupFileParams *BackupMemory::FindFile(std::string_view fi
 
 void BackupMemory::ReadHeader(uint16 blockIndex, BackupFileHeader &header) const {
     const uint32 offset = blockIndex * m_blockSize;
-    header.filename.assign(&m_backupRAM[offset + 0x04], (size_t)11);
-    header.comment.assign(&m_backupRAM[offset + 0x10], (size_t)10);
-    header.language = static_cast<Language>(m_backupRAM[offset + 0x0F]);
-    header.date = util::ReadBE<uint32>((const uint8 *)&m_backupRAM[offset + 0x1A]);
+    header.filename.resize(11);
+    DataReadString(offset + 0x04, header.filename.data(), 11);
+    header.comment.resize(10);
+    DataReadString(offset + 0x10, header.comment.data(), 10);
+    header.language = static_cast<Language>(DataReadByte(offset + 0x0F));
+    header.date = DataReadLong(offset + 0x1A);
 }
 
 std::vector<uint16> BackupMemory::ReadBlockList(uint16 blockIndex) const {
@@ -583,7 +568,7 @@ std::vector<uint16> BackupMemory::ReadBlockList(uint16 blockIndex) const {
     uint32 listIndex = 1;
 
     do {
-        uint16 nextBlock = util::ReadBE<uint16>((const uint8 *)&m_backupRAM[offset]);
+        uint16 nextBlock = DataReadWord(offset);
         if (nextBlock == 0) {
             // End of list
             break;
@@ -601,7 +586,7 @@ std::vector<uint16> BackupMemory::ReadBlockList(uint16 blockIndex) const {
             // Skip to the next block at offset 0x04 if we reach the start of the next block
             offset = blockList[listIndex++] * m_blockSize + 4;
         }
-    } while (offset < m_backupRAM.size());
+    } while (offset < Size());
 
     return blockList;
 }
@@ -642,11 +627,88 @@ BackupFile BackupMemory::BuildFile(const BackupFileParams &params) const {
         // Read data
         availBytes = std::min(availBytes, remaining);
         remaining -= availBytes;
-        file.data.insert(file.data.end(), &m_backupRAM[blockOffset + innerOffset],
-                         &m_backupRAM[blockOffset + innerOffset + availBytes]);
+        const auto pos = file.data.size();
+        file.data.resize(pos + availBytes);
+        DataReadString(blockOffset + innerOffset, (char *)&file.data[pos], availBytes);
     }
 
     return file;
+}
+
+FORCE_INLINE uint8 BackupMemory::DataReadByte(uint32 address) const {
+    if (m_addressMask != 0) {
+        return m_backupRAM[address & m_addressMask];
+    } else {
+        return 0xFFu;
+    }
+}
+
+FORCE_INLINE uint16 BackupMemory::DataReadWord(uint32 address) const {
+    if (m_addressMask != 0) {
+        return (DataReadByte(address + 0) << 8u) | DataReadByte(address + 1);
+    } else {
+        return 0xFFFFu;
+    }
+}
+
+FORCE_INLINE uint32 BackupMemory::DataReadLong(uint32 address) const {
+    if (m_addressMask != 0) {
+        return (DataReadByte(address + 0) << 24u) | //
+               (DataReadByte(address + 1) << 16u) | //
+               (DataReadByte(address + 2) << 8u) |  //
+               DataReadByte(address + 3);
+    } else {
+        return 0xFFFFFFFFu;
+    }
+}
+
+FORCE_INLINE void BackupMemory::DataReadString(uint32 address, void *str, uint32 length) const {
+    if (m_addressMask != 0) {
+        for (uint32 i = 0; i < length; ++i) {
+            static_cast<uint8 *>(str)[i] = DataReadByte(address + i);
+        }
+    }
+}
+
+FORCE_INLINE void BackupMemory::DataWriteByte(uint32 address, uint8 value) {
+    if (m_addressMask != 0) {
+        m_backupRAM[address & m_addressMask] = value;
+        m_dirty = true;
+    }
+}
+
+FORCE_INLINE void BackupMemory::DataWriteWord(uint32 address, uint16 value) {
+    if (m_addressMask != 0) {
+        m_backupRAM[(address + 0) & m_addressMask] = value >> 8u;
+        m_backupRAM[(address + 1) & m_addressMask] = value >> 0u;
+        m_dirty = true;
+    }
+}
+
+void BackupMemory::DataWriteLong(uint32 address, uint32 value) {
+    if (m_addressMask != 0) {
+        m_backupRAM[(address + 0) & m_addressMask] = value >> 24u;
+        m_backupRAM[(address + 1) & m_addressMask] = value >> 16u;
+        m_backupRAM[(address + 2) & m_addressMask] = value >> 8u;
+        m_backupRAM[(address + 3) & m_addressMask] = value >> 0u;
+        m_dirty = true;
+    }
+}
+
+void BackupMemory::DataWriteString(uint32 address, const void *str, uint32 length) {
+    if (m_addressMask != 0) {
+        for (uint32 i = 0; i < length; ++i) {
+            DataWriteByte(address + i, static_cast<const uint8 *>(str)[i]);
+        }
+    }
+}
+
+void BackupMemory::DataFill(uint32 address, uint8 value, uint32 length) {
+    if (m_addressMask != 0) {
+        for (uint32 i = 0; i < length; ++i) {
+            DataWriteByte(address + i, value);
+        }
+    }
 }
 
 } // namespace ymir::bup

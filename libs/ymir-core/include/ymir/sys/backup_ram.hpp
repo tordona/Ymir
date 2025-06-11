@@ -19,6 +19,9 @@ class BackupMemory final : public IBackupMemory {
 public:
     void MapMemory(sys::Bus &bus, uint32 start, uint32 end);
 
+    // -------------------------------------------------------------------------
+    // Image management
+
     // Loads a backup memory file at the specified path.
     // The file size determines the backup memory size.
     // The image is not modified in any way.
@@ -47,6 +50,9 @@ public:
 
     std::filesystem::path GetPath() const final;
 
+    // -------------------------------------------------------------------------
+    // Bus interface
+
     uint8 ReadByte(uint32 address) const final;
     uint16 ReadWord(uint32 address) const final;
     uint32 ReadLong(uint32 address) const final;
@@ -54,6 +60,9 @@ public:
     void WriteByte(uint32 address, uint8 value) final;
     void WriteWord(uint32 address, uint16 value) final;
     void WriteLong(uint32 address, uint32 value) final;
+
+    // -------------------------------------------------------------------------
+    // Backup file management
 
     std::vector<uint8> ReadAll() const final;
 
@@ -95,6 +104,23 @@ private:
     bool m_headerValid;
     std::vector<BackupFileParams> m_fileParams;
     std::vector<uint64> m_blockBitmap;
+
+    // -------------------------------------------------------------------------
+    // Data interface
+
+    uint8 DataReadByte(uint32 address) const;
+    uint16 DataReadWord(uint32 address) const;
+    uint32 DataReadLong(uint32 address) const;
+    void DataReadString(uint32 address, void *str, uint32 length) const;
+
+    void DataWriteByte(uint32 address, uint8 value);
+    void DataWriteWord(uint32 address, uint16 value);
+    void DataWriteLong(uint32 address, uint32 value);
+    void DataWriteString(uint32 address, const void *str, uint32 length);
+    void DataFill(uint32 address, uint8 value, uint32 length);
+
+    // -------------------------------------------------------------------------
+    // Backup file management
 
     // Rebuilds the file list from the contents of the backup memory.
     //
