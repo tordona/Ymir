@@ -722,11 +722,10 @@ void VDP::UpdateResolution() {
 
     // Horizontal/vertical resolution tables
     // NTSC uses the first two vRes entries, PAL uses the full table, and exclusive monitors use 480 lines
+    // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
     static constexpr uint32 hRes[] = {320, 352, 640, 704};
     static constexpr uint32 vRes[] = {224, 240, 256, 256};
 
-    // TODO: check for NTSC, PAL or exclusive monitor; assuming NTSC for now
-    // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
     m_HRes = hRes[m_state.regs2.TVMD.HRESOn];
     m_VRes = vRes[m_state.regs2.TVMD.VRESOn & (m_state.regs2.TVSTAT.PAL ? 3 : 1)];
     if (m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
@@ -743,7 +742,7 @@ void VDP::UpdateResolution() {
     //   LBd = Left Border
     //   LDt = Last Dot
     //   ADp = Active Display
-    // NOTE: these timings specify the HCNT to advance to the specified phase
+    // NOTE: these timings specify the HCNT interval between phases
     static constexpr std::array<std::array<uint32, 6>, 4> hTimings{{
         // RBd, HSy, VBC, LBd, LDt, ADp
         {320, 27, 27, 26, 26, 1}, // {320, 347, 374, 400, 426, 427},
