@@ -93,6 +93,7 @@ private:
 
     size_t m_addressMask = 0;
     uint32 m_blockSize = 0;
+    size_t m_addressShift = 0;
 
     bool m_dirty = false;
 
@@ -127,6 +128,9 @@ private:
     // `force` forces the rebuild even if the dirty flag is clear.
     void RebuildFileList(bool force = false);
     void RebuildFileList(bool force = false) const;
+
+    // Checks if the backup image is interleaved.
+    bool CheckInterleaved() const;
 
     // Checks if the header is valid.
     bool CheckHeader() const;

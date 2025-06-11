@@ -3122,7 +3122,7 @@ void App::SaveRecentDiscs() {
 
 void App::OpenBackupMemoryCartFileDialog() {
     static constexpr SDL_DialogFileFilter kFileFilters[] = {
-        {.name = "Backup memory images (*.bin)", .pattern = "bin"},
+        {.name = "Backup memory images (*.bin, *.sav)", .pattern = "bin;sav"},
         {.name = "All files (*.*)", .pattern = "*"},
     };
 

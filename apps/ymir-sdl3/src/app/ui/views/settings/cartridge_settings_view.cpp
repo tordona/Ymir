@@ -202,7 +202,7 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
             .defaultPath = settings.imagePath.empty()
                                ? m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-ext.bin"
                                : settings.imagePath,
-            .filters = {{"Backup memory image files (*.bin)", "bin"}, {"All files (*.*)", "*"}},
+            .filters = {{"Backup memory image files (*.bin, *.sav)", "bin;sav"}, {"All files (*.*)", "*"}},
             .userdata = this,
             .callback = util::WrapSingleSelectionCallback<&CartridgeSettingsView::ProcessLoadBackupImage,
                                                           &util::NoopCancelFileDialogCallback,

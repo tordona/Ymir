@@ -50,7 +50,8 @@ BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &
     bool valid = false;
     BackupMemorySize size{};
     for (uint32 i = 0; i < std::size(kSizes); i++) {
-        if (kSizes[i] == m_backupRAM.size()) {
+        // Check for double size in case the image is interleaved
+        if (m_backupRAM.size() == kSizes[i] || m_backupRAM.size() == kSizes[i] * 2) {
             valid = true;
             size = static_cast<BackupMemorySize>(i);
             break;
@@ -63,10 +64,11 @@ BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &
     }
 
     // Update parameters
+    m_addressShift = CheckInterleaved() ? 1u : 0u;
     m_headerValid = CheckHeader();
-    m_addressMask = m_backupRAM.size() - 1;
+    m_addressMask = m_backupRAM.size() - 1u;
     m_blockSize = kBlockSizes[static_cast<size_t>(size)];
-    m_blockBitmap.resize(GetTotalBlocks() / 64);
+    m_blockBitmap.resize(GetTotalBlocks() / 64u);
 
     RebuildFileList(true);
 
@@ -94,7 +96,7 @@ void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySiz
     }
 
     // Resize file if necessary
-    if (std::filesystem::file_size(path) != sz) {
+    if (std::filesystem::file_size(path) != sz && std::filesystem::file_size(path) != sz * 2) {
         format = true;
         std::filesystem::resize_file(path, sz, error);
         if (error) {
@@ -109,9 +111,10 @@ void BackupMemory::CreateFrom(const std::filesystem::path &path, BackupMemorySiz
     }
 
     // Update parameters
-    m_addressMask = m_backupRAM.size() - 1;
+    m_addressShift = CheckInterleaved() ? 1u : 0u;
+    m_addressMask = m_backupRAM.size() - 1u;
     m_blockSize = kBlockSizes[static_cast<size_t>(size)];
-    m_blockBitmap.resize(GetTotalBlocks() / 64);
+    m_blockBitmap.resize(GetTotalBlocks() / 64u);
 
     // Check if it has a valid header
     m_headerValid = CheckHeader();
@@ -188,7 +191,7 @@ bool BackupMemory::IsHeaderValid() const {
 }
 
 uint32 BackupMemory::Size() const {
-    return m_backupRAM.size();
+    return m_backupRAM.size() >> m_addressShift;
 }
 
 uint32 BackupMemory::GetBlockSize() const {
@@ -515,6 +518,16 @@ void BackupMemory::RebuildFileList(bool force) const {
     const_cast<BackupMemory *>(this)->RebuildFileList(force);
 }
 
+bool BackupMemory::CheckInterleaved() const {
+    // Checks if the image is in interleaved format: FF xx FF xx FF xx ...
+    for (uint32 i = 0; i < m_backupRAM.size(); i += 2) {
+        if (static_cast<uint8>(m_backupRAM[i]) != 0xFFu) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool BackupMemory::CheckHeader() const {
     // Check that the first block contains the header
     for (uint32 i = 0; i < m_blockSize; i++) {
@@ -637,6 +650,8 @@ BackupFile BackupMemory::BuildFile(const BackupFileParams &params) const {
 
 FORCE_INLINE uint8 BackupMemory::DataReadByte(uint32 address) const {
     if (m_addressMask != 0) {
+        address <<= m_addressShift;
+        address |= m_addressShift;
         return m_backupRAM[address & m_addressMask];
     } else {
         return 0xFFu;
@@ -672,27 +687,23 @@ FORCE_INLINE void BackupMemory::DataReadString(uint32 address, void *str, uint32
 
 FORCE_INLINE void BackupMemory::DataWriteByte(uint32 address, uint8 value) {
     if (m_addressMask != 0) {
+        address <<= m_addressShift;
+        address |= m_addressShift;
         m_backupRAM[address & m_addressMask] = value;
         m_dirty = true;
     }
 }
 
 FORCE_INLINE void BackupMemory::DataWriteWord(uint32 address, uint16 value) {
-    if (m_addressMask != 0) {
-        m_backupRAM[(address + 0) & m_addressMask] = value >> 8u;
-        m_backupRAM[(address + 1) & m_addressMask] = value >> 0u;
-        m_dirty = true;
-    }
+    DataWriteByte(address + 0, value >> 8u);
+    DataWriteByte(address + 1, value >> 0u);
 }
 
 void BackupMemory::DataWriteLong(uint32 address, uint32 value) {
-    if (m_addressMask != 0) {
-        m_backupRAM[(address + 0) & m_addressMask] = value >> 24u;
-        m_backupRAM[(address + 1) & m_addressMask] = value >> 16u;
-        m_backupRAM[(address + 2) & m_addressMask] = value >> 8u;
-        m_backupRAM[(address + 3) & m_addressMask] = value >> 0u;
-        m_dirty = true;
-    }
+    DataWriteByte(address + 0, value >> 24u);
+    DataWriteByte(address + 1, value >> 16u);
+    DataWriteByte(address + 2, value >> 8u);
+    DataWriteByte(address + 3, value >> 0u);
 }
 
 void BackupMemory::DataWriteString(uint32 address, const void *str, uint32 length) {

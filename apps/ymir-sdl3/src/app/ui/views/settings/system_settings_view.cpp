@@ -271,7 +271,7 @@ void SystemSettingsView::Display() {
             .defaultPath = settings.internalBackupRAMImagePath.empty()
                                ? m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin"
                                : settings.internalBackupRAMImagePath,
-            .filters = {{"Backup memory image files (*.bin)", "bin"}, {"All files (*.*)", "*"}},
+            .filters = {{"Backup memory image files (*.bin, *.sav)", "bin;sav"}, {"All files (*.*)", "*"}},
             .userdata = this,
             .callback = util::WrapSingleSelectionCallback<&SystemSettingsView::ProcessLoadBackupImage,
                                                           &util::NoopCancelFileDialogCallback,
