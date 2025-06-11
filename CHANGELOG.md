@@ -21,7 +21,7 @@
 - SMPC: Eliminate spurious INTBACK interrupts.
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
-
+- VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
 
 ## Version 0.1.4+1
 

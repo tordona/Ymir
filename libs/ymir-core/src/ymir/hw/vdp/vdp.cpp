@@ -2309,7 +2309,7 @@ void VDP::VDP2UpdateEnabledBGs() {
     // Sprite layer is always enabled, unless forcibly disabled
     m_layerStates[0].enabled = m_layerStates[0].rendered;
 
-    if (m_state.regs2.bgEnabled[5]) {
+    if (m_state.regs2.bgEnabled[4] && m_state.regs2.bgEnabled[5]) {
         m_layerStates[1].enabled = m_layerStates[1].rendered; // RBG0
         m_layerStates[2].enabled = m_layerStates[2].rendered; // RBG1
         m_layerStates[3].enabled = false;                     // EXBG
