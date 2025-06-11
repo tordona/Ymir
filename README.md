@@ -50,9 +50,12 @@ Usage:
   -p, --profile arg  Path to profile directory
   -h, --help         Display help text
   -f, --fullscreen   Start in fullscreen mode
+  -P, --paused       Start paused
 ```
 
 Use `-p <profile-path>` to point to a separate set of configuration and state files, useful if you wish to have different user profiles (hence the name).
+
+The options are case-sensitive -- lowercase `-p` sets the profile path, uppercase `-P` makes the emulator start paused.
 
 Note that the Win32 variant of Ymir does not output anything to the console, but it does honor the command line parameters.
 
