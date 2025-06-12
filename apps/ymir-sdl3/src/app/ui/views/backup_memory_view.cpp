@@ -892,13 +892,6 @@ void BackupMemoryView::FileImportError(const char *errorMessage) {
 
 BackupMemoryView::ImportFileResult BackupMemoryView::ImportFile(std::filesystem::path path, bup::BackupFile &out,
                                                                 std::error_code &error) {
-    // 00..03  char[4]   magic: "YmBP"
-    // 04..0E  char[11]  filename
-    //     0F  uint8     language
-    // 10..19  char[10]  comment
-    // 1A..1D  uint32le  date/time (minutes since 01/01/1980)
-    // 1E..21  uint32le  data size (in bytes)
-    // 22....  uint8...  data
 
     error.clear();
 
@@ -920,44 +913,106 @@ BackupMemoryView::ImportFileResult BackupMemoryView::ImportFile(std::filesystem:
         return ImportFileResult::FileTruncated;
     }
 
-    // magic
-    static constexpr std::string_view kMagic = "YmBP";
+    static constexpr std::string_view kYmirMagic = "YmBP";
+    static constexpr std::string_view kVmemMagic = "Vmem";
+
+    // Determine format from magic
     in.read(buf.data(), 4);
     CHECK_INPUT_ERROR;
-    if (std::string_view(buf.data(), 4) != kMagic) {
+    if (std::string_view(buf.data(), 4) == kYmirMagic) {
+        // Ymir backup file format:
+        //
+        // 00..03  char[4]   magic: "YmBP"
+        // 04..0E  char[11]  filename
+        //     0F  uint8     language
+        // 10..19  char[10]  comment
+        // 1A..1D  uint32le  date/time (minutes since 01/01/1980)
+        // 1E..21  uint32le  data size (in bytes)
+        // 22....  uint8...  data
+
+        // filename
+        in.read(buf.data(), 11);
+        CHECK_INPUT_ERROR;
+        out.header.filename.assign(buf.begin(), buf.end());
+
+        // language
+        out.header.language = static_cast<bup::Language>(in.get());
+        CHECK_INPUT_ERROR;
+
+        // comment
+        in.read(buf.data(), 10);
+        CHECK_INPUT_ERROR;
+        out.header.comment.assign(buf.begin(), buf.end());
+
+        // date/time
+        in.read((char *)&out.header.date, sizeof(out.header.date));
+        CHECK_INPUT_ERROR;
+
+        // data size
+        uint32 size{};
+        in.read((char *)&size, sizeof(size));
+        CHECK_INPUT_ERROR;
+        if ((size_t)size + 0x22 > fileSize) {
+            return ImportFileResult::FileTruncated;
+        }
+
+        // data
+        out.data.resize(size);
+        in.read((char *)out.data.data(), out.data.size());
+        CHECK_INPUT_ERROR;
+    } else if (std::string_view(buf.data(), 4) == kVmemMagic) {
+        // BUP file format:
+        //
+        // 00..03  char[4]   magic: "Vmem"
+        // 04..0F  -         padding/zeros
+        // 10..1B  char[11]  filename
+        // 1C..26  char[10]  comment
+        //     27  uint8     language
+        // 28..2B  uint32be  date/time (minutes since 01/01/1980)
+        // 2C..2F  uint32be  data size (in bytes)
+        // 30..31  uint16be  block size (in bytes)
+        // 40....  uint8...  data
+
+        in.seekg(0x10, std::ios::beg);
+
+        // filename
+        in.read(buf.data(), 11);
+        CHECK_INPUT_ERROR;
+        out.header.filename.assign(buf.begin(), buf.end());
+
+        // comment
+        in.seekg(0x1C, std::ios::beg); // skip extra byte
+        in.read(buf.data(), 10);
+        CHECK_INPUT_ERROR;
+        out.header.comment.assign(buf.begin(), buf.end());
+
+        // language
+        in.seekg(0x27, std::ios::beg); // skip extra byte
+        out.header.language = static_cast<bup::Language>(in.get());
+        CHECK_INPUT_ERROR;
+
+        // date/time
+        in.read((char *)&out.header.date, sizeof(out.header.date));
+        CHECK_INPUT_ERROR;
+        out.header.date = bit::big_endian_swap<uint32>(out.header.date);
+
+        // data size
+        uint32 size{};
+        in.read((char *)&size, sizeof(size));
+        CHECK_INPUT_ERROR;
+        size = bit::big_endian_swap<uint32>(size);
+        if ((size_t)size + 0x40 > fileSize) {
+            return ImportFileResult::FileTruncated;
+        }
+
+        // data
+        out.data.resize(size);
+        in.seekg(0x40, std::ios::beg);
+        in.read((char *)out.data.data(), out.data.size());
+        CHECK_INPUT_ERROR;
+    } else {
         return ImportFileResult::BadMagic;
     }
-
-    // filename
-    in.read(buf.data(), 11);
-    CHECK_INPUT_ERROR;
-    out.header.filename.assign(buf.begin(), buf.end());
-
-    // language
-    out.header.language = static_cast<bup::Language>(in.get());
-    CHECK_INPUT_ERROR;
-
-    // comment
-    in.read(buf.data(), 10);
-    CHECK_INPUT_ERROR;
-    out.header.comment.assign(buf.begin(), buf.end());
-
-    // date/time
-    in.read((char *)&out.header.date, sizeof(out.header.date));
-    CHECK_INPUT_ERROR;
-
-    // data size
-    uint32 size{};
-    in.read((char *)&size, sizeof(size));
-    CHECK_INPUT_ERROR;
-    if ((size_t)size + 0x22 > fileSize) {
-        return ImportFileResult::FileTruncated;
-    }
-
-    // data
-    out.data.resize(size);
-    in.read((char *)out.data.data(), out.data.size());
-    CHECK_INPUT_ERROR;
 
     return ImportFileResult::Success;
 }
