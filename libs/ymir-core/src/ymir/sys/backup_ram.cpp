@@ -46,12 +46,14 @@ BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &
         return BackupMemoryImageLoadResult::FilesystemError;
     }
 
+    m_addressShift = CheckInterleaved() ? 1u : 0u;
+
     // Determine if image size matches any valid backup memory size
     bool valid = false;
     BackupMemorySize size{};
     for (uint32 i = 0; i < std::size(kSizes); i++) {
         // Check for double size in case the image is interleaved
-        if (m_backupRAM.size() == kSizes[i] || m_backupRAM.size() == kSizes[i] * 2) {
+        if (m_backupRAM.size() == (kSizes[i] << m_addressShift)) {
             valid = true;
             size = static_cast<BackupMemorySize>(i);
             break;
@@ -64,7 +66,6 @@ BackupMemoryImageLoadResult BackupMemory::LoadFrom(const std::filesystem::path &
     }
 
     // Update parameters
-    m_addressShift = CheckInterleaved() ? 1u : 0u;
     m_headerValid = CheckHeader();
     m_addressMask = m_backupRAM.size() - 1u;
     m_blockSize = kBlockSizes[static_cast<size_t>(size)];
