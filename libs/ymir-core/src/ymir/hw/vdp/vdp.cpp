@@ -799,11 +799,11 @@ void VDP::UpdateResolution() {
 }
 
 FORCE_INLINE void VDP::IncrementVCounter() {
-    ++m_state.VCounter;
-    while (m_state.VCounter >= m_VTimings[static_cast<uint32>(m_state.VPhase)]) {
+    ++m_state.regs2.VCNT;
+    while (m_state.regs2.VCNT >= m_VTimings[static_cast<uint32>(m_state.VPhase)]) {
         auto nextPhase = static_cast<uint32>(m_state.VPhase) + 1;
         if (nextPhase == m_VTimings.size()) {
-            m_state.VCounter = 0;
+            m_state.regs2.VCNT = 0;
             nextPhase = 0;
         }
 
@@ -821,13 +821,13 @@ FORCE_INLINE void VDP::IncrementVCounter() {
 // ----
 
 void VDP::BeginHPhaseActiveDisplay() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_state.regs2.VCNT);
     if (m_state.VPhase == VerticalPhase::Active) {
-        if (m_state.VCounter == 0) {
+        if (m_state.regs2.VCNT == 0) {
             devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
 
             VDP2InitFrame();
-        } else if (m_state.VCounter == 210) { // ~1ms before VBlank IN
+        } else if (m_state.regs2.VCNT == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
 
@@ -839,23 +839,23 @@ void VDP::BeginHPhaseActiveDisplay() {
                 m_VDPRenderContext.vdp1Done = false;
             }
 
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_state.VCounter));
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_state.regs2.VCNT));
         } else {
-            m_deinterlaceRender ? VDP2DrawLine<true>(m_state.VCounter) : VDP2DrawLine<false>(m_state.VCounter);
+            m_deinterlaceRender ? VDP2DrawLine<true>(m_state.regs2.VCNT) : VDP2DrawLine<false>(m_state.regs2.VCNT);
         }
     }
 }
 
 void VDP::BeginHPhaseRightBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering right border phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering right border phase", m_state.regs2.VCNT);
 
-    devlog::trace<grp::base>("## HBlank IN {:3d}", m_state.VCounter);
+    devlog::trace<grp::base>("## HBlank IN {:3d}", m_state.regs2.VCNT);
 
     m_state.regs2.TVSTAT.HBLANK = 1;
     m_cbHBlank();
 
     // Start erasing if we just entered VBlank IN
-    if (m_state.VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
+    if (m_state.regs2.VCNT == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
         devlog::trace<grp::base>("## HBlank IN + VBlank IN  VBE={:d} manualerase={:d}", m_state.regs1.vblankErase,
                                  m_state.regs1.fbManualErase);
 
@@ -878,11 +878,11 @@ void VDP::BeginHPhaseRightBorder() {
 
 void VDP::BeginHPhaseSync() {
     IncrementVCounter();
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal sync phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal sync phase", m_state.regs2.VCNT);
 }
 
 void VDP::BeginHPhaseVBlankOut() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_state.regs2.VCNT);
 
     if (m_state.VPhase == VerticalPhase::LastLine) {
         devlog::trace<grp::base>("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
@@ -922,7 +922,7 @@ void VDP::BeginHPhaseVBlankOut() {
 }
 
 void VDP::BeginHPhaseLeftBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.regs2.VCNT);
 
     m_state.regs2.TVSTAT.HBLANK = 0;
 
@@ -930,10 +930,10 @@ void VDP::BeginHPhaseLeftBorder() {
 }
 
 void VDP::BeginHPhaseLastDot() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last dot phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last dot phase", m_state.regs2.VCNT);
 
     // If we just entered the bottom blanking vertical phase, switch fields
-    if (m_state.VCounter == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
+    if (m_state.regs2.VCNT == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
         if (m_state.regs2.TVMD.LSMDn != InterlaceMode::None) {
             m_state.regs2.TVSTAT.ODD ^= 1;
             devlog::trace<grp::base>("Switched to {} field", (m_state.regs2.TVSTAT.ODD ? "odd" : "even"));
@@ -954,11 +954,11 @@ void VDP::BeginHPhaseLastDot() {
 // ----
 
 void VDP::BeginVPhaseActiveDisplay() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering vertical active display phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering vertical active display phase", m_state.regs2.VCNT);
 }
 
 void VDP::BeginVPhaseBottomBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering bottom border phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering bottom border phase", m_state.regs2.VCNT);
 
     devlog::trace<grp::base>("## VBlank IN");
 
@@ -969,7 +969,7 @@ void VDP::BeginVPhaseBottomBorder() {
 }
 
 void VDP::BeginVPhaseBlankingAndSync() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering blanking/vertical sync phase", m_state.regs2.VCNT);
 
     // End frame
     devlog::trace<grp::base>("End VDP2 frame");
@@ -981,7 +981,7 @@ void VDP::BeginVPhaseBlankingAndSync() {
 }
 
 void VDP::BeginVPhaseTopBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering top border phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering top border phase", m_state.regs2.VCNT);
 
     UpdateResolution<true>();
 
@@ -989,7 +989,7 @@ void VDP::BeginVPhaseTopBorder() {
 }
 
 void VDP::BeginVPhaseLastLine() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_state.VCounter);
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_state.regs2.VCNT);
 
     devlog::trace<grp::base>("## VBlank OUT");
 

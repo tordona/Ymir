@@ -24,6 +24,7 @@
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 - VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
+- VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game.
 
 
 ## Version 0.1.4+1

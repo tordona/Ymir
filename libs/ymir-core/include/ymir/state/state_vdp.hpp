@@ -181,8 +181,6 @@ struct VDPState {
     enum class VerticalPhase { Active, BottomBorder, BlankingAndSync, TopBorder, LastLine };
     VerticalPhase VPhase; // Current vertical display phase
 
-    uint16 VCounter;
-
     struct VDPRendererState {
         struct VDP1RenderState {
             uint16 sysClipH;
