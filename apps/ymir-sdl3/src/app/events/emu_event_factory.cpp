@@ -439,21 +439,7 @@ EmuEvent FormatBackupMemory(bool external) {
 
 EmuEvent LoadInternalBackupMemory() {
     return RunFunction([](SharedContext &ctx) {
-        std::filesystem::path path;
-        if (ctx.settings.system.internalBackupRAMPerGame) {
-            const std::filesystem::path basePath = ctx.profile.GetPath(ProfilePath::BackupMemory) / "games";
-            std::filesystem::path discFilename = ctx.state.loadedDiscImagePath.filename().replace_extension("");
-            if (discFilename.empty()) {
-                discFilename = "nodisc";
-            }
-            std::filesystem::create_directories(basePath);
-            path = basePath / fmt::format("bup-int-{}.bin", discFilename);
-        } else {
-            path = ctx.settings.system.internalBackupRAMImagePath;
-            if (path.empty()) {
-                path = ctx.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
-            }
-        }
+        std::filesystem::path path = ctx.GetInternalBackupRAMPath();
 
         std::error_code error{};
         if (ctx.saturn.LoadInternalBackupMemoryImage(path, error); error) {

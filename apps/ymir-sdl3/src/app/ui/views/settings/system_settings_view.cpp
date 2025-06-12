@@ -247,8 +247,8 @@ void SystemSettingsView::Display() {
         m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
     }
     widgets::ExplanationTooltip(
-        fmt::format("When enabled, separate internal backup memory images will be created for each game at {}",
-                    m_context.profile.GetPath(ProfilePath::BackupMemory) / "games" / "bup-int-<filename>.bin")
+        fmt::format("When enabled, separate internal backup memory images will be created for each game under {}",
+                    m_context.profile.GetPath(ProfilePath::BackupMemory) / "games")
             .c_str(),
         m_context.displayScale);
 
@@ -299,12 +299,7 @@ void SystemSettingsView::Display() {
     }
 
     if (settings.internalBackupRAMPerGame) {
-        const std::filesystem::path basePath = m_context.profile.GetPath(ProfilePath::BackupMemory) / "games";
-        std::filesystem::path discFilename = m_context.state.loadedDiscImagePath.filename().replace_extension("");
-        if (discFilename.empty()) {
-            discFilename = "nodisc";
-        }
-        const std::filesystem::path intBupPath = basePath / fmt::format("bup-int-{}.bin", discFilename);
+        const std::filesystem::path intBupPath = m_context.GetInternalBackupRAMPath();
         ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
         ImGui::Text("Currently using internal backup memory image from %s", fmt::format("{}", intBupPath).c_str());
         ImGui::PopTextWrapPos();

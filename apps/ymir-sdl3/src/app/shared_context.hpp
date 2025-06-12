@@ -147,16 +147,17 @@ struct SharedContext {
     RewindBuffer rewindBuffer;
     bool rewinding = false;
 
-    // Certain GUI interactions requires synchronization with the emulator thread, especially when dealing with
+    // Certain GUI interactions require synchronization with the emulator thread, especially when dealing with
     // dynamically allocated objects:
     // - Cartridges
     // - Discs
     // - Peripherals
     // - Save states
     // - ROM manager
-    // These locks must be held by the emulator thread whenever the object instances are to be replaced.
+    // - Backup memories
+    // These locks must be held by the emulator thread whenever the object instances are to be replaced or modified.
     // The GUI must hold these locks when accessing these objects to ensure the emulator thread doesn't destroy them.
-    struct Locks {
+    mutable struct Locks {
         std::mutex cart;
         std::mutex disc;
         std::mutex peripherals;
@@ -259,6 +260,50 @@ struct SharedContext {
 
     void EnqueueEvent(GUIEvent &&event) {
         eventQueues.gui.enqueue(std::move(event));
+    }
+
+    std::filesystem::path GetInternalBackupRAMPath() const {
+        if (settings.system.internalBackupRAMPerGame) {
+            const std::filesystem::path basePath = profile.GetPath(ProfilePath::BackupMemory) / "games";
+            std::filesystem::path bupName = "";
+
+            // Use serial number + disc title if available
+            {
+                std::unique_lock lock{locks.disc};
+                const auto &disc = saturn.CDBlock.GetDisc();
+                if (!disc.sessions.empty() && !disc.header.productNumber.empty()) {
+                    if (!disc.header.gameTitle.empty()) {
+                        std::string title = disc.header.gameTitle;
+                        // Clean up invalid characters
+                        std::transform(title.begin(), title.end(), title.begin(), [](char ch) {
+                            if (ch == ':' || ch == '|' || ch == '<' || ch == '>' || ch == '/' || ch == '\\') {
+                                return '_';
+                            } else {
+                                return ch;
+                            }
+                        });
+                        bupName = fmt::format("[{}] {}", disc.header.productNumber, title);
+                    } else {
+                        bupName = fmt::format("[{}]", disc.header.productNumber);
+                    }
+                }
+            }
+
+            // Fall back to the disc file name if the serial number isn't available
+            if (bupName.empty()) {
+                bupName = state.loadedDiscImagePath.filename().replace_extension("");
+                if (bupName.empty()) {
+                    bupName = "nodisc";
+                }
+            }
+
+            std::filesystem::create_directories(basePath);
+            return basePath / fmt::format("bup-int-{}.bin", bupName);
+        } else if (!settings.system.internalBackupRAMImagePath.empty()) {
+            return settings.system.internalBackupRAMImagePath;
+        } else {
+            return profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
+        }
     }
 };
 
