@@ -2285,11 +2285,15 @@ void App::EmulatorThread() {
                 break;
             }
 
-            case ReplaceInternalBackupMemory:
+            case ReplaceInternalBackupMemory: //
+            {
+                std::unique_lock lock{m_context.locks.backupRAM};
                 m_context.saturn.mem.GetInternalBackupRAM().CopyFrom(std::get<ymir::bup::BackupMemory>(evt.value));
                 break;
+            }
             case ReplaceExternalBackupMemory:
                 if (auto *cart = m_context.saturn.GetCartridge().As<ymir::cart::CartType::BackupMemory>()) {
+                    std::unique_lock lock{m_context.locks.backupRAM};
                     cart->CopyBackupMemoryFrom(std::get<ymir::bup::BackupMemory>(evt.value));
                 }
                 break;

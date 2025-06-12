@@ -162,6 +162,7 @@ struct SharedContext {
         std::mutex peripherals;
         std::array<std::mutex, 10> saveStates;
         std::mutex romManager;
+        std::mutex backupRAM;
     } locks;
 
     struct State {

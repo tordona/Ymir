@@ -15,6 +15,7 @@
 
 ### Fixes
 
+- App: Fix rare crash when loading a backup memory image in the Backup Memory Manager.
 - App: Prevent loading internal backup memory image as backup RAM cartridge image.
 - Media: Fix pregap handling in single BIN images.
 - SCU, SH-2, SMPC, SCSP, VDP: Numerous fixes to interrupt handling (thanks to @celeriyacon). Fixes intermittent Rayman inputs and some audio glitches.

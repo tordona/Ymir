@@ -55,6 +55,7 @@ void BackupMemoryView::Display() {
     std::vector<bup::BackupFileInfo> files{};
 
     if (hasBup) {
+        std::unique_lock lock{m_context.locks.backupRAM};
         ImGui::Text("%u KiB capacity, %u of %u blocks used", m_bup->Size() / 1024u, m_bup->GetUsedBlocks(),
                     m_bup->GetTotalBlocks());
         files = m_bup->List();
@@ -137,6 +138,8 @@ void BackupMemoryView::Display() {
     if (ImGui::Button("Export")) {
         assert(m_bup != nullptr);
 
+        std::unique_lock lock{m_context.locks.backupRAM};
+
         // Export files from backup memory into a list
         m_filesToExport.clear();
         for (uint32 item : m_selected) {
@@ -197,9 +200,17 @@ void BackupMemoryView::Display() {
     const float loadImageWidth = ImGui::CalcTextSize("Load image...").x + ImGui::GetStyle().FramePadding.x * 2;
     const float sameLineSpacing = ImGui::GetStyle().ItemSpacing.x;
     const float saveImageWidth = ImGui::CalcTextSize("Save image...").x + ImGui::GetStyle().FramePadding.x * 2;
-    auto bupMemFilename =
-        m_external ? m_bup != nullptr ? fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024) : "bup-ext.bin"
-                   : "bup-int.bin";
+    std::string bupMemFilename;
+    if (m_external) {
+        if (m_bup != nullptr) {
+            std::unique_lock lock{m_context.locks.backupRAM};
+            bupMemFilename = fmt::format("bup-ext-{}M.bin", m_bup->Size() * 8 / 1024 / 1024);
+        } else {
+            bupMemFilename = "bup-ext.bin";
+        }
+    } else {
+        bupMemFilename = "bup-int.bin";
+    }
     ImGui::SameLine(avail.x - loadImageWidth - sameLineSpacing - saveImageWidth);
     if (ImGui::Button("Load image...")) {
         // Open file dialog to select backup memory image to load
@@ -217,7 +228,10 @@ void BackupMemoryView::Display() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Save image...")) {
-        m_imageToSave = m_bup->ReadAll();
+        {
+            std::unique_lock lock{m_context.locks.backupRAM};
+            m_imageToSave = m_bup->ReadAll();
+        }
 
         // Open file dialog to select backup memory image to save
         FileDialogParams params{};
@@ -257,6 +271,7 @@ bool BackupMemoryView::HasSelection() const {
 
 std::vector<bup::BackupFile> BackupMemoryView::ExportAll() const {
     if (m_bup != nullptr) {
+        std::unique_lock lock{m_context.locks.backupRAM};
         return m_bup->ExportAll();
     } else {
         return {};
@@ -265,6 +280,7 @@ std::vector<bup::BackupFile> BackupMemoryView::ExportAll() const {
 
 std::vector<bup::BackupFile> BackupMemoryView::ExportSelected() const {
     if (m_bup != nullptr) {
+        std::unique_lock lock{m_context.locks.backupRAM};
         std::vector<bup::BackupFile> files{};
         auto bupFiles = m_bup->List();
         for (auto item : m_selected) {
@@ -285,14 +301,17 @@ void BackupMemoryView::ImportAll(std::span<const bup::BackupFile> files) {
     m_importBad.clear();
     m_importFailed.clear();
     m_importOverwrite.clear();
-    for (auto &file : files) {
-        switch (m_bup->Import(file, true)) {
-        case bup::BackupFileImportResult::Imported: break;
-        case bup::BackupFileImportResult::Overwritten: break;
-        case bup::BackupFileImportResult::NoSpace:
-            m_importFailed.push_back({file.header, "Not enough space in memory"});
-            break;
-        default: m_importFailed.push_back({file.header, "Unspecified error"}); break;
+    {
+        std::unique_lock lock{m_context.locks.backupRAM};
+        for (auto &file : files) {
+            switch (m_bup->Import(file, true)) {
+            case bup::BackupFileImportResult::Imported: break;
+            case bup::BackupFileImportResult::Overwritten: break;
+            case bup::BackupFileImportResult::NoSpace:
+                m_importFailed.push_back({file.header, "Not enough space in memory"});
+                break;
+            default: m_importFailed.push_back({file.header, "Unspecified error"}); break;
+            }
         }
     }
     if (!m_importFailed.empty()) {
@@ -602,22 +621,25 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
         }
 
         if (execute) {
-            for (auto &ovFile : m_importOverwrite) {
-                // Skip files not selected to be overwritten
-                if (!ovFile.overwrite) {
-                    continue;
-                }
+            {
+                std::unique_lock lock{m_context.locks.backupRAM};
+                for (auto &ovFile : m_importOverwrite) {
+                    // Skip files not selected to be overwritten
+                    if (!ovFile.overwrite) {
+                        continue;
+                    }
 
-                // TODO: should do this in the emulator thread; but needs two-way communication
-                // - std::future/std::promise?
-                // Attempt to overwrite files
-                switch (m_bup->Import(ovFile.file, true)) {
-                case bup::BackupFileImportResult::Imported: [[fallthrough]];
-                case bup::BackupFileImportResult::Overwritten: m_importSuccess.push_back(ovFile.file.header); break;
-                case bup::BackupFileImportResult::NoSpace:
-                    m_importFailed.push_back({ovFile.file.header, "Not enough space in memory"});
-                    break;
-                default: m_importFailed.push_back({ovFile.file.header, "Unspecified error"}); break;
+                    // TODO: should do this in the emulator thread; but needs two-way communication
+                    // - std::future/std::promise?
+                    // Attempt to overwrite files
+                    switch (m_bup->Import(ovFile.file, true)) {
+                    case bup::BackupFileImportResult::Imported: [[fallthrough]];
+                    case bup::BackupFileImportResult::Overwritten: m_importSuccess.push_back(ovFile.file.header); break;
+                    case bup::BackupFileImportResult::NoSpace:
+                        m_importFailed.push_back({ovFile.file.header, "Not enough space in memory"});
+                        break;
+                    default: m_importFailed.push_back({ovFile.file.header, "Unspecified error"}); break;
+                    }
                 }
             }
             m_importOverwrite.clear();
@@ -826,25 +848,28 @@ void BackupMemoryView::ProcessFileImportError(void *userdata, const char *errorM
 void BackupMemoryView::ImportFiles(std::span<std::filesystem::path> files) {
     bup::BackupFile bupFile{};
     std::error_code error{};
-    for (auto &file : files) {
-        switch (ImportFile(file, bupFile, error)) {
-        case ImportFileResult::Success:
-            // TODO: should do this in the emulator thread; but needs two-way communication
-            // - std::future/std::promise?
-            // Attempt to import file without overwriting
-            switch (m_bup->Import(bupFile, false)) {
-            case bup::BackupFileImportResult::Imported: m_importSuccess.push_back(bupFile.header); break;
-            case bup::BackupFileImportResult::NoSpace:
-                m_importFailed.push_back({bupFile.header, "Not enough space in memory"});
+    {
+        std::unique_lock lock{m_context.locks.backupRAM};
+        for (auto &file : files) {
+            switch (ImportFile(file, bupFile, error)) {
+            case ImportFileResult::Success:
+                // TODO: should do this in the emulator thread; but needs two-way communication
+                // - std::future/std::promise?
+                // Attempt to import file without overwriting
+                switch (m_bup->Import(bupFile, false)) {
+                case bup::BackupFileImportResult::Imported: m_importSuccess.push_back(bupFile.header); break;
+                case bup::BackupFileImportResult::NoSpace:
+                    m_importFailed.push_back({bupFile.header, "Not enough space in memory"});
+                    break;
+                case bup::BackupFileImportResult::FileExists: m_importOverwrite.push_back({bupFile}); break;
+                default: m_importFailed.push_back({bupFile.header, "Unspecified error"}); break;
+                }
                 break;
-            case bup::BackupFileImportResult::FileExists: m_importOverwrite.push_back({bupFile}); break;
-            default: m_importFailed.push_back({bupFile.header, "Unspecified error"}); break;
+            case ImportFileResult::FilesystemError: m_importBad.push_back({file, error.message()}); break;
+            case ImportFileResult::FileTruncated: m_importBad.push_back({file, "Backup file truncated"}); break;
+            case ImportFileResult::BadMagic: m_importBad.push_back({file, "Not a valid backup file"}); break;
+            default: m_importBad.push_back({file, "Unspecified error"}); break;
             }
-            break;
-        case ImportFileResult::FilesystemError: m_importBad.push_back({file, error.message()}); break;
-        case ImportFileResult::FileTruncated: m_importBad.push_back({file, "Backup file truncated"}); break;
-        case ImportFileResult::BadMagic: m_importBad.push_back({file, "Not a valid backup file"}); break;
-        default: m_importBad.push_back({file, "Unspecified error"}); break;
         }
     }
 
