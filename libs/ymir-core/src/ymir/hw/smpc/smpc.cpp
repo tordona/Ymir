@@ -339,18 +339,18 @@ void SMPC::Write(uint32 address, uint8 value) {
                 // Handle INTBACK continue/break requests
                 const bool continueFlag = bit::test<7>(IREG[0]);
                 const bool breakFlag = bit::test<6>(IREG[0]);
-                if (breakFlag) {
-                    devlog::trace<grp::base>("INTBACK break request");
-                    m_intbackInProgress = false;
-                    SR.NPE = 0;
-                    SR.PDL = 0;
-                } else if (continueFlag) {
+                if (continueFlag) {
                     devlog::trace<grp::base>("INTBACK continue request");
                     // HACK: delay by a long while to fix Virtua Racing which expects the status report before VBlank
                     // OUT and the peripheral reports after VBlank OUT
                     SF = true;
                     m_scheduler.ScheduleFromNow(m_commandEvent, 100000);
                     // INTBACK();
+                } else if (breakFlag) {
+                    devlog::trace<grp::base>("INTBACK break request");
+                    m_intbackInProgress = false;
+                    SR.NPE = 0;
+                    SR.PDL = 0;
                 }
             }
         }
