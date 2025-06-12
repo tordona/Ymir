@@ -276,7 +276,8 @@ struct SharedContext {
                         std::string title = disc.header.gameTitle;
                         // Clean up invalid characters
                         std::transform(title.begin(), title.end(), title.begin(), [](char ch) {
-                            if (ch == ':' || ch == '|' || ch == '<' || ch == '>' || ch == '/' || ch == '\\') {
+                            if (ch == ':' || ch == '|' || ch == '<' || ch == '>' || ch == '/' || ch == '\\' ||
+                                ch == '*' || ch == '?') {
                                 return '_';
                             } else {
                                 return ch;
