@@ -300,7 +300,10 @@ void SystemSettingsView::Display() {
 
     if (settings.internalBackupRAMPerGame) {
         const std::filesystem::path basePath = m_context.profile.GetPath(ProfilePath::BackupMemory) / "games";
-        const std::filesystem::path discFilename = m_context.state.loadedDiscImagePath.filename().replace_extension("");
+        std::filesystem::path discFilename = m_context.state.loadedDiscImagePath.filename().replace_extension("");
+        if (discFilename.empty()) {
+            discFilename = "nodisc";
+        }
         const std::filesystem::path intBupPath = basePath / fmt::format("bup-int-{}.bin", discFilename);
         ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
         ImGui::Text("Currently using internal backup memory image from %s", fmt::format("{}", intBupPath).c_str());
