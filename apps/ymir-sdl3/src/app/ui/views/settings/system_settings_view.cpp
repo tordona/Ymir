@@ -248,7 +248,7 @@ void SystemSettingsView::Display() {
     }
     widgets::ExplanationTooltip(
         fmt::format("When enabled, separate internal backup memory images will be created for each game at {}",
-                    m_context.profile.GetPath(ProfilePath::BackupMemory) / "games" / "bup-int-<hash>.bin")
+                    m_context.profile.GetPath(ProfilePath::BackupMemory) / "games" / "bup-int-<filename>.bin")
             .c_str(),
         m_context.displayScale);
 
@@ -299,9 +299,9 @@ void SystemSettingsView::Display() {
     }
 
     if (settings.internalBackupRAMPerGame) {
-        std::unique_lock lock{m_context.locks.disc};
-        auto intBupPath = m_context.profile.GetPath(ProfilePath::BackupMemory) / "games" /
-                          fmt::format("bup-int-{}.bin", ToString(m_context.saturn.GetDiscHash()));
+        const std::filesystem::path basePath = m_context.profile.GetPath(ProfilePath::BackupMemory) / "games";
+        const std::filesystem::path discFilename = m_context.state.loadedDiscImagePath.filename().replace_extension("");
+        const std::filesystem::path intBupPath = basePath / fmt::format("bup-int-{}.bin", discFilename);
         ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x);
         ImGui::Text("Currently using internal backup memory image from %s", fmt::format("{}", intBupPath).c_str());
         ImGui::PopTextWrapPos();

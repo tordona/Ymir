@@ -442,8 +442,9 @@ EmuEvent LoadInternalBackupMemory() {
         std::filesystem::path path;
         if (ctx.settings.system.internalBackupRAMPerGame) {
             const std::filesystem::path basePath = ctx.profile.GetPath(ProfilePath::BackupMemory) / "games";
+            const std::filesystem::path discFilename = ctx.state.loadedDiscImagePath.filename().replace_extension("");
             std::filesystem::create_directories(basePath);
-            path = basePath / fmt::format("bup-int-{}.bin", ToString(ctx.saturn.GetDiscHash()));
+            path = basePath / fmt::format("bup-int-{}.bin", discFilename);
         } else {
             path = ctx.settings.system.internalBackupRAMImagePath;
             if (path.empty()) {
