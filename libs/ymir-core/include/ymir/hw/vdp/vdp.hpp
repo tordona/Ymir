@@ -1183,9 +1183,10 @@ private:
 
     // Fetches a two-word character from VRAM.
     //
+    // bgParams contains the parameters for the BG to draw.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
-    Character VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex);
+    Character VDP2FetchTwoWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
     // Fetches a one-word character from VRAM.
     //

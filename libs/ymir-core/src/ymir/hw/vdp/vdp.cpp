@@ -2440,12 +2440,13 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         // Use per-dot coefficient if reading from CRAM or if any of the VRAM banks was designated as coefficient data
         bool perDotCoeff = regs.vramControl.colorRAMCoeffTableEnable;
         if (!perDotCoeff) {
-            perDotCoeff = regs.vramControl.rotDataBankSelA0 == 1 || regs.vramControl.rotDataBankSelB0 == 1;
+            perDotCoeff = regs.vramControl.rotDataBankSelA0 == RotDataBankSel::Coefficients ||
+                          regs.vramControl.rotDataBankSelB0 == RotDataBankSel::Coefficients;
             if (regs.vramControl.partitionVRAMA) {
-                perDotCoeff |= regs.vramControl.rotDataBankSelA1 == 1;
+                perDotCoeff |= regs.vramControl.rotDataBankSelA1 == RotDataBankSel::Coefficients;
             }
             if (regs.vramControl.partitionVRAMB) {
-                perDotCoeff |= regs.vramControl.rotDataBankSelB1 == 1;
+                perDotCoeff |= regs.vramControl.rotDataBankSelB1 == RotDataBankSel::Coefficients;
             }
         }
 
@@ -2752,12 +2753,79 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
 FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
     VDP2Regs &regs2 = VDP2GetRegs();
 
-    if (!regs2.bgEnabled[5]) {
-        // Translate VRAM access cycles for vertical cell scroll data into increment and offset for NBG0 and NBG1.
-        //
-        // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
-        // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
+    // Translate VRAM access cycles and rotation data bank selectors into read "permissions" for pattern name tables and
+    // character pattern tables in each VRAM bank.
+    const bool rbg0Enabled = regs2.bgEnabled[4];
+    const bool rbg1Enabled = regs2.bgEnabled[5];
 
+    for (uint32 bank = 0; bank < 4; ++bank) {
+        const RotDataBankSel rotDataBankSel = regs2.vramControl.GetRotDataBankSel(bank);
+
+        // RBG0
+        if (rbg0Enabled && (!rbg1Enabled || bank < 2)) {
+            regs2.bgParams[0].patNameAccess[bank] = rotDataBankSel == RotDataBankSel::PatternName;
+            regs2.bgParams[0].charPatAccess[bank] = rotDataBankSel == RotDataBankSel::Character;
+        } else {
+            regs2.bgParams[0].patNameAccess[bank] = false;
+            regs2.bgParams[0].charPatAccess[bank] = false;
+        }
+
+        // RBG1
+        if (rbg1Enabled) {
+            regs2.bgParams[1].patNameAccess[bank] = bank == 3;
+            regs2.bgParams[1].charPatAccess[bank] = bank == 2;
+        } else {
+            regs2.bgParams[1].patNameAccess[bank] = false;
+            regs2.bgParams[1].charPatAccess[bank] = false;
+        }
+
+        // NBG0-3
+        for (uint32 nbg = 0; nbg < 4; ++nbg) {
+            auto &bgParams = regs2.bgParams[nbg + 1];
+            bgParams.patNameAccess[bank] = false;
+            bgParams.charPatAccess[bank] = false;
+
+            if (!regs2.bgEnabled[nbg]) {
+                continue;
+            }
+            if (rbg1Enabled && bank >= 2u) {
+                continue;
+            }
+            if (rbg0Enabled && rotDataBankSel != RotDataBankSel::Unused) {
+                continue;
+            }
+
+            const uint32 max = m_HRes >= 640 ? 4 : 8;
+            for (uint32 index = 0; index < max; ++index) {
+                const auto timing = regs2.cyclePatterns.timings[bank][index];
+                if (timing == CyclePatterns::PatNameNBG0 + nbg) {
+                    bgParams.patNameAccess[bank] = true;
+                } else if (timing == CyclePatterns::CharPatNBG0 + nbg) {
+                    bgParams.charPatAccess[bank] = true;
+                }
+            }
+        }
+    }
+
+    // Combine unpartitioned parameters
+    if (!regs2.vramControl.partitionVRAMA) {
+        for (uint32 i = 0; i < 6; i++) {
+            regs2.bgParams[i].charPatAccess[1] = regs2.bgParams[i].charPatAccess[0];
+            regs2.bgParams[i].patNameAccess[1] = regs2.bgParams[i].patNameAccess[0];
+        }
+    }
+    if (!regs2.vramControl.partitionVRAMB) {
+        for (uint32 i = 0; i < 6; i++) {
+            regs2.bgParams[i].charPatAccess[3] = regs2.bgParams[i].charPatAccess[2];
+            regs2.bgParams[i].patNameAccess[3] = regs2.bgParams[i].patNameAccess[2];
+        }
+    }
+
+    // Translate VRAM access cycles for vertical cell scroll data into increment and offset for NBG0 and NBG1.
+    //
+    // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
+    // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
+    if (!rbg1Enabled) {
         if (regs2.cyclePatterns.dirty) [[unlikely]] {
             regs2.cyclePatterns.dirty = false;
 
@@ -4589,22 +4657,22 @@ FORCE_INLINE bool VDP::VDP2CanFetchCoefficient(const RotationParams &params, uin
 
     switch (bank) {
     case 0: // VRAM-A0 or VRAM-A
-        if (regs.vramControl.rotDataBankSelA0 != 1) {
+        if (regs.vramControl.rotDataBankSelA0 != RotDataBankSel::Coefficients) {
             return false;
         }
         break;
     case 1: // VRAM-A1
-        if (regs.vramControl.rotDataBankSelA1 != 1) {
+        if (regs.vramControl.rotDataBankSelA1 != RotDataBankSel::Coefficients) {
             return false;
         }
         break;
     case 2: // VRAM-B0 or VRAM-B
-        if (regs.vramControl.rotDataBankSelB0 != 1) {
+        if (regs.vramControl.rotDataBankSelB0 != RotDataBankSel::Coefficients) {
             return false;
         }
         break;
     case 3: // VRAM-B1
-        if (regs.vramControl.rotDataBankSelB1 != 1) {
+        if (regs.vramControl.rotDataBankSelB1 != RotDataBankSel::Coefficients) {
             return false;
         }
         break;
@@ -4831,16 +4899,18 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     const uint32 pageAddress = pageBaseAddress + pageOffset;
     constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
     const Character ch =
-        twoWordChar ? VDP2FetchTwoWordCharacter(pageAddress, charIndex)
+        twoWordChar ? VDP2FetchTwoWordCharacter(bgParams, pageAddress, charIndex)
                     : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
 
     // Fetch pixel using character data
     return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, cellIndex);
 }
 
-FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(uint32 pageBaseAddress, uint32 charIndex) {
+FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress,
+                                                           uint32 charIndex) {
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint32);
-    const uint32 charData = VDP2ReadRendererVRAM<uint32>(charAddress);
+    const uint32 charBank = (charAddress >> 17u) & 3u;
+    const uint32 charData = bgParams.patNameAccess[charBank] ? VDP2ReadRendererVRAM<uint32>(charAddress) : 0x00000000;
 
     Character ch{};
     ch.charNum = bit::extract<0, 14>(charData);
@@ -4871,7 +4941,8 @@ FORCE_INLINE VDP::Character VDP::VDP2FetchOneWordCharacter(const BGParams &bgPar
     //  T   T   T  |--| PN 6-4 |       character number 13-2      |    |PR|CC|--------|cn|-----|CN1-0|   cn=CN14
 
     const uint32 charAddress = pageBaseAddress + charIndex * sizeof(uint16);
-    const uint16 charData = VDP2ReadRendererVRAM<uint16>(charAddress);
+    const uint32 charBank = (charAddress >> 17u) & 3u;
+    const uint16 charData = bgParams.patNameAccess[charBank] ? VDP2ReadRendererVRAM<uint16>(charAddress) : 0x0000;
 
     // Character number bit range from the 1-word character pattern data (charData)
     static constexpr uint32 baseCharNumStart = 0;
@@ -4961,7 +5032,10 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     uint8 colorData;
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = cellAddress + (dotOffset >> 1u);
-        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> ((~dotX & 1) * 4)) & 0xF;
+        const uint32 dotBank = (dotAddress >> 17u) & 3u;
+        const uint8 dotData = bgParams.charPatAccess[dotBank]
+                                  ? ((VDP2ReadRendererVRAM<uint8>(dotAddress) >> ((~dotX & 1) * 4)) & 0xF)
+                                  : 0x0;
         const uint32 colorIndex = (ch.palNum << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -4970,7 +5044,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
 
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = cellAddress + dotOffset;
-        const uint8 dotData = VDP2ReadRendererVRAM<uint8>(dotAddress);
+        const uint32 dotBank = (dotAddress >> 17u) & 3u;
+        const uint8 dotData = bgParams.charPatAccess[dotBank] ? VDP2ReadRendererVRAM<uint8>(dotAddress) : 0x00;
         const uint32 colorIndex = ((ch.palNum & 0x70) << 4u) | dotData;
         colorData = bit::extract<1, 3>(dotData);
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -4979,7 +5054,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
 
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
+        const uint32 dotBank = (dotAddress >> 17u) & 3u;
+        const uint16 dotData = bgParams.charPatAccess[dotBank] ? VDP2ReadRendererVRAM<uint16>(dotAddress) : 0x0000;
         const uint32 colorIndex = dotData & 0x7FF;
         colorData = bit::extract<1, 3>(dotData);
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
@@ -4988,14 +5064,16 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
 
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
+        const uint32 dotBank = (dotAddress >> 17u) & 3u;
+        const uint16 dotData = bgParams.charPatAccess[dotBank] ? VDP2ReadRendererVRAM<uint16>(dotAddress) : 0x0000;
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);
 
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = cellAddress + dotOffset * sizeof(uint32);
-        const uint32 dotData = VDP2ReadRendererVRAM<uint32>(dotAddress);
+        const uint32 dotBank = (dotAddress >> 17u) & 3u;
+        const uint32 dotData = bgParams.charPatAccess[dotBank] ? VDP2ReadRendererVRAM<uint32>(dotAddress) : 0x00000000;
         pixel.color.u32 = dotData;
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);

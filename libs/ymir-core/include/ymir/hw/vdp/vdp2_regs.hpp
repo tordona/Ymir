@@ -486,10 +486,10 @@ struct VDP2Regs {
 
     FORCE_INLINE uint16 ReadRAMCTL() const {
         uint16 value = 0;
-        bit::deposit_into<0, 1>(value, vramControl.rotDataBankSelA0);
-        bit::deposit_into<2, 3>(value, vramControl.rotDataBankSelA1);
-        bit::deposit_into<4, 5>(value, vramControl.rotDataBankSelB0);
-        bit::deposit_into<6, 7>(value, vramControl.rotDataBankSelB1);
+        bit::deposit_into<0, 1>(value, static_cast<uint8>(vramControl.rotDataBankSelA0));
+        bit::deposit_into<2, 3>(value, static_cast<uint8>(vramControl.rotDataBankSelA1));
+        bit::deposit_into<4, 5>(value, static_cast<uint8>(vramControl.rotDataBankSelB0));
+        bit::deposit_into<6, 7>(value, static_cast<uint8>(vramControl.rotDataBankSelB1));
         bit::deposit_into<8>(value, vramControl.partitionVRAMA);
         bit::deposit_into<9>(value, vramControl.partitionVRAMB);
         bit::deposit_into<12, 13>(value, vramControl.colorRAMMode);
@@ -498,10 +498,10 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteRAMCTL(uint16 value) {
-        vramControl.rotDataBankSelA0 = bit::extract<0, 1>(value);
-        vramControl.rotDataBankSelA1 = bit::extract<2, 3>(value);
-        vramControl.rotDataBankSelB0 = bit::extract<4, 5>(value);
-        vramControl.rotDataBankSelB1 = bit::extract<6, 7>(value);
+        vramControl.rotDataBankSelA0 = static_cast<RotDataBankSel>(bit::extract<0, 1>(value));
+        vramControl.rotDataBankSelA1 = static_cast<RotDataBankSel>(bit::extract<2, 3>(value));
+        vramControl.rotDataBankSelB0 = static_cast<RotDataBankSel>(bit::extract<4, 5>(value));
+        vramControl.rotDataBankSelB1 = static_cast<RotDataBankSel>(bit::extract<6, 7>(value));
         vramControl.partitionVRAMA = bit::test<8>(value);
         vramControl.partitionVRAMB = bit::test<9>(value);
         vramControl.colorRAMMode = bit::extract<12, 13>(value);

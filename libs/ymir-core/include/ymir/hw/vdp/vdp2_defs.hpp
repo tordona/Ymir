@@ -9,6 +9,7 @@
 
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/data_ops.hpp>
+#include <ymir/util/unreachable.hpp>
 
 #include <array>
 
@@ -281,6 +282,14 @@ struct alignas(128) BGParams {
     // Whether characters use one (false) or two (true) words.
     // Derived from PNCNn/PNCR.xxPNB
     bool twoWordChar;
+
+    // Whether pattern name data is accessible for each VRAM bank (A0, A1, B0, B1).
+    // Derived from CYCxn, RAMCTL and BGON (for RBG0/1 restrictions to NBGs)
+    std::array<bool, 4> patNameAccess;
+
+    // Whether character pattern data is accessible for each VRAM bank (A0, A1, B0, B1).
+    // Derived from CYCxn, RAMCTL and BGON (for RBG0/1 restrictions to NBGs)
+    std::array<bool, 4> charPatAccess;
 
     // Whether to use the vertical cell scroll table in VRAM.
     // Only valid for NBG0 and NBG1.
@@ -802,20 +811,33 @@ struct WindowParams {
     uint32 lineWindowTableAddress;
 };
 
+enum class RotDataBankSel : uint8 { Unused, Coefficients, PatternName, Character };
+
 struct VRAMControl {
     VRAMControl() {
         Reset();
     }
 
     void Reset() {
-        rotDataBankSelA0 = 0;
-        rotDataBankSelA1 = 0;
-        rotDataBankSelB0 = 0;
-        rotDataBankSelB1 = 0;
+        rotDataBankSelA0 = RotDataBankSel::Unused;
+        rotDataBankSelA1 = RotDataBankSel::Unused;
+        rotDataBankSelB0 = RotDataBankSel::Unused;
+        rotDataBankSelB1 = RotDataBankSel::Unused;
         partitionVRAMA = false;
         partitionVRAMB = false;
         colorRAMMode = 0;
         colorRAMCoeffTableEnable = false;
+    }
+
+    RotDataBankSel GetRotDataBankSel(uint32 bank) const {
+        assert(bank < 4);
+        switch (bank) {
+        case 0: return rotDataBankSelA0;
+        case 1: return rotDataBankSelA1;
+        case 2: return rotDataBankSelB0;
+        case 3: return rotDataBankSelB1;
+        default: util::unreachable();
+        }
     }
 
     // Select VRAM bank usage for rotation parameters:
@@ -824,10 +846,10 @@ struct VRAMControl {
     //   2 = bank used for pattern name table
     //   3 = bank used for character/bitmap pattern table
     // Derived from RDBS(A-B)(0-1)(1-0)
-    uint8 rotDataBankSelA0; // Rotation data bank select for VRAM-A0 or VRAM-A
-    uint8 rotDataBankSelA1; // Rotation data bank select for VRAM-A1
-    uint8 rotDataBankSelB0; // Rotation data bank select for VRAM-B0 or VRAM-B
-    uint8 rotDataBankSelB1; // Rotation data bank select for VRAM-B1
+    RotDataBankSel rotDataBankSelA0; // Rotation data bank select for VRAM-A0 or VRAM-A
+    RotDataBankSel rotDataBankSelA1; // Rotation data bank select for VRAM-A1
+    RotDataBankSel rotDataBankSelB0; // Rotation data bank select for VRAM-B0 or VRAM-B
+    RotDataBankSel rotDataBankSelB1; // Rotation data bank select for VRAM-B1
 
     // If set, partition VRAM A into two blocks: A0 and A1.
     // Derived from RAMCTL.VRAMD

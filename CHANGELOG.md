@@ -29,6 +29,7 @@
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 - VDP1: Significantly slow down command execution when running the VDP1 renderer on the emulator thread. Fixes Dragon Ball Z - Shinbutouden freeze after SEGA logo. (#233)
 - VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
+- VDP2: Honor access cycles and VRAM bank allocations to restrict pattern name and character pattern accesses. Fixes garbage graphics in Panzer Dragoon Saga and Sonic 3D Blast. (#213)
 - VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game.
 
 
