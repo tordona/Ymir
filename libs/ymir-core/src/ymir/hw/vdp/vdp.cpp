@@ -305,7 +305,7 @@ void VDP::MapMemory(sys::Bus &bus) {
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
     if (!m_effectiveRenderVDP1InVDP2Thread) {
-        // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
+        // HACK: slow down VDP1 commands to avoid freezes on Virtua Racing and Dragon Ball Z
         // TODO: use this counter in the threaded renderer
         // TODO: proper cycle counting
         static constexpr uint64 kCyclesPerCommand = 180;
