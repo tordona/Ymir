@@ -308,7 +308,7 @@ void VDP::Advance(uint64 cycles) {
         // HACK: slow down VDP1 commands to avoid FMV freezes on Virtua Racing
         // TODO: use this counter in the threaded renderer
         // TODO: proper cycle counting
-        static constexpr uint64 kCyclesPerCommand = 12;
+        static constexpr uint64 kCyclesPerCommand = 180;
 
         m_VDP1RenderContext.cycleCount += cycles;
         const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
