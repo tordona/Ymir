@@ -11,10 +11,10 @@ void ControlPad::Read(std::span<uint8> out) {
     assert(out.size() == 2);
 
     // [0] 7-0 = left, right, down, up, start, A, C, B
-    // [1] 7-3 = R, X, Y, Z, L; 2-0 = fixed 0b111
+    // [1] 7-3 = R, X, Y, Z, L; 2-0 = fixed 0b100
     const uint16 btnValue = static_cast<uint16>(m_report.buttons);
     out[0] = bit::extract<8, 15>(btnValue);
-    out[1] = bit::extract<0, 7>(btnValue); // bottom three bits set to 0b111 by UpdateInputs()
+    out[1] = bit::extract<0, 7>(btnValue); // bottom three bits set to 0b100 by UpdateInputs()
 }
 
 void ControlPad::UpdateInputs() {
@@ -22,7 +22,7 @@ void ControlPad::UpdateInputs() {
     m_cbPeripheralReport(report);
     m_report = report.report.controlPad;
     m_report.buttons &= Button::All;
-    m_report.buttons |= static_cast<Button>(0b111);
+    m_report.buttons |= static_cast<Button>(0b100);
 }
 
 uint8 ControlPad::GetReportLength() const {
@@ -42,7 +42,7 @@ uint8 ControlPad::WritePDR(uint8 ddr, uint8 value) {
         break;
     case 0x60: // TH/TR control mode
         switch (value & 0x60) {
-        case 0x60: // 1st data: L 1 1 1
+        case 0x60: // 1st data: L 1 0 0
             return 0x70 | bit::extract<0, 3>(btnValue);
         case 0x20: // 2nd data: right left down up
             return 0x30 | bit::extract<12, 15>(btnValue);

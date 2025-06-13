@@ -23,7 +23,9 @@
 - SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 - SMPC: Cancel scheduled command processing event when resetting SMPC. Fixes a long hang after hard resetting in some cases.
 - SMPC: Eliminate spurious INTBACK interrupts.
+- SMPC: Change fixed bits from 111 to 100 in TH/TR control mode responses for the first data byte of the Control Pad and 3D Control Pad peripherals. Fixes Golden Axe booting back to BIOS. (#231)
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
+- SMPC: Prioritize INTBACK continue requests over break requests.
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 - VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
 - VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game.
