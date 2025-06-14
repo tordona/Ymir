@@ -2809,13 +2809,13 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
 
     // Combine unpartitioned parameters
     if (!regs2.vramControl.partitionVRAMA) {
-        for (uint32 i = 0; i < 6; i++) {
+        for (uint32 i = 0; i < 5; i++) {
             regs2.bgParams[i].charPatAccess[1] = regs2.bgParams[i].charPatAccess[0];
             regs2.bgParams[i].patNameAccess[1] = regs2.bgParams[i].patNameAccess[0];
         }
     }
     if (!regs2.vramControl.partitionVRAMB) {
-        for (uint32 i = 0; i < 6; i++) {
+        for (uint32 i = 0; i < 5; i++) {
             regs2.bgParams[i].charPatAccess[3] = regs2.bgParams[i].charPatAccess[2];
             regs2.bgParams[i].patNameAccess[3] = regs2.bgParams[i].patNameAccess[2];
         }
