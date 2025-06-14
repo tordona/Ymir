@@ -141,7 +141,8 @@ private:
     const BackupFileParams *FindFile(std::string_view filename) const;
 
     // Reads in the backup file header from the given block.
-    void ReadHeader(uint16 blockIndex, BackupFileHeader &header) const;
+    // Returns true if the header is valid.
+    [[nodiscard]] bool ReadHeader(uint16 blockIndex, BackupFileHeader &header) const;
 
     // Reads the block list from the given block.
     // The list contains `blockIndex` as the first entry.

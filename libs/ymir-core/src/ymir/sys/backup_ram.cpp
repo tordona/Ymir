@@ -508,11 +508,25 @@ void BackupMemory::RebuildFileList(bool force) {
         if ((DataReadByte(offset) & 0x80) == 0x00) {
             continue;
         }
+        if (DataReadByte(offset + 0x01) != 0x00) {
+            continue;
+        }
+        if (DataReadByte(offset + 0x02) != 0x00) {
+            continue;
+        }
+        if (DataReadByte(offset + 0x03) != 0x00) {
+            continue;
+        }
 
         auto &params = m_fileParams.emplace_back();
-        params.blocks = ReadBlockList(i);
-        ReadHeader(i, params.info.header);
+        if (!ReadHeader(i, params.info.header)) {
+            continue;
+        }
         params.info.size = DataReadLong(offset + 0x1E);
+        if (params.info.size >= Size() - m_blockSize * 2) {
+            continue;
+        }
+        params.blocks = ReadBlockList(i);
         params.info.numBlocks = params.blocks.size();
 
         // Mark blocks as used
@@ -569,7 +583,7 @@ const BackupMemory::BackupFileParams *BackupMemory::FindFile(std::string_view fi
     return const_cast<BackupMemory *>(this)->FindFile(filename);
 }
 
-void BackupMemory::ReadHeader(uint16 blockIndex, BackupFileHeader &header) const {
+bool BackupMemory::ReadHeader(uint16 blockIndex, BackupFileHeader &header) const {
     const uint32 offset = blockIndex * m_blockSize;
     header.filename.resize(11);
     DataReadString(offset + 0x04, header.filename.data(), 11);
@@ -577,6 +591,7 @@ void BackupMemory::ReadHeader(uint16 blockIndex, BackupFileHeader &header) const
     DataReadString(offset + 0x10, header.comment.data(), 10);
     header.language = static_cast<Language>(DataReadByte(offset + 0x0F));
     header.date = DataReadLong(offset + 0x1A);
+    return static_cast<uint32>(header.language) <= static_cast<uint32>(Language::Italian);
 }
 
 std::vector<uint16> BackupMemory::ReadBlockList(uint16 blockIndex) const {
