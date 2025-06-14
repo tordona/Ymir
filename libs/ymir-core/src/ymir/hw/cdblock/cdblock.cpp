@@ -652,13 +652,14 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
 
     if (isStartFAD) {
         // Frame address range
+        const bool prevEnded = (m_status.statusCode & 0xF) == kStatusCodePause && m_status.frameAddress > m_playEndPos;
         m_playStartPos = startParam & 0x7FFFFF;
         m_playEndPos = m_playStartPos + (endParam & 0x7FFFFF) - 1;
 
         devlog::debug<grp::play_init>("FAD range {:06X} to {:06X}", m_playStartPos, m_playEndPos);
 
         uint32 frameAddress = m_status.frameAddress;
-        if (resetPos || frameAddress < m_playStartPos || frameAddress > m_playEndPos) {
+        if (prevEnded || resetPos || frameAddress < m_playStartPos || frameAddress > m_playEndPos) {
             frameAddress = m_playStartPos;
         }
 

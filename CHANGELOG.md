@@ -18,6 +18,7 @@
 
 - App: Fix rare crash when loading a backup memory image in the Backup Memory Manager.
 - App: Prevent loading internal backup memory image as backup RAM cartridge image.
+- CD Block: Start new playbacks from starting FAD when previous playback has ended. Fixes WipEout freeze after SEGA logo.
 - Media: Fix pregap handling in single BIN images.
 - SCU, SH-2, SMPC, SCSP, VDP: Numerous fixes to interrupt handling (thanks to @celeriyacon). Fixes intermittent Rayman inputs and some audio glitches.
 - SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
@@ -30,7 +31,7 @@
 - VDP1: Significantly slow down command execution when running the VDP1 renderer on the emulator thread. Fixes Dragon Ball Z - Shinbutouden freeze after SEGA logo. (#233)
 - VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
 - VDP2: Honor access cycles and VRAM bank allocations to restrict pattern name and character pattern accesses. Fixes garbage graphics in Panzer Dragoon Saga and Sonic 3D Blast. (#213)
-- VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game and King of Fighters '95 not booting.
+- VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game and King of Fighters '95 not booting. (#75)
 
 
 ## Version 0.1.4+1
