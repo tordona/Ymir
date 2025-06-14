@@ -4897,7 +4897,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
 
     // Fetch character
     const uint32 pageAddress = pageBaseAddress + pageOffset;
-    constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
+    static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
     const Character ch =
         twoWordChar ? VDP2FetchTwoWordCharacter(bgParams, pageAddress, charIndex)
                     : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
