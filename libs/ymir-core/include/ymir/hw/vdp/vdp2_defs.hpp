@@ -153,6 +153,10 @@ struct alignas(128) BGParams {
         extChar = false;
         twoWordChar = false;
 
+        patNameAccess.fill(false);
+        charPatAccess.fill(false);
+        charPatDelay = false;
+
         verticalCellScrollEnable = false;
         lineScrollXEnable = false;
         lineScrollYEnable = false;
@@ -290,6 +294,11 @@ struct alignas(128) BGParams {
     // Whether character pattern data is accessible for each VRAM bank (A0, A1, B0, B1).
     // Derived from CYCxn, RAMCTL and BGON (for RBG0/1 restrictions to NBGs)
     std::array<bool, 4> charPatAccess;
+
+    // Whether accesses to character pattern data for this background is delayed due to illegal VRAM access patterns.
+    // Only valid for NBG2 and NBG3.
+    // Derived from CYCxn, RAMCTL, ZMCTL and CHCTLA/CHCTLB.xxCHSZ
+    bool charPatDelay;
 
     // Whether to use the vertical cell scroll table in VRAM.
     // Only valid for NBG0 and NBG1.
@@ -1011,7 +1020,6 @@ struct CyclePatterns {
         for (auto &bank : timings) {
             bank.fill(Type::PatNameNBG0);
         }
-        dirty = true;
     }
 
     // [0] VRAM bank A0 / A  (00000..1FFFF / 00000..3FFFF)
@@ -1020,8 +1028,6 @@ struct CyclePatterns {
     // [3] VRAM bank B1      (60000..7FFFF)
     // [n][0..7] Access type per timing slot (T0-T7)
     alignas(16) std::array<std::array<Type, 8>, 4> timings;
-
-    bool dirty;
 };
 
 // 180098   ZMCTL   Reduction Enable

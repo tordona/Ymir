@@ -419,7 +419,7 @@ struct VDPState {
         regs2.WriteCOBG(state.regs2.COBG);
         regs2.WriteCOBB(state.regs2.COBB);
 
-        regs2.cyclePatterns.dirty = true;
+        regs2.accessPatternsDirty = true;
 
         switch (state.HPhase) {
         default:

@@ -827,6 +827,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
 
             VDP2InitFrame();
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2BeginFrame());
         } else if (m_state.regs2.VCNT == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
@@ -1052,6 +1053,7 @@ void VDP::VDPRenderThread() {
                     VDP1ProcessCommand();
                 }
                 break;*/
+            case EvtType::VDP2BeginFrame: VDP2CalcAccessPatterns(rctx.vdp2.regs); break;
             case EvtType::VDP2DrawLine:
                 m_deinterlaceRender ? VDP2DrawLine<true>(event.drawLine.vcnt)
                                     : VDP2DrawLine<false>(event.drawLine.vcnt);
@@ -2256,6 +2258,7 @@ void VDP::VDP2InitFrame() {
         VDP2InitNormalBG<2>();
         VDP2InitNormalBG<3>();
     }
+    VDP2CalcAccessPatterns(m_state.regs2);
 }
 
 template <uint32 index>
@@ -2750,8 +2753,113 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
     }
 }
 
-FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
-    VDP2Regs &regs2 = VDP2GetRegs();
+/*FORCE_INLINE*/ void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
+    if (!regs2.accessPatternsDirty) [[likely]] {
+        return;
+    }
+    regs2.accessPatternsDirty = false;
+
+    // Some games set up illegal access patterns that cause NBG2/NBG3 character pattern reads to be delayed, shifting
+    // all graphics on those backgrounds one tile to the right.
+    const bool hires = (regs2.TVMD.HRESOn & 6) != 0;
+
+    // Build access pattern masks for NBG0-3 PNs and CPs.
+    // Bits 0-7 correspond to T0-T7.
+    std::array<uint8, 4> pn = {0, 0, 0, 0}; // pattern name access masks
+    std::array<uint8, 4> cp = {0, 0, 0, 0}; // character pattern access masks
+    for (const auto &bank : regs2.cyclePatterns.timings) {
+        for (uint8 i = 0; auto timing : bank) {
+            switch (timing) {
+            case CyclePatterns::PatNameNBG0: [[fallthrough]];
+            case CyclePatterns::PatNameNBG1: [[fallthrough]];
+            case CyclePatterns::PatNameNBG2: [[fallthrough]];
+            case CyclePatterns::PatNameNBG3: //
+            {
+                const uint8 index = static_cast<uint8>(timing) - static_cast<uint8>(CyclePatterns::PatNameNBG0);
+                pn[index] |= 1u << i;
+                break;
+            }
+
+            case CyclePatterns::CharPatNBG0: [[fallthrough]];
+            case CyclePatterns::CharPatNBG1: [[fallthrough]];
+            case CyclePatterns::CharPatNBG2: [[fallthrough]];
+            case CyclePatterns::CharPatNBG3: //
+            {
+                const uint8 index = static_cast<uint8>(timing) - static_cast<uint8>(CyclePatterns::CharPatNBG0);
+                cp[index] |= 1u << i;
+                break;
+            }
+
+            default: break;
+            }
+
+            // Stop at T3 if in hi-res mode
+            if (hires && i == 3) {
+                break;
+            }
+
+            ++i;
+        }
+    }
+
+    // Apply delays to the NBGs
+    for (uint32 i = 0; i < 4; ++i) {
+        auto &bgParams = regs2.bgParams[i + 1];
+        bgParams.charPatDelay = false;
+        const uint8 bgCP = cp[i];
+        const uint8 bgPN = pn[i];
+
+        // Skip bitmap NBGs
+        if (bgParams.bitmap) {
+            continue;
+        }
+
+        // Skip NBGs without any assigned accesses
+        if (bgPN == 0 || bgCP == 0) {
+            continue;
+        }
+
+        // Skip NBG0 and NBG1 if the pattern name access happens on T0
+        if (i < 2 && bit::test<0>(bgPN)) {
+            continue;
+        }
+
+        // Apply the delay
+        if (bgPN == 0) {
+            bgParams.charPatDelay = true;
+        } else if (hires) {
+            // Valid character pattern access masks per timing for high resolution modes
+            static constexpr uint8 kPatterns[2][4] = {
+                // 1x1 character patterns
+                // T0      T1      T2      T3
+                {0b0111, 0b1110, 0b1101, 0b1011},
+
+                // 2x2 character patterns
+                // T0      T1      T2      T3
+                {0b0111, 0b1110, 0b1100, 0b1000},
+            };
+
+            for (uint8 pnIndex = 0; pnIndex < 4; ++pnIndex) {
+                if ((bgPN & (1u << pnIndex)) != 0 && ((bgCP & kPatterns[bgParams.cellSizeShift][pnIndex]) != 0)) {
+                    bgParams.charPatDelay = bgCP < bgPN;
+                    break;
+                }
+            }
+        } else {
+            // Valid character pattern access masks per timing for normal resolution modes
+            static constexpr uint8 kPatterns[8] = {
+                //   T0          T1          T2          T3          T4          T5          T6          T7
+                0b11110111, 0b11101111, 0b11001111, 0b10001111, 0b00001111, 0b00001110, 0b00001100, 0b00001000,
+            };
+
+            for (uint8 pnIndex = 0; pnIndex < 8; ++pnIndex) {
+                if ((bgPN & (1u << pnIndex)) != 0 && ((bgCP & kPatterns[pnIndex]) == 0)) {
+                    bgParams.charPatDelay = true;
+                    break;
+                }
+            }
+        }
+    }
 
     // Translate VRAM access cycles and rotation data bank selectors into read "permissions" for pattern name tables and
     // character pattern tables in each VRAM bank.
@@ -2785,17 +2893,59 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
             bgParams.patNameAccess[bank] = false;
             bgParams.charPatAccess[bank] = false;
 
+            // Skip disabled NBGs
             if (!regs2.bgEnabled[nbg]) {
                 continue;
             }
+            // Skip NBGs 2 and 3 if RBG1 is enabled
             if (rbg1Enabled && bank >= 2u) {
                 continue;
             }
+            // Skip NBGs if RBG0 is enabled and the current bank is assigned to it
             if (rbg0Enabled && rotDataBankSel != RotDataBankSel::Unused) {
                 continue;
             }
 
-            const uint32 max = m_HRes >= 640 ? 4 : 8;
+            // Determine how many character pattern accesses are needed for this NBG
+
+            // Start with a base count of 1
+            uint8 expectedCount = 1;
+
+            // Apply ZMCTL modifiers
+            if ((nbg == 0 && regs2.ZMCTL.N0ZMQT) || (nbg == 1 && regs2.ZMCTL.N1ZMQT)) {
+                expectedCount *= 4;
+            } else if ((nbg == 0 && regs2.ZMCTL.N0ZMHF) || (nbg == 1 && regs2.ZMCTL.N1ZMHF)) {
+                expectedCount *= 2;
+            }
+
+            // Apply color format modifiers
+            switch (bgParams.colorFormat) {
+            case ColorFormat::Palette16: break;
+            case ColorFormat::Palette256: expectedCount *= 2; break;
+            case ColorFormat::Palette2048: expectedCount *= 4; break;
+            case ColorFormat::RGB555: expectedCount *= 4; break;
+            case ColorFormat::RGB888: expectedCount *= 8; break;
+            }
+
+            // Check for maximum 8 cycles on normal resolution, 4 cycles on high resolution/exclusive monitor modes
+            const uint32 max = hires ? 4 : 8;
+            if (expectedCount > max) [[unlikely]] {
+                continue;
+            }
+
+            // Check that the background has the required number of accesses
+            const uint8 numCPs = std::popcount(cp[nbg]);
+            if (numCPs < expectedCount) {
+                continue;
+            }
+            if constexpr (devlog::trace_enabled<grp::vdp2_regs>) {
+                if (numCPs > expectedCount) {
+                    devlog::trace<grp::vdp2_regs>("NBG{} has more CP accesses than needed ({} > {})", nbg, numCPs,
+                                                  expectedCount);
+                }
+            }
+
+            // Enable pattern name and character pattern accesses for the bank
             for (uint32 index = 0; index < max; ++index) {
                 const auto timing = regs2.cyclePatterns.timings[bank][index];
                 if (timing == CyclePatterns::PatNameNBG0 + nbg) {
@@ -2825,30 +2975,25 @@ FORCE_INLINE void VDP::VDP2CalcAccessCycles() {
     //
     // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
     // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
-    if (!rbg1Enabled) {
-        if (regs2.cyclePatterns.dirty) [[unlikely]] {
-            regs2.cyclePatterns.dirty = false;
 
-            m_vertCellScrollInc = 0;
-            uint32 vcellAccessOffset = 0;
+    m_vertCellScrollInc = 0;
+    uint32 vcellAccessOffset = 0;
 
-            // Update cycle accesses
-            for (uint32 bank = 0; bank < 4; ++bank) {
-                for (auto access : regs2.cyclePatterns.timings[bank]) {
-                    switch (access) {
-                    case CyclePatterns::VCellScrollNBG0:
-                        m_vertCellScrollInc += sizeof(uint32);
-                        m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
-                        vcellAccessOffset += sizeof(uint32);
-                        break;
-                    case CyclePatterns::VCellScrollNBG1:
-                        m_vertCellScrollInc += sizeof(uint32);
-                        m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
-                        vcellAccessOffset += sizeof(uint32);
-                        break;
-                    default: break;
-                    }
-                }
+    // Update cycle accesses
+    for (uint32 bank = 0; bank < 4; ++bank) {
+        for (auto access : regs2.cyclePatterns.timings[bank]) {
+            switch (access) {
+            case CyclePatterns::VCellScrollNBG0:
+                m_vertCellScrollInc += sizeof(uint32);
+                m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
+                vcellAccessOffset += sizeof(uint32);
+                break;
+            case CyclePatterns::VCellScrollNBG1:
+                m_vertCellScrollInc += sizeof(uint32);
+                m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
+                vcellAccessOffset += sizeof(uint32);
+                break;
+            default: break;
             }
         }
     }
@@ -2860,11 +3005,6 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
-
-    // If starting a new frame, compute access cycles
-    if (y == 0) {
-        VDP2CalcAccessCycles();
-    }
 
     using FnDrawLayer = void (VDP::*)(uint32 y);
 
@@ -4377,13 +4517,41 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
             const CoordU32 scrollCoord{scrollX, scrollY};
 
             // Plot pixel
-            layerState.pixels.SetPixel(
-                x, VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-                       bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord));
+            layerState.pixels.SetPixel(x, VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
+                                              bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH,
+                                              bgParams.pageShiftV, scrollCoord, bgState.charFetcher));
         }
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH;
+    }
+
+    // Fetch one extra tile past the end of the display area
+    {
+        const uint32 x = m_HRes;
+        // Apply horizontal mosaic or vertical cell-scrolling
+        // Mosaic takes priority
+        if (!bgParams.mosaicEnable && bgParams.verticalCellScrollEnable) {
+            // Update vertical cell scroll amount
+            if (((fracScrollX >> 8u) & 7) == 0) {
+                cellScrollY = readCellScrollY();
+            }
+        }
+
+        if (!windowState[x]) {
+            // Compute integer scroll screen coordinates
+            const uint32 scrollX = fracScrollX >> 8u;
+            const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
+            const CoordU32 scrollCoord{scrollX, scrollY};
+
+            // Fetch pixel
+            VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
+                bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord,
+                bgState.charFetcher);
+        }
+
+        // Increment horizontal coordinate
+        fracScrollX += bgState.scrollIncH * 8;
     }
 }
 
@@ -4504,7 +4672,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             // Plot pixel
             layerState.pixels.SetPixel(xx, VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
                                                bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH,
-                                               rotParams.pageShiftV, scrollCoord));
+                                               rotParams.pageShiftV, scrollCoord,
+                                               m_rotParamStates[rotParamSelector].charFetcher));
         } else if (rotParams.screenOverProcess == ScreenOverProcess::RepeatChar) {
             // Out of bounds - repeat character
             const uint16 charData = rotParams.screenOverPatternName;
@@ -4735,7 +4904,8 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
 // TODO: optimize - remove pageShiftH and pageShiftV params
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
-                                                    uint32 pageShiftH, uint32 pageShiftV, CoordU32 scrollCoord) {
+                                                    uint32 pageShiftH, uint32 pageShiftV, CoordU32 scrollCoord,
+                                                    CharacterFetcherState &charState) {
     //      Map (NBGs)              Map (RBGs)
     // +---------+---------+   +----+----+----+----+
     // |         |         |   | A  | B  | C  | D  |
@@ -4895,15 +5065,23 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     const uint32 dotY = bit::extract<0, 2>(scrollY);
     const CoordU32 dotCoord{dotX, dotY};
 
-    // Fetch character
-    const uint32 pageAddress = pageBaseAddress + pageOffset;
-    static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
-    const Character ch =
-        twoWordChar ? VDP2FetchTwoWordCharacter(bgParams, pageAddress, charIndex)
-                    : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
+    // Fetch character if needed
+    if (charState.lastCharIndex != charIndex) {
+        charState.lastCharIndex = charIndex;
+        const uint32 pageAddress = pageBaseAddress + pageOffset;
+        static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
+        const Character ch =
+            twoWordChar
+                ? VDP2FetchTwoWordCharacter(bgParams, pageAddress, charIndex)
+                : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
+
+        // Send character to pipeline
+        charState.currChar = bgParams.charPatDelay ? charState.nextChar : ch;
+        charState.nextChar = ch;
+    }
 
     // Fetch pixel using character data
-    return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, cellIndex);
+    return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, charState.currChar, dotCoord, cellIndex);
 }
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress,
@@ -5368,6 +5546,10 @@ Dimensions VDP::Probe::GetResolution() const {
 
 InterlaceMode VDP::Probe::GetInterlaceMode() const {
     return m_vdp.m_state.regs2.TVMD.LSMDn;
+}
+
+const VDP2Regs &VDP::Probe::GetVDP2Regs() const {
+    return m_vdp.m_state.regs2;
 }
 
 } // namespace ymir::vdp

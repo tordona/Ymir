@@ -256,6 +256,7 @@ private:
             VDP1SwapFramebuffer,
             VDP1BeginFrame,
             // VDP1ProcessCommands,
+            VDP2BeginFrame,
             VDP2DrawLine,
             VDP2EndFrame,
 
@@ -323,6 +324,10 @@ private:
         /*static VDP1RenderEvent VDP1ProcessCommands(uint64 steps) {
             return {Type::VDP1ProcessCommands, {.processCommands = {.steps = steps}}};
         }*/
+
+        static VDPRenderEvent VDP2BeginFrame() {
+            return {Type::VDP2BeginFrame};
+        }
 
         static VDPRenderEvent VDP2DrawLine(uint32 vcnt) {
             return {Type::VDP2DrawLine, {.drawLine = {.vcnt = vcnt}}};
@@ -741,6 +746,23 @@ private:
         alignas(16) std::array<bool, kMaxResH> window;
     };
 
+    // Character fetcher state
+    struct CharacterFetcherState {
+        CharacterFetcherState() {
+            Reset();
+        }
+
+        void Reset() {
+            currChar = {};
+            nextChar = {};
+            lastCharIndex = 0xFFFFFFFF;
+        }
+
+        Character currChar;
+        Character nextChar;
+        uint32 lastCharIndex;
+    };
+
     // NBG layer state, including coordinate counters, increments and addresses.
     struct NormBGLayerState {
         NormBGLayerState() {
@@ -754,6 +776,7 @@ private:
             lineScrollTableAddress = 0;
             vertCellScrollOffset = 0;
             mosaicCounterY = 0;
+            charFetcher.Reset();
         }
 
         // Initial fractional X scroll coordinate.
@@ -779,6 +802,9 @@ private:
         // Reset at the start of every frame and incremented every line.
         // The value is mod mosaicV.
         uint8 mosaicCounterY;
+
+        // The character fetcher state for this background.
+        CharacterFetcherState charFetcher;
     };
 
     // State for Rotation Parameters A and B.
@@ -794,6 +820,7 @@ private:
             transparent.fill(0);
             scrX = scrY = 0;
             KA = 0;
+            charFetcher.Reset();
         }
 
         // Page base addresses for RBG planes A-P using Rotation Parameters A and B.
@@ -817,6 +844,9 @@ private:
 
         // Current base coefficient address, updated every scanline.
         uint32 KA;
+
+        // The character fetcher state for this background.
+        CharacterFetcherState charFetcher;
     };
 
     enum RotParamSelector { RotParamA, RotParamB };
@@ -1028,8 +1058,10 @@ private:
     void VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                           const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
 
-    // Computes the access cycles for NBGs and RBGs.
-    void VDP2CalcAccessCycles();
+    // Computes the access patterns for NBGs and RBGs.
+    //
+    // regs2 is the set of VDP2 registers
+    void VDP2CalcAccessPatterns(VDP2Regs &regs2);
 
     // Draws the specified VDP2 scanline.
     //
@@ -1172,6 +1204,7 @@ private:
     // pageBaseAddresses is a reference to the table containing the planes' pages' base addresses.
     // pageShiftH and pageShiftV are address shifts derived from PLSZ to determine the plane and page indices.
     // scrollCoord has the coordinates of the scroll screen.
+    // charState is the corresponding background layer's character fetcher state.
     //
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
@@ -1179,7 +1212,7 @@ private:
     // colorMode is the CRAM color mode.
     template <bool rot, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     Pixel VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses, uint32 pageShiftH,
-                                 uint32 pageShiftV, CoordU32 scrollCoord);
+                                 uint32 pageShiftV, CoordU32 scrollCoord, CharacterFetcherState &charState);
 
     // Fetches a two-word character from VRAM.
     //
@@ -1193,6 +1226,7 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // pageBaseAddress specifies the base address of the page of character patterns.
     // charIndex is the index of the character to fetch.
+    //
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // largePalette indicates if the color format uses 16 colors (false) or more (true).
     // extChar indicates if the flip bits are available (false) or used to extend the character number (true).
@@ -1282,6 +1316,8 @@ public:
 
         Dimensions GetResolution() const;
         InterlaceMode GetInterlaceMode() const;
+
+        const VDP2Regs &GetVDP2Regs() const;
 
     private:
         VDP &m_vdp;
