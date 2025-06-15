@@ -2753,7 +2753,7 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
     }
 }
 
-/*FORCE_INLINE*/ void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
+FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
     if (!regs2.accessPatternsDirty) [[likely]] {
         return;
     }
