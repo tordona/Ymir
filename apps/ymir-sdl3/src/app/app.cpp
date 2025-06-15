@@ -1864,6 +1864,9 @@ void App::RunEmulator() {
                         layerMenuItem("NBG2", vdp::VDP::Layer::NBG2);
                         layerMenuItem("NBG3", vdp::VDP::Layer::NBG3);
                         ImGui::Unindent();
+
+                        ImGui::MenuItem("NBG character pattern delay", nullptr, &m_vdpWindowSet.vdp2NBGCPDelay.Open);
+
                         ImGui::EndMenu();
                     }
 
