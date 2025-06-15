@@ -701,7 +701,7 @@ struct LineBackScreenParams {
 
     // Color calculation ratio, ranging from 31:1 to 0:32.
     // The ratio is calculated as (32-colorCalcRatio) : (colorCalcRatio).
-    // Derived from CCRNA/B.NxCCRTn
+    // Derived from CCRLB.xxCCRTn
     uint8 colorCalcRatio;
 
     // Enable shadow rendering on this background layer.

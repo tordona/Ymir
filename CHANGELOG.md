@@ -33,6 +33,7 @@
 - VDP2: Check for invalid access patterns to determine if NBG characters should be delayed. Fixes background offsets in many games. (#169, #190, #226)
 - VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
 - VDP2: Honor access cycles and VRAM bank allocations to restrict pattern name and character pattern accesses. Fixes garbage graphics in Panzer Dragoon Saga, Sonic 3D Blast and Street Fighter Alpha/Zero 2. (#203, #213)
+- VDP2: Invert back screen color calculation ratio. Fixes black background on Sakura Taisen FMVs. (#241)
 - VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game and King of Fighters '95 not booting. (#75)
 
 
