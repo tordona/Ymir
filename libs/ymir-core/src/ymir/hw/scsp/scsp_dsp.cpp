@@ -89,6 +89,11 @@ void DSP::UpdateProgramLength(uint8 writeIndex) {
         // If writing anything other than a NOP past the current program length, increase program length
         m_programLength = writeIndex + 1;
     }
+
+    // Run one extra NOP to ensure side-effects are carried out
+    if (m_programLength < program.size()) {
+        ++m_programLength;
+    }
 }
 
 void DSP::Run() {
@@ -153,7 +158,7 @@ void DSP::Run() {
                 sgaOutput = temp;
             }
             if (instr.NEGB) {
-                sgaOutput = -sgaOutput;
+                sgaOutput = -(sint32)sgaOutput;
             }
         }
         SFT_REG = (product + sgaOutput) & 0x3FFFFFF;
@@ -286,6 +291,9 @@ void DSP::LoadState(const state::SCSPDSP &state) {
         if (program[i].u64 != 0) {
             m_programLength = i + 1;
         }
+    }
+    if (m_programLength < program.size()) {
+        ++m_programLength;
     }
 
     tempMem = state.TEMP;

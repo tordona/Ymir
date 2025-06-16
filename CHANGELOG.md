@@ -27,6 +27,7 @@
 - SMPC: Eliminate spurious INTBACK interrupts.
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
 - SMPC: Prioritize INTBACK continue requests over break requests.
+- SCSP: Run one additional DSP step to fix FRC issues (thanks to @celeriyacon).
 - System: Tighten synchronization between the two SH-2 CPUs and remove artificial timeslice limit. Improves performance and fixes Fighters Megamix and Sonic Jam intermittent boot issues. (#236, #242)
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 - VDP1: Significantly slow down command execution when running the VDP1 renderer on the emulator thread. Fixes Dragon Ball Z - Shinbutouden freeze after SEGA logo. (#233)
