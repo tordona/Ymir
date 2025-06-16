@@ -3173,6 +3173,11 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
             }
         }};
 
+        if (spriteLayerState.window[xx]) {
+            layerState.pixels.transparent[xx] = true;
+            continue;
+        }
+
         if (params.mixedFormat) {
             const uint16 spriteDataValue = util::ReadBE<uint16>(&spriteFB[(spriteFBOffset * sizeof(uint16)) & 0x3FFFE]);
             if (bit::test<15>(spriteDataValue)) {
