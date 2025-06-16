@@ -305,22 +305,24 @@ void VDP::MapMemory(sys::Bus &bus) {
 template <bool debug>
 void VDP::Advance(uint64 cycles) {
     if (!m_effectiveRenderVDP1InVDP2Thread) {
-        // HACK: slow down VDP1 commands to avoid freezes on Virtua Racing and Dragon Ball Z
-        // TODO: use this counter in the threaded renderer
-        // TODO: proper cycle counting
-        static constexpr uint64 kCyclesPerCommand = 180;
+        if (m_VDP1RenderContext.rendering) {
+            // HACK: slow down VDP1 commands to avoid freezes on Virtua Racing and Dragon Ball Z
+            // TODO: use this counter in the threaded renderer
+            // TODO: proper cycle counting
+            static constexpr uint64 kCyclesPerCommand = 180;
 
-        m_VDP1RenderContext.cycleCount += cycles;
-        const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
-        m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
+            m_VDP1RenderContext.cycleCount += cycles;
+            const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
+            m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
 
-        if (m_deinterlaceRender) {
-            for (uint64 i = 0; i < steps; i++) {
-                VDP1ProcessCommand<true>();
-            }
-        } else {
-            for (uint64 i = 0; i < steps; i++) {
-                VDP1ProcessCommand<false>();
+            if (m_deinterlaceRender) {
+                for (uint64 i = 0; i < steps; i++) {
+                    VDP1ProcessCommand<true>();
+                }
+            } else {
+                for (uint64 i = 0; i < steps; i++) {
+                    VDP1ProcessCommand<false>();
+                }
             }
         }
     }
@@ -1644,6 +1646,10 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
 template <bool deinterlace>
 FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
                                     VDP1GouraudParams &gouraudParams) {
+    if (VDP1IsLineSystemClipped<deinterlace>(coord1, coord2)) {
+        return;
+    }
+
     for (LineStepper line{coord1, coord2}; line.CanStep(); line.Step()) {
         gouraudParams.U = line.FracPos();
         VDP1PlotPixel<deinterlace>(line.Coord(), pixelParams, gouraudParams);
@@ -1656,6 +1662,10 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
 template <bool deinterlace>
 void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
                                VDP1GouraudParams &gouraudParams) {
+    if (VDP1IsLineSystemClipped<deinterlace>(coord1, coord2)) {
+        return;
+    }
+
     const VDP1Regs &regs = VDP1GetRegs();
 
     const uint32 charSizeH = lineParams.charSizeH;
