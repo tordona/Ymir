@@ -93,9 +93,6 @@ public:
     // -------------------------------------------------------------------------
     // Rendering control
 
-    // Layers
-    enum class Layer { Sprite, RBG0, NBG0_RBG1, NBG1_EXBG, NBG2, NBG3 };
-
     // Enables or disables a layer.
     // Useful for debugging and troubleshooting.
     void SetLayerEnabled(Layer layer, bool enabled);
@@ -256,7 +253,9 @@ private:
             VDP1SwapFramebuffer,
             VDP1BeginFrame,
             // VDP1ProcessCommands,
+
             VDP2BeginFrame,
+            VDP2UpdateEnabledBGs,
             VDP2DrawLine,
             VDP2EndFrame,
 
@@ -327,6 +326,10 @@ private:
 
         static VDPRenderEvent VDP2BeginFrame() {
             return {Type::VDP2BeginFrame};
+        }
+
+        static VDPRenderEvent VDP2UpdateEnabledBGs() {
+            return {Type::VDP2UpdateEnabledBGs};
         }
 
         static VDPRenderEvent VDP2DrawLine(uint32 vcnt) {

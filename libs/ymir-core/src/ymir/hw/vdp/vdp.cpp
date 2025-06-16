@@ -454,7 +454,11 @@ void VDP::LoadState(const state::VDPState &state) {
 
 void VDP::SetLayerEnabled(Layer layer, bool enabled) {
     m_layerStates[static_cast<size_t>(layer)].rendered = enabled;
-    VDP2UpdateEnabledBGs();
+    if (m_threadedVDPRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2UpdateEnabledBGs());
+    } else {
+        VDP2UpdateEnabledBGs();
+    }
 }
 
 bool VDP::IsLayerEnabled(Layer layer) const {
@@ -686,7 +690,11 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
     case 0x020: [[fallthrough]]; // BGON
     case 0x028: [[fallthrough]]; // CHCTLA
     case 0x02A:                  // CHCTLB
-        VDP2UpdateEnabledBGs();
+        if (m_threadedVDPRendering) {
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2UpdateEnabledBGs());
+        } else {
+            VDP2UpdateEnabledBGs();
+        }
         break;
     }
 }
@@ -1048,12 +1056,14 @@ void VDP::VDPRenderThread() {
                     }
                 }
                 break;
-            /*case EvtType::VDP1ProcessCommands:
-                for (uint64 i = 0; i < event.processCommands.steps; i++) {
-                    VDP1ProcessCommand();
-                }
-                break;*/
+                /*case EvtType::VDP1ProcessCommands:
+                    for (uint64 i = 0; i < event.processCommands.steps; i++) {
+                        VDP1ProcessCommand();
+                    }
+                    break;*/
+
             case EvtType::VDP2BeginFrame: VDP2CalcAccessPatterns(rctx.vdp2.regs); break;
+            case EvtType::VDP2UpdateEnabledBGs: VDP2UpdateEnabledBGs(); break;
             case EvtType::VDP2DrawLine:
                 m_deinterlaceRender ? VDP2DrawLine<true>(event.drawLine.vcnt)
                                     : VDP2DrawLine<false>(event.drawLine.vcnt);
@@ -2308,10 +2318,12 @@ FORCE_INLINE void VDP::VDP2InitRotationBG() {
 }
 
 void VDP::VDP2UpdateEnabledBGs() {
+    const VDP2Regs &regs2 = VDP2GetRegs();
+
     // Sprite layer is always enabled, unless forcibly disabled
     m_layerStates[0].enabled = m_layerStates[0].rendered;
 
-    if (m_state.regs2.bgEnabled[4] && m_state.regs2.bgEnabled[5]) {
+    if (regs2.bgEnabled[4] && regs2.bgEnabled[5]) {
         m_layerStates[1].enabled = m_layerStates[1].rendered; // RBG0
         m_layerStates[2].enabled = m_layerStates[2].rendered; // RBG1
         m_layerStates[3].enabled = false;                     // EXBG
@@ -2322,19 +2334,19 @@ void VDP::VDP2UpdateEnabledBGs() {
         // - NBG1 is disabled when NBG0 uses 8:8:8 RGB
         // - NBG2 is disabled when NBG0 uses 2048 color palette or any RGB format
         // - NBG3 is disabled when NBG0 uses 8:8:8 RGB or NBG1 uses 2048 color palette or 5:5:5 RGB color format
-        const ColorFormat colorFormatNBG0 = m_state.regs2.bgParams[1].colorFormat;
-        const ColorFormat colorFormatNBG1 = m_state.regs2.bgParams[2].colorFormat;
+        const ColorFormat colorFormatNBG0 = regs2.bgParams[1].colorFormat;
+        const ColorFormat colorFormatNBG1 = regs2.bgParams[2].colorFormat;
         const bool disableNBG1 = colorFormatNBG0 == ColorFormat::RGB888;
         const bool disableNBG2 = colorFormatNBG0 == ColorFormat::Palette2048 ||
                                  colorFormatNBG0 == ColorFormat::RGB555 || colorFormatNBG0 == ColorFormat::RGB888;
         const bool disableNBG3 = colorFormatNBG0 == ColorFormat::RGB888 ||
                                  colorFormatNBG1 == ColorFormat::Palette2048 || colorFormatNBG1 == ColorFormat::RGB555;
 
-        m_layerStates[1].enabled = m_layerStates[1].rendered && m_state.regs2.bgEnabled[4];                 // RBG0
-        m_layerStates[2].enabled = m_layerStates[2].rendered && m_state.regs2.bgEnabled[0];                 // NBG0
-        m_layerStates[3].enabled = m_layerStates[3].rendered && m_state.regs2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
-        m_layerStates[4].enabled = m_layerStates[4].rendered && m_state.regs2.bgEnabled[2] && !disableNBG2; // NBG2
-        m_layerStates[5].enabled = m_layerStates[5].rendered && m_state.regs2.bgEnabled[3] && !disableNBG3; // NBG3
+        m_layerStates[1].enabled = m_layerStates[1].rendered && regs2.bgEnabled[4];                 // RBG0
+        m_layerStates[2].enabled = m_layerStates[2].rendered && regs2.bgEnabled[0];                 // NBG0
+        m_layerStates[3].enabled = m_layerStates[3].rendered && regs2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
+        m_layerStates[4].enabled = m_layerStates[4].rendered && regs2.bgEnabled[2] && !disableNBG2; // NBG2
+        m_layerStates[5].enabled = m_layerStates[5].rendered && regs2.bgEnabled[3] && !disableNBG3; // NBG3
     }
 }
 
@@ -2376,6 +2388,7 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
 
     const uint32 baseAddress = regs.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
     const bool readAll = y == 0;
+    const auto &vram2 = VDP2GetVRAM();
 
     for (int i = 0; i < 2; i++) {
         RotationParams &params = regs.rotParams[i];
@@ -2388,7 +2401,7 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         // Tables are located at the base address 0x80 bytes apart
         RotationParamTable t{};
         const uint32 address = baseAddress + i * 0x80;
-        t.ReadFrom(&VDP2GetVRAM()[address & 0x7FFFF]);
+        t.ReadFrom(&vram2[address & 0x7FFFF]);
 
         // Calculate parameters
 

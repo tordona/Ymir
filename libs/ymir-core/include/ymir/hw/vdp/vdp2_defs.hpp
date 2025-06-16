@@ -504,7 +504,7 @@ struct RotationParams {
 };
 
 struct RotationParamTable {
-    void ReadFrom(uint8 *input) {
+    void ReadFrom(const uint8 *input) {
         // Scale all but coefficient table values to 16 fractional bits
 
         Xst = bit::extract_signed<6, 28, sint64>(util::ReadBE<uint32>(&input[0x00])) << 6ll;

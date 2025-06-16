@@ -33,7 +33,7 @@ inline constexpr uint32 kMaxResH = 704; // Maximum horizontal resolution
 inline constexpr uint32 kMaxResV = 512; // Maximum vertical resolution
 
 // -----------------------------------------------------------------------------
-// Basic types
+// Colors
 
 union Color555 {
     uint16 u16;
@@ -72,6 +72,9 @@ FORCE_INLINE Color888 ConvertRGB555to888(Color555 color) {
         .msb = color.msb,
     };
 }
+
+// -----------------------------------------------------------------------------
+// Coordinates
 
 template <std::integral T>
 struct Coord {
@@ -122,24 +125,36 @@ using CoordU32 = Coord<uint32>;
 static_assert(std::is_trivial_v<CoordS32> && std::is_standard_layout_v<CoordS32>);
 static_assert(std::is_trivial_v<CoordU32> && std::is_standard_layout_v<CoordU32>);
 
+// -----------------------------------------------------------------------------
+// Dimensions
+
 struct Dimensions {
     uint32 width;
     uint32 height;
 };
 
+// -----------------------------------------------------------------------------
+// Display phases
+
 enum class HorizontalPhase { Active, RightBorder, Sync, VBlankOut, LeftBorder, LastDot };
 enum class VerticalPhase { Active, BottomBorder, BlankingAndSync, TopBorder, LastLine };
 
+// -----------------------------------------------------------------------------
+// Layers
+
+enum class Layer { Sprite, RBG0, NBG0_RBG1, NBG1_EXBG, NBG2, NBG3 };
+
 } // namespace ymir::vdp
+
+// -----------------------------------------------------------------------------
+// std::tuple helpers
 
 namespace std {
 
-using namespace ymir::vdp;
-
 template <std::integral T>
-struct tuple_size<Coord<T>> : integral_constant<size_t, 2> {};
+struct tuple_size<ymir::vdp::Coord<T>> : integral_constant<size_t, 2> {};
 
 template <size_t I, std::integral T>
-struct tuple_element<I, Coord<T>> : tuple_element<I, decltype(Coord<T>::elements)> {};
+struct tuple_element<I, ymir::vdp::Coord<T>> : tuple_element<I, decltype(ymir::vdp::Coord<T>::elements)> {};
 
 } // namespace std
