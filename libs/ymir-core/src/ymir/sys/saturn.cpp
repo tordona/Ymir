@@ -314,20 +314,19 @@ void Saturn::RunFrameImpl() {
 
 template <bool debug, bool enableSH2Cache>
 void Saturn::Run() {
-    static constexpr uint64 kSH2SyncMaxStep = 16;
+    static constexpr uint64 kSH2SyncMaxStep = 32;
 
     const uint64 cycles = m_scheduler.RemainingCount();
 
     uint64 execCycles = 0;
     if (slaveSH2Enabled) {
+        uint64 slaveCycles = m_ssh2SpilloverCycles;
         do {
-            const uint64 masterCycles = masterSH2.Advance<debug, enableSH2Cache>(kSH2SyncMaxStep);
-            if (slaveSH2Enabled) {
-                const uint64 slaveCycles = slaveSH2.Advance<debug, enableSH2Cache>(masterCycles, m_ssh2SpilloverCycles);
-                m_ssh2SpilloverCycles = slaveCycles - masterCycles;
-            }
-            execCycles += masterCycles;
+            const uint64 targetCycles = std::min(execCycles + kSH2SyncMaxStep, cycles);
+            execCycles = masterSH2.Advance<debug, enableSH2Cache>(targetCycles, execCycles);
+            slaveCycles = slaveSH2.Advance<debug, enableSH2Cache>(execCycles, slaveCycles);
         } while (execCycles < cycles);
+        m_ssh2SpilloverCycles = slaveCycles - execCycles;
     } else {
         execCycles = masterSH2.Advance<debug, enableSH2Cache>(cycles);
     }
