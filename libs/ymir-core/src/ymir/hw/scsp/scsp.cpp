@@ -277,7 +277,6 @@ void SCSP::SaveState(state::SCSPState &state) const {
     m_dsp.SaveState(state.dsp);
 
     state.m68kCycles = m_m68kCycles;
-    state.sampleCycles = m_sampleCycles;
     state.sampleCounter = m_sampleCounter;
 
     state.lfsr = m_lfsr;
@@ -357,7 +356,6 @@ void SCSP::LoadState(const state::SCSPState &state) {
     m_dsp.LoadState(state.dsp);
 
     m_m68kCycles = state.m68kCycles;
-    m_sampleCycles = state.sampleCycles;
     m_sampleCounter = state.sampleCounter;
 
     m_lfsr = state.lfsr;

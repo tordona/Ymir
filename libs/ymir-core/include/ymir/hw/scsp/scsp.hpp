@@ -965,7 +965,6 @@ private:
     core::config::audio::SampleInterpolationMode m_interpMode = core::config::audio::SampleInterpolationMode::Linear;
 
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
-    uint64 m_sampleCycles;  // Sample cycle counter
     uint64 m_sampleCounter; // Total number of samples
 
     uint32 m_lfsr; // Noise LFSR
