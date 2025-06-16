@@ -4542,6 +4542,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     // Fetch one extra tile past the end of the display area
     {
         const uint32 x = m_HRes;
+
         // Apply horizontal mosaic or vertical cell-scrolling
         // Mosaic takes priority
         if (!bgParams.mosaicEnable && bgParams.verticalCellScrollEnable) {
@@ -4551,17 +4552,15 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
             }
         }
 
-        if (!windowState[x]) {
-            // Compute integer scroll screen coordinates
-            const uint32 scrollX = fracScrollX >> 8u;
-            const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
-            const CoordU32 scrollCoord{scrollX, scrollY};
+        // Compute integer scroll screen coordinates
+        const uint32 scrollX = fracScrollX >> 8u;
+        const uint32 scrollY = ((fracScrollY + cellScrollY) >> 8u) - bgState.mosaicCounterY;
+        const CoordU32 scrollCoord{scrollX, scrollY};
 
-            // Fetch pixel
-            VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-                bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord,
-                bgState.charFetcher);
-        }
+        // Fetch pixel
+        VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
+            bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord,
+            bgState.charFetcher);
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH * 8;
