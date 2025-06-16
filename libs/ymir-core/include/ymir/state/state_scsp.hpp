@@ -59,7 +59,6 @@ struct SCSPState {
     SCSPDSP dsp;
 
     uint64 m68kCycles;
-    uint64 sampleCycles;
     uint64 sampleCounter;
 
     uint32 lfsr;

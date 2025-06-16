@@ -27,6 +27,9 @@
 - SMPC: Eliminate spurious INTBACK interrupts.
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
 - SMPC: Prioritize INTBACK continue requests over break requests.
+- SCSP: Apply DAC18B to output (thanks to @celeriyacon). Fixes quiet audio in many games. (#237)
+- SCSP: Fix send level, panning and master volume calculations.
+- SCSP: Fix swapped DAC18B and MEM4MB bits (thanks to @celeriyacon).
 - SCSP: Run one additional DSP step to fix FRC issues (thanks to @celeriyacon).
 - System: Tighten synchronization between the two SH-2 CPUs and remove artificial timeslice limit. Improves performance and fixes Fighters Megamix and Sonic Jam intermittent boot issues. (#236, #242)
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
