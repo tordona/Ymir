@@ -595,8 +595,8 @@ private:
             // bit::deposit_into<4, 7>(value, 0); // VER (version) field, always zero; added here for completeness
         }
         if constexpr (upperByte) {
-            bit::deposit_into<8>(value, m_mem4MB);
-            bit::deposit_into<9>(value, m_dac18Bits);
+            bit::deposit_into<8>(value, m_dac18Bits);
+            bit::deposit_into<9>(value, m_mem4MB);
         }
         return value;
     }
@@ -607,8 +607,8 @@ private:
             m_masterVolume = bit::extract<0, 3>(value);
         }
         if constexpr (upperByte) {
-            m_mem4MB = bit::test<8>(value);
-            m_dac18Bits = bit::test<9>(value);
+            m_dac18Bits = bit::test<8>(value);
+            m_mem4MB = bit::test<9>(value);
         }
     }
 
