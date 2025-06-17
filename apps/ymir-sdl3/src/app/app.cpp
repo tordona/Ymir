@@ -1502,6 +1502,13 @@ void App::RunEmulator() {
             ImGui::SetMouseCursor(ImGuiMouseCursor_None);
         }
 
+        // Selectively enable gamepad navigation if ImGui navigation is active
+        if (io.NavActive) {
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+        } else {
+            io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+        }
+
         // ---------------------------------------------------------------------
         // Draw ImGui widgets
 

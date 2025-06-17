@@ -8,6 +8,7 @@
 - App: Added option to create internal backup RAM files per game. (#99)
 - App: Added option to toggle fullscreen by double-clicking the display. (#197)
 - App: Added recent games list to File menu. (#196)
+- App: Enable gamepad navigation on GUI elements. (#251)
 - App: Store relative paths in Ymir.toml. (#207)
 - Backup RAM: Support interleaved backup image formats such as the ones produced by Yaba Sanshiro or the MiSTer core. (#87)
 - Backup RAM: Support standard BUP backup files. (#87)
