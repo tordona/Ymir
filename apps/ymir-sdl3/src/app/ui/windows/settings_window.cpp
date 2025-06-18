@@ -42,6 +42,7 @@ void SettingsWindow::DrawContents() {
         }
     };
 
+    m_windowConfig.allowClosingWithGamepad = true;
     if (ImGui::BeginTabBar("settings_tabs")) {
         if (ImGui::BeginTabItem("General", nullptr, tabFlag(SettingsTab::General))) {
             m_generalSettingsView.Display();
@@ -60,6 +61,7 @@ void SettingsWindow::DrawContents() {
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Input", nullptr, tabFlag(SettingsTab::Input))) {
+            // m_windowConfig.allowClosingWithGamepad = false;
             m_inputSettingsView.Display();
             ImGui::EndTabItem();
         }
