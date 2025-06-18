@@ -702,9 +702,12 @@ void App::RunEmulator() {
     {
         inputContext.SetTriggerHandler(actions::general::OpenSettings,
                                        [&](void *, const input::InputElement &) { m_settingsWindow.Open = true; });
-        inputContext.SetTriggerHandler(
-            actions::general::ToggleWindowedVideoOutput,
-            [&](void *, const input::InputElement &) { m_context.settings.video.displayVideoOutputInWindow ^= true; });
+        inputContext.SetTriggerHandler(actions::general::ToggleWindowedVideoOutput,
+                                       [&](void *, const input::InputElement &) {
+                                           m_context.settings.video.displayVideoOutputInWindow ^= true;
+                                           ImGui::SetNextFrameWantCaptureKeyboard(false);
+                                           ImGui::SetNextFrameWantCaptureMouse(false);
+                                       });
         inputContext.SetTriggerHandler(actions::general::ToggleFullScreen, [&](void *, const input::InputElement &) {
             m_context.settings.video.fullScreen = !m_context.settings.video.fullScreen;
             m_context.settings.MakeDirty();
