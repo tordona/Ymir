@@ -556,7 +556,7 @@ FORCE_INLINE void SCSP::GenerateSample() {
         SlotProcessStep6(m_slots[(i - 5u) & 31]);
         SlotProcessStep7(m_slots[(i - 6u) & 31]);
 
-        Slot &outputSlot = m_slots[(i - 6u) & 31];
+        Slot &outputSlot = m_slots[i];
         addOutput(outputSlot.output, outputSlot.directSendLevel, outputSlot.directPan);
 
         if (outputSlot.inputMixingLevel > 0) {

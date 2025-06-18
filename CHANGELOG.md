@@ -31,6 +31,7 @@
 - SMPC: Prioritize INTBACK continue requests over break requests.
 - SCSP: Apply DAC18B to output (thanks to @celeriyacon). Fixes quiet audio in many games. (#237)
 - SCSP: Fix send level, panning and master volume calculations.
+- SCSP: Fix slot output processing order (thanks to @celeriyacon).
 - SCSP: Fix swapped DAC18B and MEM4MB bits (thanks to @celeriyacon).
 - SCSP: Run one additional DSP step to fix FRC issues (thanks to @celeriyacon).
 - System: Tighten synchronization between the two SH-2 CPUs and remove artificial timeslice limit. Improves performance and fixes Fighters Megamix and Sonic Jam intermittent boot issues. (#236, #242)
