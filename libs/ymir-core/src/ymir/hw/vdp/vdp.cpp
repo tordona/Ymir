@@ -1137,6 +1137,7 @@ void VDP::VDPRenderThread() {
                 rctx.vdp2.VRAM = m_state.VRAM2;
                 rctx.vdp2.CRAM = m_state.CRAM;
                 rctx.postLoadSyncSignal.Set();
+                VDP2UpdateEnabledBGs();
                 for (uint32 addr = 0; addr < rctx.vdp2.CRAM.size(); addr += sizeof(uint16)) {
                     const uint16 colorValue = VDP2ReadRendererCRAM<uint16>(addr);
                     const Color555 color5{.u16 = colorValue};
