@@ -639,8 +639,8 @@ private:
             // bit::deposit_into<4, 7>(value, 0); // VER (version) field, always zero; added here for completeness
         }
         if constexpr (upperByte) {
-            bit::deposit_into<8>(value, m_mem4MB);
-            bit::deposit_into<9>(value, m_dac18Bits);
+            bit::deposit_into<8>(value, m_dac18Bits);
+            bit::deposit_into<9>(value, m_mem4MB);
         }
         return value;
     }
@@ -651,8 +651,8 @@ private:
             m_masterVolume = bit::extract<0, 3>(value);
         }
         if constexpr (upperByte) {
-            m_mem4MB = bit::test<8>(value);
-            m_dac18Bits = bit::test<9>(value);
+            m_dac18Bits = bit::test<8>(value);
+            m_mem4MB = bit::test<9>(value);
         }
     }
 
@@ -1098,7 +1098,6 @@ private:
     core::config::audio::SampleInterpolationMode m_interpMode = core::config::audio::SampleInterpolationMode::Linear;
 
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
-    uint64 m_sampleCycles;  // Sample cycle counter
     uint64 m_sampleCounter; // Total number of samples
 
     uint32 m_lfsr; // Noise LFSR

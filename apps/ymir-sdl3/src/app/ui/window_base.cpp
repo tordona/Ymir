@@ -18,6 +18,13 @@ void WindowBase::Display() {
     PrepareWindow();
     if (ImGui::Begin(m_windowConfig.name.c_str(), &Open, m_windowConfig.flags)) {
         DrawContents();
+
+        // Close the window if nothing is focused and B/Circle is pressed
+
+        if (m_windowConfig.allowClosingWithGamepad && ImGui::IsWindowFocused() && !ImGui::IsAnyItemFocused() &&
+            !ImGui::GetIO().NavVisible && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight)) {
+            Open = false;
+        }
     }
     ImGui::End();
 }

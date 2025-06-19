@@ -25,6 +25,7 @@ protected:
     struct WindowConfig {
         std::string name;
         ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+        bool allowClosingWithGamepad = true;
     };
 
     WindowConfig m_windowConfig;

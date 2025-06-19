@@ -28,9 +28,9 @@ void SettingsWindow::OpenTab(SettingsTab tab) {
 void SettingsWindow::PrepareWindow() {
     ImGui::SetNextWindowSizeConstraints(ImVec2(500 * m_context.displayScale, 300 * m_context.displayScale),
                                         ImVec2(FLT_MAX, FLT_MAX));
-    /*auto *vp = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f),
-                            ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));*/
+    auto *vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f), ImGuiCond_Appearing,
+                            ImVec2(0.5f, 0.5f));
 }
 
 void SettingsWindow::DrawContents() {
@@ -42,6 +42,7 @@ void SettingsWindow::DrawContents() {
         }
     };
 
+    m_windowConfig.allowClosingWithGamepad = true;
     if (ImGui::BeginTabBar("settings_tabs")) {
         if (ImGui::BeginTabItem("General", nullptr, tabFlag(SettingsTab::General))) {
             m_generalSettingsView.Display();
@@ -60,6 +61,7 @@ void SettingsWindow::DrawContents() {
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Input", nullptr, tabFlag(SettingsTab::Input))) {
+            // m_windowConfig.allowClosingWithGamepad = false;
             m_inputSettingsView.Display();
             ImGui::EndTabItem();
         }

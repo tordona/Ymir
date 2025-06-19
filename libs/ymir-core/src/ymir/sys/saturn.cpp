@@ -314,29 +314,36 @@ void Saturn::RunFrameImpl() {
 
 template <bool debug, bool enableSH2Cache>
 void Saturn::Run() {
-    static constexpr uint64 kMaxStep = 64;
+    static constexpr uint64 kSH2SyncMaxStep = 32;
 
-    const uint64 cycles = std::min<uint64>(m_scheduler.RemainingCount(), kMaxStep);
+    const uint64 cycles = m_scheduler.RemainingCount();
 
-    const uint64 masterCycles = masterSH2.Advance<debug, enableSH2Cache>(cycles);
+    uint64 execCycles = 0;
     if (slaveSH2Enabled) {
-        const uint64 slaveCycles = slaveSH2.Advance<debug, enableSH2Cache>(masterCycles, m_ssh2SpilloverCycles);
-        m_ssh2SpilloverCycles = slaveCycles - masterCycles;
+        uint64 slaveCycles = m_ssh2SpilloverCycles;
+        do {
+            const uint64 targetCycles = std::min(execCycles + kSH2SyncMaxStep, cycles);
+            execCycles = masterSH2.Advance<debug, enableSH2Cache>(targetCycles, execCycles);
+            slaveCycles = slaveSH2.Advance<debug, enableSH2Cache>(execCycles, slaveCycles);
+        } while (execCycles < cycles);
+        m_ssh2SpilloverCycles = slaveCycles - execCycles;
+    } else {
+        execCycles = masterSH2.Advance<debug, enableSH2Cache>(cycles);
     }
-    SCU.Advance<debug>(masterCycles);
-    VDP.Advance<debug>(masterCycles);
+    SCU.Advance<debug>(execCycles);
+    VDP.Advance<debug>(execCycles);
 
     // SCSP+M68K and CD block are ticked by the scheduler
 
     // TODO: advance SMPC
-    /*m_smpcCycles += masterCycles * 2464;
+    /*m_smpcCycles += execCycles * 2464;
     const uint64 smpcCycleCount = m_smpcCycles / 17640;
     if (smpcCycleCount > 0) {
         m_smpcCycles -= smpcCycleCount * 17640;
         SMPC.Advance<debug>(smpcCycleCount);
     }*/
 
-    m_scheduler.Advance(masterCycles);
+    m_scheduler.Advance(execCycles);
 }
 
 void Saturn::UpdateRunFrameFn() {

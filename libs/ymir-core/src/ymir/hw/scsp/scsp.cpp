@@ -307,7 +307,6 @@ void SCSP::SaveState(state::SCSPState &state) const {
     m_dsp.SaveState(state.dsp);
 
     state.m68kCycles = m_m68kCycles;
-    state.sampleCycles = m_sampleCycles;
     state.sampleCounter = m_sampleCounter;
 
     state.lfsr = m_lfsr;
@@ -387,7 +386,6 @@ void SCSP::LoadState(const state::SCSPState &state) {
     m_dsp.LoadState(state.dsp);
 
     m_m68kCycles = state.m68kCycles;
-    m_sampleCycles = state.sampleCycles;
     m_sampleCounter = state.sampleCounter;
 
     m_lfsr = state.lfsr;
@@ -547,11 +545,36 @@ FORCE_INLINE void SCSP::GenerateSample() {
 
     auto adjustSendLevel = [](sint16 output, uint8 sendLevel) { return output >> (sendLevel ^ 7); };
 
-    auto addPannedOutput = [&](sint16 output, uint8 pan) {
-        const sint32 panL = pan < 0x10 ? pan : 0;
-        const sint32 panR = pan < 0x10 ? 0 : (pan & 0xF);
-        outL += output >> (panL + 1);
-        outR += output >> (panR + 1);
+    auto addOutput = [&](sint32 output, uint8 sendLevel, uint8 pan) {
+        if (sendLevel == 0) { // = -infinity dB
+            return;
+        }
+
+        // Introduce enough fractional bits to accurately compute the combined effects of SDL and PAN.
+        // SDL shifts out up to 6 bits (=0x1).
+        // PAN shifts out up to 7 bits (=0xE), or 6 then 8 bits (=0xD).
+        // Maximum is 6 from SDL + 8 from PAN = 14 bits.
+        output <<= 14;
+
+        // Send level attenuates sound in steps of 6 dB, matching one bit per step
+        output >>= sendLevel ^ 7u;
+
+        // Pan attenuates sound in one of the channels in steps of 3 dB, or 0.5 bit per step
+        const uint8 panAmount = pan & 0xF;
+        sint32 panOut;
+        if (panAmount == 0xF) { // = -infinity dB
+            panOut = 0;
+        } else {
+            panOut = output >> (panAmount >> 1u);
+            if (panAmount & 1) {
+                panOut -= panOut >> 2;
+            }
+        }
+
+        // Apply panning to one of the channels
+        const bool panChanSel = (pan & 0x10) != 0;
+        outL += (panChanSel ? output : panOut) >> 14;
+        outR += (panChanSel ? panOut : output) >> 14;
     };
 
     // Process slots
@@ -564,11 +587,8 @@ FORCE_INLINE void SCSP::GenerateSample() {
         SlotProcessStep6(m_slots[(i - 5u) & 31]);
         SlotProcessStep7(m_slots[(i - 6u) & 31]);
 
-        Slot &outputSlot = m_slots[(i - 6u) & 31];
-        if (outputSlot.directSendLevel > 0) {
-            const sint16 directOutput = adjustSendLevel(outputSlot.output, outputSlot.directSendLevel);
-            addPannedOutput(directOutput, outputSlot.directPan);
-        }
+        Slot &outputSlot = m_slots[i];
+        addOutput(outputSlot.output, outputSlot.directSendLevel, outputSlot.directPan);
 
         if (outputSlot.inputMixingLevel > 0) {
             const sint16 mixsOutput = adjustSendLevel(outputSlot.output, outputSlot.inputMixingLevel);
@@ -606,27 +626,36 @@ FORCE_INLINE void SCSP::GenerateSample() {
 
     for (uint32 i = 0; i < 16; i++) {
         const Slot &slot = m_slots[i];
-        if (slot.effectSendLevel > 0) {
-            const sint16 dspOutput = adjustSendLevel(m_dsp.effectOut[i], slot.effectSendLevel);
-            addPannedOutput(dspOutput, slot.effectPan);
-        }
+        addOutput(m_dsp.effectOut[i], slot.effectSendLevel, slot.effectPan);
     }
     for (uint32 i = 0; i < 2; i++) {
         const Slot &slot = m_slots[i + 16];
-        if (slot.effectSendLevel > 0) {
-            const sint16 dspOutput = adjustSendLevel(m_dsp.audioInOut[i], slot.effectSendLevel);
-            addPannedOutput(dspOutput, slot.effectPan);
-        }
+        addOutput(m_dsp.audioInOut[i], slot.effectSendLevel, slot.effectPan);
     }
 
-    outL >>= m_masterVolume ^ 0xF;
-    outR >>= m_masterVolume ^ 0xF;
+    // Master volume attenuates sound in steps of 3 dB, or 0.5 bits per step
+    auto applyMasterVolume = [&](sint32 out) {
+        const uint32 masterVolume = m_masterVolume ^ 0xF;
+        out <<= 8;
+        out >>= masterVolume >> 1u;
+        if (masterVolume & 1) {
+            out -= out >> 2;
+        }
+        return out >> 8;
+    };
+
+    outL = applyMasterVolume(outL);
+    outR = applyMasterVolume(outR);
 
     static constexpr sint32 outMin = std::numeric_limits<sint16>::min();
     static constexpr sint32 outMax = std::numeric_limits<sint16>::max();
 
     outL = std::clamp<sint32>(outL, outMin, outMax);
     outR = std::clamp<sint32>(outR, outMin, outMax);
+    if (m_dac18Bits) {
+        outL = static_cast<uint32>(outL) << 2u;
+        outR = static_cast<uint32>(outR) << 2u;
+    }
 
     m_cbOutputSample(outL, outR);
 

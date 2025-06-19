@@ -42,3 +42,8 @@ Virtua Fighter
   resulting in corrupted or distorted backgrounds and UI. If the pointer increments past 0x60435E8, the pointer itself
   gets corrupted and the game attempts to read from random areas, usually resulting in a Ring Out for player 1, some
   serious 3D graphics distortion or the 3D graphics disappearing.
+
+Fighters Megamix
+  During early initialization, the MSH2 starts the SSH2 command processing loop, writes some commands to the table then
+  dangerously updates the command pointers. If the two CPUs aren't tightly synchronized, there's a risk of leaving the
+  command table and/or pointers in an inconsistent state, causing the SSH2 to jump into NULL.

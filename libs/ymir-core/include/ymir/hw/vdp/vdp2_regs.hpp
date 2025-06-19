@@ -62,6 +62,7 @@ struct VDP2Regs {
         transparentShadowEnable = false;
 
         TVMDDirty = true;
+        accessPatternsDirty = true;
     }
 
     uint16 Read(uint32 address) const {
@@ -373,9 +374,10 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteTVMD(uint16 value) {
-        const uint16 oldTVMD = TVMD.u16;
+        const RegTVMD oldTVMD = TVMD;
         TVMD.u16 = value & 0x81F7;
-        TVMDDirty |= TVMD.u16 != oldTVMD;
+        TVMDDirty |= TVMD.u16 != oldTVMD.u16;
+        accessPatternsDirty |= TVMD.HRESOn != oldTVMD.HRESOn;
     }
 
     // 180002   EXTEN   External Signal Enable
@@ -498,6 +500,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteRAMCTL(uint16 value) {
+        accessPatternsDirty |= ReadRAMCTL() != value;
+
         vramControl.rotDataBankSelA0 = static_cast<RotDataBankSel>(bit::extract<0, 1>(value));
         vramControl.rotDataBankSelA1 = static_cast<RotDataBankSel>(bit::extract<2, 3>(value));
         vramControl.rotDataBankSelB0 = static_cast<RotDataBankSel>(bit::extract<4, 5>(value));
@@ -602,7 +606,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCA0L(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCA0L() != value;
+        accessPatternsDirty |= ReadCYCA0L() != value;
+
         cyclePatterns.timings[0][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[0][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[0][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -610,7 +615,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCA0U(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCA0U() != value;
+        accessPatternsDirty |= ReadCYCA0U() != value;
+
         cyclePatterns.timings[0][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[0][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[0][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -628,7 +634,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCA1L(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCA1L() != value;
+        accessPatternsDirty |= ReadCYCA1L() != value;
+
         cyclePatterns.timings[1][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[1][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[1][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -636,7 +643,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCA1U(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCA1U() != value;
+        accessPatternsDirty |= ReadCYCA1U() != value;
+
         cyclePatterns.timings[1][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[1][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[1][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -654,7 +662,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCB0L(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCB0L() != value;
+        accessPatternsDirty |= ReadCYCB0L() != value;
+
         cyclePatterns.timings[2][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[2][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[2][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -662,7 +671,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCB0U(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCB0U() != value;
+        accessPatternsDirty |= ReadCYCB0U() != value;
+
         cyclePatterns.timings[2][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[2][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[2][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -680,7 +690,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCB1L(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCB1L() != value;
+        accessPatternsDirty |= ReadCYCB1L() != value;
+
         cyclePatterns.timings[3][0] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[3][1] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[3][2] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -688,7 +699,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCYCB1U(uint16 value) {
-        cyclePatterns.dirty |= ReadCYCB1U() != value;
+        accessPatternsDirty |= ReadCYCB1U() != value;
+
         cyclePatterns.timings[3][4] = static_cast<CyclePatterns::Type>(bit::extract<12, 15>(value));
         cyclePatterns.timings[3][5] = static_cast<CyclePatterns::Type>(bit::extract<8, 11>(value));
         cyclePatterns.timings[3][6] = static_cast<CyclePatterns::Type>(bit::extract<4, 7>(value));
@@ -730,6 +742,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteBGON(uint16 value) {
+        accessPatternsDirty |= ReadBGON() != value;
+
         bgEnabled[0] = bit::test<0>(value);
         bgEnabled[1] = bit::test<1>(value);
         bgEnabled[2] = bit::test<2>(value);
@@ -915,6 +929,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCHCTLA(uint16 value) {
+        accessPatternsDirty |= ReadCHCTLA() != value;
+
         bgParams[1].cellSizeShift = bit::extract<0>(value);
         bgParams[1].bitmap = bit::test<1>(value);
         bgParams[1].bmsz = bit::extract<2, 3>(value);
@@ -970,6 +986,8 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteCHCTLB(uint16 value) {
+        accessPatternsDirty |= ReadCHCTLB() != value;
+
         bgParams[3].cellSizeShift = bit::extract<0>(value);
         bgParams[3].colorFormat = static_cast<ColorFormat>(bit::extract<1>(value));
         bgParams[3].UpdateCHCTL();
@@ -1723,7 +1741,9 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteZMCTL(uint16 value) {
+        const uint16 oldZMCTL = ZMCTL.u16;
         ZMCTL.u16 = value & 0x0303;
+        accessPatternsDirty |= oldZMCTL != ZMCTL.u16;
     }
 
     // 18009A   SCRCTL  Line and Vertical Cell Scroll Control
@@ -3039,13 +3059,13 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadCCRLB() const {
         uint16 value = 0;
         bit::deposit_into<0, 4>(value, lineScreenParams.colorCalcRatio - 1);
-        bit::deposit_into<8, 12>(value, backScreenParams.colorCalcRatio - 1);
+        bit::deposit_into<8, 12>(value, backScreenParams.colorCalcRatio ^ 31);
         return value;
     }
 
     FORCE_INLINE void WriteCCRLB(uint16 value) {
         lineScreenParams.colorCalcRatio = bit::extract<0, 4>(value) + 1;
-        backScreenParams.colorCalcRatio = bit::extract<8, 12>(value) + 1;
+        backScreenParams.colorCalcRatio = bit::extract<8, 12>(value) ^ 31;
     }
 
     // 180110   CLOFEN  Color Offset Enable
@@ -3200,6 +3220,16 @@ struct VDP2Regs {
     // Indicates if TVMD has changed.
     // The screen resolution is updated on VBlank.
     bool TVMDDirty;
+
+    // Indicates if any VRAM access pattern related registers have changed.
+    // This includes:
+    // - All CYCxn registers
+    // - TVMD.HRESOn
+    // - CHCTLA/B
+    // - RAMCTL
+    // - BGON
+    // - ZMCTL
+    bool accessPatternsDirty;
 
     // Whether to display each background:
     // [0] NBG0

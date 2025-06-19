@@ -412,6 +412,10 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     //   - SCILV = {0,0,0}
     //     (unfortunately the data is missing, so old save states will never restore properly)
     //   - reuseSCILV = true if version < 6, false otherwise; not stored in save state binary
+    // - Removed fields
+    //   - uint64 sampleCycles
+    // - Misc changes
+    //   - DAC18B and MEM4MB were swapped
     // v5:
     // - Changed fields
     //   - cddaBuffer array size reduced from 2048 * 75 to 2352 * 25; note that this is a circular buffer indexed by
@@ -489,7 +493,13 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     } else {
         s.KYONEX = false;
     }
-    ar(s.MVOL, s.DAC18B, s.MEM4MB, s.MSLC);
+    ar(s.MVOL);
+    if (version >= 6) {
+        ar(s.DAC18B, s.MEM4MB);
+    } else {
+        ar(s.MEM4MB, s.DAC18B);
+    }
+    ar(s.MSLC);
     ar(s.timers);
     ar(s.MCIEB, s.MCIPD);
     ar(s.SCIEB, s.SCIPD);
@@ -503,7 +513,12 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     ar(s.DEXE, s.DDIR, s.DGATE, s.DMEA, s.DRGA, s.DTLG);
     ar(s.SOUS, s.soundStackIndex);
     ar(s.dsp);
-    ar(s.m68kCycles, s.sampleCycles, s.sampleCounter);
+    ar(s.m68kCycles);
+    if (version < 6) {
+        uint64 sampleCycles{};
+        ar(sampleCycles);
+    }
+    ar(s.sampleCounter);
     if (version < 4) {
         uint16 egCycle{};
         ar(egCycle);

@@ -8,11 +8,14 @@
 - App: Added option to create internal backup RAM files per game. (#99)
 - App: Added option to toggle fullscreen by double-clicking the display. (#197)
 - App: Added recent games list to File menu. (#196)
+- App: Automatically center Settings window when opening it. (#251)
+- App: Close windows when pressing B or Circle on gamepads while nothing is focused. (#251)
+- App: Enable gamepad navigation on GUI elements. (#251)
 - App: Store relative paths in Ymir.toml. (#207)
 - Backup RAM: Support interleaved backup image formats such as the ones produced by Yaba Sanshiro or the MiSTer core. (#87)
 - Backup RAM: Support standard BUP backup files. (#87)
 - VDP: Added option to deinterlace video. (#66)
-- VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia).
+- VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia). (#233)
 
 ### Fixes
 
@@ -20,18 +23,28 @@
 - App: Prevent loading internal backup memory image as backup RAM cartridge image.
 - CD Block: Start new playbacks from starting FAD when previous playback has ended. Fixes WipEout freeze after SEGA logo.
 - Media: Fix pregap handling in single BIN images.
+- SCSP: Apply DAC18B to output (thanks to @celeriyacon). Fixes quiet audio in many games. (#237)
+- SCSP: Fix send level, panning and master volume calculations.
+- SCSP: Fix slot output processing order (thanks to @celeriyacon).
+- SCSP: Fix swapped DAC18B and MEM4MB bits (thanks to @celeriyacon).
+- SCSP: Run one additional DSP step to fix FRC issues (thanks to @celeriyacon).
 - SCU, SH-2, SMPC, SCSP, VDP: Numerous fixes to interrupt handling (thanks to @celeriyacon). Fixes intermittent Rayman inputs and some audio glitches.
 - SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 - SMPC: Cancel scheduled command processing event when resetting SMPC. Fixes a long hang after hard resetting in some cases.
-- SMPC: Eliminate spurious INTBACK interrupts.
 - SMPC: Change fixed bits from 111 to 100 in TH/TR control mode responses for the first data byte of the Control Pad and 3D Control Pad peripherals. Fixes Golden Axe booting back to BIOS. (#231)
+- SMPC: Eliminate spurious INTBACK interrupts.
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
 - SMPC: Prioritize INTBACK continue requests over break requests.
+- System: Tighten synchronization between the two SH-2 CPUs and remove artificial timeslice limit. Improves performance and fixes Fighters Megamix and Sonic Jam intermittent boot issues. (#236, #242)
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 - VDP1: Significantly slow down command execution when running the VDP1 renderer on the emulator thread. Fixes Dragon Ball Z - Shinbutouden freeze after SEGA logo. (#233)
+- VDP2: Apply window effect to sprite layer. Fixes graphics going out of bounds in many games. (#173)
+- VDP2: Check for invalid access patterns to determine if NBG characters should be delayed. Fixes background offsets in many games. (#169, #190, #226)
 - VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
-- VDP2: Honor access cycles and VRAM bank allocations to restrict pattern name and character pattern accesses. Fixes garbage graphics in Panzer Dragoon Saga and Sonic 3D Blast. (#213)
+- VDP2: Honor access cycles and VRAM bank allocations to restrict pattern name and character pattern accesses. Fixes garbage graphics in Panzer Dragoon Saga, Sonic 3D Blast and Street Fighter Alpha/Zero 2. (#203, #213)
+- VDP2: Invert back screen color calculation ratio. Fixes black background on Sakura Taisen FMVs. (#241)
 - VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game and King of Fighters '95 not booting. (#75)
+- VDP2: Synchronize background enable events with the renderer thread. Fixes FMV slicing issues on slow machines on Sakura Taisen.
 
 
 ## Version 0.1.4+1

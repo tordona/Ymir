@@ -2,6 +2,18 @@
 Games that are sensitive to VDP1 and video signal timings
 =========================================================
 
+What to test to verify VDP1 framebuffer erase timing:
+  Boot animation                3D graphics flicker
+  I Love Donald Duck            sprites linger on items menu
+  Panzer Dragoon 1              3D graphics flicker in-game
+  Powerslave/Exhumed            intro video flicker, menus and in-game graphics not rendered/erased every frame
+  Sega Ages: After Burner II    VDP2 tiles missing/erased
+  Sega Ages: OutRun             VDP2 tiles missing/erased
+  Sonic R                       3D graphics garbled on title screen
+  Virtua Fighter 1              3D graphics flicker
+
+-----
+
 Panzer Dragoon 1 (in-game)
   Frame 1:
     [VBlank IN]  VBE=1 -- expects the erase to happen at this line's HBlank IN
@@ -26,11 +38,11 @@ If you don't delay VBE and FCM/FCT handling until HBlank, you get unsorted, over
 Virtua Fighter 1 (in-game)
   Always uses VBE=0
   Frame 1:
-    [VBlank IN] FCM=1 FCT=0 -- sets manual framebuffer erase, held until next framebuffer swap
+    [VBlank IN] FCM=1 FCT=0 -- sets manual framebuffer erase, held until next frame
   Frame 2:
     [VBlank IN] FCM=1 FCT=1 -- does manual erase then swap
 
-The manual framebuffer erase flag is *not* handled at VBlank IN HBlank IN. It is handled just before the next framebuffer swap.
+The manual framebuffer erase flag is *not* handled at VBlank IN HBlank IN. It is handled in the next frame just before the framebuffer swap.
 
 -----
 
@@ -44,6 +56,18 @@ I Love Mickey Mouse/Donald Duck
       [VBlank IN] FCM=1 FCT=0 -- requests manual erase, no swap; screen is erased on next frame
 
 Manual erase does not depend on a swap to occur.
+
+-----
+
+Powerslave/Exhumed (intro FMV)
+  Always uses VBE=0
+  Frame 1:
+    [VBlank IN]  FCM=1 FCT=0 -- requests manual erase, no swap
+  Frame 2:
+    [VBlank IN]  FCM=1 FCT=0 -- requests manual erase, but doesn't take effect due to a pending manual erase
+    [VBlank OUT] FCM=1 FCT=1 -- requests framebuffer swap; happens halfway through the line's HBlank
+    [shortly after] PTM=1 -- begins rendering new VDP1 frame
+  Frame 3: nothing
 
 
 =======
@@ -66,8 +90,6 @@ Relevant VDP1 registers:
 
   Manual erase is handled in the next frame.
   If a manual swap is also requested, the erase happens just before the swap.
-
-  TODO: recheck VDP1 framebuffer erase and swap timings
 
 Relevant video signal events:
   VBlank IN

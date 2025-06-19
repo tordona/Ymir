@@ -42,4 +42,11 @@ EmuEvent WriteSH2Memory(uint32 address, uint8 value, bool enableSideEffects, boo
     }
 }
 
+EmuEvent SetLayerEnabled(ymir::vdp::Layer layer, bool enabled) {
+    return RunFunction([=](SharedContext &ctx) {
+        auto &vdp = ctx.saturn.VDP;
+        vdp.SetLayerEnabled(layer, enabled);
+    });
+}
+
 } // namespace app::events::emu::debug
