@@ -276,6 +276,7 @@ public:
         util::Observable<double> uiScale;
 
         util::Observable<bool> deinterlace;
+        util::Observable<bool> transparentMeshes;
     } video;
 
     struct Audio {

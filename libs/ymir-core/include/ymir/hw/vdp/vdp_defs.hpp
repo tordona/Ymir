@@ -33,6 +33,11 @@ inline constexpr uint32 kMaxResH = 704; // Maximum horizontal resolution
 inline constexpr uint32 kMaxResV = 512; // Maximum vertical resolution
 
 // -----------------------------------------------------------------------------
+// VDP1 sprite framebuffer
+
+using SpriteFB = std::array<uint8, kVDP1FramebufferRAMSize>;
+
+// -----------------------------------------------------------------------------
 // Colors
 
 union Color555 {

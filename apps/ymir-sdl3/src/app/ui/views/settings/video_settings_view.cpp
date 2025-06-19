@@ -125,6 +125,14 @@ void VideoSettingsView::Display() {
         "Significantly impacts performance in those modes when enabled.",
         m_context.displayScale);
 
+    bool transparentMeshes = settings.transparentMeshes.Get();
+    if (MakeDirty(ImGui::Checkbox("Transparent meshes", &transparentMeshes))) {
+        settings.transparentMeshes = transparentMeshes;
+    }
+    widgets::ExplanationTooltip(
+        "When enabled, meshes (checkerboard patterns) will be rendered as transparent polygons instead.",
+        m_context.displayScale);
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);

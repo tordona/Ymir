@@ -17,6 +17,7 @@
 - Backup RAM: Support standard BUP backup files. (#87)
 - VDP: Added option to deinterlace video. (#66)
 - VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia). (#233)
+- VDP1: Added option to replace meshes with 50% transparency.
 
 ### Fixes
 

@@ -62,10 +62,21 @@ public:
     // Enable or disable deinterlacing of double-density interlaced frames.
     void SetDeinterlaceRender(bool enable) {
         m_deinterlaceRender = enable;
+        UpdateFunctionPointers();
     }
 
     bool IsDeinterlaceRender() const {
         return m_deinterlaceRender;
+    }
+
+    // Enable or disable transparent mesh rendering enhancement.
+    void SetTransparentMeshes(bool enable) {
+        m_transparentMeshes = enable;
+        UpdateFunctionPointers();
+    }
+
+    bool IsTransparentMeshes() const {
+        return m_transparentMeshes;
     }
 
     // TODO: replace with scheduler events
@@ -470,7 +481,7 @@ private:
         struct VDP1 {
             VDP1Regs regs;
             alignas(16) std::array<uint8, kVDP1VRAMSize> VRAM;
-            // alignas(16) std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> spriteFB;
+            // alignas(16) std::array<SpriteFB, 2> spriteFB;
         } vdp1;
 
         struct VDP2 {
@@ -575,12 +586,27 @@ private:
     // - data written by the CPU on the VDP1 framebuffer is mirrored to the same position in m_altSpriteFB
     bool m_deinterlaceRender = false;
 
+    // Enables rendering of meshes as transparent polygons.
+    // When false, mesh polygons are rendered as checkerboard patterns, exactly like a real Saturn.
+    // When true, mesh polygons are rendered as 50% transparent. This does not interfere with color calculations or
+    // other graphics effects.
+    bool m_transparentMeshes = false;
+
     // Complementary (alternate) VDP1 framebuffers, for deinterlaced rendering.
     // When deinterlace mode is enabled, if the system is using double-density interlace, this buffer will contain the
     // field lines complementary to the standard VDP1 framebuffer memory (e.g. while displaying odd lines, this buffer
     // contains even lines).
     // VDP2 rendering will combine both buffers to draw a full-resolution progressive image in one go.
-    alignas(16) std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> m_altSpriteFB;
+    alignas(16) std::array<SpriteFB, 2> m_altSpriteFB;
+
+    using FnVDP1ProcessCommand = void (VDP::*)();
+    using FnVDP2DrawLine = void (VDP::*)(uint32 y);
+
+    FnVDP1ProcessCommand m_fnVDP1ProcessCommand;
+    FnVDP2DrawLine m_fnVDP2DrawLine;
+
+    // Updates the function pointers based on the rendering settings.
+    void UpdateFunctionPointers();
 
     // -------------------------------------------------------------------------
     // VDP1
@@ -609,6 +635,16 @@ private:
             erase = false;
 
             cycleCount = 0;
+
+            for (auto &altFB : meshFBValid) {
+                for (auto &drawFB : altFB) {
+                    drawFB.fill(false);
+                }
+            }
+
+            for (auto &altFB : stagingFBValid) {
+                altFB.fill(false);
+            }
         }
 
         // System clipping dimensions
@@ -627,11 +663,26 @@ private:
         sint32 localCoordX;
         sint32 localCoordY;
 
+        // Is the VDP1 currently processing commands?
         bool rendering;
 
+        // Is manual framebuffer erase scheduled for the next frame?
         bool erase;
 
+        // Command processing cycle counter
         uint64 cycleCount;
+
+        // Transparent mesh sprite framebuffer.
+        // Used when transparent meshes are enabled.
+        // Indexing: [altFB][drawFB]
+        std::array<std::array<SpriteFB, 2>, 2> meshFB;
+        std::array<std::array<std::array<bool, kVDP1FramebufferRAMSize>, 2>, 2> meshFBValid;
+
+        // Staging buffer for transparent polygons.
+        // Used when transparent meshes are enabled.
+        // Indexing: [altFB]
+        std::array<SpriteFB, 2> stagingFB;
+        std::array<std::array<bool, kVDP1FramebufferRAMSize>, 2> stagingFBValid;
     } m_VDP1RenderContext;
 
     struct VDP1GouraudParams {
@@ -743,6 +794,7 @@ private:
             uint8 colorCalcRatio = 0;
             bool shadowOrWindow = false;
             bool normalShadow = false;
+            bool transparentMesh = false;
         };
 
         alignas(16) std::array<Attributes, kMaxResH> attrs;
@@ -945,10 +997,11 @@ private:
     // Ends the current VDP1 frame.
     void VDP1EndFrame();
 
+#define TPL_TRAITS template <bool deinterlace, bool transparentMeshes>
 #define TPL_DEINTERLACE template <bool deinterlace>
 
     // Processes a single commmand from the VDP1 command table.
-    TPL_DEINTERLACE void VDP1ProcessCommand();
+    TPL_TRAITS void VDP1ProcessCommand();
 
     TPL_DEINTERLACE bool VDP1IsPixelUserClipped(CoordS32 coord) const;
     TPL_DEINTERLACE bool VDP1IsPixelSystemClipped(CoordS32 coord) const;
@@ -956,29 +1009,33 @@ private:
     TPL_DEINTERLACE bool VDP1IsQuadSystemClipped(CoordS32 coord1, CoordS32 coord2, CoordS32 coord3,
                                                  CoordS32 coord4) const;
 
-    TPL_DEINTERLACE void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
-                                       const VDP1GouraudParams &gouraudParams);
-    TPL_DEINTERLACE void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
-                                      VDP1GouraudParams &gouraudParams);
-    TPL_DEINTERLACE void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2,
-                                              const VDP1TexturedLineParams &lineParams,
-                                              VDP1GouraudParams &gouraudParams);
+    void VDP1PlotMeshPixel(bool altFB, uint32 offset, uint16 data);
+    void VDP1ClearMeshPixel(bool altFB, uint32 fbIndex, uint32 offset);
+
+    TPL_DEINTERLACE void VDP1CommitMeshPolygon(CoordS32 topLeft, CoordS32 bottomRight);
+
+    TPL_TRAITS void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
+                                  const VDP1GouraudParams &gouraudParams);
+    TPL_TRAITS void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
+                                 VDP1GouraudParams &gouraudParams);
+    TPL_TRAITS void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
+                                         VDP1GouraudParams &gouraudParams);
 
     // Individual VDP1 command processors
 
-    TPL_DEINTERLACE void VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control);
-    TPL_DEINTERLACE void VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control);
-    TPL_DEINTERLACE void VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_TRAITS void VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_TRAITS void VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_TRAITS void VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control);
 
-    TPL_DEINTERLACE void VDP1Cmd_DrawPolygon(uint32 cmdAddress);
-    TPL_DEINTERLACE void VDP1Cmd_DrawPolylines(uint32 cmdAddress);
-    TPL_DEINTERLACE void VDP1Cmd_DrawLine(uint32 cmdAddress);
+    TPL_TRAITS void VDP1Cmd_DrawPolygon(uint32 cmdAddress);
+    TPL_TRAITS void VDP1Cmd_DrawPolylines(uint32 cmdAddress);
+    TPL_TRAITS void VDP1Cmd_DrawLine(uint32 cmdAddress);
 
     void VDP1Cmd_SetSystemClipping(uint32 cmdAddress);
     void VDP1Cmd_SetUserClipping(uint32 cmdAddress);
     void VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress);
 
-#undef TPL_DEINTERLACE
+#undef TPL_TRAITS
 
     // -------------------------------------------------------------------------
     // VDP2
@@ -1071,7 +1128,8 @@ private:
     // y is the scanline to draw
     //
     // deinterlace determines whether to deinterlace video output
-    template <bool deinterlace>
+    // transparentMeshes enables transparent mesh rendering enhancement
+    template <bool deinterlace, bool transparentMeshes>
     void VDP2DrawLine(uint32 y);
 
     // Draws the line color and back screens.
@@ -1086,8 +1144,23 @@ private:
     // colorMode is the CRAM color mode.
     // rotate determines if Rotation Parameter A coordinates should be used to draw the sprite layer.
     // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <uint32 colorMode, bool rotate, bool altField>
+    // transparentMeshes enables transparent mesh rendering enhancement
+    template <uint32 colorMode, bool rotate, bool altField, bool transparentMeshes>
     void VDP2DrawSpriteLayer(uint32 y);
+
+    // Draws a pixel on the sprite layer of the current VDP2 scanline.
+    //
+    // x is the X coordinate of the pixel to draw.
+    // params contains the sprite layer's parameters.
+    // spriteFB is a reference to the sprite framebuffer to read from.
+    // spriteFBOffset is the offset into the buffer of the pixel to read.
+    //
+    // colorMode is the CRAM color mode.
+    // transparentMeshes enables transparent mesh rendering enhancement
+    // applyMesh determines if the pixel to be applied is a transparent mesh pixel (true) or a regular sprite layer
+    // pixel (false).
+    template <uint32 colorMode, bool transparentMeshes, bool applyMesh>
+    void VDP2DrawSpritePixel(uint32 x, const SpriteParams &params, const SpriteFB &spriteFB, uint32 spriteFBOffset);
 
     // Draws the current VDP2 scanline of the specified normal background layer.
     //
@@ -1115,7 +1188,8 @@ private:
     //
     // deinterlace determines whether to deinterlace video output
     // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <bool deinterlace, bool altField>
+    // transparentMeshes enables transparent mesh rendering enhancement
+    template <bool deinterlace, bool altField, bool transparentMeshes>
     void VDP2ComposeLine(uint32 y);
 
     // Draws a normal scroll BG scanline.
@@ -1236,6 +1310,17 @@ private:
     template <bool fourCellChar, bool largePalette, bool extChar>
     Character VDP2FetchOneWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress, uint32 charIndex);
 
+    // Extract a one-word character from the given raw character data.
+    //
+    // bgParams contains the parameters for the BG to draw.
+    // charData is the raw character data.
+    //
+    // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
+    // largePalette indicates if the color format uses 16 colors (false) or more (true).
+    // extChar indicates if the flip bits are available (false) or used to extend the character number (true).
+    template <bool fourCellChar, bool largePalette, bool extChar>
+    Character VDP2ExtractOneWordCharacter(const BGParams &bgParams, uint16 charData);
+
     // Fetches a pixel in the specified cell in a 2x2 character pattern.
     //
     // cramOffset is the base CRAM offset computed from CRAOFA/CRAOFB.xxCAOSn and vramControl.colorRAMMode.
@@ -1269,29 +1354,23 @@ private:
 
     // Fetches sprite data based on the current sprite mode.
     //
+    // fb is the VDP1 framebuffer to read sprite data from.
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
-    //
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <bool altField>
-    SpriteData VDP2FetchSpriteData(uint32 fbOffset);
+    SpriteData VDP2FetchSpriteData(const SpriteFB &fb, uint32 fbOffset);
 
     // Fetches 16-bit sprite data based on the current sprite mode.
     //
+    // fb is the VDP1 framebuffer to read sprite data from.
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     // type is the sprite type (between 0 and 7).
-    //
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <bool altField>
-    SpriteData VDP2FetchWordSpriteData(uint32 fbOffset, uint8 type);
+    SpriteData VDP2FetchWordSpriteData(const SpriteFB &fb, uint32 fbOffset, uint8 type);
 
     // Fetches 8-bit sprite data based on the current sprite mode.
     //
+    // fb is the VDP1 framebuffer to read sprite data from.
     // fbOffset is the offset into the framebuffer (in bytes) where the sprite data is located.
     // type is the sprite type (between 8 and 15).
-    //
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
-    template <bool altField>
-    SpriteData VDP2FetchByteSpriteData(uint32 fbOffset, uint8 type);
+    SpriteData VDP2FetchByteSpriteData(const SpriteFB &fb, uint32 fbOffset, uint8 type);
 
     // Determines the type of sprite shadow (if any) based on color data.
     //

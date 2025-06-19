@@ -181,6 +181,8 @@ int App::Run(const CommandLineOptions &options) {
 
     m_context.settings.video.deinterlace.Observe(
         [&](bool value) { m_context.EnqueueEvent(events::emu::SetDeinterlace(value)); });
+    m_context.settings.video.transparentMeshes.Observe(
+        [&](bool value) { m_context.EnqueueEvent(events::emu::SetTransparentMeshes(value)); });
 
     {
         auto result = m_context.settings.Load(m_context.profile.GetPath(ProfilePath::Root) / "Ymir.toml");

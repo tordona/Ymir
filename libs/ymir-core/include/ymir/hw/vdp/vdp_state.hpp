@@ -447,7 +447,7 @@ struct VDPState {
     alignas(16) std::array<uint8, kVDP1VRAMSize> VRAM1;
     alignas(16) std::array<uint8, kVDP2VRAMSize> VRAM2; // 4x 128 KiB banks: A0, A1, B0, B1
     alignas(16) std::array<uint8, kVDP2CRAMSize> CRAM;
-    alignas(16) std::array<std::array<uint8, kVDP1FramebufferRAMSize>, 2> spriteFB;
+    alignas(16) std::array<SpriteFB, 2> spriteFB;
     uint8 displayFB; // index of current sprite display buffer, CPU-accessible; opposite buffer is drawn into
 
     // -------------------------------------------------------------------------

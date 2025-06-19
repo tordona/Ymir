@@ -83,6 +83,7 @@ EmuEvent SetVideoStandard(ymir::core::config::sys::VideoStandard videoStandard);
 EmuEvent SetAreaCode(uint8 areaCode);
 
 EmuEvent SetDeinterlace(bool enable);
+EmuEvent SetTransparentMeshes(bool enable);
 
 EmuEvent SetDebugTrace(bool enable);
 EmuEvent DumpMemory();

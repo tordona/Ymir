@@ -556,6 +556,7 @@ void Settings::ResetToDefaults() {
     video.overrideUIScale = false;
     video.uiScale = 1.0;
     video.deinterlace = false;
+    video.transparentMeshes = false;
 
     audio.volume = 0.8;
     audio.mute = false;
@@ -789,6 +790,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         video.uiScale = uiScale;
 
         Parse(tblVideo, "Deinterlace", video.deinterlace);
+        Parse(tblVideo, "TransparentMeshes", video.transparentMeshes);
     }
 
     if (auto tblAudio = data["Audio"]) {
@@ -1040,6 +1042,7 @@ SettingsSaveResult Settings::Save() {
             {"OverrideUIScale", video.overrideUIScale.Get()},
             {"UIScale", video.uiScale.Get()},
             {"Deinterlace", video.deinterlace.Get()},
+            {"TransparentMeshes", video.transparentMeshes.Get()},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
             {"IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread.Get()},
         }}},

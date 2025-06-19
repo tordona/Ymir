@@ -52,6 +52,10 @@ EmuEvent SetDeinterlace(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.VDP.SetDeinterlaceRender(enable); });
 }
 
+EmuEvent SetTransparentMeshes(bool enable) {
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.VDP.SetTransparentMeshes(enable); });
+}
+
 EmuEvent SetDebugTrace(bool enable) {
     return RunFunction([=](SharedContext &ctx) {
         ctx.saturn.EnableDebugTracing(enable);
