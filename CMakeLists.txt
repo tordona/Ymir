@@ -65,6 +65,11 @@ if (DEFINED Ymir_SHARED_LIBS)
     set(BUILD_SHARED_LIBS "${Ymir_SHARED_LIBS}")
 endif ()
 
+## Build static libraries by default if BUILD_SHARED_LIBS is not specified
+if (BUILD_SHARED_LIBS STREQUAL "")
+    set(BUILD_SHARED_LIBS OFF)
+endif ()
+
 ## Configure Visual Studio solution
 if (MSVC)
     include(cmake/VSHelpers.cmake)
