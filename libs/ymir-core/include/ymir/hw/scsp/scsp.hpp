@@ -198,10 +198,10 @@ private:
     std::queue<QueuedMidiMessage> m_midiInputQueue;
     uint64 m_nextMidiTime;
 
-	std::array<uint8, 1024> m_midiInputBuffer;
-	uint32 m_midiInputReadPos;
-	uint32 m_midiInputWritePos;
-	bool m_midiInputOverflow;
+    std::array<uint8, 1024> m_midiInputBuffer;
+    uint32 m_midiInputReadPos;
+    uint32 m_midiInputWritePos;
+    bool m_midiInputOverflow;
 
     std::vector<uint8> m_midiOutputBuffer;
     int m_expectedOutputPacketSize = 0;

@@ -737,7 +737,7 @@ void App::RunEmulator() {
         }
     }});
 
-	// ---------------------------------
+    // ---------------------------------
     // MIDI setup
 
     m_context.midiInput->setCallback(OnMidiInputReceived, this);
