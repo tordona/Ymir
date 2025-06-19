@@ -94,8 +94,6 @@ message(STATUS "==> rtmidi")
 set(RTMIDI_BUILD_STATIC_LIBS ON)
 add_subdirectory(rtmidi)
 
-message(STATUS "Shared? ${BUILD_SHARED_LIBS}")
-
 # --------------------------------------------------------------------------------------------------
 # Test dependencies
 

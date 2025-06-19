@@ -1074,7 +1074,6 @@ FORCE_INLINE void SCU::WriteRegWord(uint32 address, uint16 value) {
 template <bool poke>
 FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     // TODO: handle 8-bit and 16-bit register writes if needed
-    uint32 wtf;
 
     switch (address) {
     case 0x00: // (DMA0RA) Level 0 DMA Read Address

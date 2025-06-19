@@ -79,7 +79,7 @@ struct GUIEvent {
     };
 
     Type type;
-    std::variant<std::monostate, std::vector<uint8>, bool, uint32, std::string, std::filesystem::path, PeripheralBindsParams,
+    std::variant<std::monostate, bool, uint32, std::string, std::filesystem::path, PeripheralBindsParams,
                  FileDialogParams, FolderDialogParams, ui::SettingsTab>
         value;
 };
