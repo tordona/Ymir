@@ -30,6 +30,13 @@ SCSP::SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config)
 void SCSP::Reset(bool hard) {
     m_WRAM.fill(0);
 
+    m_midiInputBuffer.fill(0);
+    m_midiInputReadPos = 0;
+    m_midiInputWritePos = 0;
+    m_midiInputOverflow = false;
+
+    m_nextMidiTime = 0;
+
     m_cddaBuffer.fill(0);
     m_cddaReadPos = 0;
     m_cddaWritePos = 0;
@@ -154,6 +161,29 @@ uint32 SCSP::ReceiveCDDA(std::span<uint8, 2352> data) {
         m_cddaReady = true;
     }
     return len * 3 / m_cddaBuffer.size();
+}
+
+void SCSP::ReceiveMidiInput(MidiMessage &msg) {
+    // if we reset, and this is the first message received, ignore delta time & play now
+    if (m_nextMidiTime != 0) {
+        m_nextMidiTime += (uint64)(msg.deltaTime * kAudioFreq);
+    }
+
+    // if scheduled time falls behind real time, compensate
+    if (m_nextMidiTime < m_sampleCounter) {
+        devlog::debug<grp::midi>("Scheduled time fell behind real time");
+        m_nextMidiTime = m_sampleCounter + kMidiAheadTime;
+    }
+
+    // if scheduled time is too far ahead of real time, compensate
+    if (m_nextMidiTime >= m_sampleCounter + kMaxMidiScheduleTime) {
+        devlog::debug<grp::midi>("Scheduled time ahead of real time");
+        m_nextMidiTime = m_sampleCounter + kMidiAheadTime;
+    }
+
+    devlog::trace<grp::midi>("Received midi payload, scheduled for {} (bytes: {})", m_nextMidiTime, msg.payload.size());
+
+    m_midiInputQueue.push(QueuedMidiMessage(m_nextMidiTime, msg.payload));
 }
 
 void SCSP::DumpWRAM(std::ostream &out) const {
@@ -385,6 +415,7 @@ void SCSP::SetInterrupt(uint16 intr, bool level) {
     const uint16 prev = m_scuPendingInterrupts;
     m_scuPendingInterrupts &= ~(1 << intr);
     m_scuPendingInterrupts |= level << intr;
+
     if ((prev ^ m_scuPendingInterrupts) & m_scuEnabledInterrupts & (1 << intr)) {
         UpdateSCUInterrupts();
     }
@@ -598,6 +629,9 @@ FORCE_INLINE void SCSP::GenerateSample() {
     outR = std::clamp<sint32>(outR, outMin, outMax);
 
     m_cbOutputSample(outL, outR);
+
+    // process scheduled MIDI messages
+    ProcessMidiInputQueue();
 
     m_sampleCounter++;
 
@@ -827,6 +861,36 @@ FORCE_INLINE void SCSP::SlotProcessStep7(Slot &slot) {
 
 ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
     return ExceptionVector::AutoVectorRequest;
+}
+
+void SCSP::ProcessMidiInputQueue() {
+    // TODO: I believe MIDI stuff is *supposed* to trigger interrupts...
+    // however there are no commercial games relying on this behavior, so it should be fine for now.
+
+    while (m_midiInputQueue.size() > 0) {
+        auto &msg = m_midiInputQueue.front();
+        if (msg.scheduleTime <= m_sampleCounter) {
+            // TODO: is there any way to clear overflow beyond a reset?
+            if (!m_midiInputOverflow) {
+                devlog::trace<grp::midi>("Adding MIDI message to buffer at {} (bytes: {})", m_sampleCounter, msg.payload.size());
+
+                for (auto it = msg.payload.begin(); it != msg.payload.end(); it++) {
+                    m_midiInputBuffer[m_midiInputWritePos] = *it;
+                    m_midiInputWritePos = (m_midiInputWritePos + 1) % m_midiInputBuffer.size();
+
+                    if (m_midiInputWritePos == m_midiInputReadPos) {
+                        m_midiInputOverflow = true;
+                        devlog::error<grp::midi>("MIDI buffer overflowed");
+                        break;
+                    }
+                }
+            }
+
+            m_midiInputQueue.pop();
+        } else {
+            break;
+        }
+    }
 }
 
 } // namespace ymir::scsp

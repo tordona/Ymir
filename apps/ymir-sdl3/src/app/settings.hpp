@@ -274,8 +274,15 @@ public:
     } video;
 
     struct Audio {
+        struct MidiPort {
+            int portNumber;
+            bool isVirtual;
+        };
+
         util::Observable<float> volume;
         util::Observable<bool> mute;
+        util::Observable<MidiPort> midiInputPort;
+        util::Observable<MidiPort> midiOutputPort;
     } audio;
 
     struct Cartridge {

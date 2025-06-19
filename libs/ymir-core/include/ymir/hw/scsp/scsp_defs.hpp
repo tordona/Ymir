@@ -19,6 +19,12 @@ inline constexpr uint64 kM68KCyclesPerSample = kCyclesPerSample / kCyclesPerM68K
 // SCSP clock frequency: 22,579,200 Hz = 44,100 Hz * 512 cycles per sample
 inline constexpr uint64 kClockFreq = kAudioFreq * kCyclesPerSample;
 
+// Maximum length of time MIDI events can be scheduled ahead (0.25s)
+inline constexpr uint64 kMaxMidiScheduleTime = kAudioFreq / 4;
+
+// Constant value added to MIDI schedule time to keep events ahead of real time
+inline constexpr uint64 kMidiAheadTime = 1024;
+
 // Pending interrupt flags
 inline constexpr uint16 kIntrINT0N = 0;          // External INT0N line
 inline constexpr uint16 kIntrINT1N = 1;          // External INT1N line

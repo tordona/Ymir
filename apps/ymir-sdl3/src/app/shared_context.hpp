@@ -23,6 +23,8 @@
 
 #include <blockingconcurrentqueue.h>
 
+#include <RtMidi.h>
+
 #include <deque>
 #include <filesystem>
 #include <memory>
@@ -146,6 +148,9 @@ struct SharedContext {
 
     RewindBuffer rewindBuffer;
     bool rewinding = false;
+
+    RtMidiIn *midiInput = nullptr;
+    RtMidiOut *midiOutput = nullptr;
 
     // Certain GUI interactions require synchronization with the emulator thread, especially when dealing with
     // dynamically allocated objects:
@@ -305,6 +310,55 @@ struct SharedContext {
         } else {
             return profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
         }
+    }
+
+    std::string GetMidiVirtualInputPortName() {
+        return "Ymir Virtual MIDI Input";
+    }
+
+    std::string GetMidiVirtualOutputPortName() {
+        return "Ymir Virtual MIDI Output";
+    }
+
+    std::string GetMidiInputPortName() {
+        std::string portName;
+        if (settings.audio.midiInputPort.Get().portNumber == -1) {
+            portName = "None";
+        } else if (settings.audio.midiInputPort.Get().isVirtual) {
+            portName = GetMidiVirtualInputPortName();
+        } else if (settings.audio.midiInputPort.Get().portNumber >= midiInput->getPortCount()) {
+            portName = "(Unavailable)";
+        } else {
+            portName = midiInput->getPortName(settings.audio.midiInputPort.Get().portNumber);
+        }
+
+        return portName;
+    }
+
+    std::string GetMidiOutputPortName() {
+        std::string portName;
+        if (settings.audio.midiOutputPort.Get().portNumber == -1) {
+            portName = "None";
+        } else if (settings.audio.midiOutputPort.Get().isVirtual) {
+            portName = GetMidiVirtualOutputPortName();
+        } else if (settings.audio.midiOutputPort.Get().portNumber >= midiOutput->getPortCount()) {
+            portName = "(Unavailable)";
+        } else {
+            portName = midiOutput->getPortName(settings.audio.midiOutputPort.Get().portNumber);
+        }
+
+        return portName;
+    }
+
+    SharedContext() {
+        midiInput = new RtMidiIn(RtMidi::Api::UNSPECIFIED, "Ymir MIDI input client");
+        midiOutput = new RtMidiOut(RtMidi::Api::UNSPECIFIED, "Ymir MIDI output client");
+        midiInput->ignoreTypes(false, false, false);
+    }
+
+    ~SharedContext() {
+        delete midiInput;
+        delete midiOutput;
     }
 };
 
