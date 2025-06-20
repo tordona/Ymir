@@ -908,6 +908,9 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
             bit::deposit_into<21>(value, m_dsp.zero);
             bit::deposit_into<22>(value, m_dsp.sign);
             bit::deposit_into<23>(value, m_dsp.dmaRun);
+            if constexpr (!poke) {
+                m_dsp.overflow = false;
+            }
             return value;
         }
         case 0x84: // (DSP_PPD) DSP Program RAM Data Port (write-only)

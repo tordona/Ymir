@@ -31,6 +31,7 @@
 - SCSP: Fix swapped DAC18B and MEM4MB bits (thanks to @celeriyacon).
 - SCSP: Run one additional DSP step to fix FRC issues (thanks to @celeriyacon).
 - SCU, SH-2, SMPC, SCSP, VDP: Numerous fixes to interrupt handling (thanks to @celeriyacon). Fixes intermittent Rayman inputs and some audio glitches.
+- SCU: Various DSP accuracy fixes (thanks to @celeriyacon).
 - SH2: More fixes to WDT and DIVU (thanks to @celeriyacon).
 - SMPC: Cancel scheduled command processing event when resetting SMPC. Fixes a long hang after hard resetting in some cases.
 - SMPC: Change fixed bits from 111 to 100 in TH/TR control mode responses for the first data byte of the Control Pad and 3D Control Pad peripherals. Fixes Golden Axe booting back to BIOS. (#231)
