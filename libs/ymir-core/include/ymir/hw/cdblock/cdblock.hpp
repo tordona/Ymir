@@ -451,6 +451,8 @@ public:
 private:
     Probe m_probe{*this};
     debug::ICDBlockTracer *m_tracer = nullptr;
+
+    uint8 m_netlinkSCR;
 };
 
 } // namespace ymir::cdblock
