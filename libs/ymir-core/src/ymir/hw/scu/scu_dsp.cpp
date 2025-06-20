@@ -302,6 +302,20 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
 
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
+    // D1-Bus MOVs to MC0-3 using the a bank that was read by any of the three busses prevents writes and CT updates.
+    // MOV to M0-3 is unaffected because it writes directly to CT as opposed to M0-3 reads which hit Data RAM.
+    //
+    // For reference:
+    // src 0..3 = M0..M3
+    // src 4..7 = MC0..MC3
+    // dst 0..3 = MC0..MC3
+    uint8 dataRAMReads = 0x0;
+    auto markDataRAMRead = [&](uint8 src) {
+        if (src < 0x8) {
+            dataRAMReads |= 1u << (src & 0x3);
+        }
+    };
+
     // ALU
     ALU = AC;
     switch (instr.aluInfo.aluOp) {
@@ -338,6 +352,7 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
     }
     if (instr.aluInfo.xBusOp >= 0b011) {
         const sint32 value = ReadSource<debug>(instr.aluInfo.xBusSource);
+        markDataRAMRead(instr.aluInfo.xBusSource);
         if ((instr.aluInfo.xBusOp & 0b11) == 0b11) {
             // MOV [s],P
             P.s64 = static_cast<sint64>(value);
@@ -370,6 +385,7 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
     }
     if (instr.aluInfo.yBusOp >= 0b11) {
         const sint32 value = ReadSource<debug>(instr.aluInfo.yBusSource);
+        markDataRAMRead(instr.aluInfo.yBusSource);
         if ((instr.aluInfo.yBusOp & 0b11) == 0b11) {
             // MOV [s],A
             AC.s64 = static_cast<sint64>(value);
@@ -386,15 +402,27 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
     {
         const sint32 imm = instr.aluInfo.d1BusImm;
         const uint8 dst = instr.aluInfo.d1BusDest;
-        WriteD1Bus<debug>(dst, imm);
+        if (dst < 0x4 && (dataRAMReads & (1u << dst))) {
+            CT[dst] = false;
+        } else {
+            WriteD1Bus<debug>(dst, imm);
+        }
         break;
     }
     case 0b11: // MOV [s], [d]
     {
         const uint8 src = instr.aluInfo.d1BusImm & 0b1111;
         const uint8 dst = instr.aluInfo.d1BusDest;
-        const uint32 value = ReadSource<debug>(src);
-        WriteD1Bus<debug>(dst, value);
+        markDataRAMRead(src);
+
+        if (dst >= 0x4 || (dataRAMReads & (1u << dst)) == 0) {
+            // Allow writes to Data RAM only if src wasn't read
+            const uint32 value = ReadSource<debug>(src);
+            WriteD1Bus<debug>(dst, value);
+        } else if (dst < 0x4 && src >= 0x4 && src < 0x8 && dst != (src & 3)) {
+            // Reads from MC0-3 should still increment CT
+            incCT[src & 3] = true;
+        }
         break;
     }
     }
