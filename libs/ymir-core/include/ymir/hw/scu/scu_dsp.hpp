@@ -118,22 +118,22 @@ public:
         const uint64 op1 = AC.L;
         const uint64 op2 = P.L;
         const uint64 result = op1 + op2;
-        zero = result == 0;
+        ALU.L = result;
+        zero = ALU.L == 0;
         sign = static_cast<sint32>(result) < 0;
         carry = bit::test<32>(result);
         overflow |= bit::test<31>((~(op1 ^ op2)) & (op1 ^ result));
-        ALU.L = result;
     }
 
     FORCE_INLINE void ALU_SUB() {
         const uint64 op1 = AC.L;
         const uint64 op2 = P.L;
         const uint64 result = op1 - op2;
-        zero = result == 0;
+        ALU.L = result;
+        zero = ALU.L == 0;
         sign = static_cast<sint32>(result) < 0;
         carry = bit::test<32>(result);
         overflow |= bit::test<31>((op1 ^ op2) & (op1 ^ result));
-        ALU.L = result;
     }
 
     FORCE_INLINE void ALU_AD2() {
@@ -267,7 +267,8 @@ public:
         {
             const uint32 addr = CT.array[index];
             dataRAM[index][addr] = value;
-            incCT |= 1u << (index * 8u);
+            CT.array[index]++;
+            CT.array[index] &= 0x3F;
             break;
         }
         case 0b0100: RX = value; break;
@@ -369,6 +370,7 @@ public:
         sint64 s64 : 48;
         struct {
             uint32 L;
+            uint16 u16Top;
         };
         struct {
             uint64 : 16;

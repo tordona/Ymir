@@ -3781,7 +3781,7 @@ TestData{
         .zero = false,
         .carry = false,
         .overflow = false,
-        .CT = {0, 1, 2, 4},
+        .CT = {0, 1, 2, 3}, // NOTE: CT3 should not be modified due to read/write conflict
         .ALU = 0,
         .AC = 0,
         .P = 0,
@@ -4097,7 +4097,7 @@ TestData{
         .ALU = 0,
         .AC = 0,
         .P = 0,
-        .RX = 3,
+        .RX = 1,  // X-Bus has priority over D1-Bus
         .RY = 0,
         .LOP = 0,
         .TOP = 0,
@@ -4148,7 +4148,7 @@ TestData{
         .CT = {0, 1, 2, 3},
         .ALU = 0,
         .AC = 0,
-        .P = 3,
+        .P = 1, // X-Bus has priority over D1-Bus
         .RX = 0,
         .RY = 0,
         .LOP = 0,

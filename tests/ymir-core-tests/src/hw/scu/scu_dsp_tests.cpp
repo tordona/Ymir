@@ -135,8 +135,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
 
     SECTION("AND") {
         dsp.carry = true;
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -181,14 +181,14 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         CHECK(dsp.carry == false);
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("OR") {
         dsp.carry = true;
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -233,14 +233,14 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         CHECK(dsp.carry == false);
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("XOR") {
         dsp.carry = true;
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -285,18 +285,18 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         CHECK(dsp.carry == false);
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("ADD") {
-        dsp.ALU.H = 0xDEAD;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 123;
             dsp.P.L = 321;
@@ -313,7 +313,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = false;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 0;
             dsp.P.L = 0;
@@ -330,7 +330,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = false;
             dsp.sign = true;
             dsp.carry = false;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 0xFFFFFFFF;
             dsp.P.L = 1;
@@ -364,7 +364,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = false;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = -123;
             dsp.P.L = 1;
@@ -381,7 +381,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = false;
             dsp.carry = false;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = -123;
             dsp.P.L = -1;
@@ -415,7 +415,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = true;
             dsp.carry = false;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 100;
             dsp.P.L = -1;
@@ -445,18 +445,18 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             CHECK(dsp.overflow == true);
         }
 
-        // ALU.H should not be modified
-        CHECK(dsp.ALU.H == 0xDEAD);
+        // ALU.u16Top should not be modified
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("SUB") {
-        dsp.ALU.H = 0xDEAD;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 321;
             dsp.P.L = 123;
@@ -473,7 +473,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = false;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 0;
             dsp.P.L = 0;
@@ -490,7 +490,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = false;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 0x7FFFFFFF;
             dsp.P.L = 0x7FFFFFFF;
@@ -507,7 +507,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = false;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 0x80000000;
             dsp.P.L = 0x80000000;
@@ -524,7 +524,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = false;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = -123;
             dsp.P.L = 1;
@@ -541,7 +541,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = false;
             dsp.carry = false;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.L = 1;
             dsp.P.L = 123;
@@ -588,8 +588,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             CHECK(dsp.overflow == true);
         }
 
-        // ALU.H should not be modified
-        CHECK(dsp.ALU.H == 0xDEAD);
+        // ALU.u16Top should not be modified
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("AD2") {
@@ -597,7 +597,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.u64 = 123;
             dsp.P.u64 = 321;
@@ -614,7 +614,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = false;
             dsp.sign = true;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.u64 = 0;
             dsp.P.u64 = 0;
@@ -631,7 +631,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = false;
             dsp.sign = true;
             dsp.carry = false;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.u64 = -1;
             dsp.P.u64 = 1;
@@ -665,7 +665,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = false;
             dsp.carry = true;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.u64 = -123;
             dsp.P.u64 = 1;
@@ -682,7 +682,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = false;
             dsp.carry = false;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.u64 = -123;
             dsp.P.u64 = -1;
@@ -716,7 +716,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
             dsp.zero = true;
             dsp.sign = true;
             dsp.carry = false;
-            dsp.overflow = true;
+            dsp.overflow = false;
 
             dsp.AC.u64 = 100;
             dsp.P.u64 = -1;
@@ -748,8 +748,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
     }
 
     SECTION("SR") {
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -808,13 +808,13 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         }
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("RR") {
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -859,13 +859,13 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         }
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("SL") {
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -924,13 +924,13 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         }
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("RL") {
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -1003,13 +1003,13 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         }
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 
     SECTION("RL8") {
-        dsp.overflow = true;
-        dsp.ALU.H = 0xDEAD;
+        dsp.overflow = false;
+        dsp.ALU.u16Top = 0xDEAD;
 
         SECTION("no flags") {
             dsp.zero = true;
@@ -1082,8 +1082,8 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP ALU operations compute correc
         }
 
         // These should not be modified
-        CHECK(dsp.overflow == true);
-        CHECK(dsp.ALU.H == 0xDEAD);
+        CHECK(dsp.overflow == false);
+        CHECK(dsp.ALU.u16Top == 0xDEAD);
     }
 }
 
@@ -1410,7 +1410,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute corr
 
         dsp.Run<false>(1);
 
-        CHECK(dsp.PC == 1);
+        CHECK(dsp.PC == 2); // PC is incremented one extra time after END
         CHECK(dsp.programExecuting == false);
         CHECK(dsp.programEnded == true);
         CHECK(dspEndTriggered == false);
@@ -1428,7 +1428,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP end instructions execute corr
 
         dsp.Run<false>(1);
 
-        CHECK(dsp.PC == 1);
+        CHECK(dsp.PC == 2); // PC is incremented one extra time after ENDI
         CHECK(dsp.programExecuting == false);
         CHECK(dsp.programEnded == true);
         CHECK(dspEndTriggered == true);
