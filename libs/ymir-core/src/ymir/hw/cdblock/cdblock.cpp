@@ -1496,7 +1496,7 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
     // case 0x66: CmdMoveSectorData(); break;
     case 0x67: CmdGetCopyError(); break;
     case 0x70: CmdChangeDirectory(); break;
-    // case 0x71: CmdReadDirectory(); break;
+    case 0x71: CmdReadDirectory(); break;
     case 0x72: CmdGetFileSystemScope(); break;
     case 0x73: CmdGetFileInfo(); break;
     case 0x74: CmdReadFile(); break;
