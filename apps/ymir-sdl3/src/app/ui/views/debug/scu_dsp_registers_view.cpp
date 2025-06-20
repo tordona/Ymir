@@ -178,14 +178,14 @@ void SCUDSPRegistersView::Display() {
             ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, flagsSpacing);
             ImGui::PushFont(m_context.fonts.monospace.medium.regular);
             for (uint32 i = 0; i < 4; i++) {
-                uint8 ct = m_dsp.CT[i];
+                uint8 ct = m_dsp.CT.array[i];
                 if (i > 0) {
                     ImGui::SameLine();
                 }
                 ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 2);
                 if (ImGui::InputScalar(fmt::format("##reg_ct{}", i).c_str(), ImGuiDataType_U8, &ct, nullptr, nullptr,
                                        "%02X", ImGuiInputTextFlags_CharsHexadecimal)) {
-                    m_dsp.CT[i] = ct & 0x3F;
+                    m_dsp.CT.array[i] = ct & 0x3F;
                 }
             }
             ImGui::PopFont();

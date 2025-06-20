@@ -1156,7 +1156,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
             dsp.zero = test.initialState.zero;
             dsp.carry = test.initialState.carry;
             dsp.overflow = test.initialState.overflow;
-            dsp.CT = test.initialState.CT;
+            dsp.CT.array = test.initialState.CT;
             dsp.ALU.u64 = test.initialState.ALU;
             dsp.AC.u64 = test.initialState.AC;
             dsp.P.u64 = test.initialState.P;
@@ -1185,7 +1185,7 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP instructions execute correctl
             CHECK(dsp.zero == test.finalState.zero);
             CHECK(dsp.carry == test.finalState.carry);
             CHECK(dsp.overflow == test.finalState.overflow);
-            CHECK(dsp.CT == test.finalState.CT);
+            CHECK(dsp.CT.array == test.finalState.CT);
             CHECK(dsp.ALU.u64 == test.finalState.ALU);
             CHECK(dsp.AC.u64 == test.finalState.AC);
             CHECK(dsp.P.u64 == test.finalState.P);
@@ -1450,10 +1450,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1468,10 +1468,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1502,10 +1502,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1520,10 +1520,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1555,10 +1555,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1573,10 +1573,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1609,10 +1609,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1627,10 +1627,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1662,10 +1662,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1680,10 +1680,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1715,10 +1715,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1733,10 +1733,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1768,10 +1768,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1786,10 +1786,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1821,10 +1821,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 0;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 0;
 
         // Setup execution
         dsp.PC = 0;
@@ -1839,10 +1839,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 0);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 0);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1877,10 +1877,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 0;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 0;
 
         // Setup execution
         dsp.PC = 0;
@@ -1895,10 +1895,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 0);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 0);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == true);
@@ -1933,10 +1933,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -1951,10 +1951,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -1988,10 +1988,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2006,10 +2006,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -2048,10 +2048,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2066,10 +2066,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -2115,10 +2115,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2133,10 +2133,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -2179,10 +2179,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2197,10 +2197,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 1);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 1);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -2234,10 +2234,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2252,10 +2252,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 2);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 2);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -2294,10 +2294,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2312,10 +2312,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 3);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 3);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -2361,10 +2361,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2379,10 +2379,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 4);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 4);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == false);
@@ -2432,10 +2432,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2450,10 +2450,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 4);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 4);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == true);
         CHECK(dsp.dmaHold == true);
@@ -2494,10 +2494,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         // Setup execution
         dsp.PC = 0;
@@ -2512,10 +2512,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2547,10 +2547,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x2001000, 0x12345678);
 
@@ -2567,10 +2567,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2603,10 +2603,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead16(0x5A01000, 0x1234);
         MockMemoryRead16(0x5A01002, 0x5678);
@@ -2624,10 +2624,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2661,10 +2661,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x6001000, 0x12345678);
 
@@ -2681,10 +2681,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2717,10 +2717,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x6001000, 0x12345678);
 
@@ -2737,10 +2737,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2773,10 +2773,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x6001000, 0x12345678);
 
@@ -2793,10 +2793,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2829,10 +2829,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x6001000, 0x12345678);
 
@@ -2849,10 +2849,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2885,10 +2885,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 0;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 0;
 
         MockMemoryRead32(0x6001000, 0x12345678);
         MockMemoryRead32(0x6001004, 0xDEADBEEF);
@@ -2908,10 +2908,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 0);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 0);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -2950,10 +2950,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 0;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 0;
 
         MockMemoryRead32(0x6001000, 0x12345678);
         MockMemoryRead32(0x6001004, 0xDEADBEEF);
@@ -2973,10 +2973,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 0);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 0);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == true);
@@ -3015,10 +3015,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x6001000, 0x12345678);
 
@@ -3035,10 +3035,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -3071,10 +3071,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x6001000, 0x12345678);
 
@@ -3091,10 +3091,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == false);
@@ -3128,10 +3128,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.dataRAM[3][1] = 8;
         dsp.dataRAM[3][2] = 9;
         dsp.dataRAM[3][3] = 10;
-        dsp.CT[0] = 0;
-        dsp.CT[1] = 1;
-        dsp.CT[2] = 2;
-        dsp.CT[3] = 3;
+        dsp.CT.array[0] = 0;
+        dsp.CT.array[1] = 1;
+        dsp.CT.array[2] = 2;
+        dsp.CT.array[3] = 3;
 
         MockMemoryRead32(0x6001000, 0x12345678);
 
@@ -3148,10 +3148,10 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SCU DSP DMA transfers execute correct
         dsp.Run<false>(1);
 
         CHECK(dsp.PC == 1);
-        CHECK(dsp.CT[0] == 0);
-        CHECK(dsp.CT[1] == 1);
-        CHECK(dsp.CT[2] == 2);
-        CHECK(dsp.CT[3] == 3);
+        CHECK(dsp.CT.array[0] == 0);
+        CHECK(dsp.CT.array[1] == 1);
+        CHECK(dsp.CT.array[2] == 2);
+        CHECK(dsp.CT.array[3] == 3);
         CHECK(dsp.dmaRun == true);
         CHECK(dsp.dmaToD0 == false);
         CHECK(dsp.dmaHold == true);

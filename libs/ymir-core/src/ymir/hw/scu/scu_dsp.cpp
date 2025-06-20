@@ -51,8 +51,8 @@ void SCUDSP::Reset(bool hard) {
     carry = false;
     overflow = false;
 
-    CT.fill(0);
-    incCT.fill(false);
+    CT.u32 = 0x00000000;
+    incCT = 0x00000000;
 
     ALU.u64 = 0;
     AC.u64 = 0;
@@ -108,15 +108,6 @@ void SCUDSP::Run(uint64 cycles) {
             }
         }
 
-        // Update CT0-3
-        for (int i = 0; i < 4; i++) {
-            if (incCT[i]) {
-                CT[i]++;
-                CT[i] &= 0x3F;
-            }
-        }
-        incCT.fill(false);
-
         // Clear stepping flag to ensure the DSP only runs one command when stepping
         programStep = false;
     }
@@ -163,7 +154,7 @@ void SCUDSP::RunDMA(uint64 cycles) {
         dmaCount--;
         if (toD0) {
             // Data RAM -> D0
-            const uint32 value = useDataRAM ? dataRAM[ctIndex][CT[ctIndex]] : ~0u;
+            const uint32 value = useDataRAM ? dataRAM[ctIndex][CT.array[ctIndex]] : ~0u;
             if (bus == BusID::ABus) {
                 // A-Bus -> one 32-bit write
                 m_bus.Write<uint32>(addrD0, value);
@@ -197,15 +188,15 @@ void SCUDSP::RunDMA(uint64 cycles) {
                 addrD0 += dmaAddrInc;
             }
             if (useDataRAM) {
-                dataRAM[ctIndex][CT[ctIndex]] = value;
+                dataRAM[ctIndex][CT.array[ctIndex]] = value;
             } else if (useProgramRAM) {
                 programRAM[programRAMIndex++].u32 = value;
             }
         }
         addrD0 &= 0x7FF'FFFF;
         if (useDataRAM) {
-            CT[ctIndex]++;
-            CT[ctIndex] &= 0x3F;
+            CT.array[ctIndex]++;
+            CT.array[ctIndex] &= 0x3F;
         }
     } while (dmaCount != 0);
 
@@ -238,7 +229,7 @@ void SCUDSP::SaveState(state::SCUDSPState &state) const {
     state.zero = zero;
     state.carry = carry;
     state.overflow = overflow;
-    state.CT = CT;
+    state.CT = CT.array;
     state.ALU = ALU.s64;
     state.AC = AC.s64;
     state.P = P.s64;
@@ -281,7 +272,7 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     zero = state.zero;
     carry = state.carry;
     overflow = state.overflow;
-    CT = state.CT;
+    CT.array = state.CT;
     ALU.s64 = state.ALU;
     AC.s64 = state.AC;
     P.s64 = state.P;
@@ -403,7 +394,7 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
         const sint32 imm = instr.aluInfo.d1BusImm;
         const uint8 dst = instr.aluInfo.d1BusDest;
         if (dst < 0x4 && (dataRAMReads & (1u << dst))) {
-            CT[dst] = false;
+            CT.u32 &= ~(1 << (dst * 8));
         } else {
             WriteD1Bus<debug>(dst, imm);
         }
@@ -421,11 +412,15 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
             WriteD1Bus<debug>(dst, value);
         } else if (dst < 0x4 && src >= 0x4 && src < 0x8 && dst != (src & 3)) {
             // Reads from MC0-3 should still increment CT
-            incCT[src & 3] = true;
+            incCT |= 1u << ((src & 3) * 8);
         }
         break;
     }
     }
+
+    // Update CT0-3
+    CT.u32 = (CT.u32 + incCT) & 0x3F3F3F3F;
+    incCT = 0x00000000;
 }
 
 template <bool debug>
@@ -476,11 +471,11 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
     if (command.specialInfo.dmaInfo.sizeSource) {
         const uint8 ctIndex = command.specialInfo.dmaInfo.imm & 0b11;
         const bool inc = bit::test<2>(command.specialInfo.dmaInfo.imm);
-        const uint32 ctAddr = CT[ctIndex];
+        const uint32 ctAddr = CT.array[ctIndex];
         dmaCount = dataRAM[ctIndex][ctAddr];
         if (inc) {
-            CT[ctIndex]++;
-            CT[ctIndex] &= 0x3F;
+            CT.array[ctIndex]++;
+            CT.array[ctIndex] &= 0x3F;
         }
     } else {
         dmaCount = command.specialInfo.dmaInfo.imm;

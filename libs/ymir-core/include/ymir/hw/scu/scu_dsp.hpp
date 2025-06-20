@@ -199,15 +199,15 @@ public:
         case 0b0111: // MC3
         {
             const uint8 ctIndex = bit::extract<0, 1>(index);
-            const bool inc = bit::test<2>(index);
+            const uint8 inc = bit::extract<2>(index);
 
             // Finish previous DMA transfer
             if (dmaRun) {
                 RunDMA<debug>(1); // TODO: cycles?
             }
 
-            incCT[ctIndex] |= inc;
-            const uint32 ctAddr = CT[ctIndex];
+            incCT |= inc << (ctIndex * 8u);
+            const uint32 ctAddr = CT.array[ctIndex];
             return dataRAM[ctIndex][ctAddr];
         }
         case 0b1001: return ALU.L;
@@ -230,9 +230,9 @@ public:
         case 0b0010: // MC2
         case 0b0011: // MC3
         {
-            const uint32 addr = CT[index];
+            const uint32 addr = CT.array[index];
             dataRAM[index][addr] = value;
-            incCT[index] = true;
+            incCT |= 1u << (index * 8u);
             break;
         }
         case 0b0100: RX = value; break;
@@ -245,8 +245,8 @@ public:
         case 0b1101: // M1
         case 0b1110: // M2
         case 0b1111: // M3
-            CT[index & 3] = value & 0x3F;
-            incCT[index & 3] = false;
+            CT.array[index & 3] = value & 0x3F;
+            incCT &= ~(1u << ((index & 3) * 8));
             break;
         }
     }
@@ -265,9 +265,9 @@ public:
         case 0b0010: // MC2
         case 0b0011: // MC3
         {
-            const uint32 addr = CT[index];
+            const uint32 addr = CT.array[index];
             dataRAM[index][addr] = value;
-            incCT[index] = true;
+            incCT |= 1u << (index * 8u);
             break;
         }
         case 0b0100: RX = value; break;
@@ -358,8 +358,11 @@ public:
     bool overflow;
 
     // DSP data address (6 bits)
-    std::array<uint8, 4> CT;
-    std::array<bool, 4> incCT; // whether CT must be incremented after this iteration
+    union {
+        std::array<uint8, 4> array;
+        uint32 u32;
+    } CT;
+    uint32 incCT;
 
     union Reg48 {
         uint64 u64 : 48;
