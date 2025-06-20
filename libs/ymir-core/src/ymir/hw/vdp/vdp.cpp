@@ -1676,6 +1676,8 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
                     dstColor.r = (srcColor.r + dstColor.r) >> 1u;
                     dstColor.g = (srcColor.g + dstColor.g) >> 1u;
                     dstColor.b = (srcColor.b + dstColor.b) >> 1u;
+                } else {
+                    dstColor = srcColor;
                 }
                 break;
             }
