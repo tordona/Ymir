@@ -1592,8 +1592,10 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
             m_VDP1RenderContext.stagingFBValid[altFB][fbOffset] = true;
         } else {
             drawFB[fbOffset] = pixelParams.color;
-            m_VDP1RenderContext.stagingFBValid[altFB][fbOffset] = false;
-            VDP1ClearMeshPixel(altFB, fbIndex, fbOffset);
+            if constexpr (transparentMeshes) {
+                m_VDP1RenderContext.stagingFBValid[altFB][fbOffset] = false;
+                VDP1ClearMeshPixel(altFB, fbIndex, fbOffset);
+            }
         }
     } else {
         fbOffset = (fbOffset * sizeof(uint16)) & 0x3FFFE;
@@ -1683,8 +1685,10 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
                 m_VDP1RenderContext.stagingFBValid[altFB][fbOffset] = true;
             } else {
                 util::WriteBE<uint16>(pixel, dstColor.u16);
-                m_VDP1RenderContext.stagingFBValid[altFB][fbOffset] = false;
-                VDP1ClearMeshPixel(altFB, fbIndex, fbOffset);
+                if constexpr (transparentMeshes) {
+                    m_VDP1RenderContext.stagingFBValid[altFB][fbOffset] = false;
+                    VDP1ClearMeshPixel(altFB, fbIndex, fbOffset);
+                }
             }
         }
     }
@@ -3273,13 +3277,12 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
 
+    const SpriteParams &params = regs2.spriteParams;
     auto &layerState = m_layerStates[0];
     auto &spriteLayerState = m_spriteLayerState;
 
     for (uint32 x = 0; x < maxX; x++) {
         const uint32 xx = x << xShift;
-
-        auto &attr = spriteLayerState.attrs[xx];
 
         const uint8 fbIndex = VDP1GetDisplayFBIndex();
         const auto &spriteFB = altField ? m_altSpriteFB[fbIndex] : m_state.spriteFB[fbIndex];
@@ -3295,8 +3298,6 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
             }
         }();
 
-        const SpriteParams &params = regs2.spriteParams;
-
         VDP2DrawSpritePixel<colorMode, transparentMeshes, false>(xx, params, spriteFB, spriteFBOffset);
         if constexpr (transparentMeshes) {
             const uint32 offset = params.mixedFormat ? ((spriteFBOffset * sizeof(uint16)) & 0x3FFFE) : spriteFBOffset;
@@ -3309,7 +3310,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
         if (doubleResH) {
             auto pixel = layerState.pixels.GetPixel(xx);
             layerState.pixels.SetPixel(xx + 1, pixel);
-            spriteLayerState.attrs[xx + 1] = attr;
+            spriteLayerState.attrs[xx + 1] = spriteLayerState.attrs[xx];
         }
     }
 }
@@ -3332,7 +3333,9 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     auto &attr = spriteLayerState.attrs[x];
 
     if (spriteLayerState.window[x]) {
-        layerState.pixels.transparent[x] = true;
+        if constexpr (!applyMesh) {
+            layerState.pixels.transparent[x] = true;
+        }
         return;
     }
 
@@ -4479,8 +4482,8 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
     // Find the sprite mesh layers
     alignas(16) std::array<uint8, kMaxResH> scanline_meshLayers;
-    std::fill_n(scanline_meshLayers.begin(), m_HRes, 0xFF);
     if constexpr (transparentMeshes) {
+        std::fill_n(scanline_meshLayers.begin(), m_HRes, 0xFF);
         for (uint32 x = 0; x < m_HRes; x++) {
             const uint8 priority = m_layerStates[LYR_Sprite].pixels.priority[x];
             std::array<LayerIndex, 3> &layers = scanline_layers[x];
