@@ -395,6 +395,8 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
         const uint8 dst = instr.aluInfo.d1BusDest;
         if (dst < 0x4 && (dataRAMReads & (1u << dst))) {
             CT.u32 &= ~(1 << (dst * 8));
+        } else if (dst == 0x5 && (instr.aluInfo.xBusOp & 0b10) == 0b10) {
+            // Prevent writes to P if X-Bus has written to it
         } else {
             WriteD1Bus<debug>(dst, imm);
         }
@@ -409,7 +411,12 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
         if (dst >= 0x4 || (dataRAMReads & (1u << dst)) == 0) {
             // Allow writes to Data RAM only if src wasn't read
             const uint32 value = ReadSource<debug>(src);
-            WriteD1Bus<debug>(dst, value);
+
+            if (dst == 0x5 && (instr.aluInfo.xBusOp & 0b10) == 0b10) {
+                // Prevent writes to P if X-Bus has written to it
+            } else {
+                WriteD1Bus<debug>(dst, value);
+            }
         } else if (dst < 0x4 && src >= 0x4 && src < 0x8 && dst != (src & 3)) {
             // Reads from MC0-3 should still increment CT
             incCT |= 1u << ((src & 3) * 8);
