@@ -553,6 +553,8 @@ void Settings::ResetToDefaults() {
     video.displayVideoOutputInWindow = false;
     video.fullScreen = false;
     video.doubleClickToFullScreen = false;
+    video.overrideUIScale = false;
+    video.uiScale = 1.0;
     video.deinterlace = false;
 
     audio.volume = 0.8;
@@ -774,10 +776,19 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
         Parse(tblVideo, "FullScreen", video.fullScreen);
         Parse(tblVideo, "DoubleClickToFullScreen", video.doubleClickToFullScreen);
-        Parse(tblVideo, "Deinterlace", video.deinterlace);
 
         Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
         Parse(tblVideo, "IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread);
+        Parse(tblVideo, "OverrideUIScale", video.overrideUIScale);
+
+        // Round scale to steps of 25% and clamp to 100%-200% range
+        double uiScale = video.uiScale;
+        Parse(tblVideo, "UIScale", uiScale);
+        uiScale = std::round(uiScale / 0.25) * 0.25;
+        uiScale = std::clamp(uiScale, 1.0, 2.0);
+        video.uiScale = uiScale;
+
+        Parse(tblVideo, "Deinterlace", video.deinterlace);
     }
 
     if (auto tblAudio = data["Audio"]) {
@@ -1026,6 +1037,8 @@ SettingsSaveResult Settings::Save() {
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
             {"FullScreen", video.fullScreen.Get()},
             {"DoubleClickToFullScreen", video.doubleClickToFullScreen},
+            {"OverrideUIScale", video.overrideUIScale.Get()},
+            {"UIScale", video.uiScale.Get()},
             {"Deinterlace", video.deinterlace.Get()},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
             {"IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread.Get()},

@@ -33,6 +33,8 @@ void VideoSettingsView::Display() {
     }
     // TODO: aspect ratio selector? slider?
 
+    ImGui::Separator();
+
     MakeDirty(ImGui::Checkbox("Auto-fit window to screen", &settings.autoResizeWindow));
     widgets::ExplanationTooltip(
         "If forced aspect ratio is disabled, adjusts and recenters the window whenever the display "
@@ -52,6 +54,9 @@ void VideoSettingsView::Display() {
     if (MakeDirty(ImGui::Checkbox("Windowed video output", &settings.displayVideoOutputInWindow))) {
         m_context.EnqueueEvent(events::gui::FitWindowToScreen());
     }
+    widgets::ExplanationTooltip("Moves the display into a dedicated window.\n"
+                                "Can be helpful when used in conjunction with the debugger windows.",
+                                m_context.displayScale);
 
     bool fullScreen = settings.fullScreen.Get();
     if (MakeDirty(ImGui::Checkbox("Full screen", &fullScreen))) {
@@ -59,6 +64,51 @@ void VideoSettingsView::Display() {
     }
 
     MakeDirty(ImGui::Checkbox("Double-click to toggle full screen", &settings.doubleClickToFullScreen));
+
+    ImGui::Separator();
+
+    // Round scale to steps of 25% and clamp to 100%-200% range
+    bool overrideUIScale = settings.overrideUIScale;
+    double uiScale = overrideUIScale ? settings.uiScale.Get() : m_context.displayScale;
+    uiScale = std::round(uiScale / 0.25) * 0.25;
+    uiScale = std::clamp(uiScale, 1.00, 2.00);
+
+    if (MakeDirty(ImGui::Checkbox(fmt::format("Override UI scale (current: {:.0f}%)", uiScale * 100.0).c_str(),
+                                  &overrideUIScale))) {
+        settings.overrideUIScale = overrideUIScale;
+        // Use current DPI setting when enabling the override
+        if (overrideUIScale) {
+            settings.uiScale = uiScale;
+        }
+    }
+
+    ImGui::Indent();
+    if (!overrideUIScale) {
+        ImGui::BeginDisabled();
+    }
+    if (MakeDirty(ImGui::RadioButton("100%##ui_scale", uiScale == 1.0))) {
+        settings.uiScale = 1.00;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("125%##ui_scale", uiScale == 1.25))) {
+        settings.uiScale = 1.25;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("150%##ui_scale", uiScale == 1.50))) {
+        settings.uiScale = 1.50;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("175%##ui_scale", uiScale == 1.75))) {
+        settings.uiScale = 1.75;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("200%##ui_scale", uiScale == 2.00))) {
+        settings.uiScale = 2.00;
+    }
+    if (!overrideUIScale) {
+        ImGui::EndDisabled();
+    }
+    ImGui::Unindent();
 
     // -----------------------------------------------------------------------------------------------------------------
 

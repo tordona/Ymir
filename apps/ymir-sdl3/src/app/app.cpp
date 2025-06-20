@@ -357,11 +357,6 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup Dear ImGui context
 
-    // Get the DPI scaling multiplier set for the primary screen
-    // TODO: consider dynamically adjusting it based on which display the window is located
-    m_context.displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-    devlog::info<grp::base>("Primary display DPI scaling: {:.1f}%", m_context.displayScale * 100.0f);
-
     std::filesystem::path imguiIniLocation = m_context.profile.GetPath(ProfilePath::PersistentState) / "imgui.ini";
     auto imguiIniLocationStr = fmt::format("{}", imguiIniLocation);
     ScopeGuard sgSaveImguiIni{[&] { ImGui::SaveIniSettingsToDisk(imguiIniLocationStr.c_str()); }};
@@ -374,9 +369,21 @@ void App::RunEmulator() {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
 
-    // Setup Dear ImGui style
-    const ImGuiStyle &style = ReloadStyle(m_context.displayScale);
-    ReloadFonts(m_context.displayScale);
+    // RescaleUI also loads the style and fonts
+    bool rescaleUIPending = false;
+    RescaleUI(false);
+    {
+        auto &videoSettings = m_context.settings.video;
+
+        // Observe changes to the UI scale options at this point to avoid "destroying"
+        videoSettings.overrideUIScale.Observe([&](bool) { rescaleUIPending = true; });
+        videoSettings.uiScale.Observe([&](double) { rescaleUIPending = true; });
+
+        m_context.settings.video.deinterlace.Observe(
+            [&](bool value) { m_context.EnqueueEvent(events::emu::SetDeinterlace(value)); });
+    }
+
+    const ImGuiStyle &style = ImGui::GetStyle();
 
     // ---------------------------------
     // Create window
@@ -1322,13 +1329,9 @@ void App::RunEmulator() {
                 break;
 
             case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-                m_context.displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-                devlog::info<grp::base>("Primary display DPI scaling: {:.1f}%", m_context.displayScale * 100.0f);
-                ReloadStyle(m_context.displayScale);
-
-                // Delete the current font-texture to ensure `ImGui::NewFrame` generates a new one
-                ImGui_ImplSDLRenderer3_DestroyFontsTexture();
-                ReloadFonts(m_context.displayScale);
+                if (!m_context.settings.video.overrideUIScale) {
+                    RescaleUI(true);
+                }
                 break;
             case SDL_EVENT_QUIT: goto end_loop; break;
             case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
@@ -1363,6 +1366,10 @@ void App::RunEmulator() {
                 break;
             }
             }
+        }
+        if (rescaleUIPending) {
+            rescaleUIPending = false;
+            RescaleUI(true);
         }
 
         // Process all axis changes
@@ -2512,6 +2519,26 @@ void App::OpenWelcomeModal(bool scanIPLROMs) {
 
 void App::RebindInputs() {
     m_context.settings.RebindInputs();
+}
+
+void App::RescaleUI(bool reloadFonts) {
+    float displayScale;
+    if (m_context.settings.video.overrideUIScale) {
+        displayScale = m_context.settings.video.uiScale;
+    } else {
+        displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+        devlog::info<grp::base>("Primary display DPI scaling: {:.1f}%", displayScale * 100.0f);
+    }
+
+    m_context.displayScale = displayScale;
+    devlog::info<grp::base>("UI scaling set to {:.1f}%", m_context.displayScale * 100.0f);
+    ReloadStyle(m_context.displayScale);
+
+    if (reloadFonts) {
+        // Delete the current font-texture to ensure `ImGui::NewFrame` generates a new one
+        ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+    }
+    ReloadFonts(m_context.displayScale);
 }
 
 ImGuiStyle &App::ReloadStyle(float displayScale) {

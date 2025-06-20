@@ -79,6 +79,8 @@ private:
     void OpenWelcomeModal(bool scanIPLROMS);
 
     void RebindInputs();
+
+    void RescaleUI(bool reloadFonts);
     ImGuiStyle &ReloadStyle(float displayScale);
     void ReloadFonts(float displayScale);
 

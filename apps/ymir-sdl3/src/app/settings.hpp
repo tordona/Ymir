@@ -266,10 +266,15 @@ public:
         bool forceIntegerScaling;
         bool forceAspectRatio;
         double forcedAspect;
+
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;
         util::Observable<bool> fullScreen;
         bool doubleClickToFullScreen;
+
+        util::Observable<bool> overrideUIScale;
+        util::Observable<double> uiScale;
+
         util::Observable<bool> deinterlace;
     } video;
 

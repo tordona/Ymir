@@ -6,6 +6,7 @@
 
 - App: Added command-line option `-P` to force emulator to start paused.
 - App: Added option to create internal backup RAM files per game. (#99)
+- App: Added option to override UI scale. (#251)
 - App: Added option to toggle fullscreen by double-clicking the display. (#197)
 - App: Added recent games list to File menu. (#196)
 - App: Automatically center Settings window when opening it. (#251)
