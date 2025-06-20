@@ -520,9 +520,9 @@ TEST_CASE_PERSISTENT_FIXTURE(TestSubject, "SH2 interrupts are handled correctly"
         CHECK(memoryAccesses[0] == MemoryAccessInfo{startSP - 4, startSR, true, sizeof(uint32)});
         CHECK(memoryAccesses[1] == MemoryAccessInfo{startSP - 8, startPC, true, sizeof(uint32)});
         CHECK(memoryAccesses[2] == MemoryAccessInfo{vecAddr, intrHandlerAddr, false, sizeof(uint32)});
-        // - IRL interrupt acknowledged; no other interrupt should be acknowledged
+        // - IRL interrupt acknowledged if INTC.ICR.VECMD=1; no other interrupt should be acknowledged
         if (source == sh2::InterruptSource::IRL) {
-            CHECK(intrAcked == true);
+            CHECK(intrAcked == intc.ICR.VECMD);
         } else {
             CHECK(intrAcked == false);
         }
