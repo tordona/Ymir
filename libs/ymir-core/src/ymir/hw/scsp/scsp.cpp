@@ -35,6 +35,9 @@ void SCSP::Reset(bool hard) {
     m_midiInputWritePos = 0;
     m_midiInputOverflow = false;
 
+    m_midiOutputSize = 0;
+    m_expectedOutputPacketSize = 0;
+
     m_nextMidiTime = 0;
 
     m_cddaBuffer.fill(0);
