@@ -67,10 +67,10 @@ inline EmuEvent RunFunction(std::function<void(SharedContext &)> &&fn) {
     return {.type = EmuEvent::Type::RunFunction, .value = std::move(fn)};
 }
 
-inline EmuEvent ReceiveMidiInput(double deltaTime, std::vector<uint8> &payload) {
+inline EmuEvent ReceiveMidiInput(double deltaTime, std::vector<uint8> &&payload) {
     return {.type = EmuEvent::Type::ReceiveMidiInput, .value = ymir::scsp::MidiMessage(
         deltaTime,
-        payload
+        std::move(payload)
     )};
 }
 

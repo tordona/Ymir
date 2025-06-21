@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ymir/sys/backup_ram.hpp>
-#include <ymir/hw/scsp/scsp.hpp>
+#include <ymir/hw/scsp/scsp_midi_defs.hpp>
 
 #include <filesystem>
 #include <functional>

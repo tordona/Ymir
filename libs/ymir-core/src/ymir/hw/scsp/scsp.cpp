@@ -183,7 +183,116 @@ void SCSP::ReceiveMidiInput(MidiMessage &msg) {
 
     devlog::trace<grp::midi>("Received midi payload, scheduled for {} (bytes: {})", m_nextMidiTime, msg.payload.size());
 
-    m_midiInputQueue.push(QueuedMidiMessage(m_nextMidiTime, msg.payload));
+    m_midiInputQueue.push(QueuedMidiMessage(m_nextMidiTime, std::move(msg.payload)));
+}
+
+void SCSP::FlushMidiOutput(bool endPacket) {
+    m_cbSendMidiOutputMessage(std::span<uint8>(m_midiOutputBuffer).subspan(0, m_midiOutputSize));
+    m_midiOutputSize = 0;
+    if (endPacket) {
+        m_expectedOutputPacketSize = 0;
+    }
+}
+
+template <bool lowerByte, bool upperByte, bool peek>
+uint16 SCSP::ReadMIDIIn() {
+    uint8 mibuf = m_midiInputBuffer[m_midiInputReadPos];
+    bool mienp = m_midiInputReadPos == m_midiInputWritePos;
+    bool mifull = ((m_midiInputWritePos + 1) % m_midiInputBuffer.size()) == m_midiInputReadPos;
+    bool miovf = m_midiInputOverflow;
+
+    uint16 value = 0;
+    bit::deposit_into<0, 7>(value, mibuf);
+    bit::deposit_into<8>(value, mienp);
+    bit::deposit_into<9>(value, mifull);
+    bit::deposit_into<10>(value, miovf);
+    bit::deposit_into<11>(value, true); // output always empty for now
+
+    if constexpr (!peek && lowerByte) {
+        // advance read position
+        if (!mienp) {
+            m_midiInputReadPos = (m_midiInputReadPos + 1) % m_midiInputBuffer.size();
+        } else {
+            devlog::error<grp::midi>("Invalid read from empty MIDI buffer");
+        }
+    }
+
+    return value;
+}
+
+template <bool lowerByte, bool upperByte, bool poke>
+void SCSP::WriteMIDIOut(uint16 value) {
+    if constexpr (lowerByte && !poke) {
+        // basically we need to try and gather individual bytes into a single packet of MIDI data
+        // most MIDI messages only have one or two bytes of data
+        // however, if it's a sysex, it can be an arbitrary size and is terminated by 0xF7
+
+        uint8 byte = bit::extract<0, 7>(value);
+        m_midiOutputBuffer[m_midiOutputSize++] = byte;
+
+        if (m_expectedOutputPacketSize == -1) {
+            // currently building a SysEx message (note that these can actually be broken up into multiple packets afaik)
+            // flush if either we hit a terminator byte *or* buffer hits maximum size
+            if (byte == 0xF7 || m_midiOutputSize == kMidiBufferSize) {
+                FlushMidiOutput(byte == 0xF7);
+            }
+        }
+        else if (m_midiOutputBuffer.size() == m_expectedOutputPacketSize) {
+            // finished building normal midi packet
+            FlushMidiOutput(true);
+        }
+        else if (m_midiOutputSize == 1) {
+            // starting new midi packet, check status byte to see what kind of packet we're building
+            if ((byte >> 4) == 0b1000) {
+                // note off
+                m_expectedOutputPacketSize = 3;
+            }
+            else if ((byte >> 4) == 0b1001) {
+                // note on
+                m_expectedOutputPacketSize = 3;
+            }
+            else if ((byte >> 4) == 0b1010) {
+                // key pressure (aftertouch)
+                m_expectedOutputPacketSize = 3;
+            }
+            else if ((byte >> 4) == 0b1011) {
+                // control change
+                m_expectedOutputPacketSize = 3;
+            }
+            else if ((byte >> 4) == 0b1100) {
+                // program change
+                m_expectedOutputPacketSize = 2;
+            }
+            else if ((byte >> 4) == 0b1101) {
+                // channel pressure (aftertouch)
+                m_expectedOutputPacketSize = 2;
+            }
+            else if ((byte >> 4) == 0b1110) {
+                // pitch bend change
+                m_expectedOutputPacketSize = 3;
+            }
+            else if (byte == 0xF0) {
+                // sysex, arbitrary size (terminated by 0xF7)
+                m_expectedOutputPacketSize = -1;
+            }
+            else if (byte == 0xF1) {
+                // MIDI time code quarter frame
+                m_expectedOutputPacketSize = 2;
+            }
+            else if (byte == 0xF2) {
+                // song position pointer
+                m_expectedOutputPacketSize = 3;
+            }
+            else if (byte == 0xF3) {
+                // song select
+                m_expectedOutputPacketSize = 2;
+            }
+            else {
+                // everything else is one-byte, so just send as is
+                FlushMidiOutput(true);
+            }
+        }
+    }
 }
 
 void SCSP::DumpWRAM(std::ostream &out) const {
@@ -524,6 +633,7 @@ void SCSP::ExecuteDMA() {
 
 FORCE_INLINE void SCSP::Tick() {
     RunM68K();
+    ProcessMidiInputQueue();
     GenerateSample();
     UpdateTimers();
     UpdateM68KInterrupts();
@@ -658,9 +768,6 @@ FORCE_INLINE void SCSP::GenerateSample() {
     }
 
     m_cbOutputSample(outL, outR);
-
-    // process scheduled MIDI messages
-    ProcessMidiInputQueue();
 
     m_sampleCounter++;
 
@@ -903,8 +1010,8 @@ void SCSP::ProcessMidiInputQueue() {
             if (!m_midiInputOverflow) {
                 devlog::trace<grp::midi>("Adding MIDI message to buffer at {} (bytes: {})", m_sampleCounter, msg.payload.size());
 
-                for (auto it = msg.payload.begin(); it != msg.payload.end(); it++) {
-                    m_midiInputBuffer[m_midiInputWritePos] = *it;
+                for (auto data : msg.payload) {
+                    m_midiInputBuffer[m_midiInputWritePos] = data;
                     m_midiInputWritePos = (m_midiInputWritePos + 1) % m_midiInputBuffer.size();
 
                     if (m_midiInputWritePos == m_midiInputReadPos) {

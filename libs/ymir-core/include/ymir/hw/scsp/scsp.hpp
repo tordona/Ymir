@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scsp_defs.hpp"
+#include "scsp_midi_defs.hpp"
 #include "scsp_dsp.hpp"
 #include "scsp_slot.hpp"
 #include "scsp_timer.hpp"
@@ -104,15 +105,6 @@ namespace grp {
 
 } // namespace grp
 
-struct MidiMessage {
-    double deltaTime;
-    std::vector<uint8> payload;
-
-    MidiMessage(double deltaTime, std::vector<uint8> &payload)
-        : deltaTime(deltaTime)
-        , payload(std::move(payload)) {}
-};
-
 class SCSP {
 public:
     SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config);
@@ -167,7 +159,7 @@ private:
         uint64 scheduleTime;
         std::vector<uint8> payload;
 
-        QueuedMidiMessage(uint64 scheduleTime, std::vector<uint8> &payload)
+        QueuedMidiMessage(uint64 scheduleTime, std::vector<uint8> &&payload)
             : scheduleTime(scheduleTime)
             , payload(std::move(payload)) {
         }
@@ -198,13 +190,14 @@ private:
     std::queue<QueuedMidiMessage> m_midiInputQueue;
     uint64 m_nextMidiTime;
 
-    std::array<uint8, 1024> m_midiInputBuffer;
+    std::array<uint8, kMidiBufferSize> m_midiInputBuffer;
     uint32 m_midiInputReadPos;
     uint32 m_midiInputWritePos;
     bool m_midiInputOverflow;
 
-    std::vector<uint8> m_midiOutputBuffer;
-    int m_expectedOutputPacketSize = 0;
+    std::array<uint8, kMidiBufferSize> m_midiOutputBuffer;
+    uint32 m_midiOutputSize;
+    int m_expectedOutputPacketSize;
 
     void ProcessMidiInputQueue();
 
@@ -685,110 +678,13 @@ private:
 
     // --- MIDI Register ---
 
-    void FlushMidiOutput() {
-        m_cbSendMidiOutputMessage(std::move(m_midiOutputBuffer));
-        m_expectedOutputPacketSize = 0;
-    }
+    void FlushMidiOutput(bool endPacket);
 
     template <bool lowerByte, bool upperByte, bool peek>
-    uint16 ReadMIDIIn() {
-        uint8 mibuf = m_midiInputBuffer[m_midiInputReadPos];
-        bool mienp = m_midiInputReadPos == m_midiInputWritePos;
-        bool mifull = ((m_midiInputWritePos + 1) % m_midiInputBuffer.size()) == m_midiInputReadPos;
-        bool miovf = m_midiInputOverflow;
-
-        uint16 value = 0;
-        bit::deposit_into<0, 7>(value, mibuf);
-        bit::deposit_into<8>(value, mienp);
-        bit::deposit_into<9>(value, mifull);
-        bit::deposit_into<10>(value, miovf);
-        bit::deposit_into<11>(value, true); // output always empty for now
-
-        if constexpr (!peek && lowerByte) {
-            // advance read position
-            if (!mienp) {
-                m_midiInputReadPos = (m_midiInputReadPos + 1) % m_midiInputBuffer.size();
-            } else {
-                devlog::error<grp::midi>("Invalid read from empty MIDI buffer");
-            }
-        }
-
-        return value;
-    }
+    uint16 ReadMIDIIn();
 
     template <bool lowerByte, bool upperByte, bool poke>
-    void WriteMIDIOut(uint16 value) {
-        if constexpr (lowerByte && !poke) {
-            // basically we need to try and gather individual bytes into a single packet of MIDI data
-            // most MIDI messages only have one or two bytes of data
-            // however, if it's a sysex, it can be an arbitrary size and is terminated by 0xF7
-
-            uint8 byte = bit::extract<0, 7>(value);
-            m_midiOutputBuffer.push_back(byte);
-
-            if (m_midiOutputBuffer.size() == 1) {
-                if ((byte >> 4) == 0b1000) {
-                    // note off
-                    m_expectedOutputPacketSize = 3;
-                }
-                else if ((byte >> 4) == 0b1001) {
-                    // note on
-                    m_expectedOutputPacketSize = 3;
-                }
-                else if ((byte >> 4) == 0b1010) {
-                    // key pressure (aftertouch)
-                    m_expectedOutputPacketSize = 3;
-                }
-                else if ((byte >> 4) == 0b1011) {
-                    // control change
-                    m_expectedOutputPacketSize = 3;
-                }
-                else if ((byte >> 4) == 0b1100) {
-                    // program change
-                    m_expectedOutputPacketSize = 2;
-                }
-                else if ((byte >> 4) == 0b1101) {
-                    // channel pressure (aftertouch)
-                    m_expectedOutputPacketSize = 2;
-                }
-                else if ((byte >> 4) == 0b1110) {
-                    // pitch bend change
-                    m_expectedOutputPacketSize = 3;
-                }
-                else if (byte == 0xF0) {
-                    // sysex
-                    m_expectedOutputPacketSize = 0;
-                }
-                else if (byte == 0xF1) {
-                    // MIDI time code quarter frame
-                    m_expectedOutputPacketSize = 2;
-                }
-                else if (byte == 0xF2) {
-                    // song position pointer
-                    m_expectedOutputPacketSize = 3;
-                }
-                else if (byte == 0xF3) {
-                    // song select
-                    m_expectedOutputPacketSize = 2;
-                }
-                else {
-                    // everything else is one-byte, so just send as is
-                    FlushMidiOutput();
-                }
-            }
-            else {
-                if (m_expectedOutputPacketSize == 0) {
-                    // sys ex
-                    if (byte == 0xF7) {
-                        FlushMidiOutput();
-                    }
-                }
-                else if (m_midiOutputBuffer.size() == m_expectedOutputPacketSize) {
-                    FlushMidiOutput();
-                }
-            }
-        }
-    }
+    void WriteMIDIOut(uint16 value);
 
     // --- Timer Register ---
 
