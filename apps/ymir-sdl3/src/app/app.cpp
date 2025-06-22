@@ -202,7 +202,7 @@ int App::Run(const CommandLineOptions &options) {
                 }
                 break;
             }
-            case MidiPortType::Virtual: {
+            case MidiPortType::Virtual:
                 try {
                     m_context.midi.midiInput->openVirtualPort(m_context.GetMidiVirtualInputPortName());
                     devlog::debug<grp::base>("Opened virtual MIDI input port");
@@ -210,7 +210,7 @@ int App::Run(const CommandLineOptions &options) {
                     devlog::error<grp::base>("Failed opening virtual MIDI input port: {}", error.getMessage());
                 }
                 break;
-            }
+            default: break;
             }
         });
 
@@ -233,7 +233,7 @@ int App::Run(const CommandLineOptions &options) {
                 }
                 break;
             }
-            case MidiPortType::Virtual: {
+            case MidiPortType::Virtual:
                 try {
                     m_context.midi.midiOutput->openVirtualPort(m_context.GetMidiVirtualOutputPortName());
                     devlog::debug<grp::base>("Opened virtual MIDI output port");
@@ -241,7 +241,7 @@ int App::Run(const CommandLineOptions &options) {
                     devlog::error<grp::base>("Failed opening virtual MIDI output port: {}", error.getMessage());
                 }
                 break;
-            }
+            default: break;
             }
         });
     }
@@ -749,7 +749,8 @@ void App::RunEmulator() {
     m_context.saturn.SCSP.SetSendMidiOutputCallback(
         {&m_context.midi.midiOutput, [](std::span<uint8> payload, void *ctx) {
              try {
-                 static_cast<RtMidiOut *>(ctx)->sendMessage(payload.data(), payload.size());
+                 auto &ptr = *static_cast<std::unique_ptr<RtMidiOut> *>(ctx);
+                 ptr->sendMessage(payload.data(), payload.size());
              } catch (RtMidiError &error) {
                  devlog::error<grp::base>("Failed to send MIDI output message: {}", error.getMessage());
              }
