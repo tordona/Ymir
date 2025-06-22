@@ -280,8 +280,16 @@ public:
     } video;
 
     struct Audio {
+        struct MidiPort {
+            enum Type { None, Normal, Virtual };
+            std::string id;
+            Type type;
+        };
+
         util::Observable<float> volume;
         util::Observable<bool> mute;
+        util::Observable<MidiPort> midiInputPort;
+        util::Observable<MidiPort> midiOutputPort;
     } audio;
 
     struct Cartridge {

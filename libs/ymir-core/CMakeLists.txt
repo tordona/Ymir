@@ -41,6 +41,7 @@ add_library(ymir-core
     include/ymir/hw/scsp/scsp.hpp
     include/ymir/hw/scsp/scsp_callbacks.hpp
     include/ymir/hw/scsp/scsp_defs.hpp
+	include/ymir/hw/scsp/scsp_midi_defs.hpp
     include/ymir/hw/scsp/scsp_dsp.hpp
     include/ymir/hw/scsp/scsp_dsp_instr.hpp
     include/ymir/hw/scsp/scsp_internal_callbacks.hpp

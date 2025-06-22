@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ymir/hw/scsp/scsp_midi_defs.hpp>
 #include <ymir/sys/backup_ram.hpp>
 
 #include <filesystem>
@@ -33,6 +34,8 @@ struct EmuEvent {
 
         RunFunction,
 
+        ReceiveMidiInput,
+
         SetThreadPriority,
 
         Shutdown,
@@ -40,8 +43,8 @@ struct EmuEvent {
 
     Type type;
 
-    std::variant<std::monostate, bool, std::string, std::filesystem::path, ymir::bup::BackupMemory,
-                 std::function<void(SharedContext &)>>
+    std::variant<std::monostate, ymir::scsp::MidiMessage, bool, std::string, std::filesystem::path,
+                 ymir::bup::BackupMemory, std::function<void(SharedContext &)>>
         value;
 };
 

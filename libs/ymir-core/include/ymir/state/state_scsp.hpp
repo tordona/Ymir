@@ -6,6 +6,7 @@
 #include "state_scsp_timer.hpp"
 
 #include <ymir/hw/m68k/m68k_defs.hpp>
+#include <ymir/hw/scsp/scsp_midi_defs.hpp>
 
 #include <ymir/core/types.hpp>
 
@@ -62,6 +63,15 @@ struct SCSPState {
     uint64 sampleCounter;
 
     uint32 lfsr;
+
+    std::array<uint8, ymir::scsp::kMidiBufferSize> midiInputBuffer;
+    uint32 midiInputReadPos;
+    uint32 midiInputWritePos;
+    bool midiInputOverflow;
+
+    std::array<uint8, ymir::scsp::kMidiBufferSize> midiOutputBuffer;
+    uint32 midiOutputSize;
+    sint32 expectedOutputPacketSize;
 };
 
 } // namespace ymir::state

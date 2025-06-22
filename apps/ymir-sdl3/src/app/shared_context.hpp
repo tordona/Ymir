@@ -23,10 +23,14 @@
 
 #include <blockingconcurrentqueue.h>
 
+#include <RtMidi.h>
+
 #include <deque>
 #include <filesystem>
 #include <memory>
 #include <mutex>
+
+using MidiPortType = app::Settings::Audio::MidiPort::Type;
 
 namespace app {
 
@@ -146,6 +150,11 @@ struct SharedContext {
 
     RewindBuffer rewindBuffer;
     bool rewinding = false;
+
+    struct Midi {
+        std::unique_ptr<RtMidiIn> midiInput;
+        std::unique_ptr<RtMidiOut> midiOutput;
+    } midi;
 
     // Certain GUI interactions require synchronization with the emulator thread, especially when dealing with
     // dynamically allocated objects:
@@ -305,6 +314,75 @@ struct SharedContext {
         } else {
             return profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
         }
+    }
+
+    std::string GetMidiVirtualInputPortName() {
+        return "Ymir Virtual MIDI Input";
+    }
+
+    std::string GetMidiVirtualOutputPortName() {
+        return "Ymir Virtual MIDI Output";
+    }
+
+    std::string GetMidiInputPortName() {
+        switch (settings.audio.midiInputPort.Get().type) {
+        case MidiPortType::None: {
+            return "None";
+        }
+        case MidiPortType::Normal: {
+            return settings.audio.midiInputPort.Get().id;
+        }
+        case MidiPortType::Virtual: {
+            return GetMidiVirtualInputPortName();
+        }
+        }
+
+        return {};
+    }
+
+    std::string GetMidiOutputPortName() {
+        switch (settings.audio.midiOutputPort.Get().type) {
+        case MidiPortType::None: {
+            return "None";
+        }
+        case MidiPortType::Normal: {
+            return settings.audio.midiOutputPort.Get().id;
+        }
+        case MidiPortType::Virtual: {
+            return GetMidiVirtualInputPortName();
+        }
+        }
+
+        return {};
+    }
+
+    int FindInputPortByName(std::string name) {
+        unsigned int portCount = midi.midiInput->getPortCount();
+        for (unsigned int i = 0; i < portCount; i++) {
+            if (midi.midiInput->getPortName(i) == name) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    int FindOutputPortByName(std::string name) {
+        unsigned int portCount = midi.midiOutput->getPortCount();
+        for (unsigned int i = 0; i < portCount; i++) {
+            if (midi.midiOutput->getPortName(i) == name) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    SharedContext() {
+        midi.midiInput = std::unique_ptr<RtMidiIn>(new RtMidiIn(RtMidi::Api::UNSPECIFIED, "Ymir MIDI input client"));
+        midi.midiOutput =
+            std::unique_ptr<RtMidiOut>(new RtMidiOut(RtMidi::Api::UNSPECIFIED, "Ymir MIDI output client"));
+        midi.midiInput->ignoreTypes(false, false, false);
     }
 };
 

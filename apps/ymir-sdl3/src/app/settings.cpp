@@ -138,6 +138,19 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::
     }
 }
 
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Audio::MidiPort::Type &value) {
+    value = Settings::Audio::MidiPort::Type::None;
+    if (auto opt = node.value<std::string>()) {
+        if (*opt == "None"s) {
+            value = Settings::Audio::MidiPort::Type::None;
+        } else if (*opt == "Normal"s) {
+            value = Settings::Audio::MidiPort::Type::Normal;
+        } else if (*opt == "Virtual"s) {
+            value = Settings::Audio::MidiPort::Type::Virtual;
+        }
+    }
+}
+
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Cartridge::Type &value) {
     value = Settings::Cartridge::Type::None;
     if (auto opt = node.value<std::string>()) {
@@ -245,6 +258,15 @@ FORCE_INLINE static const char *ToTOML(const core::config::audio::SampleInterpol
     default: [[fallthrough]];
     case core::config::audio::SampleInterpolationMode::NearestNeighbor: return "Nearest";
     case core::config::audio::SampleInterpolationMode::Linear: return "Linear";
+    }
+}
+
+FORCE_INLINE static const char *ToTOML(const Settings::Audio::MidiPort::Type value) {
+    switch (value) {
+    default: [[fallthrough]];
+    case Settings::Audio::MidiPort::Type::None: return "None";
+    case Settings::Audio::MidiPort::Type::Normal: return "Normal";
+    case Settings::Audio::MidiPort::Type::Virtual: return "Virtual";
     }
 }
 
@@ -560,6 +582,8 @@ void Settings::ResetToDefaults() {
 
     audio.volume = 0.8;
     audio.mute = false;
+    audio.midiInputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
+    audio.midiOutputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
 
     cartridge.type = Settings::Cartridge::Type::None;
     cartridge.backupRAM.imagePath = "";
@@ -794,10 +818,20 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     }
 
     if (auto tblAudio = data["Audio"]) {
+        auto inputPort = audio.midiInputPort.Get();
+        auto outputPort = audio.midiOutputPort.Get();
+
         Parse(tblAudio, "Volume", audio.volume);
         Parse(tblAudio, "Mute", audio.mute);
+        Parse(tblAudio, "MidiInputPortId", inputPort.id);
+        Parse(tblAudio, "MidiOutputPortId", outputPort.id);
+        Parse(tblAudio, "MidiInputPortType", inputPort.type);
+        Parse(tblAudio, "MidiOutputPortType", outputPort.type);
         Parse(tblAudio, "InterpolationMode", emuConfig.audio.interpolation);
         Parse(tblAudio, "ThreadedSCSP", emuConfig.audio.threadedSCSP);
+
+        audio.midiInputPort = inputPort;
+        audio.midiOutputPort = outputPort;
     }
 
     if (auto tblCart = data["Cartridge"]) {
@@ -1050,6 +1084,10 @@ SettingsSaveResult Settings::Save() {
         {"Audio", toml::table{{
             {"Volume", audio.volume.Get()},
             {"Mute", audio.mute.Get()},
+            {"MidiInputPortId", audio.midiInputPort.Get().id},
+            {"MidiOutputPortId", audio.midiOutputPort.Get().id},
+            {"MidiInputPortType", ToTOML(audio.midiInputPort.Get().type)},
+            {"MidiOutputPortType", ToTOML(audio.midiOutputPort.Get().type)},
             {"InterpolationMode", ToTOML(emuConfig.audio.interpolation)},
             {"ThreadedSCSP", emuConfig.audio.threadedSCSP.Get()},
         }}},
