@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vector>
+#include "scsp_defs.hpp"
+
 #include <ymir/core/types.hpp>
 
-#include "scsp_defs.hpp"
+#include <vector>
 
 namespace ymir::scsp {
 
