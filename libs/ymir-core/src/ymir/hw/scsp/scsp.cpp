@@ -234,63 +234,50 @@ void SCSP::WriteMIDIOut(uint16 value) {
         m_midiOutputBuffer[m_midiOutputSize++] = byte;
 
         if (m_expectedOutputPacketSize == -1) {
-            // currently building a SysEx message (note that these can actually be broken up into multiple packets afaik)
-            // flush if either we hit a terminator byte *or* buffer hits maximum size
+            // currently building a SysEx message (note that these can actually be broken up into multiple packets
+            // afaik) flush if either we hit a terminator byte *or* buffer hits maximum size
             if (byte == 0xF7 || m_midiOutputSize == kMidiBufferSize) {
                 FlushMidiOutput(byte == 0xF7);
             }
-        }
-        else if (m_midiOutputBuffer.size() == m_expectedOutputPacketSize) {
+        } else if (m_midiOutputBuffer.size() == m_expectedOutputPacketSize) {
             // finished building normal midi packet
             FlushMidiOutput(true);
-        }
-        else if (m_midiOutputSize == 1) {
+        } else if (m_midiOutputSize == 1) {
             // starting new midi packet, check status byte to see what kind of packet we're building
             if ((byte >> 4) == 0b1000) {
                 // note off
                 m_expectedOutputPacketSize = 3;
-            }
-            else if ((byte >> 4) == 0b1001) {
+            } else if ((byte >> 4) == 0b1001) {
                 // note on
                 m_expectedOutputPacketSize = 3;
-            }
-            else if ((byte >> 4) == 0b1010) {
+            } else if ((byte >> 4) == 0b1010) {
                 // key pressure (aftertouch)
                 m_expectedOutputPacketSize = 3;
-            }
-            else if ((byte >> 4) == 0b1011) {
+            } else if ((byte >> 4) == 0b1011) {
                 // control change
                 m_expectedOutputPacketSize = 3;
-            }
-            else if ((byte >> 4) == 0b1100) {
+            } else if ((byte >> 4) == 0b1100) {
                 // program change
                 m_expectedOutputPacketSize = 2;
-            }
-            else if ((byte >> 4) == 0b1101) {
+            } else if ((byte >> 4) == 0b1101) {
                 // channel pressure (aftertouch)
                 m_expectedOutputPacketSize = 2;
-            }
-            else if ((byte >> 4) == 0b1110) {
+            } else if ((byte >> 4) == 0b1110) {
                 // pitch bend change
                 m_expectedOutputPacketSize = 3;
-            }
-            else if (byte == 0xF0) {
+            } else if (byte == 0xF0) {
                 // sysex, arbitrary size (terminated by 0xF7)
                 m_expectedOutputPacketSize = -1;
-            }
-            else if (byte == 0xF1) {
+            } else if (byte == 0xF1) {
                 // MIDI time code quarter frame
                 m_expectedOutputPacketSize = 2;
-            }
-            else if (byte == 0xF2) {
+            } else if (byte == 0xF2) {
                 // song position pointer
                 m_expectedOutputPacketSize = 3;
-            }
-            else if (byte == 0xF3) {
+            } else if (byte == 0xF3) {
                 // song select
                 m_expectedOutputPacketSize = 2;
-            }
-            else {
+            } else {
                 // everything else is one-byte, so just send as is
                 FlushMidiOutput(true);
             }
@@ -1041,7 +1028,8 @@ void SCSP::ProcessMidiInputQueue() {
         if (msg.scheduleTime <= m_sampleCounter) {
             // TODO: is there any way to clear overflow beyond a reset?
             if (!m_midiInputOverflow) {
-                devlog::trace<grp::midi>("Adding MIDI message to buffer at {} (bytes: {})", m_sampleCounter, msg.payload.size());
+                devlog::trace<grp::midi>("Adding MIDI message to buffer at {} (bytes: {})", m_sampleCounter,
+                                         msg.payload.size());
 
                 for (auto data : msg.payload) {
                     m_midiInputBuffer[m_midiInputWritePos] = data;

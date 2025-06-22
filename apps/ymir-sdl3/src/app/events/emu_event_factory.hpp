@@ -68,10 +68,7 @@ inline EmuEvent RunFunction(std::function<void(SharedContext &)> &&fn) {
 }
 
 inline EmuEvent ReceiveMidiInput(double deltaTime, std::vector<uint8> &&payload) {
-    return {.type = EmuEvent::Type::ReceiveMidiInput, .value = ymir::scsp::MidiMessage(
-        deltaTime,
-        std::move(payload)
-    )};
+    return {.type = EmuEvent::Type::ReceiveMidiInput, .value = ymir::scsp::MidiMessage(deltaTime, std::move(payload))};
 }
 
 inline EmuEvent SetThreadPriority(bool boost) {

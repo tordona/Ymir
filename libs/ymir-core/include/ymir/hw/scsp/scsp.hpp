@@ -1,8 +1,8 @@
 #pragma once
 
 #include "scsp_defs.hpp"
-#include "scsp_midi_defs.hpp"
 #include "scsp_dsp.hpp"
+#include "scsp_midi_defs.hpp"
 #include "scsp_slot.hpp"
 #include "scsp_timer.hpp"
 
@@ -129,9 +129,9 @@ public:
 
     // Feeds CDDA data into the buffer and returns how many thirds of the buffer are used
     uint32 ReceiveCDDA(std::span<uint8, 2352> data);
-	
-	// push scheduled message onto MIDI input queue
-	void ReceiveMidiInput(MidiMessage &msg);
+
+    // push scheduled message onto MIDI input queue
+    void ReceiveMidiInput(MidiMessage &msg);
 
     void DumpWRAM(std::ostream &out) const;
 
@@ -161,8 +161,7 @@ private:
 
         QueuedMidiMessage(uint64 scheduleTime, std::vector<uint8> &&payload)
             : scheduleTime(scheduleTime)
-            , payload(std::move(payload)) {
-        }
+            , payload(std::move(payload)) {}
     };
 
     alignas(16) std::array<uint8, m68k::kM68KWRAMSize> m_WRAM;

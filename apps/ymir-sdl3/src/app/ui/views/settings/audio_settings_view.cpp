@@ -80,7 +80,8 @@ void AudioSettingsView::Display() {
 
     if (ImGui::BeginCombo(inputLabel.c_str(), inputPortName.c_str())) {
         if (MakeDirty(ImGui::Selectable("None", inputPort.type == MidiPortType::None))) {
-            m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::None };
+            m_context.settings.audio.midiInputPort =
+                app::Settings::Audio::MidiPort{.id = {}, .type = MidiPortType::None};
         }
 
         int portCount = m_context.midi.midiInput->getPortCount();
@@ -88,7 +89,8 @@ void AudioSettingsView::Display() {
             std::string portName = m_context.midi.midiInput->getPortName(i);
             bool selected = inputPort.type == MidiPortType::Normal && inputPort.id == portName;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .id = portName, .type = MidiPortType::Normal };
+                m_context.settings.audio.midiInputPort =
+                    app::Settings::Audio::MidiPort{.id = portName, .type = MidiPortType::Normal};
             }
         }
 
@@ -97,7 +99,8 @@ void AudioSettingsView::Display() {
             const std::string portName = m_context.GetMidiVirtualInputPortName();
             bool selected = inputPort.type == MidiPortType::Virtual;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::Virtual };
+                m_context.settings.audio.midiInputPort =
+                    app::Settings::Audio::MidiPort{.id = {}, .type = MidiPortType::Virtual};
             }
         }
 
@@ -107,13 +110,15 @@ void AudioSettingsView::Display() {
     // OUTPUT PORTS
 
     const std::string outputPortName = m_context.GetMidiOutputPortName();
-    const std::string outputLabel = fmt::format("Output port {}", m_context.midi.midiOutput->isPortOpen() ? "(open)" : "");
+    const std::string outputLabel =
+        fmt::format("Output port {}", m_context.midi.midiOutput->isPortOpen() ? "(open)" : "");
 
     auto outputPort = m_context.settings.audio.midiOutputPort.Get();
 
     if (ImGui::BeginCombo(outputLabel.c_str(), outputPortName.c_str())) {
         if (MakeDirty(ImGui::Selectable("None", outputPort.type == MidiPortType::None))) {
-            m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::None };
+            m_context.settings.audio.midiOutputPort =
+                app::Settings::Audio::MidiPort{.id = {}, .type = MidiPortType::None};
         }
 
         int portCount = m_context.midi.midiOutput->getPortCount();
@@ -121,7 +126,8 @@ void AudioSettingsView::Display() {
             std::string portName = m_context.midi.midiOutput->getPortName(i);
             bool selected = outputPort.type == MidiPortType::Normal && outputPort.id == portName;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .id = portName, .type = MidiPortType::Normal };
+                m_context.settings.audio.midiOutputPort =
+                    app::Settings::Audio::MidiPort{.id = portName, .type = MidiPortType::Normal};
             }
         }
 
@@ -130,7 +136,8 @@ void AudioSettingsView::Display() {
             const std::string portName = m_context.GetMidiVirtualOutputPortName();
             bool selected = outputPort.type == MidiPortType::Virtual;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::Virtual };
+                m_context.settings.audio.midiOutputPort =
+                    app::Settings::Audio::MidiPort{.id = {}, .type = MidiPortType::Virtual};
             }
         }
 

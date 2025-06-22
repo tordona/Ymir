@@ -25,4 +25,4 @@ struct MidiMessage {
         , payload(std::move(payload)) {}
 };
 
-} // namespace ymir:scsp
+} // namespace ymir::scsp

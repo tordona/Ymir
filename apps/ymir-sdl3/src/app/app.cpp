@@ -183,75 +183,67 @@ int App::Run(const CommandLineOptions &options) {
     }
 
     {
-        m_context.settings.audio.midiInputPort.Observe(
-            [&](app::Settings::Audio::MidiPort value) {
-                m_context.midi.midiInput->closePort();
+        m_context.settings.audio.midiInputPort.Observe([&](app::Settings::Audio::MidiPort value) {
+            m_context.midi.midiInput->closePort();
 
-                switch (value.type) {
-                    case MidiPortType::Normal: {
-                        int portNumber = m_context.FindInputPortByName(value.id);
-                        if (portNumber == -1) {
-                            devlog::error<grp::base>("Failed opening MIDI input port: no port named {}", value.id);
-                        }
-                        else {
-                            try {
-                                m_context.midi.midiInput->openPort(portNumber);
-                                devlog::debug<grp::base>("Opened MIDI input port {}", value.id);
-                            }
-                            catch (RtMidiError &error) {
-                                devlog::error<grp::base>("Failed opening MIDI input port {}: {}", portNumber, error.getMessage());
-                            };
-                        }
-                        break;
-                    }
-                    case MidiPortType::Virtual: {
-                        try {
-                            m_context.midi.midiInput->openVirtualPort(m_context.GetMidiVirtualInputPortName());
-                            devlog::debug<grp::base>("Opened virtual MIDI input port");
-                        }
-                        catch (RtMidiError &error) {
-                            devlog::error<grp::base>("Failed opening virtual MIDI input port: {}", error.getMessage());
-                        }
-                        break;
-                    }
+            switch (value.type) {
+            case MidiPortType::Normal: {
+                int portNumber = m_context.FindInputPortByName(value.id);
+                if (portNumber == -1) {
+                    devlog::error<grp::base>("Failed opening MIDI input port: no port named {}", value.id);
+                } else {
+                    try {
+                        m_context.midi.midiInput->openPort(portNumber);
+                        devlog::debug<grp::base>("Opened MIDI input port {}", value.id);
+                    } catch (RtMidiError &error) {
+                        devlog::error<grp::base>("Failed opening MIDI input port {}: {}", portNumber,
+                                                 error.getMessage());
+                    };
                 }
+                break;
             }
-        );
-        
-        m_context.settings.audio.midiOutputPort.Observe(
-            [&](app::Settings::Audio::MidiPort value) {
-                m_context.midi.midiOutput->closePort();
+            case MidiPortType::Virtual: {
+                try {
+                    m_context.midi.midiInput->openVirtualPort(m_context.GetMidiVirtualInputPortName());
+                    devlog::debug<grp::base>("Opened virtual MIDI input port");
+                } catch (RtMidiError &error) {
+                    devlog::error<grp::base>("Failed opening virtual MIDI input port: {}", error.getMessage());
+                }
+                break;
+            }
+            }
+        });
 
-                switch (value.type) {
-                    case MidiPortType::Normal: {
-                        int portNumber = m_context.FindOutputPortByName(value.id);
-                        if (portNumber == -1) {
-                            devlog::error<grp::base>("Failed opening MIDI output port: no port named {}", value.id);
-                        }
-                        else {
-                            try {
-                                m_context.midi.midiOutput->openPort(portNumber);
-                                devlog::debug<grp::base>("Opened MIDI output port {}", value.id);
-                            }
-                            catch (RtMidiError &error) {
-                                devlog::error<grp::base>("Failed opening MIDI output port {}: {}", portNumber, error.getMessage());
-                            };
-                        }
-                        break;
-                    }
-                    case MidiPortType::Virtual: {
-                        try {
-                            m_context.midi.midiOutput->openVirtualPort(m_context.GetMidiVirtualOutputPortName());
-                            devlog::debug<grp::base>("Opened virtual MIDI output port");
-                        }
-                        catch (RtMidiError &error) {
-                            devlog::error<grp::base>("Failed opening virtual MIDI output port: {}", error.getMessage());
-                        }
-                        break;
-                    }
+        m_context.settings.audio.midiOutputPort.Observe([&](app::Settings::Audio::MidiPort value) {
+            m_context.midi.midiOutput->closePort();
+
+            switch (value.type) {
+            case MidiPortType::Normal: {
+                int portNumber = m_context.FindOutputPortByName(value.id);
+                if (portNumber == -1) {
+                    devlog::error<grp::base>("Failed opening MIDI output port: no port named {}", value.id);
+                } else {
+                    try {
+                        m_context.midi.midiOutput->openPort(portNumber);
+                        devlog::debug<grp::base>("Opened MIDI output port {}", value.id);
+                    } catch (RtMidiError &error) {
+                        devlog::error<grp::base>("Failed opening MIDI output port {}: {}", portNumber,
+                                                 error.getMessage());
+                    };
                 }
+                break;
             }
-        );
+            case MidiPortType::Virtual: {
+                try {
+                    m_context.midi.midiOutput->openVirtualPort(m_context.GetMidiVirtualOutputPortName());
+                    devlog::debug<grp::base>("Opened virtual MIDI output port");
+                } catch (RtMidiError &error) {
+                    devlog::error<grp::base>("Failed opening virtual MIDI output port: {}", error.getMessage());
+                }
+                break;
+            }
+            }
+        });
     }
 
     m_context.settings.video.deinterlace.Observe(
@@ -745,14 +737,14 @@ void App::RunEmulator() {
                                                  static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right);
                                              }});
 
-    m_context.saturn.SCSP.SetSendMidiOutputCallback({&m_context.midi.midiOutput, [](std::span<uint8> payload, void *ctx) {
-        try {
-            static_cast<RtMidiOut*>(ctx)->sendMessage(payload.data(), payload.size());
-        }
-        catch (RtMidiError &error) {
-            devlog::error<grp::base>("Failed to send MIDI output message: {}", error.getMessage());
-        }
-    }});
+    m_context.saturn.SCSP.SetSendMidiOutputCallback(
+        {&m_context.midi.midiOutput, [](std::span<uint8> payload, void *ctx) {
+             try {
+                 static_cast<RtMidiOut *>(ctx)->sendMessage(payload.data(), payload.size());
+             } catch (RtMidiError &error) {
+                 devlog::error<grp::base>("Failed to send MIDI output message: {}", error.getMessage());
+             }
+         }});
 
     // ---------------------------------
     // MIDI setup
@@ -3416,7 +3408,7 @@ void App::OpenGenericModal(std::string title, std::function<void()> fnContents) 
     m_genericModalContents = fnContents;
 }
 
-void App::OnMidiInputReceived(double delta, std::vector<unsigned char>* msg, void* userData) {
+void App::OnMidiInputReceived(double delta, std::vector<unsigned char> *msg, void *userData) {
     App *app = static_cast<App *>(userData);
     app->m_context.EnqueueEvent(events::emu::ReceiveMidiInput(delta, std::move(*msg)));
 }

@@ -326,15 +326,15 @@ struct SharedContext {
 
     std::string GetMidiInputPortName() {
         switch (settings.audio.midiInputPort.Get().type) {
-            case MidiPortType::None: {
-                return "None";
-            }
-            case MidiPortType::Normal: {
-                return settings.audio.midiInputPort.Get().id;
-            }
-            case MidiPortType::Virtual: {
-                return GetMidiVirtualInputPortName();
-            }
+        case MidiPortType::None: {
+            return "None";
+        }
+        case MidiPortType::Normal: {
+            return settings.audio.midiInputPort.Get().id;
+        }
+        case MidiPortType::Virtual: {
+            return GetMidiVirtualInputPortName();
+        }
         }
 
         return {};
@@ -342,15 +342,15 @@ struct SharedContext {
 
     std::string GetMidiOutputPortName() {
         switch (settings.audio.midiOutputPort.Get().type) {
-            case MidiPortType::None: {
-                return "None";
-            }
-            case MidiPortType::Normal: {
-                return settings.audio.midiOutputPort.Get().id;
-            }
-            case MidiPortType::Virtual: {
-                return GetMidiVirtualInputPortName();
-            }
+        case MidiPortType::None: {
+            return "None";
+        }
+        case MidiPortType::Normal: {
+            return settings.audio.midiOutputPort.Get().id;
+        }
+        case MidiPortType::Virtual: {
+            return GetMidiVirtualInputPortName();
+        }
         }
 
         return {};
@@ -380,7 +380,8 @@ struct SharedContext {
 
     SharedContext() {
         midi.midiInput = std::unique_ptr<RtMidiIn>(new RtMidiIn(RtMidi::Api::UNSPECIFIED, "Ymir MIDI input client"));
-        midi.midiOutput = std::unique_ptr<RtMidiOut>(new RtMidiOut(RtMidi::Api::UNSPECIFIED, "Ymir MIDI output client"));
+        midi.midiOutput =
+            std::unique_ptr<RtMidiOut>(new RtMidiOut(RtMidi::Api::UNSPECIFIED, "Ymir MIDI output client"));
         midi.midiInput->ignoreTypes(false, false, false);
     }
 };

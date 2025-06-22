@@ -542,8 +542,7 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
         ar(s.midiOutputBuffer);
         ar(s.midiOutputSize);
         ar(s.expectedOutputPacketSize);
-    }
-    else {
+    } else {
         s.midiInputBuffer.fill(0);
         s.midiInputReadPos = 0;
         s.midiInputWritePos = 0;
