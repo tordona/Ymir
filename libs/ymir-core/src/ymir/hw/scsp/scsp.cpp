@@ -111,6 +111,16 @@ void SCSP::MapMemory(sys::Bus &bus) {
             cast(ctx).WriteWRAM<uint16>(address + 2, value >> 0u);
         });
 
+    // Unused hole
+    bus.MapBoth(
+        0x5A8'0000, 0x5AF'FFFF, this,                          //
+        [](uint32 address, void *ctx) -> uint8 { return 0; },  //
+        [](uint32 address, void *ctx) -> uint16 { return 0; }, //
+        [](uint32 address, void *ctx) -> uint32 { return 0; }, //
+        [](uint32 address, uint8 value, void *ctx) {},         //
+        [](uint32 address, uint16 value, void *ctx) {},        //
+        [](uint32 address, uint32 value, void *ctx) {});
+
     // Registers
     bus.MapNormal(
         0x5B0'0000, 0x5BF'FFFF, this,
