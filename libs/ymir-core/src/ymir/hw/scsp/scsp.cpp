@@ -189,6 +189,37 @@ void SCSP::ReceiveMidiInput(MidiMessage &msg) {
     m_midiInputQueue.push(QueuedMidiMessage(m_nextMidiTime, std::move(msg.payload)));
 }
 
+void SCSP::ProcessMidiInputQueue() {
+    // TODO: I believe MIDI stuff is *supposed* to trigger interrupts...
+    // however there are no commercial games relying on this behavior, so it should be fine for now.
+
+    while (m_midiInputQueue.size() > 0) {
+        auto &msg = m_midiInputQueue.front();
+        if (msg.scheduleTime <= m_sampleCounter) {
+            // TODO: is there any way to clear overflow beyond a reset?
+            if (!m_midiInputOverflow) {
+                devlog::trace<grp::midi>("Adding MIDI message to buffer at {} (bytes: {})", m_sampleCounter,
+                                         msg.payload.size());
+
+                for (auto data : msg.payload) {
+                    m_midiInputBuffer[m_midiInputWritePos] = data;
+                    m_midiInputWritePos = (m_midiInputWritePos + 1) % m_midiInputBuffer.size();
+
+                    if (m_midiInputWritePos == m_midiInputReadPos) {
+                        m_midiInputOverflow = true;
+                        devlog::error<grp::midi>("MIDI buffer overflowed");
+                        break;
+                    }
+                }
+            }
+
+            m_midiInputQueue.pop();
+        } else {
+            break;
+        }
+    }
+}
+
 void SCSP::FlushMidiOutput(bool endPacket) {
     m_cbSendMidiOutputMessage(std::span<uint8>(m_midiOutputBuffer).subspan(0, m_midiOutputSize));
     m_midiOutputSize = 0;
@@ -1017,37 +1048,6 @@ FORCE_INLINE void SCSP::SlotProcessStep7(Slot &slot) {
 
 ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
     return ExceptionVector::AutoVectorRequest;
-}
-
-void SCSP::ProcessMidiInputQueue() {
-    // TODO: I believe MIDI stuff is *supposed* to trigger interrupts...
-    // however there are no commercial games relying on this behavior, so it should be fine for now.
-
-    while (m_midiInputQueue.size() > 0) {
-        auto &msg = m_midiInputQueue.front();
-        if (msg.scheduleTime <= m_sampleCounter) {
-            // TODO: is there any way to clear overflow beyond a reset?
-            if (!m_midiInputOverflow) {
-                devlog::trace<grp::midi>("Adding MIDI message to buffer at {} (bytes: {})", m_sampleCounter,
-                                         msg.payload.size());
-
-                for (auto data : msg.payload) {
-                    m_midiInputBuffer[m_midiInputWritePos] = data;
-                    m_midiInputWritePos = (m_midiInputWritePos + 1) % m_midiInputBuffer.size();
-
-                    if (m_midiInputWritePos == m_midiInputReadPos) {
-                        m_midiInputOverflow = true;
-                        devlog::error<grp::midi>("MIDI buffer overflowed");
-                        break;
-                    }
-                }
-            }
-
-            m_midiInputQueue.pop();
-        } else {
-            break;
-        }
-    }
 }
 
 } // namespace ymir::scsp

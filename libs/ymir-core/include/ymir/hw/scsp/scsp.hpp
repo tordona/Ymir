@@ -198,8 +198,6 @@ private:
     uint32 m_midiOutputSize;
     sint32 m_expectedOutputPacketSize;
 
-    void ProcessMidiInputQueue();
-
     // -------------------------------------------------------------------------
     // Threading
 
@@ -677,6 +675,7 @@ private:
 
     // --- MIDI Register ---
 
+    void ProcessMidiInputQueue();
     void FlushMidiOutput(bool endPacket);
 
     template <bool lowerByte, bool upperByte, bool peek>
