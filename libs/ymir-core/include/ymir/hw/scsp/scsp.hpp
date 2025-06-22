@@ -197,7 +197,7 @@ private:
 
     std::array<uint8, kMidiBufferSize> m_midiOutputBuffer;
     uint32 m_midiOutputSize;
-    int m_expectedOutputPacketSize;
+    sint32 m_expectedOutputPacketSize;
 
     void ProcessMidiInputQueue();
 

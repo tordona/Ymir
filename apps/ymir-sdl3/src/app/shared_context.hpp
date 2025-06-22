@@ -30,6 +30,8 @@
 #include <memory>
 #include <mutex>
 
+using MidiPortType = app::Settings::Audio::MidiPort::Type;
+
 namespace app {
 
 struct SharedContext {
@@ -323,33 +325,35 @@ struct SharedContext {
     }
 
     std::string GetMidiInputPortName() {
-        std::string portName;
-        if (settings.audio.midiInputPort.Get().portNumber == -1) {
-            portName = "None";
-        } else if (settings.audio.midiInputPort.Get().isVirtual) {
-            portName = GetMidiVirtualInputPortName();
-        } else if (settings.audio.midiInputPort.Get().portNumber >= midi.midiInput->getPortCount()) {
-            portName = "(Unavailable)";
-        } else {
-            portName = midi.midiInput->getPortName(settings.audio.midiInputPort.Get().portNumber);
+        switch (settings.audio.midiInputPort.Get().type) {
+            case MidiPortType::None: {
+                return "None";
+            }
+            case MidiPortType::Normal: {
+                return settings.audio.midiInputPort.Get().id;
+            }
+            case MidiPortType::Virtual: {
+                return GetMidiVirtualInputPortName();
+            }
         }
 
-        return portName;
+        return {};
     }
 
     std::string GetMidiOutputPortName() {
-        std::string portName;
-        if (settings.audio.midiOutputPort.Get().portNumber == -1) {
-            portName = "None";
-        } else if (settings.audio.midiOutputPort.Get().isVirtual) {
-            portName = GetMidiVirtualOutputPortName();
-        } else if (settings.audio.midiOutputPort.Get().portNumber >= midi.midiOutput->getPortCount()) {
-            portName = "(Unavailable)";
-        } else {
-            portName = midi.midiOutput->getPortName(settings.audio.midiOutputPort.Get().portNumber);
+        switch (settings.audio.midiOutputPort.Get().type) {
+            case MidiPortType::None: {
+                return "None";
+            }
+            case MidiPortType::Normal: {
+                return settings.audio.midiOutputPort.Get().id;
+            }
+            case MidiPortType::Virtual: {
+                return GetMidiVirtualInputPortName();
+            }
         }
 
-        return portName;
+        return {};
     }
 
     int FindInputPortByName(std::string name) {

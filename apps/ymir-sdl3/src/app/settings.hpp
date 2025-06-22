@@ -275,8 +275,9 @@ public:
 
     struct Audio {
         struct MidiPort {
-            int portNumber;
-            bool isVirtual;
+            enum Type { None, Normal, Virtual };
+            std::string id;
+            Type type;
         };
 
         util::Observable<float> volume;

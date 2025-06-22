@@ -130,6 +130,7 @@
 CMRC_DECLARE(Ymir_sdl3_rc);
 
 using clk = std::chrono::steady_clock;
+using MidiPortType = app::Settings::Audio::MidiPort::Type;
 
 namespace app {
 
@@ -186,8 +187,24 @@ int App::Run(const CommandLineOptions &options) {
             [&](app::Settings::Audio::MidiPort value) {
                 m_context.midi.midiInput->closePort();
 
-                if (value.portNumber != -1) {
-                    if (value.isVirtual) {
+                switch (value.type) {
+                    case MidiPortType::Normal: {
+                        int portNumber = m_context.FindInputPortByName(value.id);
+                        if (portNumber == -1) {
+                            devlog::error<grp::base>("Failed opening MIDI input port: no port named {}", value.id);
+                        }
+                        else {
+                            try {
+                                m_context.midi.midiInput->openPort(portNumber);
+                                devlog::debug<grp::base>("Opened MIDI input port {}", value.id);
+                            }
+                            catch (RtMidiError &error) {
+                                devlog::error<grp::base>("Failed opening MIDI input port {}: {}", portNumber, error.getMessage());
+                            };
+                        }
+                        break;
+                    }
+                    case MidiPortType::Virtual: {
                         try {
                             m_context.midi.midiInput->openVirtualPort(m_context.GetMidiVirtualInputPortName());
                             devlog::debug<grp::base>("Opened virtual MIDI input port");
@@ -195,15 +212,7 @@ int App::Run(const CommandLineOptions &options) {
                         catch (RtMidiError &error) {
                             devlog::error<grp::base>("Failed opening virtual MIDI input port: {}", error.getMessage());
                         }
-                    }
-                    else {
-                        try {
-                            m_context.midi.midiInput->openPort(value.portNumber);
-                            devlog::debug<grp::base>("Opened MIDI input port {}", m_context.midi.midiInput->getPortName(value.portNumber));
-                        }
-                        catch (RtMidiError &error) {
-                            devlog::error<grp::base>("Failed opening MIDI input port {}: {}", value.portNumber, error.getMessage());
-                        };
+                        break;
                     }
                 }
             }
@@ -213,8 +222,24 @@ int App::Run(const CommandLineOptions &options) {
             [&](app::Settings::Audio::MidiPort value) {
                 m_context.midi.midiOutput->closePort();
 
-                if (value.portNumber != -1) {
-                    if (value.isVirtual) {
+                switch (value.type) {
+                    case MidiPortType::Normal: {
+                        int portNumber = m_context.FindOutputPortByName(value.id);
+                        if (portNumber == -1) {
+                            devlog::error<grp::base>("Failed opening MIDI output port: no port named {}", value.id);
+                        }
+                        else {
+                            try {
+                                m_context.midi.midiOutput->openPort(portNumber);
+                                devlog::debug<grp::base>("Opened MIDI output port {}", value.id);
+                            }
+                            catch (RtMidiError &error) {
+                                devlog::error<grp::base>("Failed opening MIDI output port {}: {}", portNumber, error.getMessage());
+                            };
+                        }
+                        break;
+                    }
+                    case MidiPortType::Virtual: {
                         try {
                             m_context.midi.midiOutput->openVirtualPort(m_context.GetMidiVirtualOutputPortName());
                             devlog::debug<grp::base>("Opened virtual MIDI output port");
@@ -222,15 +247,7 @@ int App::Run(const CommandLineOptions &options) {
                         catch (RtMidiError &error) {
                             devlog::error<grp::base>("Failed opening virtual MIDI output port: {}", error.getMessage());
                         }
-                    }
-                    else {
-                        try {
-                            m_context.midi.midiOutput->openPort(value.portNumber);
-                            devlog::debug<grp::base>("Opened MIDI output port {}", m_context.midi.midiOutput->getPortName(value.portNumber));
-                        }
-                        catch (RtMidiError &error) {
-                            devlog::error<grp::base>("Failed opening MIDI output port {}: {}", value.portNumber, error.getMessage());
-                        };
+                        break;
                     }
                 }
             }

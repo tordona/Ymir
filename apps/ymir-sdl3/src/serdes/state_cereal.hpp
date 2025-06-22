@@ -412,6 +412,13 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     //   - SCILV = {0,0,0}
     //     (unfortunately the data is missing, so old save states will never restore properly)
     //   - reuseSCILV = true if version < 6, false otherwise; not stored in save state binary
+    //   - uint8[1024] midiInputBuffer
+    //   - uint32 midiInputReadPos
+    //   - uint32 midiInputWritePos
+    //   - bool midiInputOverflow
+    //   - uint8[1024] midiOutputBuffer
+    //   - uint32 midiOutputSize
+    //   - sint32 expectedOutputPacketSize
     // - Removed fields
     //   - uint64 sampleCycles
     // - Misc changes
@@ -526,6 +533,26 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
         ar(egStep);
     }
     ar(s.lfsr);
+    if (version >= 6) {
+        ar(s.midiInputBuffer);
+        ar(s.midiInputReadPos);
+        ar(s.midiInputWritePos);
+        ar(s.midiInputOverflow);
+
+        ar(s.midiOutputBuffer);
+        ar(s.midiOutputSize);
+        ar(s.expectedOutputPacketSize);
+    }
+    else {
+        s.midiInputBuffer.fill(0);
+        s.midiInputReadPos = 0;
+        s.midiInputWritePos = 0;
+        s.midiInputOverflow = false;
+
+        s.midiOutputBuffer.fill(0);
+        s.midiOutputSize = 0;
+        s.expectedOutputPacketSize = 0;
+    }
 }
 
 template <class Archive>

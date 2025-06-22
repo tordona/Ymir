@@ -422,6 +422,15 @@ void SCSP::SaveState(state::SCSPState &state) const {
     state.sampleCounter = m_sampleCounter;
 
     state.lfsr = m_lfsr;
+
+    std::copy(m_midiInputBuffer.begin(), m_midiInputBuffer.end(), state.midiInputBuffer.begin());
+    state.midiInputReadPos = m_midiInputReadPos;
+    state.midiInputWritePos = m_midiInputWritePos;
+    state.midiInputOverflow = m_midiInputOverflow;
+
+    std::copy(m_midiOutputBuffer.begin(), m_midiOutputBuffer.end(), state.midiOutputBuffer.begin());
+    state.midiOutputSize = m_midiOutputSize;
+    state.expectedOutputPacketSize = m_expectedOutputPacketSize;
 }
 
 bool SCSP::ValidateState(const state::SCSPState &state) const {
@@ -445,6 +454,18 @@ bool SCSP::ValidateState(const state::SCSPState &state) const {
         }
     }
     if (!m_dsp.ValidateState(state.dsp)) {
+        return false;
+    }
+    if (state.midiInputReadPos >= m_midiInputBuffer.size()) {
+        return false;
+    }
+    if (state.midiInputWritePos >= m_midiInputBuffer.size()) {
+        return false;
+    }
+    if (state.midiOutputSize >= m_midiOutputBuffer.size()) {
+        return false;
+    }
+    if (state.expectedOutputPacketSize >= m_midiOutputBuffer.size() || state.expectedOutputPacketSize < -1) {
         return false;
     }
 
@@ -501,6 +522,15 @@ void SCSP::LoadState(const state::SCSPState &state) {
     m_sampleCounter = state.sampleCounter;
 
     m_lfsr = state.lfsr;
+
+    std::copy(state.midiInputBuffer.begin(), state.midiInputBuffer.end(), m_midiInputBuffer.begin());
+    m_midiInputReadPos = state.midiInputReadPos;
+    m_midiInputWritePos = state.midiInputWritePos;
+    m_midiInputOverflow = state.midiInputOverflow;
+
+    std::copy(state.midiOutputBuffer.begin(), state.midiOutputBuffer.end(), m_midiOutputBuffer.begin());
+    m_midiOutputSize = state.midiOutputSize;
+    m_expectedOutputPacketSize = state.expectedOutputPacketSize;
 }
 
 void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext) {

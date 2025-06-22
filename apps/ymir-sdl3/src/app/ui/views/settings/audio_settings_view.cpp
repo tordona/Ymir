@@ -6,6 +6,8 @@
 
 using namespace ymir;
 
+using MidiPortType = app::Settings::Audio::MidiPort::Type;
+
 namespace app::ui {
 
 AudioSettingsView::AudioSettingsView(SharedContext &context)
@@ -77,25 +79,25 @@ void AudioSettingsView::Display() {
     auto inputPort = m_context.settings.audio.midiInputPort.Get();
 
     if (ImGui::BeginCombo(inputLabel.c_str(), inputPortName.c_str())) {
-        if (MakeDirty(ImGui::Selectable("None", inputPort.portNumber == -1))) {
-            m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .portNumber = -1, .isVirtual = false };
+        if (MakeDirty(ImGui::Selectable("None", inputPort.type == MidiPortType::None))) {
+            m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::None };
         }
 
         int portCount = m_context.midi.midiInput->getPortCount();
         for (int i = 0; i < portCount; i++) {
             std::string portName = m_context.midi.midiInput->getPortName(i);
-            bool selected = inputPort.portNumber == i && !inputPort.isVirtual;
+            bool selected = inputPort.type == MidiPortType::Normal && inputPort.id == portName;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .portNumber = i, .isVirtual = false };
+                m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .id = portName, .type = MidiPortType::Normal };
             }
         }
 
         // if the backend supports virtual MIDI ports, show a virtual port also
         if (supportsVirtual) {
             const std::string portName = m_context.GetMidiVirtualInputPortName();
-            bool selected = inputPort.portNumber == 0 && inputPort.isVirtual;
+            bool selected = inputPort.type == MidiPortType::Virtual;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .portNumber = 0, .isVirtual = true };
+                m_context.settings.audio.midiInputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::Virtual };
             }
         }
 
@@ -110,25 +112,25 @@ void AudioSettingsView::Display() {
     auto outputPort = m_context.settings.audio.midiOutputPort.Get();
 
     if (ImGui::BeginCombo(outputLabel.c_str(), outputPortName.c_str())) {
-        if (MakeDirty(ImGui::Selectable("None", outputPort.portNumber == -1))) {
-            m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .portNumber = -1, .isVirtual = false };
+        if (MakeDirty(ImGui::Selectable("None", outputPort.type == MidiPortType::None))) {
+            m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::None };
         }
 
         int portCount = m_context.midi.midiOutput->getPortCount();
         for (int i = 0; i < portCount; i++) {
             std::string portName = m_context.midi.midiOutput->getPortName(i);
-            bool selected = outputPort.portNumber == i && !outputPort.isVirtual;
+            bool selected = outputPort.type == MidiPortType::Normal && outputPort.id == portName;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .portNumber = i, .isVirtual = false };
+                m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .id = portName, .type = MidiPortType::Normal };
             }
         }
 
         // if the backend supports virtual MIDI ports, show a virtual port also
         if (supportsVirtual) {
             const std::string portName = m_context.GetMidiVirtualOutputPortName();
-            bool selected = outputPort.portNumber == 0 && outputPort.isVirtual;
+            bool selected = outputPort.type == MidiPortType::Virtual;
             if (MakeDirty(ImGui::Selectable(portName.c_str(), selected))) {
-                m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .portNumber = 0, .isVirtual = true };
+                m_context.settings.audio.midiOutputPort = app::Settings::Audio::MidiPort { .id = {}, .type = MidiPortType::Virtual };
             }
         }
 
