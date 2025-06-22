@@ -27,6 +27,7 @@
 - CD Block: Start new playbacks from starting FAD when previous playback has ended. Fixes WipEout freeze after SEGA logo.
 - Media: Fix pregap handling in single BIN images.
 - SCSP: Apply DAC18B to output (thanks to @celeriyacon). Fixes quiet audio in many games. (#237)
+- SCSP: Fix loss of accuracy on MIXS send level calculation (thanks to @celeriyacon).
 - SCSP: Fix send level, panning and master volume calculations.
 - SCSP: Fix slot output processing order (thanks to @celeriyacon).
 - SCSP: Fix swapped DAC18B and MEM4MB bits (thanks to @celeriyacon).

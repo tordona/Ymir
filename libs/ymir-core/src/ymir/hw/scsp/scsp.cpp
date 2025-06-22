@@ -714,7 +714,7 @@ FORCE_INLINE void SCSP::GenerateSample() {
     sint32 outL = 0;
     sint32 outR = 0;
 
-    auto adjustSendLevel = [](sint16 output, uint8 sendLevel) { return output >> (sendLevel ^ 7); };
+    auto adjustSendLevel = [](sint16 output, uint8 sendLevel) { return (output << 4) >> (sendLevel ^ 7); };
 
     auto addOutput = [&](sint32 output, uint8 sendLevel, uint8 pan) {
         if (sendLevel == 0) { // = -infinity dB
@@ -762,8 +762,8 @@ FORCE_INLINE void SCSP::GenerateSample() {
         addOutput(outputSlot.output, outputSlot.directSendLevel, outputSlot.directPan);
 
         if (outputSlot.inputMixingLevel > 0) {
-            const sint16 mixsOutput = adjustSendLevel(outputSlot.output, outputSlot.inputMixingLevel);
-            m_dsp.mixStack[outputSlot.inputSelect] += mixsOutput << 4;
+            const sint32 mixsOutput = adjustSendLevel(outputSlot.output, outputSlot.inputMixingLevel);
+            m_dsp.mixStack[outputSlot.inputSelect] += mixsOutput;
         }
 
         m_soundStackIndex = (m_soundStackIndex + 1) & 63;
