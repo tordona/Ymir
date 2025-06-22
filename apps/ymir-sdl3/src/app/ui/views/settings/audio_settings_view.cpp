@@ -146,19 +146,21 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
-    ImGui::SeparatorText("Performance");
-    ImGui::PopFont();
+    if constexpr (false) {
+        ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+        ImGui::SeparatorText("Performance");
+        ImGui::PopFont();
 
-    bool threadedSCSP = config.threadedSCSP;
-    if (MakeDirty(ImGui::Checkbox("Threaded SCSP and sound CPU", &threadedSCSP))) {
-        m_context.EnqueueEvent(events::emu::EnableThreadedSCSP(threadedSCSP));
+        bool threadedSCSP = config.threadedSCSP;
+        if (MakeDirty(ImGui::Checkbox("Threaded SCSP and sound CPU", &threadedSCSP))) {
+            m_context.EnqueueEvent(events::emu::EnableThreadedSCSP(threadedSCSP));
+        }
+        widgets::ExplanationTooltip("NOTE: This feature is currently unimplemented.\n\n"
+                                    "Runs the SCSP and MC68EC000 in a dedicated thread.\n"
+                                    "Improves performance at the cost of accuracy.\n"
+                                    "A few select games may break when this option is enabled.",
+                                    m_context.displayScale);
     }
-    widgets::ExplanationTooltip("NOTE: This feature is currently unimplemented.\n\n"
-                                "Runs the SCSP and MC68EC000 in a dedicated thread.\n"
-                                "Improves performance at the cost of accuracy.\n"
-                                "A few select games may break when this option is enabled.",
-                                m_context.displayScale);
 }
 
 } // namespace app::ui
