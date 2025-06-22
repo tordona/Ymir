@@ -379,9 +379,9 @@ struct SharedContext {
     }
 
     SharedContext() {
-        midi.midiInput = std::unique_ptr<RtMidiIn>(new RtMidiIn(RtMidi::Api::UNSPECIFIED, "Ymir MIDI input client"));
-        midi.midiOutput =
-            std::unique_ptr<RtMidiOut>(new RtMidiOut(RtMidi::Api::UNSPECIFIED, "Ymir MIDI output client"));
+        static constexpr auto api = RtMidi::Api::UNSPECIFIED;
+        midi.midiInput = std::make_unique<RtMidiIn>(api, "Ymir MIDI input client");
+        midi.midiOutput = std::make_unique<RtMidiOut>(api, "Ymir MIDI output client");
         midi.midiInput->ignoreTypes(false, false, false);
     }
 };
