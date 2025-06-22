@@ -1002,14 +1002,6 @@ FORCE_INLINE void SCSP::SlotProcessStep3_2(Slot &slot) {
             slot.modulation = bit::sign_extend<16>((zd << 5) >> (16 - slot.modLevel));
         }
 
-        uint32 mask = ~0u;
-        if (slot.maskMode) {
-            mask = (slot.loopEndAddress & 0x080) - 1;
-            mask &= (slot.loopEndAddress & 0x100) - 1;
-            mask &= (slot.loopEndAddress & 0x200) - 1;
-            mask &= (slot.loopEndAddress & 0x400) - 1;
-        }
-
         const uint16 currSmp = slot.reverse ? ~slot.currSample : slot.currSample;
 
         const sint32 thisSlotPhase = slot.reverse ? ~slot.currPhase : slot.currPhase;
@@ -1017,7 +1009,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3_2(Slot &slot) {
 
         const sint32 modInt = bit::sign_extend<11>(slot.modulation >> 5);
 
-        const sint32 addrInc1 = bit::sign_extend<17>((currSmp + modInt + (thisSlotModPhase >> 6)) & mask);
+        const sint32 addrInc1 = bit::sign_extend<17>((currSmp + modInt + (thisSlotModPhase >> 6)) & slot.mask);
 
         if (slot.pcm8Bit) {
             const uint32 address1 = slot.startAddress + addrInc1 * sizeof(uint8);
@@ -1034,14 +1026,6 @@ FORCE_INLINE void SCSP::SlotProcessStep3_4(Slot &slot) {
         return;
     }
 
-    uint32 mask = ~0u;
-    if (slot.maskMode) {
-        mask = (slot.loopEndAddress & 0x080) - 1;
-        mask &= (slot.loopEndAddress & 0x100) - 1;
-        mask &= (slot.loopEndAddress & 0x200) - 1;
-        mask &= (slot.loopEndAddress & 0x400) - 1;
-    }
-
     switch (slot.soundSource) {
     case Slot::SoundSource::SoundRAM: //
     {
@@ -1055,7 +1039,7 @@ FORCE_INLINE void SCSP::SlotProcessStep3_4(Slot &slot) {
 
         const sint32 modInt = bit::sign_extend<11>(slot.modulation >> 5);
 
-        const sint32 addrInc2 = bit::sign_extend<17>((nextSmp + modInt + (nextSlotModPhase >> 6)) & mask);
+        const sint32 addrInc2 = bit::sign_extend<17>((nextSmp + modInt + (nextSlotModPhase >> 6)) & slot.mask);
 
         if (slot.pcm8Bit) {
             const uint32 address2 = slot.startAddress + addrInc2 * sizeof(uint8);

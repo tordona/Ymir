@@ -204,6 +204,7 @@ struct Slot {
         static constexpr uint32 lb = lowerByte ? 0 : 8;
         static constexpr uint32 ub = upperByte ? 15 : 7;
         bit::deposit_into<lb, ub>(loopEndAddress, bit::extract<lb, ub>(value));
+        UpdateMask();
     }
 
     template <bool lowerByte, bool upperByte>
@@ -335,6 +336,7 @@ struct Slot {
         if constexpr (upperByte) {
             bit::deposit_into<11, 14>(value, octave);
             bit::deposit_into<15>(value, maskMode);
+            UpdateMask();
         }
         return value;
     }
@@ -347,6 +349,7 @@ struct Slot {
             freqNumSwitch ^= 0x400u;
             octave = bit::extract<11, 14>(value);
             maskMode = bit::test<15>(value);
+            UpdateMask();
             CheckAttackBug();
         }
     }
@@ -563,7 +566,9 @@ struct Slot {
 
     uint8 octave;         // (R/W) OCT - octave
     uint16 freqNumSwitch; // (R/W) FNS - frequency number switch
-    bool maskMode;        // (R/W) MM(?) - mask mode (undocumented)
+    bool maskMode;        // (R/W) MSK - wave mask (undocumented)
+
+    mutable uint32 mask; // Address mask (computed from MSK and LEA)
 
     // --- LFO Register ---
 
@@ -834,6 +839,16 @@ struct Slot {
             active = false;
             reverse = false;
             crossedLoopStart = false;
+        }
+    }
+
+    FORCE_INLINE void UpdateMask() const {
+        mask = ~0u;
+        if (maskMode) {
+            mask = (loopEndAddress & 0x080) - 1;
+            mask &= (loopEndAddress & 0x100) - 1;
+            mask &= (loopEndAddress & 0x200) - 1;
+            mask &= (loopEndAddress & 0x400) - 1;
         }
     }
 };

@@ -83,6 +83,8 @@ void Slot::Reset() {
     sample2 = 0;
 
     output = 0;
+
+    UpdateMask();
 }
 
 void Slot::SaveState(state::SCSPSlotState &state) const {
@@ -344,6 +346,8 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     output = state.output;
 
     finalLevel = state.finalLevel;
+
+    UpdateMask();
 }
 
 } // namespace ymir::scsp
