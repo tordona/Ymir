@@ -15,6 +15,7 @@
 - App: Store relative paths in Ymir.toml. (#207)
 - Backup RAM: Support interleaved backup image formats such as the ones produced by Yaba Sanshiro or the MiSTer core. (#87)
 - Backup RAM: Support standard BUP backup files. (#87)
+- SCSP: Added MIDI In and Out support. (#258; @GlaireDaggers)
 - VDP: Added option to deinterlace video. (#66)
 - VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia). (#233)
 - VDP1: Added option to replace meshes with 50% transparency.
