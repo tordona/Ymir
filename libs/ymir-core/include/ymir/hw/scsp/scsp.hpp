@@ -500,6 +500,7 @@ private:
             const uint32 index = (address >> 3u) & 0x7F;
             const uint32 subindex = ((address >> 1u) & 0x3) ^ 3;
             write16(m_dsp.program[index].u16[subindex], value16);
+            m_dsp.UpdateProgramLength(index);
             return;
         } else if (AddressInRange<0xC00, 0xDFF>(address)) {
             // DSP TEMP

@@ -1,43 +1,6 @@
 #include <ymir/hw/scsp/scsp_dsp.hpp>
 
-#include <ymir/util/bit_ops.hpp>
-#include <ymir/util/data_ops.hpp>
-#include <ymir/util/inline.hpp>
-
-#include <algorithm>
-#include <bit>
-
 namespace ymir::scsp {
-
-FORCE_INLINE static uint32 FloatToInt(const uint16 value) {
-    const uint32 signXor = static_cast<sint32>((value & 0x8000) << 16) >> 1;
-    const uint32 exp = (value >> 11) & 0xF;
-
-    uint32 ret = value & 0x7FF;
-    if (exp < 12) {
-        ret |= 0x800;
-    }
-    ret <<= 11 + 8;
-    ret ^= signXor;
-    ret = static_cast<sint32>(ret) >> (8 + std::min<uint32>(11, exp));
-
-    return ret & 0xFFFFFF;
-}
-
-FORCE_INLINE static uint32 IntToFloat(const uint32 value) {
-    const uint32 shiftedValue = value << 8;
-    const uint32 signXor = static_cast<sint32>(shiftedValue) >> 31;
-    uint32 ret;
-
-    uint32 exp = std::min(0x1F, std::countl_zero(((shiftedValue ^ signXor) << 1) | (1 << 19)));
-    uint32 shift = exp - (exp == 12);
-
-    ret = static_cast<sint32>(shiftedValue) >> (19 - shift);
-    ret &= 0x87FF;
-    ret |= exp << 11;
-
-    return ret;
-}
 
 DSP::DSP(uint8 *ram)
     : m_WRAM(ram) {
@@ -61,6 +24,8 @@ void DSP::Reset() {
     // 4 DSP program steps per slot -> -6*4 = -24 = 104 (or 0x68) in modulo 128
     PC = 0x68;
 
+    m_programLength = 0;
+
     INPUTS = 0;
 
     SFT_REG = 0;
@@ -83,131 +48,21 @@ void DSP::Reset() {
     m_readWriteAddr = 0;
 }
 
-void DSP::Step() {
-    DSPInstr instr = program[PC];
-
-    if (instr.IRA <= 0x1F) {
-        // MEMS area: 24 -> 24 bits
-        INPUTS = soundMem[instr.IRA];
-    } else if (instr.IRA <= 0x2F) {
-        // MIXS area: 20 -> 24 bits
-        INPUTS = mixStack[GetMIXSIndex(instr.IRA & 0xF) ^ 0x10] << 4;
-    } else if (instr.IRA <= 0x31) {
-        // EXTS area: 16 -> 24 bits
-        INPUTS = audioInOut[instr.IRA & 0x1] << 8;
-    }
-
-    const uint8 tempReadAddr = (instr.TRA + MDEC_CT) & 0x7F;
-    const uint8 tempWriteAddr = (instr.TWA + MDEC_CT) & 0x7F;
-
-    const sint32 inputs = bit::sign_extend<24>(INPUTS);
-    const sint32 temp = bit::sign_extend<24>(tempMem[tempReadAddr]);
-
-    const sint32 xselInputs[2] = {temp, inputs};
-    const uint16 yselInputs[4] = {
-        FRC_REG,
-        coeffs[instr.CRA],
-        static_cast<uint16>(bit::extract<11, 23>(Y_REG)),
-        static_cast<uint16>(bit::extract<4, 15>(Y_REG)),
-    };
-
-    if (instr.YRL) {
-        Y_REG = bit::extract<0, 23>(inputs);
-    }
-
-    sint32 shifterOut = static_cast<uint32>(bit::sign_extend<26>(SFT_REG)) << (instr.SHFT0 ^ instr.SHFT1);
-    if (instr.SHFT1 == 0) {
-        shifterOut = std::clamp(shifterOut, -0x800000, 0x7FFFFF);
-    }
-    shifterOut &= 0xFFFFFF;
-
-    if (instr.FRCL) {
-        if (instr.SHFT0 & instr.SHFT1) {
-            FRC_REG = bit::extract<0, 11>(shifterOut);
-        } else {
-            FRC_REG = bit::extract<11, 23>(shifterOut);
+void DSP::UpdateProgramLength(uint8 writeIndex) {
+    const bool wroteNOP = program[writeIndex].u64 == 0;
+    if (wroteNOP && writeIndex == m_programLength - 1) {
+        // If writing a NOP to the last instruction, shrink the program
+        while (m_programLength > 0 && program[m_programLength - 1].u64 == 0) {
+            --m_programLength;
         }
+    } else if (!wroteNOP && writeIndex >= m_programLength) {
+        // If writing anything other than a NOP past the current program length, increase program length
+        m_programLength = writeIndex + 1;
     }
 
-    const uint32 product = (bit::sign_extend<13, sint64>(yselInputs[instr.YSEL]) * xselInputs[instr.XSEL]) >> 12;
-
-    uint32 sgaOutput;
-    if (instr.ZERO) {
-        sgaOutput = 0;
-    } else {
-        if (instr.BSEL) {
-            sgaOutput = SFT_REG;
-        } else {
-            sgaOutput = temp;
-        }
-        if (instr.NEGB) {
-            sgaOutput = -(sint32)sgaOutput;
-        }
-    }
-    SFT_REG = (product + sgaOutput) & 0x3FFFFFF;
-
-    if (instr.EWT) {
-        effectOut[instr.EWA] = shifterOut >> 8;
-    }
-    if (instr.TWT) {
-        tempMem[tempWriteAddr] = shifterOut;
-    }
-    if (instr.IWT) {
-        soundMem[instr.IWA] = m_readValue;
-    }
-
-    if (m_readPending) {
-        uint16 tmp = ReadWRAM();
-        m_readValue = (m_readPending && m_readNOFL) ? (tmp << 8) : FloatToInt(tmp);
-        m_readPending = false;
-        m_readNOFL = false;
-    } else if (m_writePending) {
-        WriteWRAM();
-        m_writePending = false;
-    }
-
-    uint16 addr = addrs[instr.MASA] + instr.NXADR;
-
-    if (instr.ADREB) {
-        addr += bit::sign_extend<12>(ADRS_REG);
-    }
-
-    if (!instr.TABLE) {
-        addr = (addr + MDEC_CT) & ((0x2000 << ringBufferLength) - 1);
-    }
-
-    m_readWriteAddr = (addr + (ringBufferLeadAddress << 12)) & 0x7FFFF;
-
-    if (instr.MRD) {
-        m_readPending = true;
-        m_readNOFL = instr.NOFL;
-    }
-    if (instr.MWT) {
-        m_writePending = true;
-        m_writeValue = instr.NOFL ? (shifterOut >> 8) : IntToFloat(shifterOut);
-    }
-
-    if (instr.ADRL) {
-        if (instr.SHFT0 & instr.SHFT1) {
-            ADRS_REG = shifterOut >> 12;
-        } else {
-            ADRS_REG = (inputs >> 16) & 0xFFF;
-        }
-    }
-
-    ++PC;
-    if (PC == 0x80) {
-        PC = 0;
-        if (m_writePending) {
-            WriteWRAM();
-            m_writePending = false;
-        }
-
-        // Swap MIXS buffers
-        m_mixStackGen ^= 0x10;
-        m_mixStackNull = 0xFFFF;
-
-        MDEC_CT--;
+    // Run one extra NOP to ensure side-effects are carried out
+    if (m_programLength < program.size()) {
+        ++m_programLength;
     }
 }
 
@@ -278,8 +133,15 @@ bool DSP::ValidateState(const state::SCSPDSP &state) const {
 }
 
 void DSP::LoadState(const state::SCSPDSP &state) {
+    m_programLength = 0;
     for (size_t i = 0; i < program.size(); i++) {
         program[i].u64 = state.MPRO[i];
+        if (program[i].u64 != 0) {
+            m_programLength = i + 1;
+        }
+    }
+    if (m_programLength < program.size()) {
+        ++m_programLength;
     }
 
     tempMem = state.TEMP;
@@ -314,22 +176,6 @@ void DSP::LoadState(const state::SCSPDSP &state) {
     m_writeValue = state.writeValue;
 
     m_readWriteAddr = state.readWriteAddr;
-}
-
-uint16 DSP::ReadWRAM() const {
-    const uint32 address = m_readWriteAddr * sizeof(uint16);
-    if (address < 0x80000) {
-        return util::ReadBE<uint16>(&m_WRAM[address]);
-    } else {
-        return 0;
-    }
-}
-
-void DSP::WriteWRAM() {
-    const uint32 address = m_readWriteAddr * sizeof(uint16);
-    if (address < 0x80000) {
-        util::WriteBE<uint16>(&m_WRAM[address], m_writeValue);
-    }
 }
 
 } // namespace ymir::scsp

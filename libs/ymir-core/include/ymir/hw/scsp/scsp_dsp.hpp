@@ -7,12 +7,45 @@
 #include <ymir/core/types.hpp>
 
 #include <ymir/util/bit_ops.hpp>
+#include <ymir/util/data_ops.hpp>
 #include <ymir/util/inline.hpp>
 
+#include <algorithm>
 #include <array>
+#include <bit>
 #include <iosfwd>
 
 namespace ymir::scsp {
+
+FORCE_INLINE static uint32 FloatToInt(const uint16 value) {
+    const uint32 signXor = static_cast<sint32>((value & 0x8000) << 16) >> 1;
+    const uint32 exp = (value >> 11) & 0xF;
+
+    uint32 ret = value & 0x7FF;
+    if (exp < 12) {
+        ret |= 0x800;
+    }
+    ret <<= 11 + 8;
+    ret ^= signXor;
+    ret = static_cast<sint32>(ret) >> (8 + std::min<uint32>(11, exp));
+
+    return ret & 0xFFFFFF;
+}
+
+FORCE_INLINE static uint32 IntToFloat(const uint32 value) {
+    const uint32 shiftedValue = value << 8;
+    const uint32 signXor = static_cast<sint32>(shiftedValue) >> 31;
+    uint32 ret;
+
+    uint32 exp = std::min(0x1F, std::countl_zero(((shiftedValue ^ signXor) << 1) | (1 << 19)));
+    uint32 shift = exp - (exp == 12);
+
+    ret = static_cast<sint32>(shiftedValue) >> (19 - shift);
+    ret &= 0x87FF;
+    ret |= exp << 11;
+
+    return ret;
+}
 
 class DSP {
 public:
@@ -20,7 +53,136 @@ public:
 
     void Reset();
 
-    void Step();
+    FORCE_INLINE void Step() {
+        if (PC < m_programLength) {
+            DSPInstr instr = program[PC];
+
+            if (instr.IRA <= 0x1F) {
+                // MEMS area: 24 -> 24 bits
+                INPUTS = soundMem[instr.IRA];
+            } else if (instr.IRA <= 0x2F) {
+                // MIXS area: 20 -> 24 bits
+                INPUTS = mixStack[GetMIXSIndex(instr.IRA & 0xF) ^ 0x10] << 4;
+            } else if (instr.IRA <= 0x31) {
+                // EXTS area: 16 -> 24 bits
+                INPUTS = audioInOut[instr.IRA & 0x1] << 8;
+            }
+
+            const uint8 tempReadAddr = (instr.TRA + MDEC_CT) & 0x7F;
+            const uint8 tempWriteAddr = (instr.TWA + MDEC_CT) & 0x7F;
+
+            const sint32 inputs = bit::sign_extend<24>(INPUTS);
+            const sint32 temp = bit::sign_extend<24>(tempMem[tempReadAddr]);
+
+            const sint32 xval = instr.XSEL ? inputs : temp;
+            uint16 yval;
+            switch (instr.YSEL) {
+            case 0: yval = FRC_REG; break;
+            case 1: yval = coeffs[instr.CRA]; break;
+            case 2: yval = static_cast<uint16>(bit::extract<11, 23>(Y_REG)); break;
+            case 3: yval = static_cast<uint16>(bit::extract<4, 15>(Y_REG)); break;
+            }
+
+            if (instr.YRL) {
+                Y_REG = bit::extract<0, 23>(inputs);
+            }
+
+            sint32 shifterOut = static_cast<uint32>(bit::sign_extend<26>(SFT_REG)) << (instr.SHFT0 ^ instr.SHFT1);
+            if (instr.SHFT1 == 0) {
+                shifterOut = std::clamp(shifterOut, -0x800000, 0x7FFFFF);
+            }
+            shifterOut &= 0xFFFFFF;
+
+            if (instr.FRCL) {
+                if (instr.SHFT0 & instr.SHFT1) {
+                    FRC_REG = bit::extract<0, 11>(shifterOut);
+                } else {
+                    FRC_REG = bit::extract<11, 23>(shifterOut);
+                }
+            }
+
+            uint32 sgaOutput;
+            if (instr.ZERO) {
+                sgaOutput = 0;
+            } else {
+                if (instr.BSEL) {
+                    sgaOutput = SFT_REG;
+                } else {
+                    sgaOutput = temp;
+                }
+                if (instr.NEGB) {
+                    sgaOutput = -(sint32)sgaOutput;
+                }
+            }
+            const uint32 product = (bit::sign_extend<13, sint64>(yval) * xval) >> 12;
+            SFT_REG = (product + sgaOutput) & 0x3FFFFFF;
+
+            if (instr.EWT) {
+                effectOut[instr.EWA] = shifterOut >> 8;
+            }
+            if (instr.TWT) {
+                tempMem[tempWriteAddr] = shifterOut;
+            }
+            if (instr.IWT) {
+                soundMem[instr.IWA] = m_readValue;
+            }
+
+            if (m_readPending) {
+                uint16 tmp = ReadWRAM();
+                m_readValue = (m_readPending && m_readNOFL) ? (tmp << 8) : FloatToInt(tmp);
+                m_readPending = false;
+                m_readNOFL = false;
+            } else if (m_writePending) {
+                WriteWRAM();
+                m_writePending = false;
+            }
+
+            uint16 addr = addrs[instr.MASA] + instr.NXADR;
+
+            if (instr.ADREB) {
+                addr += bit::sign_extend<12>(ADRS_REG);
+            }
+
+            if (!instr.TABLE) {
+                addr = (addr + MDEC_CT) & ((0x2000 << ringBufferLength) - 1);
+            }
+
+            m_readWriteAddr = (addr + (ringBufferLeadAddress << 12)) & 0x7FFFF;
+
+            if (instr.MRD) {
+                m_readPending = true;
+                m_readNOFL = instr.NOFL;
+            }
+            if (instr.MWT) {
+                m_writePending = true;
+                m_writeValue = instr.NOFL ? (shifterOut >> 8) : IntToFloat(shifterOut);
+            }
+
+            if (instr.ADRL) {
+                if (instr.SHFT0 & instr.SHFT1) {
+                    ADRS_REG = shifterOut >> 12;
+                } else {
+                    ADRS_REG = (inputs >> 16) & 0xFFF;
+                }
+            }
+        } else if (m_writePending) {
+            WriteWRAM();
+            m_writePending = false;
+        }
+
+        ++PC;
+        if (PC == 0x80) {
+            PC = 0;
+
+            // Swap MIXS buffers
+            m_mixStackGen ^= 0x10;
+            m_mixStackNull = 0xFFFF;
+
+            MDEC_CT--;
+        }
+    }
+
+    void UpdateProgramLength(uint8 writeIndex);
 
     void DumpRegs(std::ostream &out) const;
 
@@ -67,6 +229,8 @@ private:
 
     uint8 PC;
 
+    uint8 m_programLength;
+
     uint32 INPUTS; // (24-bit) INPUTS - input data
 
     uint32 SFT_REG;  // (26-bit)
@@ -97,8 +261,21 @@ private:
 
     uint8 *m_WRAM;
 
-    uint16 ReadWRAM() const;
-    void WriteWRAM();
+    FORCE_INLINE uint16 ReadWRAM() const {
+        const uint32 address = m_readWriteAddr * sizeof(uint16);
+        if (address < 0x80000) {
+            return util::ReadBE<uint16>(&m_WRAM[address]);
+        } else {
+            return 0;
+        }
+    }
+
+    FORCE_INLINE void WriteWRAM() {
+        const uint32 address = m_readWriteAddr * sizeof(uint16);
+        if (address < 0x80000) {
+            util::WriteBE<uint16>(&m_WRAM[address], m_writeValue);
+        }
+    }
 };
 
 } // namespace ymir::scsp

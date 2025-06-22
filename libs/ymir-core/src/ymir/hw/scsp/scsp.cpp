@@ -584,7 +584,7 @@ void SCSP::EnableThreading(bool enable) {
     }
 }
 
-void SCSP::SetInterrupt(uint16 intr, bool level) {
+FORCE_INLINE void SCSP::SetInterrupt(uint16 intr, bool level) {
     m_m68kPendingInterrupts &= ~(1 << intr);
     m_m68kPendingInterrupts |= level << intr;
 
