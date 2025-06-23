@@ -1509,8 +1509,12 @@ FORCE_INLINE void VDP::VDP1CommitMeshPolygon(CoordS32 topLeft, CoordS32 bottomRi
     const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
 
     for (sint32 y = topLeft.y(); y <= bottomRight.y(); ++y) {
+        sint32 yy = y;
+        if (doubleDensity && regs1.dblInterlaceEnable) {
+            yy >>= 1;
+        }
         for (sint32 x = topLeft.x(); x <= bottomRight.x(); ++x) {
-            uint32 fbOffset = y * regs1.fbSizeH + x;
+            uint32 fbOffset = yy * regs1.fbSizeH + x;
             if (regs1.pixel8Bits) {
                 fbOffset &= 0x3FFFF;
             } else {
