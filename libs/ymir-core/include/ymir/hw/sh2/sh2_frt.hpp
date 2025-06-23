@@ -58,7 +58,7 @@ struct FreeRunningTimer {
                 event = Event::OVI;
             }
         }
-        if (FRC - 1 < OCRA && FRC + steps - 1 >= OCRA) {
+        if (static_cast<uint16>(OCRA - FRC) < steps) {
             FTCSR.OCFA = 1;
             if (FTCSR.CCLRA) {
                 nextFRC = 0;
@@ -67,7 +67,7 @@ struct FreeRunningTimer {
                 event = Event::OCI;
             }
         }
-        if (FRC - 1 < OCRB && FRC + steps - 1 >= OCRB) {
+        if (static_cast<uint16>(OCRB - FRC) < steps) {
             FTCSR.OCFB = 1;
             if (TIER.OCIBE) {
                 event = Event::OCI;
@@ -240,11 +240,11 @@ struct FreeRunningTimer {
     // 015  R/W  8        FF        OCRA/B L  Output compare register A/B L
     uint16 OCRA, OCRB;
 
-    uint16 &CurrOCR() {
+    FORCE_INLINE uint16 &CurrOCR() {
         return TOCR.OCRS ? OCRB : OCRA;
     }
 
-    uint16 CurrOCR() const {
+    FORCE_INLINE uint16 CurrOCR() const {
         return TOCR.OCRS ? OCRB : OCRA;
     }
 
