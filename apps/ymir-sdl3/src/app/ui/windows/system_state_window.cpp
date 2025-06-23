@@ -128,9 +128,10 @@ void SystemStateWindow::DrawRealTimeClock() {
 }
 
 void SystemStateWindow::DrawClocks() {
-    if (ImGui::BeginTable("sys_clocks", 2, ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::BeginTable("sys_clocks", 3, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("Components");
         ImGui::TableSetupColumn("Clock");
+        ImGui::TableSetupColumn("Ratio");
         ImGui::TableHeadersRow();
 
         const sys::ClockRatios &clockRatios = m_context.saturn.GetClockRatios();
@@ -144,6 +145,9 @@ void SystemStateWindow::DrawClocks() {
         if (ImGui::TableNextColumn()) {
             ImGui::Text("%.5lf MHz", masterClock);
         }
+        if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("1:1");
+        }
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -152,17 +156,22 @@ void SystemStateWindow::DrawClocks() {
         if (ImGui::TableNextColumn()) {
             ImGui::Text("%.5lf MHz", masterClock * 0.5);
         }
+        if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("1:2");
+        }
 
+        // Account for double-resolution
+        const bool doubleWidth = m_context.saturn.VDP.GetProbe().GetResolution().width >= 640;
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::TextUnformatted("Pixel clock");
         }
         if (ImGui::TableNextColumn()) {
-            // Account for double-resolution
-            auto &probe = m_context.saturn.VDP.GetProbe();
-            auto resolution = probe.GetResolution();
-            const double factor = resolution.width >= 640 ? 0.5 : 0.25;
+            const double factor = doubleWidth ? 0.5 : 0.25;
             ImGui::Text("%.5lf MHz", masterClock * factor);
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::Text("1:%u", doubleWidth ? 2u : 4u);
         }
 
         ImGui::TableNextRow();
@@ -172,6 +181,9 @@ void SystemStateWindow::DrawClocks() {
         if (ImGui::TableNextColumn()) {
             ImGui::Text("%.5lf MHz", masterClock * clockRatios.SCSPNum / clockRatios.SCSPDen);
         }
+        if (ImGui::TableNextColumn()) {
+            ImGui::Text("%" PRIu64 ":%" PRIu64, clockRatios.SCSPNum, clockRatios.SCSPDen);
+        }
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -179,6 +191,9 @@ void SystemStateWindow::DrawClocks() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::Text("%.5lf MHz", masterClock * clockRatios.SCSPNum / clockRatios.SCSPDen * 0.5);
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::Text("%" PRIu64 ":%" PRIu64, clockRatios.SCSPNum, clockRatios.SCSPDen * 2u);
         }
 
         ImGui::TableNextRow();
@@ -188,6 +203,9 @@ void SystemStateWindow::DrawClocks() {
         if (ImGui::TableNextColumn()) {
             ImGui::Text("%.5lf MHz", masterClock * clockRatios.CDBlockNum / clockRatios.CDBlockDen);
         }
+        if (ImGui::TableNextColumn()) {
+            ImGui::Text("%" PRIu64 ":%" PRIu64, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
+        }
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -195,6 +213,9 @@ void SystemStateWindow::DrawClocks() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::Text("%.5lf MHz", masterClock * clockRatios.SMPCNum / clockRatios.SMPCDen);
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::Text("%" PRIu64 ":%" PRIu64, clockRatios.SMPCNum, clockRatios.SMPCDen);
         }
 
         ImGui::EndTable();
