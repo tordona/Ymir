@@ -87,11 +87,13 @@ add_subdirectory(stb)
 
 # libchdr - https://github.com/rtissera/libchdr
 message(STATUS "==> libchdr")
+set(BUILD_FUZZER OFF)
 add_subdirectory(libchdr)
 
-# rtmidi - https://github.com/thestk/rtmidi.git
+# rtmidi - https://github.com/thestk/rtmidi
 message(STATUS "==> rtmidi")
 set(RTMIDI_BUILD_STATIC_LIBS ON)
+set(RTMIDI_BUILD_TESTING OFF)
 add_subdirectory(rtmidi)
 
 # --------------------------------------------------------------------------------------------------
@@ -107,18 +109,26 @@ endif ()
 
 # Place vendored library projects under a Vendored folder in Visual Studio solutions
 if (MSVC)
-    set_target_properties(fmt PROPERTIES FOLDER Vendored)
     if (BUILD_SHARED_LIBS)
         set_target_properties(SDL3-shared PROPERTIES FOLDER Vendored)
     else ()
         set_target_properties(SDL3-static PROPERTIES FOLDER Vendored)
     endif ()
-    set_target_properties(SDL_uclibc PROPERTIES FOLDER Vendored)
     set_target_properties(Catch2 PROPERTIES FOLDER Vendored)
     set_target_properties(Catch2WithMain PROPERTIES FOLDER Vendored)
+    set_target_properties(chdr-benchmark PROPERTIES FOLDER Vendored)
+    set_target_properties(chdr-static PROPERTIES FOLDER Vendored)
+    set_target_properties(fmt PROPERTIES FOLDER Vendored)
     set_target_properties(imgui PROPERTIES FOLDER Vendored)
-    set_target_properties(xxHash PROPERTIES FOLDER Vendored)
+    set_target_properties(libzstd_static PROPERTIES FOLDER Vendored)
     set_target_properties(lz4 PROPERTIES FOLDER Vendored)
+    set_target_properties(lzma PROPERTIES FOLDER Vendored)
+    set_target_properties(rt_uninstall PROPERTIES FOLDER Vendored)
+    set_target_properties(rtmidi PROPERTIES FOLDER Vendored)
+    set_target_properties(SDL_uclibc PROPERTIES FOLDER Vendored)
+    set_target_properties(stb PROPERTIES FOLDER Vendored)
+    set_target_properties(xxHash PROPERTIES FOLDER Vendored)
+    set_target_properties(zlibstatic PROPERTIES FOLDER Vendored)
 endif ()
 
 message(STATUS "Done adding vendored libraries")
