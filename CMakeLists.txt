@@ -66,7 +66,7 @@ if (DEFINED Ymir_SHARED_LIBS)
 endif ()
 
 ## Build static libraries by default if BUILD_SHARED_LIBS is not specified
-if (BUILD_SHARED_LIBS STREQUAL "")
+if (NOT DEFINED BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS OFF)
 endif ()
 

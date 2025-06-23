@@ -4,8 +4,6 @@
 
 namespace ymir::cart {
 
-static NoCartridge no_instance{};
-
 CartridgeSlot::CartridgeSlot() {
     RemoveCartridge();
 }

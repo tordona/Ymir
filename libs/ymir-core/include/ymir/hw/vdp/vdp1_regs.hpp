@@ -207,7 +207,7 @@ struct VDP1Regs {
     //     011   Rotation 8     512x512
     //     100   HDTV           512x256
 
-    FORCE_INLINE uint16 ReadTVMR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadTVMR() const {
         uint16 value = 0;
         bit::deposit_into<3>(value, vblankErase);
         bit::deposit_into<2>(value, hdtvEnable);
@@ -255,7 +255,7 @@ struct VDP1Regs {
     // last visible scanline immediately before VBlank (224 or 240) to issue another write to set VBE,FCM,FCT = 111,
     // and finally restore VBE = 0 after VBlank OUT to stop VDP1 from clearing the next frame buffer.
 
-    FORCE_INLINE uint16 ReadFBCR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadFBCR() const {
         uint16 value = 0;
         bit::deposit_into<0>(value, fbSwapTrigger);
         bit::deposit_into<1>(value, fbSwapMode);
@@ -291,7 +291,7 @@ struct VDP1Regs {
     //                       10 (2) = Trigger on frame buffer swap
     //                       11 (3) = (prohibited)
 
-    FORCE_INLINE uint16 ReadPTMR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadPTMR() const {
         return plotTrigger;
     }
 
@@ -311,7 +311,7 @@ struct VDP1Regs {
     //   - Bits 15-8 specify the values for even X coordinates
     //   - Bits 7-0 specify the values for odd X coordinates
 
-    FORCE_INLINE uint16 ReadEWDR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadEWDR() const {
         return eraseWriteValue;
     }
 
@@ -326,7 +326,7 @@ struct VDP1Regs {
     //   14-9     W  -     Upper-left Coordinate X1
     //    8-0     W  -     Upper-left Coordinate Y1
 
-    FORCE_INLINE uint16 ReadEWLR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadEWLR() const {
         uint16 value = 0;
         bit::deposit_into<0, 8>(value, eraseY1);
         bit::deposit_into<9, 14>(value, eraseX1 >> 3);
@@ -344,7 +344,7 @@ struct VDP1Regs {
     //   15-9     W  -     Lower-right Coordinate X3
     //    8-0     W  -     Lower-right Coordinate Y3
 
-    FORCE_INLINE uint16 ReadEWRR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadEWRR() const {
         uint16 value = 0;
         bit::deposit_into<0, 8>(value, eraseY3);
         bit::deposit_into<9, 15>(value, eraseX3 >> 3);
@@ -374,7 +374,7 @@ struct VDP1Regs {
     //                       0 = previous drawing end bit not fetched
     //                       1 = previous drawing end bit fetched
 
-    FORCE_INLINE uint16 ReadEDSR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadEDSR() const {
         uint16 value = 0;
         bit::deposit_into<0>(value, prevFrameEnded);
         bit::deposit_into<1>(value, currFrameEnded);
@@ -391,7 +391,7 @@ struct VDP1Regs {
     //   bits   r/w  code  description
     //   15-0   R    -     Last Operation Command Address (divided by 8)
 
-    FORCE_INLINE uint16 ReadLOPR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadLOPR() const {
         return prevCommandAddress >> 3u;
     }
 
@@ -404,7 +404,7 @@ struct VDP1Regs {
     //   bits   r/w  code  description
     //   15-0   R    -     Current Operation Command Address (divided by 8)
 
-    FORCE_INLINE uint16 ReadCOPR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadCOPR() const {
         return currCommandAddress >> 3u;
     }
 
@@ -425,7 +425,7 @@ struct VDP1Regs {
     //      3   R    VBE   V-Blank Erase/Write Enable (read-only view of TVMR.VBE)
     //    2-0   R    TVM   TV Mode Selection (read-only view of TVMR.TVM)
 
-    FORCE_INLINE uint16 ReadMODR() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadMODR() const {
         uint16 value = 0;
         bit::deposit_into<0>(value, pixel8Bits);
         bit::deposit_into<1>(value, fbRotEnable);

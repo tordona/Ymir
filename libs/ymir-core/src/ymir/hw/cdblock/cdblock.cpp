@@ -585,6 +585,7 @@ T CDBlock::PeekReg(uint32 address) {
         default: return 0;
         }
     }
+    util::unreachable();
 }
 
 template <mem_primitive T>

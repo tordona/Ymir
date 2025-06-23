@@ -496,6 +496,7 @@ T SCU::ReadCartridge(uint32 address) {
             return m_cartSlot.ReadByte<peek>(address);
         }
     }
+    util::unreachable();
 }
 
 template <mem_primitive T, bool poke>

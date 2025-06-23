@@ -13,14 +13,14 @@ public:
     ROMCartridge()
         : BaseCartridge(0xFFu, CartType::ROM) {}
 
-    uint8 ReadByte(uint32 address) const final {
+    uint8 ReadByte(uint32 address) const override {
         if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
             return m_rom[address & (kROMCartSize - 1)];
         } else {
             return 0xFFu;
         }
     }
-    uint16 ReadWord(uint32 address) const final {
+    uint16 ReadWord(uint32 address) const override {
         if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
             return util::ReadBE<uint16>(&m_rom[address & (kROMCartSize - 1) & ~1]);
         } else {
@@ -28,17 +28,17 @@ public:
         }
     }
 
-    void WriteByte(uint32 address, uint8 value) final {}
-    void WriteWord(uint32 address, uint16 value) final {}
+    void WriteByte(uint32 address, uint8 value) override {}
+    void WriteWord(uint32 address, uint16 value) override {}
 
-    uint8 PeekByte(uint32 address) const final {
+    uint8 PeekByte(uint32 address) const override {
         if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
             return m_rom[address & (kROMCartSize - 1)];
         } else {
             return 0xFFu;
         }
     }
-    uint16 PeekWord(uint32 address) const final {
+    uint16 PeekWord(uint32 address) const override {
         if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
             return util::ReadBE<uint16>(&m_rom[address & (kROMCartSize - 1) & ~1]);
         } else {
@@ -46,12 +46,12 @@ public:
         }
     }
 
-    void PokeByte(uint32 address, uint8 value) final {
+    void PokeByte(uint32 address, uint8 value) override {
         if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
             m_rom[address & (kROMCartSize - 1)] = value;
         }
     }
-    void PokeWord(uint32 address, uint16 value) final {
+    void PokeWord(uint32 address, uint16 value) override {
         if (util::AddressInRange<0x200'0000, 0x3FF'FFFF>(address)) {
             util::WriteBE<uint16>(&m_rom[address & (kROMCartSize - 1) & ~1], value);
         }

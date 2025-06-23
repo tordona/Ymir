@@ -91,7 +91,7 @@ public:
     // Save states
 
     void SaveState(state::SH2State &state) const;
-    bool ValidateState(const state::SH2State &state) const;
+    [[nodiscard]] bool ValidateState(const state::SH2State &state) const;
     void LoadState(const state::SH2State &state);
 
     // -------------------------------------------------------------------------

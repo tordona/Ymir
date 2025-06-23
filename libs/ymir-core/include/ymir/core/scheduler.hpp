@@ -63,7 +63,7 @@ private:
 ///
 /// The scheduler contains a fixed-size array of `kNumScheduledEvent` elements that must be manually registered by each
 /// component that needs to handle such events. Registering is done by the `Scheduler::RegisterEvent` method that takes
-/// the callback function, an user context pointer and an user ID for identifying the event in save states. The returned
+/// the callback function, a user context pointer and a user ID for identifying the event in save states. The returned
 /// `EventID` must be used to schedule the event with `Scheduler::ScheduleFromNow` or `Scheduler::ScheduleAt`.
 ///
 /// The callback function takes an `EventContext` object and the user context pointer provided on registration. The
@@ -164,7 +164,7 @@ public:
     /// If the result is negative, an event is late.
     /// @return the number of cycles until the next event
     FORCE_INLINE sint64 RemainingCount() const {
-        return (sint64)m_nextCount - (sint64)m_currCount;
+        return static_cast<sint64>(m_nextCount) - static_cast<sint64>(m_currCount);
     }
 
     /// @brief Schedules the specified event to happen `interval` cycles from the current count.
@@ -236,7 +236,7 @@ public:
     /// @brief Validates the given state object.
     /// @param state the state object
     /// @return `true` if the state object is valid
-    bool ValidateState(const state::SchedulerState &state) const {
+    [[nodiscard]] bool ValidateState(const state::SchedulerState &state) const {
         for (size_t i = 0; i < kNumScheduledEvents; i++) {
             const size_t eventIndex = m_eventPtrs[state.events[i].id];
             if (eventIndex == kInvalidEvent) {

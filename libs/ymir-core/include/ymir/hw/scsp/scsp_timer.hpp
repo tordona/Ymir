@@ -31,22 +31,22 @@ struct Timer {
         return counter == 0xFF;
     }
 
-    uint8 ReadTIMx() const {
+    [[nodiscard]] uint8 ReadTIMx() const noexcept {
         return reload;
     }
 
-    void WriteTIMx(uint8 value) {
+    void WriteTIMx(uint8 value) noexcept {
         reload = value;
         doReload = true;
     }
 
-    uint8 ReadTxCTL() const {
+    [[nodiscard]] uint8 ReadTxCTL() const noexcept {
         uint8 value = 0;
         bit::deposit_into<0, 2>(value, incrementInterval);
         return value;
     }
 
-    void WriteTxCTL(uint8 value) {
+    void WriteTxCTL(uint8 value) noexcept {
         incrementInterval = bit::extract<0, 2>(value);
         incrementMask = (1ull << incrementInterval) - 1;
     }
@@ -62,7 +62,7 @@ struct Timer {
         state.counter = counter;
     }
 
-    bool ValidateState(const state::SCSPTimer &state) const {
+    [[nodiscard]] bool ValidateState(const state::SCSPTimer &state) const {
         return true;
     }
 

@@ -2,8 +2,6 @@
 
 #include "peripheral_base.hpp"
 
-#include "peripheral_state_common.hpp"
-
 namespace ymir::peripheral {
 
 /// @brief Implements the Saturn Control Pad (ID 0x0) with:
@@ -13,15 +11,15 @@ namespace ymir::peripheral {
 /// - Start button
 class ControlPad final : public BasePeripheral {
 public:
-    ControlPad(CBPeripheralReport callback);
+    explicit ControlPad(CBPeripheralReport callback);
 
-    void UpdateInputs() final;
+    void UpdateInputs() override;
 
-    uint8 GetReportLength() const final;
+    [[nodiscard]] uint8 GetReportLength() const override;
 
-    void Read(std::span<uint8> out) final;
+    void Read(std::span<uint8> out) override;
 
-    uint8 WritePDR(uint8 ddr, uint8 value) final;
+    [[nodiscard]] uint8 WritePDR(uint8 ddr, uint8 value) override;
 
 private:
     ControlPadReport m_report;

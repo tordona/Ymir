@@ -28,7 +28,7 @@ using M68kBus = scsp::SCSP;
 
 class MC68EC000 {
 public:
-    MC68EC000(M68kBus &bus);
+    explicit MC68EC000(M68kBus &bus);
 
     void Reset(bool hard);
 
@@ -40,7 +40,7 @@ public:
     // Save states
 
     void SaveState(state::M68KState &state) const;
-    bool ValidateState(const state::M68KState &state) const;
+    [[nodiscard]] bool ValidateState(const state::M68KState &state) const;
     void LoadState(const state::M68KState &state);
 
 private:

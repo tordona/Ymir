@@ -9,19 +9,19 @@ public:
     NullPeripheral()
         : BasePeripheral(PeripheralType::None, 0x0, {}) {}
 
-    bool IsConnected() const final {
+    [[nodiscard]] bool IsConnected() const override {
         return false;
     }
 
-    void UpdateInputs() final {}
+    void UpdateInputs() override {}
 
-    uint8 GetReportLength() const final {
+    [[nodiscard]] uint8 GetReportLength() const override {
         return 0;
     }
 
-    void Read(std::span<uint8> out) final {}
+    void Read(std::span<uint8> out) override {}
 
-    uint8 WritePDR(uint8 ddr, uint8 value) final {
+    [[nodiscard]] uint8 WritePDR(uint8 ddr, uint8 value) override {
         return 0;
     }
 };

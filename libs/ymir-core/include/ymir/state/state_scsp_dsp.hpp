@@ -23,7 +23,7 @@ struct SCSPDSP {
     uint8 RBL;
 
     uint8 PC;
-    uint32 INPUTS;
+    sint32 INPUTS;
 
     uint32 SFT_REG;
     uint16 FRC_REG;

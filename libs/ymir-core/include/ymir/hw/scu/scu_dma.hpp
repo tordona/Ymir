@@ -107,7 +107,7 @@ struct DMAChannel {
         state.endIndirect = endIndirect;
     }
 
-    bool ValidateState(const state::SCUDMAState &state) const {
+    [[nodiscard]] bool ValidateState(const state::SCUDMAState &state) const {
         if (state.xferCount > 1048576) {
             // TODO: should limit to 4096 for channels 1 and 2
             return false;

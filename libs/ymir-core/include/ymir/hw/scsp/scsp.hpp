@@ -41,27 +41,27 @@ struct SCSPAccessTypeInfo;
 
 template <>
 struct SCSPAccessTypeInfo<SCSPAccessType::SCU> {
-    static constexpr const char *name = "SCU";
+    static constexpr auto name = "SCU";
 };
 
 template <>
 struct SCSPAccessTypeInfo<SCSPAccessType::M68kCode> {
-    static constexpr const char *name = "M68K code";
+    static constexpr auto name = "M68K code";
 };
 
 template <>
 struct SCSPAccessTypeInfo<SCSPAccessType::M68kData> {
-    static constexpr const char *name = "M68K data";
+    static constexpr auto name = "M68K data";
 };
 
 template <>
 struct SCSPAccessTypeInfo<SCSPAccessType::DMA> {
-    static constexpr const char *name = "DMA";
+    static constexpr auto name = "DMA";
 };
 
 template <>
 struct SCSPAccessTypeInfo<SCSPAccessType::Debug> {
-    static constexpr const char *name = "debug";
+    static constexpr auto name = "debug";
 };
 
 template <SCSPAccessType accessType>
@@ -151,7 +151,7 @@ public:
     // Save states
 
     void SaveState(state::SCSPState &state) const;
-    bool ValidateState(const state::SCSPState &state) const;
+    [[nodiscard]] bool ValidateState(const state::SCSPState &state) const;
     void LoadState(const state::SCSPState &state);
 
 private:

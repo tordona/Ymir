@@ -513,7 +513,7 @@ void VDP::IncludeVDP1RenderInVDPThread(bool enable) {
 }
 
 template <mem_primitive T>
-FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) {
+FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) const {
     address &= 0x7FFFF;
     return util::ReadBE<T>(&m_state.VRAM1[address]);
 }
@@ -528,7 +528,7 @@ FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
 }
 
 template <mem_primitive T>
-FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) {
+FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) const {
     address &= 0x3FFFF;
     return util::ReadBE<T>(&m_state.spriteFB[m_state.displayFB ^ 1][address]);
 }
@@ -546,7 +546,7 @@ FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
 }
 
 template <bool peek>
-FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) {
+FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) const {
     address &= 0x7FFFF;
     return m_state.regs1.Read<peek>(address);
 }
@@ -592,7 +592,7 @@ FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
 }
 
 template <mem_primitive T>
-FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) {
+FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) const {
     // TODO: handle VRSIZE.VRAMSZ
     address &= 0x7FFFF;
     return util::ReadBE<T>(&m_state.VRAM2[address]);
@@ -609,7 +609,7 @@ FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
 }
 
 template <mem_primitive T, bool peek>
-FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) {
+FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) const {
     if constexpr (std::is_same_v<T, uint32>) {
         uint32 value = VDP2ReadCRAM<uint16, peek>(address + 0) << 16u;
         value |= VDP2ReadCRAM<uint16, peek>(address + 2) << 0u;
@@ -664,7 +664,7 @@ FORCE_INLINE void VDP::VDP2UpdateCRAMCache(uint32 address) {
     }
 }
 
-FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) {
+FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) const {
     address &= 0x1FF;
     return m_state.regs2.Read(address);
 }
@@ -1016,7 +1016,7 @@ void VDP::VDPRenderThread() {
         const size_t count = rctx.DequeueEvents(events.begin(), events.size());
 
         for (size_t i = 0; i < count; ++i) {
-            auto &event = events[i];
+            const auto &event = events[i];
             using EvtType = VDPRenderEvent::Type;
             switch (event.type) {
             case EvtType::Reset:
@@ -1181,7 +1181,7 @@ FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
     }
 }
 
-FORCE_INLINE Color888 VDP::VDP2ReadRendererColor5to8(uint32 address) {
+FORCE_INLINE Color888 VDP::VDP2ReadRendererColor5to8(uint32 address) const {
     if (m_threadedVDPRendering) {
         return m_VDPRenderContext.vdp2.CRAMCache[(address / sizeof(uint16)) & 0x7FF];
     } else {
@@ -3456,8 +3456,8 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
             const uint32 clm = bit::extract<4, 5>(index());
             const uint32 chm = bit::extract<6, 7>(index());
 
-            const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
-            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const auto chmEnum = static_cast<CharacterMode>(chm);
+            const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
             arr[chm][fcc][cf][clm] = &VDP::VDP2DrawNormalScrollBG<chmEnum, fcc, cfEnum, colorMode, deinterlace>;
         });
@@ -3474,7 +3474,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
             const uint32 cf = bit::extract<0, 2>(index());
             const uint32 cm = bit::extract<3, 4>(index());
 
-            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
             arr[cf][cm] = &VDP::VDP2DrawNormalBitmapBG<cfEnum, colorMode, deinterlace>;
         });
@@ -3510,7 +3510,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     }
 
     if (bgParams.mosaicEnable) {
-        bgState.mosaicCounterY++;
+        ++bgState.mosaicCounterY;
         if (bgState.mosaicCounterY >= regs.mosaicV) {
             bgState.mosaicCounterY = 0;
         }
@@ -3536,8 +3536,8 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
             const uint32 clm = bit::extract<4, 5>(index());
             const uint32 chm = bit::extract<6, 7>(index());
 
-            const CharacterMode chmEnum = static_cast<CharacterMode>(chm);
-            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const auto chmEnum = static_cast<CharacterMode>(chm);
+            const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
             arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<selRotParam, chmEnum, fcc, cfEnum, colorMode>;
         });
@@ -3554,7 +3554,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
             const uint32 cf = bit::extract<0, 2>(index());
             const uint32 cm = bit::extract<3, 4>(index());
 
-            const ColorFormat cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
+            const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
             arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<selRotParam, cfEnum, colorMode>;
         });
@@ -4417,6 +4417,9 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0xFF000000);
         return;
     }
+
+    // NOTE: All arrays here are intentionally left uninitialized for performance.
+    // Only the necessary entries are initialized and used.
 
     // Determine layer orders
     static constexpr std::array<LayerIndex, 3> kLayersInit{LYR_Back, LYR_Back, LYR_Back};

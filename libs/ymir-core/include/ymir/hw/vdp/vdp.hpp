@@ -23,6 +23,7 @@
 #include <ymir/util/data_ops.hpp>
 #include <ymir/util/event.hpp>
 #include <ymir/util/inline.hpp>
+#include <ymir/util/unreachable.hpp>
 
 #include <blockingconcurrentqueue.h>
 
@@ -98,7 +99,7 @@ public:
     // Save states
 
     void SaveState(state::VDPState &state) const;
-    bool ValidateState(const state::VDPState &state) const;
+    [[nodiscard]] bool ValidateState(const state::VDPState &state) const;
     void LoadState(const state::VDPState &state);
 
     // -------------------------------------------------------------------------
@@ -128,7 +129,7 @@ private:
 
     static void OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext);
 
-    using VideoStandard = ::ymir::core::config::sys::VideoStandard;
+    using VideoStandard = core::config::sys::VideoStandard;
     void SetVideoStandard(VideoStandard videoStandard);
 
     // -------------------------------------------------------------------------
@@ -141,19 +142,19 @@ private:
     // VDP1 memory/register access
 
     template <mem_primitive T>
-    T VDP1ReadVRAM(uint32 address);
+    T VDP1ReadVRAM(uint32 address) const;
 
     template <mem_primitive T>
     void VDP1WriteVRAM(uint32 address, T value);
 
     template <mem_primitive T>
-    T VDP1ReadFB(uint32 address);
+    T VDP1ReadFB(uint32 address) const;
 
     template <mem_primitive T>
     void VDP1WriteFB(uint32 address, T value);
 
     template <bool peek>
-    uint16 VDP1ReadReg(uint32 address);
+    uint16 VDP1ReadReg(uint32 address) const;
     template <bool poke>
     void VDP1WriteReg(uint32 address, uint16 value);
 
@@ -161,13 +162,13 @@ private:
     // VDP2 memory/register access
 
     template <mem_primitive T>
-    T VDP2ReadVRAM(uint32 address);
+    T VDP2ReadVRAM(uint32 address) const;
 
     template <mem_primitive T>
     void VDP2WriteVRAM(uint32 address, T value);
 
     template <mem_primitive T, bool peek>
-    T VDP2ReadCRAM(uint32 address);
+    T VDP2ReadCRAM(uint32 address) const;
 
     template <mem_primitive T, bool poke>
     void VDP2WriteCRAM(uint32 address, T value);
@@ -175,7 +176,7 @@ private:
     template <mem_primitive T>
     void VDP2UpdateCRAMCache(uint32 address);
 
-    uint16 VDP2ReadReg(uint32 address);
+    uint16 VDP2ReadReg(uint32 address) const;
     void VDP2WriteReg(uint32 address, uint16 value);
 
     // -------------------------------------------------------------------------
@@ -360,6 +361,7 @@ private:
             } else if constexpr (std::is_same_v<T, uint16>) {
                 return VDP1VRAMWriteWord(address, value);
             }
+            util::unreachable();
         }
 
         static VDPRenderEvent VDP1VRAMWriteByte(uint32 address, uint8 value) {
@@ -379,6 +381,7 @@ private:
             } else if constexpr (std::is_same_v<T, uint16>) {
                 return VDP1FBWriteWord(address, value);
             }
+            util::unreachable();
         }
 
         static VDPRenderEvent VDP1FBWriteByte(uint32 address, uint8 value) {
@@ -402,6 +405,7 @@ private:
             } else if constexpr (std::is_same_v<T, uint16>) {
                 return VDP2VRAMWriteWord(address, value);
             }
+            util::unreachable();
         }
 
         static VDPRenderEvent VDP2VRAMWriteByte(uint32 address, uint8 value) {
@@ -421,6 +425,7 @@ private:
             } else if constexpr (std::is_same_v<T, uint16>) {
                 return VDP2CRAMWriteWord(address, value);
             }
+            util::unreachable();
         }
 
         static VDPRenderEvent VDP2CRAMWriteByte(uint32 address, uint8 value) {
@@ -458,10 +463,10 @@ private:
 
     mutable struct VDPRenderContext {
         struct QueueTraits : moodycamel::ConcurrentQueueDefaultTraits {
-            static const size_t BLOCK_SIZE = 64;
-            static const size_t EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD = 64;
-            static const std::uint32_t EXPLICIT_CONSUMER_CONSUMPTION_QUOTA_BEFORE_ROTATE = 512;
-            static const int MAX_SEMA_SPINS = 20000;
+            static constexpr size_t BLOCK_SIZE = 64;
+            static constexpr size_t EXPLICIT_BLOCK_EMPTY_COUNTER_THRESHOLD = 64;
+            static constexpr std::uint32_t EXPLICIT_CONSUMER_CONSUMPTION_QUOTA_BEFORE_ROTATE = 512;
+            static constexpr int MAX_SEMA_SPINS = 20000;
         };
 
         moodycamel::BlockingConcurrentQueue<VDPRenderEvent, QueueTraits> eventQueue;
@@ -543,7 +548,7 @@ private:
                     eventQueue.enqueue_bulk(pTok, pendingEvents.begin(), pendingEventsCount);
                     pendingEventsCount = 0;
                 }
-                eventQueue.enqueue(pTok, std::move(event));
+                eventQueue.enqueue(pTok, event);
                 break;
             }
         }
@@ -575,7 +580,7 @@ private:
     template <mem_primitive T>
     T VDP2ReadRendererCRAM(uint32 address);
 
-    Color888 VDP2ReadRendererColor5to8(uint32 address);
+    Color888 VDP2ReadRendererColor5to8(uint32 address) const;
 
     // Enables deinterlacing of double-density interlace frames in the renderer.
     // When false, double-density interlace mode is rendered normally - only even or odd lines are updated every frame.
@@ -872,7 +877,7 @@ private:
             pageBaseAddresses.fill(0);
             screenCoords.fill({});
             lineColor.fill({.u32 = 0});
-            transparent.fill(0);
+            transparent.fill(false);
             scrX = scrY = 0;
             KA = 0;
             charFetcher.Reset();
@@ -1394,12 +1399,12 @@ public:
 
     class Probe {
     public:
-        Probe(VDP &vdp);
+        explicit Probe(VDP &vdp);
 
-        Dimensions GetResolution() const;
-        InterlaceMode GetInterlaceMode() const;
+        [[nodiscard]] Dimensions GetResolution() const;
+        [[nodiscard]] InterlaceMode GetInterlaceMode() const;
 
-        const VDP2Regs &GetVDP2Regs() const;
+        [[nodiscard]] const VDP2Regs &GetVDP2Regs() const;
 
     private:
         VDP &m_vdp;

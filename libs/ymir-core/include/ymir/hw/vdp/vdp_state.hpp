@@ -233,7 +233,7 @@ struct VDPState {
         }
     }
 
-    bool ValidateState(const state::VDPState &state) const {
+    [[nodiscard]] bool ValidateState(const state::VDPState &state) const {
         switch (state.HPhase) {
         case state::VDPState::HorizontalPhase::Active: break;
         case state::VDPState::HorizontalPhase::RightBorder: break;

@@ -2,8 +2,6 @@
 
 #include "peripheral_base.hpp"
 
-#include "peripheral_state_common.hpp"
-
 namespace ymir::peripheral {
 
 /// @brief Implements the 3D Control Pad (ID 0x0 in digital mode, 0x1 in analog mode) with:
@@ -20,15 +18,15 @@ namespace ymir::peripheral {
 /// - The button state is set to OFF when the trigger value is 85 or lower
 class AnalogPad final : public BasePeripheral {
 public:
-    AnalogPad(CBPeripheralReport callback);
+    explicit AnalogPad(CBPeripheralReport callback);
 
-    void UpdateInputs() final;
+    void UpdateInputs() override;
 
-    uint8 GetReportLength() const final;
+    [[nodiscard]] uint8 GetReportLength() const override;
 
-    void Read(std::span<uint8> out) final;
+    void Read(std::span<uint8> out) override;
 
-    uint8 WritePDR(uint8 ddr, uint8 value) final;
+    [[nodiscard]] uint8 WritePDR(uint8 ddr, uint8 value) override;
 
     void SetAnalogMode(bool mode);
 

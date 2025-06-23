@@ -697,6 +697,7 @@ void serialize(Archive &ar, SCSPDSP &s, const uint32 version) {
     //   - TEMP entries changed from uint32 to sint32
     //   - MEMS entries changed from uint32 to sint32
     //   - MIXS increased from 16 to 16*2 entries
+    //   - INPUTS changed from uint32 to sint32
 
     ar(s.MPRO, s.TEMP, s.MEMS, s.COEF, s.MADRS);
     if (version >= 6) {

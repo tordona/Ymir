@@ -38,7 +38,7 @@ public:
 
     void LoadPersistentDataFrom(std::filesystem::path path, std::error_code &error);
     void SavePersistentDataTo(std::filesystem::path path, std::error_code &error);
-    std::filesystem::path GetPersistentDataPath() const {
+    [[nodiscard]] std::filesystem::path GetPersistentDataPath() const {
         return m_persistentDataPath;
     }
 
@@ -78,7 +78,7 @@ public:
     // Save states
 
     void SaveState(state::SMPCState &state) const;
-    bool ValidateState(const state::SMPCState &state) const;
+    [[nodiscard]] bool ValidateState(const state::SMPCState &state) const;
     void LoadState(const state::SMPCState &state);
 
 private:

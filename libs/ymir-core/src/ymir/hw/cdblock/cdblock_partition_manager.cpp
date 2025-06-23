@@ -29,7 +29,7 @@ uint32 CDBlock::PartitionManager::GetFreeBufferCount() const {
     return m_freeBuffers;
 }
 
-void CDBlock::PartitionManager::InsertHead(uint8 partitionIndex, Buffer &buffer) {
+void CDBlock::PartitionManager::InsertHead(uint8 partitionIndex, const Buffer &buffer) {
     assert(partitionIndex < m_partitions.size());
     assert(m_freeBuffers > 0);
     auto &partition = m_partitions[partitionIndex];

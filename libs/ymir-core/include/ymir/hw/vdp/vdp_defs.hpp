@@ -95,11 +95,11 @@ struct Coord {
         return elements[1];
     }
 
-    const T &x() const {
+    [[nodiscard]] const T &x() const {
         return elements[0];
     }
 
-    const T &y() const {
+    [[nodiscard]] const T &y() const {
         return elements[1];
     }
 };

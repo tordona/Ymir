@@ -17,6 +17,8 @@ using CBInterruptCallback = util::RequiredCallback<void()>;
 /// @brief The subset of system operations used by the SMPC.
 class ISMPCOperations {
 public:
+    virtual ~ISMPCOperations() = default;
+
     virtual bool GetNMI() const = 0; ///< Retrieves the NMI line state
     virtual void RaiseNMI() = 0;     ///< Raises the NMI line
 

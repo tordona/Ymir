@@ -35,12 +35,11 @@ FORCE_INLINE static uint32 FloatToInt(const uint16 value) {
 FORCE_INLINE static uint32 IntToFloat(const uint32 value) {
     const uint32 shiftedValue = value << 8;
     const uint32 signXor = static_cast<sint32>(shiftedValue) >> 31;
-    uint32 ret;
 
-    uint32 exp = std::min(0x1F, std::countl_zero(((shiftedValue ^ signXor) << 1) | (1 << 19)));
-    uint32 shift = exp - (exp == 12);
+    const uint32 exp = std::min(0x1F, std::countl_zero(((shiftedValue ^ signXor) << 1) | (1 << 19)));
+    const uint32 shift = exp - (exp == 12);
 
-    ret = static_cast<sint32>(shiftedValue) >> (19 - shift);
+    uint32 ret = static_cast<sint32>(shiftedValue) >> (19 - shift);
     ret &= 0x87FF;
     ret |= exp << 11;
 
@@ -49,7 +48,7 @@ FORCE_INLINE static uint32 IntToFloat(const uint32 value) {
 
 class DSP {
 public:
-    DSP(uint8 *ram);
+    explicit DSP(uint8 *ram);
 
     void Reset();
 
@@ -238,7 +237,7 @@ public:
     // Save states
 
     void SaveState(state::SCSPDSP &state) const;
-    bool ValidateState(const state::SCSPDSP &state) const;
+    [[nodiscard]] bool ValidateState(const state::SCSPDSP &state) const;
     void LoadState(const state::SCSPDSP &state);
 
 private:
@@ -252,7 +251,7 @@ private:
 
     uint8 m_programLength;
 
-    uint32 INPUTS; // (24-bit) INPUTS - input data
+    sint32 INPUTS; // (24-bit) INPUTS - input data
 
     uint32 SFT_REG;  // (26-bit)
     uint16 FRC_REG;  // (13-bit)
@@ -282,7 +281,7 @@ private:
 
     uint8 *m_WRAM;
 
-    FORCE_INLINE uint16 ReadWRAM() const {
+    [[nodiscard]] FORCE_INLINE uint16 ReadWRAM() const {
         const uint32 address = m_readWriteAddr * sizeof(uint16);
         if (address < 0x80000) {
             return util::ReadBE<uint16>(&m_WRAM[address]);
@@ -291,7 +290,7 @@ private:
         }
     }
 
-    FORCE_INLINE void WriteWRAM() {
+    FORCE_INLINE void WriteWRAM() const {
         const uint32 address = m_readWriteAddr * sizeof(uint16);
         if (address < 0x80000) {
             util::WriteBE<uint16>(&m_WRAM[address], m_writeValue);

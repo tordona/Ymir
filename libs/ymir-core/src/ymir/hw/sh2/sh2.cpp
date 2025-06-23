@@ -729,6 +729,7 @@ FLATTEN_EX FORCE_INLINE_EX T SH2::OpenBusSeqRead(uint32 address) {
     } else if constexpr (std::is_same_v<T, uint32>) {
         return (OpenBusSeqRead<uint16>(address + 1) << 16u) | OpenBusSeqRead<uint16>(address);
     }
+    util::unreachable();
 }
 
 template <bool enableCache>

@@ -50,7 +50,7 @@ public:
     // Save states
 
     void SaveState(state::SMPCState &state) const;
-    bool ValidateState(const state::SMPCState &state) const;
+    [[nodiscard]] bool ValidateState(const state::SMPCState &state) const;
     void LoadState(const state::SMPCState &state);
 
 private:

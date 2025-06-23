@@ -838,7 +838,7 @@ struct VRAMControl {
         colorRAMCoeffTableEnable = false;
     }
 
-    RotDataBankSel GetRotDataBankSel(uint32 bank) const {
+    [[nodiscard]] RotDataBankSel GetRotDataBankSel(uint32 bank) const {
         assert(bank < 4);
         switch (bank) {
         case 0: return rotDataBankSelA0;

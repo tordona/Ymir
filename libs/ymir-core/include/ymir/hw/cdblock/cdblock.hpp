@@ -23,8 +23,6 @@
 #include <ymir/media/disc.hpp>
 #include <ymir/media/filesystem.hpp>
 
-#include <ymir/util/dev_log.hpp>
-
 #include <ymir/core/hash.hpp>
 
 #include <array>
@@ -51,18 +49,18 @@ public:
     void EjectDisc();
     void OpenTray();
     void CloseTray();
-    bool IsTrayOpen() const;
+    [[nodiscard]] bool IsTrayOpen() const;
 
-    const media::Disc &GetDisc() const {
+    [[nodiscard]] const media::Disc &GetDisc() const {
         return m_disc;
     }
-    XXH128Hash GetDiscHash() const;
+    [[nodiscard]] XXH128Hash GetDiscHash() const;
 
     // -------------------------------------------------------------------------
     // Save states
 
     void SaveState(state::CDBlockState &state) const;
-    bool ValidateState(const state::CDBlockState &state) const;
+    [[nodiscard]] bool ValidateState(const state::CDBlockState &state) const;
     void LoadState(const state::CDBlockState &state);
 
 private:
@@ -271,7 +269,7 @@ private:
         uint8 GetBufferCount(uint8 partitionIndex) const;
         uint32 GetFreeBufferCount() const;
 
-        void InsertHead(uint8 partitionIndex, Buffer &buffer);
+        void InsertHead(uint8 partitionIndex, const Buffer &buffer);
         Buffer *GetTail(uint8 partitionIndex, uint8 offset);
         bool RemoveTail(uint8 partitionIndex, uint8 offset);
 
@@ -285,7 +283,7 @@ private:
         // Save states
 
         void SaveState(state::CDBlockState &state) const;
-        bool ValidateState(const state::CDBlockState &state) const;
+        [[nodiscard]] bool ValidateState(const state::CDBlockState &state) const;
         void LoadState(const state::CDBlockState &state);
 
     private:

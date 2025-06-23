@@ -18,33 +18,33 @@ public:
     // If it is larger than 4 MiB, only the lower 4 MiB will be used.
     BackupMemoryCartridge(bup::BackupMemory &&backupRAM);
 
-    uint8 ReadByte(uint32 address) const final {
+    uint8 ReadByte(uint32 address) const override {
         return m_backupRAM.ReadByte(address);
     }
 
-    uint16 ReadWord(uint32 address) const final {
+    uint16 ReadWord(uint32 address) const override {
         return m_backupRAM.ReadWord(address);
     }
 
-    void WriteByte(uint32 address, uint8 value) final {
+    void WriteByte(uint32 address, uint8 value) override {
         m_backupRAM.WriteByte(address, value);
     }
 
-    void WriteWord(uint32 address, uint16 value) final {
+    void WriteWord(uint32 address, uint16 value) override {
         m_backupRAM.WriteWord(address, value);
     }
 
-    uint8 PeekByte(uint32 address) const final {
+    uint8 PeekByte(uint32 address) const override {
         return ReadByte(address);
     }
-    uint16 PeekWord(uint32 address) const final {
+    uint16 PeekWord(uint32 address) const override {
         return ReadWord(address);
     }
 
-    void PokeByte(uint32 address, uint8 value) final {
+    void PokeByte(uint32 address, uint8 value) override {
         WriteByte(address, value);
     }
-    void PokeWord(uint32 address, uint16 value) final {
+    void PokeWord(uint32 address, uint16 value) override {
         WriteWord(address, value);
     }
 

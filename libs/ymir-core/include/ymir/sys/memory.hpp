@@ -99,7 +99,7 @@ struct SystemMemory {
     /// @brief Validates the given state object.
     /// @param[in] state the state object to validate
     /// @return `true` if the state is valid
-    bool ValidateState(const state::SystemState &state) const;
+    [[nodiscard]] bool ValidateState(const state::SystemState &state) const;
 
     /// @brief Loads the system memory state from the given state object.
     ///

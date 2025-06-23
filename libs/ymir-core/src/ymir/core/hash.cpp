@@ -5,7 +5,7 @@
 namespace ymir {
 
 XXH128Hash CalcHash128(const void *input, size_t len, uint64_t seed) {
-    XXH128_hash_t hash = XXH128(input, len, seed);
+    const XXH128_hash_t hash = XXH128(input, len, seed);
     XXH128_canonical_t canonicalHash{};
     XXH128_canonicalFromHash(&canonicalHash, hash);
 

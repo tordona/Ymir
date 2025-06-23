@@ -437,7 +437,7 @@ struct alignas(128) Slot {
     // Save states
 
     void SaveState(state::SCSPSlotState &state) const;
-    bool ValidateState(const state::SCSPSlotState &state) const;
+    [[nodiscard]] bool ValidateState(const state::SCSPSlotState &state) const;
     void LoadState(const state::SCSPSlotState &state);
 
     // -------------------------------------------------------------------------
@@ -578,7 +578,7 @@ struct alignas(128) Slot {
                                                             156,  124, 108, 92,  76,  60,  52,  44,  36,  28,  24,
                                                             20,   16,  12,  10,  8,   6,   4,   3,   2,   1};
 
-    bool lfoReset;             // (R/W) LFORE - true resets the LFO (TODO: is this a one-shot action?)
+    bool lfoReset;             // (R/W) LFORE - true resets the LFO
     uint8 lfofRaw;             // (R/W) LFOF - 0x00 to 0x1F (raw value)
     uint32 lfoStepInterval;    // (R/W) LFOF - determines the LFO increment interval (from s_lfoStepTbl)
     uint8 ampLFOSens;          // (R/W) ALFOS - 0 (none) to 7 (maximum) intensity of tremor effect

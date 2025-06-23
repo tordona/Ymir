@@ -22,7 +22,7 @@ using CBTriggerDSPEnd = util::RequiredCallback<void()>;
 
 class SCUDSP {
 public:
-    SCUDSP(sys::Bus &bus);
+    explicit SCUDSP(sys::Bus &bus);
 
     void Reset(bool hard);
 
@@ -42,7 +42,7 @@ public:
     // -------------------------------------------------------------------------
     // Memory accessors
 
-    uint32 ReadProgram() {
+    [[nodiscard]] uint32 ReadProgram() const {
         return programRAM[PC].u32;
     }
 
@@ -324,7 +324,7 @@ public:
     // Save states
 
     void SaveState(state::SCUDSPState &state) const;
-    bool ValidateState(const state::SCUDSPState &state) const;
+    [[nodiscard]] bool ValidateState(const state::SCUDSPState &state) const;
     void LoadState(const state::SCUDSPState &state);
 
     // -------------------------------------------------------------------------

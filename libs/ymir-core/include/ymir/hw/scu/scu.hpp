@@ -142,7 +142,7 @@ public:
     // Save states
 
     void SaveState(state::SCUState &state) const;
-    bool ValidateState(const state::SCUState &state) const;
+    [[nodiscard]] bool ValidateState(const state::SCUState &state) const;
     void LoadState(const state::SCUState &state);
 
 private:

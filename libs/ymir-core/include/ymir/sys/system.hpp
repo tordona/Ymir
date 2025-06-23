@@ -39,12 +39,12 @@ struct System {
         state.clockSpeed = clockSpeed;
     }
 
-    bool ValidateState(const state::SystemState &state) const {
-        if (videoStandard != core::config::sys::VideoStandard::NTSC &&
-            videoStandard != core::config::sys::VideoStandard::PAL) {
+    [[nodiscard]] bool ValidateState(const state::SystemState &state) const {
+        if (state.videoStandard != core::config::sys::VideoStandard::NTSC &&
+            state.videoStandard != core::config::sys::VideoStandard::PAL) {
             return false;
         }
-        if (clockSpeed != ClockSpeed::_320 && clockSpeed != ClockSpeed::_352) {
+        if (state.clockSpeed != ClockSpeed::_320 && state.clockSpeed != ClockSpeed::_352) {
             return false;
         }
         return true;

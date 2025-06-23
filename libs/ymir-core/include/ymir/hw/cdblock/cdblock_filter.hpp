@@ -6,8 +6,6 @@
 
 #include <ymir/util/bit_ops.hpp>
 
-#include <span>
-
 namespace ymir::cdblock {
 
 struct Filter {

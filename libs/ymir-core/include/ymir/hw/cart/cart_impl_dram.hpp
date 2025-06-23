@@ -45,7 +45,7 @@ protected:
 // Upper 512 KiB mapped to 0x260'0000..0x26F'FFFF, mirrored twice
 class DRAM8MbitCartridge final : public BaseDRAMCartridge<0x5A, 1_MiB, CartType::DRAM8Mbit> {
 public:
-    uint8 ReadByte(uint32 address) const final {
+    uint8 ReadByte(uint32 address) const override {
         switch (address >> 20) {
         case 0x24: return m_ram[address & 0x7FFFF];
         case 0x26: return m_ram[(address & 0x7FFFF) | 0x80000];
@@ -53,7 +53,7 @@ public:
         }
     }
 
-    uint16 ReadWord(uint32 address) const final {
+    uint16 ReadWord(uint32 address) const override {
         switch (address >> 20) {
         case 0x24: return util::ReadBE<uint16>(&m_ram[address & 0x7FFFF]);
         case 0x26: return util::ReadBE<uint16>(&m_ram[(address & 0x7FFFF) | 0x80000]);
@@ -61,31 +61,31 @@ public:
         }
     }
 
-    void WriteByte(uint32 address, uint8 value) final {
+    void WriteByte(uint32 address, uint8 value) override {
         switch (address >> 20) {
         case 0x24: m_ram[address & 0x7FFFF] = value; break;
         case 0x26: m_ram[(address & 0x7FFFF) | 0x80000] = value; break;
         }
     }
 
-    void WriteWord(uint32 address, uint16 value) final {
+    void WriteWord(uint32 address, uint16 value) override {
         switch (address >> 20) {
         case 0x24: util::WriteBE<uint16>(&m_ram[address & 0x7FFFF], value); break;
         case 0x26: util::WriteBE<uint16>(&m_ram[(address & 0x7FFFF) | 0x80000], value); break;
         }
     }
 
-    uint8 PeekByte(uint32 address) const final {
+    uint8 PeekByte(uint32 address) const override {
         return ReadByte(address);
     }
-    uint16 PeekWord(uint32 address) const final {
+    uint16 PeekWord(uint32 address) const override {
         return ReadWord(address);
     }
 
-    void PokeByte(uint32 address, uint8 value) final {
+    void PokeByte(uint32 address, uint8 value) override {
         WriteByte(address, value);
     }
-    void PokeWord(uint32 address, uint16 value) final {
+    void PokeWord(uint32 address, uint16 value) override {
         WriteWord(address, value);
     }
 };
@@ -96,7 +96,7 @@ public:
 // Mapped to 0x240'0000..0x27F'FFFF
 class DRAM32MbitCartridge final : public BaseDRAMCartridge<0x5C, 4_MiB, CartType::DRAM32Mbit> {
 public:
-    uint8 ReadByte(uint32 address) const final {
+    uint8 ReadByte(uint32 address) const override {
         if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
             return m_ram[address & 0x3FFFFF];
         } else {
@@ -104,7 +104,7 @@ public:
         }
     }
 
-    uint16 ReadWord(uint32 address) const final {
+    uint16 ReadWord(uint32 address) const override {
         if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
             return util::ReadBE<uint16>(&m_ram[address & 0x3FFFFF]);
         } else {
@@ -112,29 +112,29 @@ public:
         }
     }
 
-    void WriteByte(uint32 address, uint8 value) final {
+    void WriteByte(uint32 address, uint8 value) override {
         if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
             m_ram[address & 0x3FFFFF] = value;
         }
     }
 
-    void WriteWord(uint32 address, uint16 value) final {
+    void WriteWord(uint32 address, uint16 value) override {
         if (util::AddressInRange<0x240'0000, 0x27F'FFFF>(address)) {
             util::WriteBE<uint16>(&m_ram[address & 0x3FFFFF], value);
         }
     }
 
-    uint8 PeekByte(uint32 address) const final {
+    uint8 PeekByte(uint32 address) const override {
         return ReadByte(address);
     }
-    uint16 PeekWord(uint32 address) const final {
+    uint16 PeekWord(uint32 address) const override {
         return ReadWord(address);
     }
 
-    void PokeByte(uint32 address, uint8 value) final {
+    void PokeByte(uint32 address, uint8 value) override {
         WriteByte(address, value);
     }
-    void PokeWord(uint32 address, uint16 value) final {
+    void PokeWord(uint32 address, uint16 value) override {
         WriteWord(address, value);
     }
 };
