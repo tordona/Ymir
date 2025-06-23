@@ -4488,7 +4488,6 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         std::fill_n(scanline_meshLayers.begin(), m_HRes, 0xFF);
         for (uint32 x = 0; x < m_HRes; x++) {
             const uint8 priority = m_layerStates[LYR_Sprite].pixels.priority[x];
-            std::array<LayerIndex, 3> &layers = scanline_layers[x];
             std::array<uint8, 3> &layerPrios = scanline_layerPrios[x];
             for (int i = 0; i < 3; i++) {
                 // The sprite layer has the highest priority on ties, therefore the priority check can be simplified
@@ -4812,8 +4811,6 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
     // Fetch one extra tile past the end of the display area
     {
-        const uint32 x = m_HRes;
-
         // Apply horizontal mosaic or vertical cell-scrolling
         // Mosaic takes priority
         if (!bgParams.mosaicEnable && bgParams.verticalCellScrollEnable) {
