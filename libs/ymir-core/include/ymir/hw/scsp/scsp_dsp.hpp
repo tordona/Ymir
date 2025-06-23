@@ -214,6 +214,15 @@ public:
         }
     }
 
+    // Effectively equivalent to MIXSSlotWrite(offset, 0)
+    FORCE_INLINE void MIXSSlotZero(uint8 offset) {
+        assert(offset <= 0xF);
+        if (m_mixStackNull & (1u << offset)) {
+            m_mixStackNull &= ~(1u << offset);
+            mixStack[GetMIXSIndex(offset)] = 0;
+        }
+    }
+
     uint8 ringBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
     uint8 ringBufferLength;      // (W) RBL - DSP Ring Buffer Length
 

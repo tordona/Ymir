@@ -631,10 +631,6 @@ FORCE_INLINE void SCSP::RunM68K() {
 }
 
 FORCE_INLINE void SCSP::GenerateSample() {
-    auto adjustSendLevel = [](sint32 output, uint8 sendLevel) {
-        return sendLevel == 0 ? 0 : (output << 4) >> (sendLevel ^ 7);
-    };
-
     auto addOutput = [&](sint32 output, uint8 sendLevel, uint8 pan) {
         if (sendLevel == 0) { // = -infinity dB
             return;
@@ -717,8 +713,12 @@ FORCE_INLINE void SCSP::GenerateSample() {
         m_dsp.Step();
 
         // Cycles 2,3
-        const sint32 mixsOutput = adjustSendLevel(op7Slot.output, op7Slot.inputMixingLevel);
-        m_dsp.MIXSSlotWrite(op7Slot.inputSelect, mixsOutput);
+        if (op7Slot.inputMixingLevel > 0) {
+            const sint32 mixsOutput = (op7Slot.output << 4) >> (op7Slot.inputMixingLevel ^ 7);
+            m_dsp.MIXSSlotWrite(op7Slot.inputSelect, mixsOutput);
+        } else {
+            m_dsp.MIXSSlotZero(op7Slot.inputSelect);
+        }
 
         SlotProcessStep2_2(op2Slot);
         SlotProcessStep3_2(op3Slot);

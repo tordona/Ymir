@@ -361,7 +361,7 @@ private:
         } else if (AddressInRange<0xE80, 0xEBF>(address)) {
             // DSP MIXS
             const uint32 offset = (address >> 1u) & 0x1;
-            const uint32 index = m_dsp.GetMIXSIndex((address >> 2u) & 0xF);
+            const uint32 index = m_dsp.GetMIXSIndex((address >> 2u) & 0xF) ^ 0x10;
             if (offset == 0) {
                 return read16(bit::extract<0, 3>(m_dsp.mixStack[index]));
             } else {
@@ -535,7 +535,7 @@ private:
         } else if (AddressInRange<0xE80, 0xEBF>(address)) {
             // DSP MIXS
             const uint32 offset = (address >> 1u) & 0x1;
-            const uint32 index = m_dsp.GetMIXSIndex((address >> 2u) & 0xF);
+            const uint32 index = m_dsp.GetMIXSIndex((address >> 2u) & 0xF) ^ 0x10;
             if (offset == 0) {
                 uint16 tmpValue = bit::extract<0, 3>(m_dsp.mixStack[index]);
                 write16(tmpValue, value16);
