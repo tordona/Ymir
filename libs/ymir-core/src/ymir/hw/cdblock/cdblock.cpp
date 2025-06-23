@@ -2784,7 +2784,6 @@ void CDBlock::CmdChangeDirectory() {
     const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
     const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-    // Output structure: standard CD status data
     bool reject = false;
     if (filterNumber < m_filters.size()) {
         // TODO: use filter to read the sector(s) containing the directory record
@@ -2797,6 +2796,7 @@ void CDBlock::CmdChangeDirectory() {
         reject = true;
     }
 
+    // Output structure: standard CD status data
     if (reject) [[unlikely]] {
         ReportCDStatus(kStatusReject);
     } else {
