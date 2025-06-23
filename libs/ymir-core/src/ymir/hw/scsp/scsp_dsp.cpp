@@ -19,6 +19,8 @@ void DSP::Reset() {
 
     ringBufferLeadAddress = 0;
     ringBufferLength = 0;
+    UpdateRBP();
+    UpdateRBL();
 
     // DSP program is aligned to operation 7, which processes slot i-6.
     // 4 DSP program steps per slot -> -6*4 = -24 = 104 (or 0x68) in modulo 128
@@ -176,6 +178,16 @@ void DSP::LoadState(const state::SCSPDSP &state) {
     m_writeValue = state.writeValue;
 
     m_readWriteAddr = state.readWriteAddr;
+
+    for (sint32 &value : tempMem) {
+        value = bit::sign_extend<24>(value);
+    }
+    for (sint32 &value : soundMem) {
+        value = bit::sign_extend<24>(value);
+    }
+
+    UpdateRBP();
+    UpdateRBL();
 }
 
 } // namespace ymir::scsp

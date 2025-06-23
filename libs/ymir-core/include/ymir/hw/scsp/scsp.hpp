@@ -514,6 +514,7 @@ private:
                 uint16 tmpValue = bit::extract<8, 23>(m_dsp.tempMem[index]);
                 write16(tmpValue, value16);
                 bit::deposit_into<8, 23>(m_dsp.tempMem[index], tmpValue);
+                m_dsp.tempMem[index] = bit::sign_extend<24>(m_dsp.tempMem[index]);
             }
             return;
         } else if (AddressInRange<0xE00, 0xE7F>(address)) {
@@ -528,6 +529,7 @@ private:
                 uint16 tmpValue = bit::extract<8, 23>(m_dsp.soundMem[index]);
                 write16(tmpValue, value16);
                 bit::deposit_into<8, 23>(m_dsp.soundMem[index], tmpValue);
+                m_dsp.soundMem[index] = bit::sign_extend<24>(m_dsp.soundMem[index]);
             }
             return;
         } else if (AddressInRange<0xE80, 0xEBF>(address)) {
@@ -901,8 +903,10 @@ private:
     void WriteReg402(uint16 value) {
         if constexpr (lowerByte) {
             m_dsp.ringBufferLeadAddress = bit::extract<0, 6>(value);
+            m_dsp.UpdateRBP();
         }
         util::SplitWriteWord<lowerByte, upperByte, 7, 8>(m_dsp.ringBufferLength, value);
+        m_dsp.UpdateRBL();
     }
 
     // -------------------------------------------------------------------------
@@ -910,7 +914,7 @@ private:
 
     // --- Sound slots ---
 
-    alignas(16) std::array<Slot, 32> m_slots;
+    alignas(128) std::array<Slot, 32> m_slots;
 
     bool m_kyonex; // (W) KYONEX - Key on execute
 

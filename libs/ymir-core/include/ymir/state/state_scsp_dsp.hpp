@@ -8,8 +8,8 @@ namespace ymir::state {
 
 struct SCSPDSP {
     alignas(16) std::array<uint64, 128> MPRO;
-    alignas(16) std::array<uint32, 128> TEMP;
-    alignas(16) std::array<uint32, 32> MEMS;
+    alignas(16) std::array<sint32, 128> TEMP;
+    alignas(16) std::array<sint32, 32> MEMS;
     alignas(16) std::array<uint16, 64> COEF;
     alignas(16) std::array<uint16, 32> MADRS;
     alignas(16) std::array<sint32, 16 * 2> MIXS;

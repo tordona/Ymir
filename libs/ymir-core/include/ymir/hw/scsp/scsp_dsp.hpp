@@ -55,7 +55,7 @@ public:
 
     FORCE_INLINE void Step() {
         if (PC < m_programLength) {
-            DSPInstr instr = program[PC];
+            const DSPInstr instr = program[PC];
 
             if (instr.IRA <= 0x1F) {
                 // MEMS area: 24 -> 24 bits
@@ -71,8 +71,8 @@ public:
             const uint8 tempReadAddr = (instr.TRA + MDEC_CT) & 0x7F;
             const uint8 tempWriteAddr = (instr.TWA + MDEC_CT) & 0x7F;
 
-            const sint32 inputs = bit::sign_extend<24>(INPUTS);
-            const sint32 temp = bit::sign_extend<24>(tempMem[tempReadAddr]);
+            const sint32 inputs = INPUTS;
+            const sint32 temp = tempMem[tempReadAddr];
 
             const sint32 xval = instr.XSEL ? inputs : temp;
             uint16 yval;
@@ -90,11 +90,12 @@ public:
             sint32 shifterOut = static_cast<uint32>(bit::sign_extend<26>(SFT_REG)) << (instr.SHFT0 ^ instr.SHFT1);
             if (instr.SHFT1 == 0) {
                 shifterOut = std::clamp(shifterOut, -0x800000, 0x7FFFFF);
+            } else {
+                shifterOut = bit::sign_extend<24>(shifterOut);
             }
-            shifterOut &= 0xFFFFFF;
 
             if (instr.FRCL) {
-                if (instr.SHFT0 & instr.SHFT1) {
+                if (instr.SHFT == 3) {
                     FRC_REG = bit::extract<0, 11>(shifterOut);
                 } else {
                     FRC_REG = bit::extract<11, 23>(shifterOut);
@@ -124,7 +125,7 @@ public:
                 tempMem[tempWriteAddr] = shifterOut;
             }
             if (instr.IWT) {
-                soundMem[instr.IWA] = m_readValue;
+                soundMem[instr.IWA] = bit::sign_extend<24>(m_readValue);
             }
 
             if (m_readPending) {
@@ -144,10 +145,10 @@ public:
             }
 
             if (!instr.TABLE) {
-                addr = (addr + MDEC_CT) & ((0x2000 << ringBufferLength) - 1);
+                addr = (addr + MDEC_CT) & m_RBL;
             }
 
-            m_readWriteAddr = (addr + (ringBufferLeadAddress << 12)) & 0x7FFFF;
+            m_readWriteAddr = (addr + m_RBP) & 0x7FFFF;
 
             if (instr.MRD) {
                 m_readPending = true;
@@ -159,8 +160,8 @@ public:
             }
 
             if (instr.ADRL) {
-                if (instr.SHFT0 & instr.SHFT1) {
-                    ADRS_REG = shifterOut >> 12;
+                if (instr.SHFT == 3) {
+                    ADRS_REG = (shifterOut >> 12) & 0xFFF;
                 } else {
                     ADRS_REG = (inputs >> 16) & 0xFFF;
                 }
@@ -178,7 +179,7 @@ public:
             m_mixStackGen ^= 0x10;
             m_mixStackNull = 0xFFFF;
 
-            MDEC_CT--;
+            --MDEC_CT;
         }
     }
 
@@ -190,8 +191,8 @@ public:
     // Registers
 
     alignas(16) std::array<DSPInstr, 128> program;   // (60-bit) MPRO - DSP program RAM
-    alignas(16) std::array<uint32, 128> tempMem;     // (24-bit) TEMP - DSP temporary (universal) RAM
-    alignas(16) std::array<uint32, 32> soundMem;     // (24-bit) MEMS - DSP sound memory
+    alignas(16) std::array<sint32, 128> tempMem;     // (24-bit) TEMP - DSP temporary (universal) RAM
+    alignas(16) std::array<sint32, 32> soundMem;     // (24-bit) MEMS - DSP sound memory
     alignas(16) std::array<uint16, 64> coeffs;       // (13-bit) COEF - DSP coefficient data RAM
     alignas(16) std::array<uint16, 32> addrs;        // (16-bit) MADRS - DSP memory address registers
     alignas(16) std::array<sint32, 16 * 2> mixStack; // (20-bit) MIXS - DSP mix sound slot data stack (4 frac bits)
@@ -216,6 +217,14 @@ public:
     uint8 ringBufferLeadAddress; // (W) RBP - DSP Ring Buffer Lead Address
     uint8 ringBufferLength;      // (W) RBL - DSP Ring Buffer Length
 
+    FORCE_INLINE void UpdateRBP() noexcept {
+        m_RBP = static_cast<uint32>(ringBufferLeadAddress) << 12u;
+    }
+
+    FORCE_INLINE void UpdateRBL() noexcept {
+        m_RBL = (0x2000u << static_cast<uint32>(ringBufferLength)) - 1u;
+    }
+
     // -------------------------------------------------------------------------
     // Save states
 
@@ -228,6 +237,9 @@ private:
     // State
 
     uint8 PC;
+
+    uint32 m_RBP; // Precomputed RBP << 12
+    uint32 m_RBL; // Precomputed (0x2000 << RBL) - 1
 
     uint8 m_programLength;
 

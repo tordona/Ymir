@@ -13,7 +13,7 @@
 
 namespace ymir::scsp {
 
-struct Slot {
+struct alignas(128) Slot {
     Slot();
 
     void Reset();
@@ -852,5 +852,6 @@ struct Slot {
         }
     }
 };
+static_assert(sizeof(Slot) == 128); // Adjust this and the struct alignment to a power of two when changing fields
 
 } // namespace ymir::scsp

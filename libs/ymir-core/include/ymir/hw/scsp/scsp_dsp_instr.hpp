@@ -39,6 +39,10 @@ union DSPInstr {
         uint64 TRA : 7;   // 56-62 - TEMP read address
         uint64 : 1;       //    63 - (unused)
     };
+    struct {
+        uint64 : 20;
+        uint64 SHFT : 2; // 20-21 - Shifter control 0 and 1
+    };
 };
 static_assert(sizeof(DSPInstr) == sizeof(uint64));
 

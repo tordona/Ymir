@@ -694,6 +694,8 @@ void serialize(Archive &ar, SCSPDSP &s, const uint32 version) {
     //   - MIXSGen = 0
     //   - MIXStackNull = 0xFFFF
     // - Changed fields
+    //   - TEMP entries changed from uint32 to sint32
+    //   - MEMS entries changed from uint32 to sint32
     //   - MIXS increased from 16 to 16*2 entries
 
     ar(s.MPRO, s.TEMP, s.MEMS, s.COEF, s.MADRS);
