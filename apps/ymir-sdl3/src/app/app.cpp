@@ -440,7 +440,7 @@ void App::RunEmulator() {
 
     // RescaleUI also loads the style and fonts
     bool rescaleUIPending = false;
-    RescaleUI(false);
+    RescaleUI(SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay()), false);
     {
         auto &videoSettings = m_context.settings.video;
 
@@ -1415,9 +1415,11 @@ void App::RunEmulator() {
                 // evt.gsensor.data;
                 break;
 
+            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: [[fallthrough]];
             case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
                 if (!m_context.settings.video.overrideUIScale) {
-                    RescaleUI(true);
+                    const float windowScale = SDL_GetWindowDisplayScale(screen.window);
+                    RescaleUI(windowScale, true);
                 }
                 break;
             case SDL_EVENT_QUIT: goto end_loop; break;
@@ -1456,7 +1458,8 @@ void App::RunEmulator() {
         }
         if (rescaleUIPending) {
             rescaleUIPending = false;
-            RescaleUI(true);
+            const float windowScale = SDL_GetWindowDisplayScale(screen.window);
+            RescaleUI(windowScale, true);
         }
 
         // Process all axis changes
@@ -2613,14 +2616,11 @@ void App::RebindInputs() {
     m_context.settings.RebindInputs();
 }
 
-void App::RescaleUI(bool reloadFonts) {
-    float displayScale;
+void App::RescaleUI(float displayScale, bool reloadFonts) {
     if (m_context.settings.video.overrideUIScale) {
         displayScale = m_context.settings.video.uiScale;
-    } else {
-        displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-        devlog::info<grp::base>("Primary display DPI scaling: {:.1f}%", displayScale * 100.0f);
     }
+    devlog::info<grp::base>("Window DPI scaling: {:.1f}%", displayScale * 100.0f);
 
     m_context.displayScale = displayScale;
     devlog::info<grp::base>("UI scaling set to {:.1f}%", m_context.displayScale * 100.0f);

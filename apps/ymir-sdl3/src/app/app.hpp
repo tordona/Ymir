@@ -80,7 +80,7 @@ private:
 
     void RebindInputs();
 
-    void RescaleUI(bool reloadFonts);
+    void RescaleUI(float displayScale, bool reloadFonts);
     ImGuiStyle &ReloadStyle(float displayScale);
     void ReloadFonts(float displayScale);
 
