@@ -132,14 +132,11 @@ namespace settings::audio {
                 ImGui::AlignTextToFramePadding();
                 ImGui::TextUnformatted("Emulation step granularity");
                 widgets::ExplanationTooltip(
-                    "Adjusts emulation granularity for the SCSP.\n"
+                    "WARNING: This setting is very performance-hungry!\n"
                     "\n"
                     "Increasing this setting causes the SCSP to be emulated in smaller timeslices (up to 32 times as "
-                    "often as "
-                    "sample-level processing), significantly lowering performance in exchange for a higher level of "
-                    "accuracy "
-                    "that "
-                    "doesn't benefit the vast majority of commercial games.\n"
+                    "often as sample-level processing), significantly lowering performance in exchange for a higher "
+                    "level of accuracy that doesn't benefit the vast majority of commercial games.\n"
                     "\n"
                     "This option might be of interest to homebrew developers who need extra accuracy in some way.",
                     ctx.displayScale);
