@@ -146,7 +146,27 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    if constexpr (false) {
+    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::SeparatorText("Accuracy");
+    ImGui::PopFont();
+
+    bool slotStepping = config.slotStepping;
+    if (MakeDirty(ImGui::Checkbox("Update SCSP on every slot instead of sample", &slotStepping))) {
+        m_context.EnqueueEvent(events::emu::SetSCSPSlotStepping(slotStepping));
+    }
+    widgets::ExplanationTooltip(
+        "Increases emulation granularity for the SCSP from samples to slots.\n"
+        "\n"
+        "This setting causes the SCSP to be emulated in much smaller timeslices (32 times as often as sample-level "
+        "processing), significantly lowering performance in exchange for a higher level of accuracy that doesn't "
+        "benefit the vast majority of commercial games.\n"
+        "\n"
+        "This option might be of interest to homebrew developers who need extra accuracy in some way.",
+        m_context.displayScale);
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    if constexpr (false) { // NOTE: disabled because it is unimplemented
         ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
         ImGui::SeparatorText("Performance");
         ImGui::PopFont();

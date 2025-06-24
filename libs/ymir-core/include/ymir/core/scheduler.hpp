@@ -101,7 +101,7 @@ public:
     /// @param[in] userContext the user context pointer
     /// @param[in] callback the event callback function
     /// @return the event ID for the newly registered event
-    EventID RegisterEvent(UserEventID userID, void *userContext, EventCallback callback) {
+    [[nodiscard]] EventID RegisterEvent(UserEventID userID, void *userContext, EventCallback callback) {
         assert(m_eventPtrs[userID] == kInvalidEvent);                    // ensure user IDs are unique
         assert(m_nextEventIndex <= std::numeric_limits<EventID>::max()); // IDtype value space exhausted
         EventID id = m_nextEventIndex;
@@ -114,6 +114,16 @@ public:
         event.countDenominator = 1;
         ++m_nextEventIndex;
         return id;
+    }
+
+    /// @brief Replaces an event's callback function and user context pointer.
+    /// @param[in] id the event ID to modify
+    /// @param[in] userContext the user context pointer
+    /// @param[in] callback the event callback function
+    void SetEventCallback(EventID id, void *userContext, EventCallback callback) {
+        Event &event = m_events[id];
+        event.userContext = userContext;
+        event.callback = callback;
     }
 
     /// @brief Sets the event cycle counting factor.
@@ -143,19 +153,19 @@ public:
 
     /// @brief Retrieves the current value of the primary cycle counter.
     /// @return the current cycle count
-    FORCE_INLINE uint64 CurrentCount() const {
+    [[nodiscard]] FORCE_INLINE uint64 CurrentCount() const {
         return m_currCount;
     }
 
     /// @brief Retrieves the absolute cycle count of the earliest scheduled event.
     /// @return the cycle count of the next event to trigger
-    FORCE_INLINE uint64 NextCount() const {
+    [[nodiscard]] FORCE_INLINE uint64 NextCount() const {
         return m_nextCount;
     }
 
     /// @brief Retrieves a pointer to the absolute cycle count of the earliest scheduled event.
     /// @return a pointer to the cycle count of the next event to trigger
-    FORCE_INLINE const uint64 *NextCountPtr() const {
+    [[nodiscard]] FORCE_INLINE const uint64 *NextCountPtr() const {
         return &m_nextCount;
     }
 
@@ -163,7 +173,7 @@ public:
     ///
     /// If the result is negative, an event is late.
     /// @return the number of cycles until the next event
-    FORCE_INLINE sint64 RemainingCount() const {
+    [[nodiscard]] FORCE_INLINE sint64 RemainingCount() const {
         return static_cast<sint64>(m_nextCount) - static_cast<sint64>(m_currCount);
     }
 
@@ -183,6 +193,15 @@ public:
     FORCE_INLINE void ScheduleAt(EventID id, uint64 target) {
         assert(id < kNumScheduledEvents);
         ScheduleEvent(id, target);
+    }
+
+    /// @brief Retrieves the scheduled target time for the event.
+    /// @param[in] id the event ID.
+    /// @return the absolute cycle count when the event is scheduled to trigger
+    [[nodiscard]] FORCE_INLINE uint64 GetScheduleTarget(EventID id) const {
+        assert(id < kNumScheduledEvents);
+        const Event &event = m_events[id];
+        return event.target;
     }
 
     /// @brief Removes the specified event from the schedule.
@@ -279,7 +298,7 @@ private:
 
         /// @brief Calculates the target cycle count scaled by the reciprocal of the scaling factor.
         /// @return `(target * countDenominator + countNumerator - 1) / countNumerator`
-        FORCE_INLINE uint64 CalcTargetScaledByReciprocal() const {
+        [[nodiscard]] FORCE_INLINE uint64 CalcTargetScaledByReciprocal() const {
             return (target * countDenominator + countNumerator - 1) / countNumerator;
         }
     };

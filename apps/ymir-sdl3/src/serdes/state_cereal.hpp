@@ -412,14 +412,16 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     //   - SCILV = {0,0,0}
     //     (unfortunately the data is missing, so old save states will never restore properly)
     //   - reuseSCILV = true if version < 6, false otherwise; not stored in save state binary
+    //   - KYONEXExec = false
+    //   - currSlot = 0
     //   - out = {0,0}
-    //   - uint8[1024] midiInputBuffer
-    //   - uint32 midiInputReadPos
-    //   - uint32 midiInputWritePos
-    //   - bool midiInputOverflow
-    //   - uint8[1024] midiOutputBuffer
-    //   - uint32 midiOutputSize
-    //   - sint32 expectedOutputPacketSize
+    //   - midiInputBuffer = {0,0,0,...}
+    //   - midiInputReadPos = 0
+    //   - midiInputWritePos = 0
+    //   - midiInputOverflow = false
+    //   - midiOutputBuffer = {0,0,0,...}
+    //   - midiOutputSize = 0
+    //   - expectedOutputPacketSize = 0
     // - Removed fields
     //   - uint64 sampleCycles
     // - Misc changes
@@ -501,6 +503,11 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     } else {
         s.KYONEX = false;
     }
+    if (version >= 6) {
+        ar(s.KYONEXExec);
+    } else {
+        s.KYONEXExec = false;
+    }
     ar(s.MVOL);
     if (version >= 6) {
         ar(s.DAC18B, s.MEM4MB);
@@ -535,8 +542,10 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     }
     ar(s.lfsr);
     if (version >= 6) {
+        ar(s.currSlot);
         ar(s.out);
     } else {
+        s.currSlot = 0;
         s.out.fill(0);
     }
     if (version >= 6) {

@@ -316,7 +316,7 @@ template <bool debug, bool enableSH2Cache>
 void Saturn::Run() {
     static constexpr uint64 kSH2SyncMaxStep = 32;
 
-    const uint64 cycles = m_scheduler.RemainingCount();
+    const uint64 cycles = std::max<sint64>(m_scheduler.RemainingCount(), 0);
 
     uint64 execCycles = 0;
     if (slaveSH2Enabled) {

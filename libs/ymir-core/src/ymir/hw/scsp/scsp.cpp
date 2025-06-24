@@ -17,6 +17,7 @@ SCSP::SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config)
     // Replicate interpolation mode to avoid an extra dereference in the hot path
     config.interpolation.Observe(m_interpMode);
     config.threadedSCSP.Observe([&](bool value) { EnableThreading(value); });
+    config.slotStepping.Observe([&](bool value) { SetSlotStepping(value); });
 
     m_sampleTickEvent = m_scheduler.RegisterEvent(core::events::SCSPSample, this, OnSampleTickEvent);
 
@@ -54,6 +55,8 @@ void SCSP::Reset(bool hard) {
 
     m_lfsr = 1;
 
+    m_currSlot = 0;
+
     m_out.fill(0);
 
     if (hard) {
@@ -65,6 +68,7 @@ void SCSP::Reset(bool hard) {
     }
 
     m_kyonex = false;
+    m_kyonexExecute = false;
 
     m_masterVolume = 0;
     m_mem4MB = false;
@@ -333,6 +337,7 @@ void SCSP::SaveState(state::SCSPState &state) const {
     }
 
     state.KYONEX = m_kyonex;
+    state.KYONEXExec = m_kyonexExecute;
 
     state.MVOL = m_masterVolume;
     state.DAC18B = m_dac18Bits;
@@ -434,6 +439,7 @@ void SCSP::LoadState(const state::SCSPState &state) {
     }
 
     m_kyonex = state.KYONEX;
+    m_kyonexExecute = state.KYONEXExec;
 
     m_masterVolume = state.MVOL & 0xF;
     m_dac18Bits = state.DAC18B;
@@ -479,12 +485,57 @@ void SCSP::LoadState(const state::SCSPState &state) {
     std::copy(state.midiOutputBuffer.begin(), state.midiOutputBuffer.end(), m_midiOutputBuffer.begin());
     m_midiOutputSize = state.midiOutputSize;
     m_expectedOutputPacketSize = state.expectedOutputPacketSize;
+
+    // Realign the tick event if the save state was using slot stepping but we're currently using sample stepping
+    if (!m_slotStepping && m_currSlot != 0) {
+        m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent);
+    }
+}
+
+void SCSP::OnSlotTickEvent(core::EventContext &eventContext, void *userContext) {
+    auto &scsp = *static_cast<SCSP *>(userContext);
+    scsp.TickSlot();
+    eventContext.RescheduleFromNow(kCyclesPerSlot);
 }
 
 void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext) {
     auto &scsp = *static_cast<SCSP *>(userContext);
-    scsp.Tick();
+    scsp.TickSample();
     eventContext.RescheduleFromNow(kCyclesPerSample);
+}
+
+void SCSP::OnTransitionalTickEvent(core::EventContext &eventContext, void *userContext) {
+    // Tick slots until we're aligned to slot 0
+    auto &scsp = *static_cast<SCSP *>(userContext);
+    scsp.TickSlot();
+    if (scsp.m_currSlot == 0) {
+        // Now that we're aligned, switch to the bigger and faster sample tick event
+        scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSampleTickEvent);
+        eventContext.RescheduleFromNow(kCyclesPerSample);
+    } else {
+        // Not yet aligned; continue ticking slots
+        eventContext.RescheduleFromNow(kCyclesPerSlot);
+    }
+}
+
+void SCSP::SetSlotStepping(bool enable) {
+    if (m_slotStepping != enable) {
+        m_slotStepping = enable;
+
+        // Switch callbacks
+        if (enable) {
+            // Going from sample to slot step is relatively easy. The tricky bit is rescheduling the event.
+            // It may be pushed into the past, in which case the event will trigger multiple times to catch up.
+            const uint64 target = m_scheduler.GetScheduleTarget(m_sampleTickEvent);
+            const uint64 newTarget = target - kCyclesPerSample + kCyclesPerSlot;
+            m_scheduler.ScheduleAt(m_sampleTickEvent, newTarget);
+            m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent);
+        } else {
+            // Going from slot to sample requires the slot counter to be realigned.
+            // Luckily, we don't need to reschedule it.
+            m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent);
+        }
+    }
 }
 
 void SCSP::EnableThreading(bool enable) {
@@ -612,194 +663,44 @@ void SCSP::ExecuteDMA() {
     }
 }
 
-FORCE_INLINE void SCSP::Tick() {
-    RunM68K();
+FORCE_INLINE void SCSP::TickSlot() {
+    RunM68K(kM68KCyclesPerSlot);
     ProcessMidiInputQueue();
-    GenerateSample();
-    UpdateTimers();
-    UpdateM68KInterrupts();
+    StepSlot();
 }
 
-FORCE_INLINE void SCSP::RunM68K() {
+FORCE_INLINE void SCSP::TickSample() {
+    RunM68K(kM68KCyclesPerSample);
+    ProcessMidiInputQueue();
+    StepSample();
+}
+
+FORCE_INLINE void SCSP::RunM68K(uint64 cycles) {
     if (m_m68kEnabled) {
         uint64 cy = m_m68kSpilloverCycles;
-        while (cy < kM68KCyclesPerSample) {
+        while (cy < cycles) {
             cy += m_m68k.Step();
         }
-        m_m68kSpilloverCycles = cy - kM68KCyclesPerSample;
+        m_m68kSpilloverCycles = cy - cycles;
     }
 }
 
-FORCE_INLINE void SCSP::GenerateSample() {
-    auto addOutput = [&](sint32 output, uint8 sendLevel, uint8 pan) {
-        if (sendLevel == 0) { // = -infinity dB
-            return;
-        }
+FORCE_INLINE void SCSP::StepSlot() {
+    ProcessSlots(m_currSlot);
 
-        // Introduce enough fractional bits to accurately compute the combined effects of SDL and PAN.
-        // SDL shifts out up to 6 bits (=0x1).
-        // PAN shifts out up to 7 bits (=0xE), or 6 then 8 bits (=0xD).
-        // Maximum is 6 from SDL + 8 from PAN = 14 bits.
-        output <<= 14;
-
-        // Send level attenuates sound in steps of 6 dB, matching one bit per step
-        output >>= sendLevel ^ 7u;
-
-        // Pan attenuates sound in one of the channels in steps of 3 dB, or 0.5 bit per step
-        const uint8 panAmount = pan & 0xF;
-        sint32 panOut;
-        if (panAmount == 0xF) { // = -infinity dB
-            panOut = 0;
-        } else {
-            panOut = output >> (panAmount >> 1u);
-            if (panAmount & 1) {
-                panOut -= panOut >> 2;
-            }
-        }
-
-        // Apply panning to one of the channels
-        const bool panChanSel = (pan & 0x10) != 0;
-        m_out[0] += (panChanSel ? output : panOut) >> 14;
-        m_out[1] += (panChanSel ? panOut : output) >> 14;
-    };
-
-    // Process slots and DSP.
-    //
-    // The SCSP performs 7 operations in parallel on 7 different slots from i to i-6:
-    //   op1 (slot i-0): Phase generation and pitch LFO calculation
-    //   op2 (slot i-1): X/Y modulation data read and address pointer calculation
-    //   op3 (slot i-2): Waveform read
-    //   op4 (slot i-3): Interpolation, envelope generator update and amplitude LFO calculation
-    //   op5 (slot i-4): Amplitude LFO level calculation
-    //   op6 (slot i-5): Total level calculation
-    //   op7 (slot i-6): Sound stack write
-    //
-    // The SCSP as a whole runs on an 8-step cycle, performing different tasks at each step.
-    // Every two cycles, the SCSP alternates between giving the DSP or the slots RAM access, in that order.
-    // In other words, RAM access is granted to DSP on cycles 0,1,4,5 and to slots on cycles 2,3,6,7.
-    //
-    // For slot operations, cycle 0 is generally used to read registers and most operations happen on cycle 7.
-    // Some operations need to be broken down into substeps in order to do multiple RAM reads or latch values.
-    // The slot operation steps are implemented by the SlotProcessStepN_X functions, where N is the operation number and
-    // X is the substep. Substeps align with every two cycles of the 8-step cycle -- X=1 for cycles 0,1, X=2 for cycles
-    // 2,3, X=3 for cycles 4,5 and X=4 for cycles 6,7.
-    //
-    // The DSP runs in parallel with slot processing on a two-step cycle:
-    //   0: Read/write registers and memory
-    //   1: Execute one program step
-    // So for each 8-step cycle, the DSP runs four program steps.
-    //
-    // Many sample cycle-based operations, including the final output sent to the DAC, are aligned to operation 7 when
-    // it finishes processing slot 31.
-    for (uint32 i = 0; i < 32; i++) {
-        const uint32 op1SlotIndex = i;
-        const uint32 op2SlotIndex = (i - 1u) & 31;
-        const uint32 op3SlotIndex = (i - 2u) & 31;
-        const uint32 op4SlotIndex = (i - 3u) & 31;
-        const uint32 op5SlotIndex = (i - 4u) & 31;
-        const uint32 op6SlotIndex = (i - 5u) & 31;
-        const uint32 op7SlotIndex = (i - 6u) & 31;
-
-        auto &op1Slot = m_slots[op1SlotIndex];
-        auto &op2Slot = m_slots[op2SlotIndex];
-        auto &op3Slot = m_slots[op3SlotIndex];
-        auto &op4Slot = m_slots[op4SlotIndex];
-        auto &op5Slot = m_slots[op5SlotIndex];
-        auto &op6Slot = m_slots[op6SlotIndex];
-        auto &op7Slot = m_slots[op7SlotIndex];
-
-        // Cycles 0,1
-        SlotProcessStep7_1(op7Slot);
-        m_dsp.Step();
-
-        // Cycles 2,3
-        if (op7Slot.inputMixingLevel > 0) {
-            const sint32 mixsOutput = (op7Slot.output << 4) >> (op7Slot.inputMixingLevel ^ 7);
-            m_dsp.MIXSSlotWrite(op7Slot.inputSelect, mixsOutput);
-        } else {
-            m_dsp.MIXSSlotZero(op7Slot.inputSelect);
-        }
-
-        SlotProcessStep2_2(op2Slot);
-        SlotProcessStep3_2(op3Slot);
-        SlotProcessStep4_2(op4Slot);
-        m_dsp.Step();
-
-        // Cycles 4,5
-        SlotProcessStep2_3(op2Slot);
-        m_dsp.Step();
-
-        // Cycles 6,7
-        SlotProcessStep1_4(op1Slot);
-        SlotProcessStep2_4(op2Slot);
-        SlotProcessStep3_4(op3Slot);
-        SlotProcessStep4_4(op4Slot);
-        SlotProcessStep5_4(op5Slot);
-        SlotProcessStep6_4(op6Slot);
-        m_dsp.Step();
-
-        // Accumulate direct send output
-        addOutput(op7Slot.output, op7Slot.directSendLevel, op7Slot.directPan);
-
-        if (op7SlotIndex < 16) {
-            // Accumulate EFREG into final output
-            addOutput(m_dsp.effectOut[op7SlotIndex], op7Slot.effectSendLevel, op7Slot.effectPan);
-        } else if (op7SlotIndex < 18) {
-            // Accumulate EXTS into final output
-            addOutput(m_dsp.audioInOut[op7SlotIndex & 1], op7Slot.effectSendLevel, op7Slot.effectPan);
-        } else if (op7SlotIndex == 31) {
-            // Finish sample cycle
-
-            // Master volume attenuates sound in steps of 3 dB, or 0.5 bits per step
-            auto applyMasterVolume = [&](sint32 out) {
-                const uint32 masterVolume = m_masterVolume ^ 0xF;
-                out <<= 8;
-                out >>= masterVolume >> 1u;
-                if (masterVolume & 1) {
-                    out -= out >> 2;
-                }
-                return out >> 8;
-            };
-
-            // Apply master volume
-            m_out[0] = applyMasterVolume(m_out[0]);
-            m_out[1] = applyMasterVolume(m_out[1]);
-
-            // Clamp to signed 16-bit range
-            static constexpr sint32 outMin = std::numeric_limits<sint16>::min();
-            static constexpr sint32 outMax = std::numeric_limits<sint16>::max();
-            m_out[0] = std::clamp<sint32>(m_out[0], outMin, outMax);
-            m_out[1] = std::clamp<sint32>(m_out[1], outMin, outMax);
-
-            // "Expand" to 18 bits if DAC18B is enabled
-            if (m_dac18Bits) {
-                m_out[0] = static_cast<uint32>(m_out[0]) << 2u;
-                m_out[1] = static_cast<uint32>(m_out[1]) << 2u;
-            }
-
-            // Write to output and reset
-            m_cbOutputSample(m_out[0], m_out[1]);
-            m_out.fill(0);
-
-            // Copy CDDA data to DSP EXTS (0=left, 1=right)
-            if (m_cddaReady && m_cddaReadPos != m_cddaWritePos) {
-                m_dsp.audioInOut[0] = util::ReadLE<uint16>(&m_cddaBuffer[m_cddaReadPos + 0]);
-                m_dsp.audioInOut[1] = util::ReadLE<uint16>(&m_cddaBuffer[m_cddaReadPos + 2]);
-                m_cddaReadPos = (m_cddaReadPos + 2 * sizeof(uint16)) % m_cddaBuffer.size();
-            } else {
-                // Buffer underrun
-                m_dsp.audioInOut[0] = 0;
-                m_dsp.audioInOut[1] = 0;
-                m_cddaReady = false;
-            }
-        }
-
-        m_soundStackIndex = (m_soundStackIndex + 1) & 63;
+    ++m_currSlot;
+    if (m_currSlot == 32) {
+        m_currSlot = 0;
+        IncrementSampleCounter();
     }
+}
 
-    ++m_sampleCounter;
-
-    SetInterrupt(kIntrSample, true);
+FORCE_INLINE void SCSP::StepSample() {
+    assert(m_currSlot == 0);
+    for (uint32 i = 0; i < 32; i++) {
+        ProcessSlots(i);
+    }
+    IncrementSampleCounter();
 }
 
 FORCE_INLINE void SCSP::UpdateTimers() {
@@ -812,12 +713,159 @@ FORCE_INLINE void SCSP::UpdateTimers() {
     }
 }
 
+FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
+    const uint32 op1SlotIndex = i;
+    const uint32 op2SlotIndex = (i - 1u) & 31;
+    const uint32 op3SlotIndex = (i - 2u) & 31;
+    const uint32 op4SlotIndex = (i - 3u) & 31;
+    const uint32 op5SlotIndex = (i - 4u) & 31;
+    const uint32 op6SlotIndex = (i - 5u) & 31;
+    const uint32 op7SlotIndex = (i - 6u) & 31;
+
+    auto &op1Slot = m_slots[op1SlotIndex];
+    auto &op2Slot = m_slots[op2SlotIndex];
+    auto &op3Slot = m_slots[op3SlotIndex];
+    auto &op4Slot = m_slots[op4SlotIndex];
+    auto &op5Slot = m_slots[op5SlotIndex];
+    auto &op6Slot = m_slots[op6SlotIndex];
+    auto &op7Slot = m_slots[op7SlotIndex];
+
+    // Cycles 0,1
+    SlotProcessStep7_1(op7Slot);
+    m_dsp.Step();
+
+    // Cycles 2,3
+    if (op7Slot.inputMixingLevel > 0) {
+        const sint32 mixsOutput = (op7Slot.output << 4) >> (op7Slot.inputMixingLevel ^ 7);
+        m_dsp.MIXSSlotWrite(op7Slot.inputSelect, mixsOutput);
+    } else {
+        m_dsp.MIXSSlotZero(op7Slot.inputSelect);
+    }
+
+    SlotProcessStep2_2(op2Slot);
+    SlotProcessStep3_2(op3Slot);
+    SlotProcessStep4_2(op4Slot);
+    m_dsp.Step();
+
+    // Cycles 4,5
+    SlotProcessStep2_3(op2Slot);
+    m_dsp.Step();
+
+    // Cycles 6,7
+    SlotProcessStep1_4(op1Slot);
+    SlotProcessStep2_4(op2Slot);
+    SlotProcessStep3_4(op3Slot);
+    SlotProcessStep4_4(op4Slot);
+    SlotProcessStep5_4(op5Slot);
+    SlotProcessStep6_4(op6Slot);
+    m_dsp.Step();
+
+    // Accumulate direct send output
+    AddOutput(op7Slot.output, op7Slot.directSendLevel, op7Slot.directPan);
+
+    if (op7SlotIndex < 16) {
+        // Accumulate EFREG into final output
+        AddOutput(m_dsp.effectOut[op7SlotIndex], op7Slot.effectSendLevel, op7Slot.effectPan);
+    } else if (op7SlotIndex < 18) {
+        // Accumulate EXTS into final output
+        AddOutput(m_dsp.audioInOut[op7SlotIndex & 1], op7Slot.effectSendLevel, op7Slot.effectPan);
+    } else if (op7SlotIndex == 31) {
+        // Finish sample cycle
+
+        // Master volume attenuates sound in steps of 3 dB, or 0.5 bits per step
+        auto applyMasterVolume = [&](sint32 out) {
+            const uint32 masterVolume = m_masterVolume ^ 0xF;
+            out <<= 8;
+            out >>= masterVolume >> 1u;
+            if (masterVolume & 1) {
+                out -= out >> 2;
+            }
+            return out >> 8;
+        };
+
+        // Apply master volume
+        m_out[0] = applyMasterVolume(m_out[0]);
+        m_out[1] = applyMasterVolume(m_out[1]);
+
+        // Clamp to signed 16-bit range
+        static constexpr sint32 outMin = std::numeric_limits<sint16>::min();
+        static constexpr sint32 outMax = std::numeric_limits<sint16>::max();
+        m_out[0] = std::clamp<sint32>(m_out[0], outMin, outMax);
+        m_out[1] = std::clamp<sint32>(m_out[1], outMin, outMax);
+
+        // "Expand" to 18 bits if DAC18B is enabled
+        if (m_dac18Bits) {
+            m_out[0] = static_cast<uint32>(m_out[0]) << 2u;
+            m_out[1] = static_cast<uint32>(m_out[1]) << 2u;
+        }
+
+        // Write to output and reset
+        m_cbOutputSample(m_out[0], m_out[1]);
+        m_out.fill(0);
+
+        // Copy CDDA data to DSP EXTS (0=left, 1=right)
+        if (m_cddaReady && m_cddaReadPos != m_cddaWritePos) {
+            m_dsp.audioInOut[0] = util::ReadLE<uint16>(&m_cddaBuffer[m_cddaReadPos + 0]);
+            m_dsp.audioInOut[1] = util::ReadLE<uint16>(&m_cddaBuffer[m_cddaReadPos + 2]);
+            m_cddaReadPos = (m_cddaReadPos + 2 * sizeof(uint16)) % m_cddaBuffer.size();
+        } else {
+            // Buffer underrun
+            m_dsp.audioInOut[0] = 0;
+            m_dsp.audioInOut[1] = 0;
+            m_cddaReady = false;
+        }
+    }
+
+    m_soundStackIndex = (m_soundStackIndex + 1) & 63;
+}
+
+FORCE_INLINE void SCSP::IncrementSampleCounter() {
+    ++m_sampleCounter;
+    UpdateTimers();
+    SetInterrupt(kIntrSample, true);
+    UpdateM68KInterrupts();
+}
+
+FORCE_INLINE void SCSP::AddOutput(sint32 output, uint8 sendLevel, uint8 pan) {
+    if (sendLevel == 0) { // = -infinity dB
+        return;
+    }
+
+    // Introduce enough fractional bits to accurately compute the combined effects of SDL and PAN.
+    // SDL shifts out up to 6 bits (=0x1).
+    // PAN shifts out up to 7 bits (=0xE), or 6 then 8 bits (=0xD).
+    // Maximum is 6 from SDL + 8 from PAN = 14 bits.
+    output <<= 14;
+
+    // Send level attenuates sound in steps of 6 dB, matching one bit per step
+    output >>= sendLevel ^ 7u;
+
+    // Pan attenuates sound in one of the channels in steps of 3 dB, or 0.5 bit per step
+    const uint8 panAmount = pan & 0xF;
+    sint32 panOut;
+    if (panAmount == 0xF) { // = -infinity dB
+        panOut = 0;
+    } else {
+        panOut = output >> (panAmount >> 1u);
+        if (panAmount & 1) {
+            panOut -= panOut >> 2;
+        }
+    }
+
+    // Apply panning to one of the channels
+    const bool panChanSel = (pan & 0x10) != 0;
+    m_out[0] += (panChanSel ? output : panOut) >> 14;
+    m_out[1] += (panChanSel ? panOut : output) >> 14;
+}
+
 FORCE_INLINE void SCSP::SlotProcessStep1_4(Slot &slot) {
     m_lfsr = (m_lfsr >> 1u) | (((m_lfsr >> 5u) ^ m_lfsr) & 1u) << 16u;
 
-    // KYONEX will always line up with slot 0 on operation 1.
-    // If it didn't, we'd have to set a pending flag to align it with slot 0 here.
-    if (m_kyonex && slot.TriggerKey()) {
+    if (slot.index == 0) {
+        m_kyonexExecute = m_kyonex;
+        m_kyonex = false;
+    }
+    if (m_kyonexExecute && slot.TriggerKey()) {
         static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
         devlog::trace<grp::kyonex>(
             "Slot {:02d} key {} {:2d}-bit addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
@@ -831,7 +879,7 @@ FORCE_INLINE void SCSP::SlotProcessStep1_4(Slot &slot) {
     }
     if (slot.index == 31) {
         if constexpr (devlog::debug_enabled<grp::kyonex>) {
-            if (m_kyonex) {
+            if (m_kyonexExecute) {
                 static char out[32];
                 for (auto &slot : m_slots) {
                     out[slot.index] = slot.keyOnBit ? '+' : '_';
@@ -839,7 +887,6 @@ FORCE_INLINE void SCSP::SlotProcessStep1_4(Slot &slot) {
                 devlog::debug<grp::kyonex>("{}", std::string_view(out, 32));
             }
         }
-        m_kyonex = false;
     }
 
     // Pitch LFO waveform tables

@@ -30,6 +30,7 @@ struct SCSPState {
     alignas(16) std::array<SCSPSlotState, 32> slots;
 
     bool KYONEX;
+    bool KYONEXExec;
 
     uint32 MVOL;
     bool DAC18B;
@@ -63,6 +64,8 @@ struct SCSPState {
     uint64 sampleCounter;
 
     uint32 lfsr;
+
+    uint32 currSlot;
 
     std::array<sint32, 2> out;
 

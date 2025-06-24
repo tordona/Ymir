@@ -4,14 +4,23 @@
 
 namespace ymir::scsp {
 
+// Number of SCSP slots
+inline constexpr uint64 kSlots = 32;
+
 // Audio sampling rate in Hz
 inline constexpr uint64 kAudioFreq = 44100;
 
-// Number of SCSP cycles per sample
-inline constexpr uint64 kCyclesPerSample = 512;
+// Number of SCSP cycles per slot
+inline constexpr uint64 kCyclesPerSlot = 16;
+
+// Number of SCSP cycles per sample: 16 cycles per slot * 32 slots = 512 cycles
+inline constexpr uint64 kCyclesPerSample = kCyclesPerSlot * kSlots;
 
 // Number of SCSP cycles per MC68EC000 cycle
 inline constexpr uint64 kCyclesPerM68KCycle = 2;
+
+// Number of M68K cycles per slot
+inline constexpr uint64 kM68KCyclesPerSlot = kCyclesPerSlot / kCyclesPerM68KCycle;
 
 // Number of M68K cycles per sample
 inline constexpr uint64 kM68KCyclesPerSample = kCyclesPerSample / kCyclesPerM68KCycle;

@@ -582,6 +582,7 @@ void Settings::ResetToDefaults() {
 
     audio.volume = 0.8;
     audio.mute = false;
+
     audio.midiInputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
     audio.midiOutputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
 
@@ -823,6 +824,9 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
 
         Parse(tblAudio, "Volume", audio.volume);
         Parse(tblAudio, "Mute", audio.mute);
+
+        Parse(tblAudio, "SlotStepping", emuConfig.audio.slotStepping);
+
         Parse(tblAudio, "MidiInputPortId", inputPort.id);
         Parse(tblAudio, "MidiOutputPortId", outputPort.id);
         Parse(tblAudio, "MidiInputPortType", inputPort.type);
@@ -1084,6 +1088,7 @@ SettingsSaveResult Settings::Save() {
         {"Audio", toml::table{{
             {"Volume", audio.volume.Get()},
             {"Mute", audio.mute.Get()},
+            {"SlotStepping", emuConfig.audio.slotStepping.Get()},
             {"MidiInputPortId", audio.midiInputPort.Get().id},
             {"MidiOutputPortId", audio.midiOutputPort.Get().id},
             {"MidiInputPortType", ToTOML(audio.midiInputPort.Get().type)},

@@ -180,7 +180,21 @@ private:
     core::Scheduler &m_scheduler;
     core::EventID m_sampleTickEvent;
 
+    // Processes a slot tick.
+    static void OnSlotTickEvent(core::EventContext &eventContext, void *userContext);
+
+    // Processes a sample tick.
     static void OnSampleTickEvent(core::EventContext &eventContext, void *userContext);
+
+    // Transitional event used when switching from slot to sample ticks.
+    // Processes slot by slot until the slot index aligns back to 0, then switches to sample tick events.
+    static void OnTransitionalTickEvent(core::EventContext &eventContext, void *userContext);
+
+    // Enables or disables stepping the SCSP per slot instead of per sample.
+    void SetSlotStepping(bool enable);
+
+    // Whether to schedule a full sample (false) or individual slot steps (true).
+    bool m_slotStepping = false;
 
     CBOutputSample m_cbOutputSample;
     CBTriggerSoundRequestInterrupt m_cbTriggerSoundRequestInterrupt;
@@ -998,7 +1012,8 @@ private:
 
     alignas(128) std::array<Slot, 32> m_slots;
 
-    bool m_kyonex; // (W) KYONEX - Key on execute
+    bool m_kyonex;        // (W) KYONEX - Key on execute
+    bool m_kyonexExecute; // KYONEX currently being processed
 
     // --- Mixer Register ---
 
@@ -1061,11 +1076,56 @@ private:
     // -------------------------------------------------------------------------
     // Audio processing
 
-    void Tick();
+    void TickSlot();   // Processes a single slot (16 SCSP cycles)
+    void TickSample(); // Processes a full sample (512 SCSP cycles)
 
-    void RunM68K();
-    void GenerateSample();
+    void RunM68K(uint64 cycles);
     void UpdateTimers();
+
+    // Emulates one slot's worth of cycles.
+    // This executes the 7 slot operations once, and 4 DSP program steps.
+    void StepSlot();
+
+    // Emulates an entire sample's worth of cycles.
+    // This executes the 7 slot operations 32 times, and all 128 DSP program steps.
+    // Requires the slot counter to be aligned to 0.
+    void StepSample();
+
+    // Performs the 7 operation steps on slots from index i to i-6 (modulo 32).
+    void ProcessSlots(uint32 i);
+
+    // Advances the sample counter by one.
+    void IncrementSampleCounter();
+
+    // Accumulates audio data into the final output using the given send level and panning parameters.
+    void AddOutput(sint32 output, uint8 sendLevel, uint8 pan);
+
+    // The SCSP performs 7 operations in parallel on 7 different slots from i to i-6:
+    //   op1 (slot i-0): Phase generation and pitch LFO calculation
+    //   op2 (slot i-1): X/Y modulation data read and address pointer calculation
+    //   op3 (slot i-2): Waveform read
+    //   op4 (slot i-3): Interpolation, envelope generator update and amplitude LFO calculation
+    //   op5 (slot i-4): Amplitude LFO level calculation
+    //   op6 (slot i-5): Total level calculation
+    //   op7 (slot i-6): Sound stack write
+    //
+    // The SCSP as a whole runs on an 8-step cycle, performing different tasks at each step.
+    // Every two cycles, the SCSP alternates between giving the DSP or the slots RAM access, in that order.
+    // In other words, RAM access is granted to DSP on cycles 0,1,4,5 and to slots on cycles 2,3,6,7.
+    //
+    // For slot operations, cycle 0 is generally used to read registers and most operations happen on cycle 7.
+    // Some operations need to be broken down into substeps in order to do multiple RAM reads or latch values.
+    // The slot operation steps are implemented by the SlotProcessStepN_X functions below, where N is the operation
+    // number and X is the substep. Substeps align with every two cycles of the 8-step cycle -- X=1 for cycles 0,1, X=2
+    // for cycles 2,3, X=3 for cycles 4,5 and X=4 for cycles 6,7.
+    //
+    // The DSP runs in parallel with slot processing on a two-step cycle:
+    //   0: Read/write registers and memory
+    //   1: Execute one program step
+    // So for each 8-step cycle, the DSP runs four program steps.
+    //
+    // Many sample cycle-based operations, including the final output sent to the DAC, are aligned to operation 7 when
+    // it finishes processing slot 31.
 
     void SlotProcessStep1_4(Slot &slot); // Phase generation and pitch LFO calculation
     void SlotProcessStep2_2(Slot &slot); // Phase latch
@@ -1079,12 +1139,16 @@ private:
     void SlotProcessStep6_4(Slot &slot); // Total level calculation
     void SlotProcessStep7_1(Slot &slot); // Sound stack write
 
+    // The audio interpolation mode.
+    // Linear is accurate to the hardware. Other options are offered as tweaks or enhancements.
     core::config::audio::SampleInterpolationMode m_interpMode = core::config::audio::SampleInterpolationMode::Linear;
 
     uint64 m_m68kCycles;    // MC68EC000 cycle counter
     uint64 m_sampleCounter; // Total number of samples
 
     uint32 m_lfsr; // Noise LFSR
+
+    uint32 m_currSlot; // Current slot being processed
 
     std::array<sint32, 2> m_out;
 

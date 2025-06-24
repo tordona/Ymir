@@ -110,7 +110,9 @@ EmuEvent SetEmulateSH2Cache(bool enable);
 
 EmuEvent EnableThreadedVDP(bool enable);
 EmuEvent IncludeVDP1InVDPRenderThread(bool enable);
+
 EmuEvent EnableThreadedSCSP(bool enable);
+EmuEvent SetSCSPSlotStepping(bool enable);
 
 EmuEvent LoadState(uint32 slot);
 EmuEvent SaveState(uint32 slot);
