@@ -492,10 +492,10 @@ void SCSP::LoadState(const state::SCSPState &state) {
     if (m_stepGranularity < 5u && (m_currSlot & ((1u << m_stepGranularity) - 1u)) != 0) {
         switch (m_stepGranularity) {
         case 0u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent<0u>); break;
-        case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 1u>); break;
-        case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 2u>); break;
-        case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 3u>); break;
-        case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 4u>); break;
+        case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u>); break;
+        case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<2u>); break;
+        case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<3u>); break;
+        case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<4u>); break;
         default: util::unreachable();
         }
     }
@@ -514,29 +514,27 @@ void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext
     eventContext.Reschedule(kCyclesPerSample);
 }
 
-template <uint32 stepShiftOld, uint32 stepShiftNew>
+template <uint32 newStepShift>
 void SCSP::OnTransitionalTickEvent(core::EventContext &eventContext, void *userContext) {
-    static_assert(stepShiftOld < stepShiftNew, "Must transition from less to more slots");
-    static_assert(stepShiftOld <= 5u, "stepShiftOld must be at most 5 (32 slots)");
-    static_assert(stepShiftNew <= 5u, "stepShiftNew must be at most 5 (32 slots)");
+    static_assert(newStepShift <= 5u, "newStepShift must be at most 5 (32 slots)");
 
-    static constexpr uint32 kSlotIndexMask = (1u << stepShiftNew) - 1u;
+    static constexpr uint32 kSlotIndexMask = (1u << newStepShift) - 1u;
 
     // Check if the slot counter is aligned
     auto &scsp = *static_cast<SCSP *>(userContext);
     if ((scsp.m_currSlot & kSlotIndexMask) == 0) {
         // Aligned; switch to the bigger tick event
-        if constexpr (stepShiftNew == 5u) {
+        if constexpr (newStepShift == 5u) {
             scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSampleTickEvent);
             eventContext.Reschedule(kCyclesPerSample);
         } else {
-            scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSlotTickEvent<stepShiftNew>);
-            eventContext.Reschedule(kCyclesPerSlot << stepShiftNew);
+            scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSlotTickEvent<newStepShift>);
+            eventContext.Reschedule(kCyclesPerSlot << newStepShift);
         }
     } else {
-        // Not yet aligned; continue ticking slots
-        scsp.TickSlots<stepShiftOld>();
-        eventContext.Reschedule(kCyclesPerSlot << stepShiftOld);
+        // Not yet aligned; continue ticking slots one by one
+        scsp.TickSlots<0>();
+        eventContext.Reschedule(kCyclesPerSlot);
     }
 }
 
@@ -550,58 +548,26 @@ void SCSP::SetStepGranularity(uint32 granularity) {
             const uint64 target = m_scheduler.GetScheduleTarget(m_sampleTickEvent);
             const uint64 newTarget = target - (kCyclesPerSlot << m_stepGranularity) + (kCyclesPerSlot << granularity);
             m_scheduler.ScheduleAt(m_sampleTickEvent, newTarget);
+
+            core::Scheduler::EventCallback callback;
             switch (granularity) {
-            case 0u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent<0u>); break;
-            case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent<1u>); break;
-            case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent<2u>); break;
-            case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent<3u>); break;
-            case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent<4u>); break;
+            case 0u: callback = OnSlotTickEvent<0u>; break;
+            case 1u: callback = (m_currSlot & 0x1) ? OnTransitionalTickEvent<1u> : OnSlotTickEvent<1u>; break;
+            case 2u: callback = (m_currSlot & 0x3) ? OnTransitionalTickEvent<2u> : OnSlotTickEvent<2u>; break;
+            case 3u: callback = (m_currSlot & 0x7) ? OnTransitionalTickEvent<3u> : OnSlotTickEvent<3u>; break;
+            case 4u: callback = (m_currSlot & 0xF) ? OnTransitionalTickEvent<4u> : OnSlotTickEvent<4u>; break;
             default: util::unreachable();
             }
+            m_scheduler.SetEventCallback(m_sampleTickEvent, this, callback);
         } else {
             // Going from smaller to larger steps requires the slot counter to be realigned.
             // Luckily, we don't need to reschedule it.
-            switch (m_stepGranularity) {
-            case 0u:
-                switch (granularity) {
-                case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 1u>); break;
-                case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 2u>); break;
-                case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 3u>); break;
-                case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 4u>); break;
-                case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<0u, 5u>); break;
-                default: util::unreachable();
-                }
-                break;
-            case 1u:
-                switch (granularity) {
-                case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u, 2u>); break;
-                case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u, 3u>); break;
-                case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u, 4u>); break;
-                case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u, 5u>); break;
-                default: util::unreachable();
-                }
-                break;
-            case 2u:
-                switch (granularity) {
-                case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<2u, 3u>); break;
-                case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<2u, 4u>); break;
-                case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<2u, 5u>); break;
-                default: util::unreachable();
-                }
-                break;
-            case 3u:
-                switch (granularity) {
-                case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<3u, 4u>); break;
-                case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<3u, 5u>); break;
-                default: util::unreachable();
-                }
-                break;
-            case 4u:
-                switch (granularity) {
-                case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<4u, 5u>); break;
-                default: util::unreachable();
-                }
-                break;
+            switch (granularity) {
+            case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u>); break;
+            case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<2u>); break;
+            case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<3u>); break;
+            case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<4u>); break;
+            case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<5u>); break;
             default: util::unreachable();
             }
         }

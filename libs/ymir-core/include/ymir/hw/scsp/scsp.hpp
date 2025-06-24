@@ -198,9 +198,9 @@ private:
     // Processes a sample tick.
     static void OnSampleTickEvent(core::EventContext &eventContext, void *userContext);
 
-    // Transitional event used when switching from slot to sample ticks.
+    // Transitional event used when switching from smaller to larger steps.
     // Processes slot by slot until the slot index aligns back to 0, then switches to sample tick events.
-    template <uint32 stepShiftOld, uint32 stepShiftNew>
+    template <uint32 newStepShift>
     static void OnTransitionalTickEvent(core::EventContext &eventContext, void *userContext);
 
     // The emulation step granularity expressed as a bit shift.
