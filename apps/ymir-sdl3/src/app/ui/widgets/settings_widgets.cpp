@@ -167,9 +167,6 @@ namespace settings::audio {
                 const auto cellPadding = ImGui::GetStyle().CellPadding;
                 const auto basePos = ImVec2(initBasePos.x, initBasePos.y + cellPadding.y);
                 const auto avail = ImVec2(totalAvail.x, totalAvail.y - cellPadding.y * 2.0f);
-                const auto innerSpacing = ImGui::GetStyle().ItemInnerSpacing;
-                const auto framePadding = ImGui::GetStyle().FramePadding;
-                const float textHeight = ImGui::GetTextLineHeightWithSpacing();
                 const float graphWidth = avail.x;
                 const float graphHeight = ImGui::GetFrameHeight();
                 const float borderThickness = 2.0f * ctx.displayScale;

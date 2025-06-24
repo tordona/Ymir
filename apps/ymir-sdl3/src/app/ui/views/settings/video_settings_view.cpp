@@ -13,7 +13,6 @@ VideoSettingsView::VideoSettingsView(SharedContext &context)
 
 void VideoSettingsView::Display() {
     auto &settings = m_context.settings.video;
-    auto &config = m_context.saturn.configuration.video;
 
     // -----------------------------------------------------------------------------------------------------------------
 

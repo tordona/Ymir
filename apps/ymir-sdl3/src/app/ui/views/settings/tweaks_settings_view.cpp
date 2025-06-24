@@ -103,7 +103,6 @@ void TweaksSettingsView::Display() {
 
 void TweaksSettingsView::DisplayEnhancements() {
     auto &settings = m_context.settings;
-    auto &config = m_context.saturn.configuration;
 
     ImGui::PushFont(m_context.fonts.sansSerif.xlarge.bold);
     ImGui::SeparatorText("Enhancements");
