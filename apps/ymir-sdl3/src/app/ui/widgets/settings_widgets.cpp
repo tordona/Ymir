@@ -114,8 +114,9 @@ namespace settings::audio {
     }
 
     std::string StepGranularityToString(uint32 stepGranularity) {
-        return fmt::format("{} {}{}", (32 >> stepGranularity), (stepGranularity < 5 ? "slots" : "slot"),
-                           (stepGranularity == 0 ? " (one sample)" : ""));
+        const uint32 numSteps = 32u >> stepGranularity;
+        return fmt::format("{} {}{}", numSteps, (numSteps != 1 ? "slots" : "slot"),
+                           (numSteps == 32 ? " (1 sample)" : ""));
     }
 
     void StepGranularity(SharedContext &ctx) {
@@ -156,7 +157,6 @@ namespace settings::audio {
                 ImGui::Text("Step size: %s", StepGranularityToString(stepGranularity).c_str());
             }
             if (ImGui::TableNextColumn()) {
-                static constexpr ImU32 kGraphBorderColor = 0xE0BBE0F0;
                 static constexpr ImU32 kGraphBackgroundColor = 0xAA253840;
                 static constexpr ImU32 kGraphSliceFillColor = 0xE04AC3F7;
                 static constexpr ImU32 kGraphSliceFillColorAlt = 0xE02193C4;
@@ -169,7 +169,6 @@ namespace settings::audio {
                 const auto avail = ImVec2(totalAvail.x, totalAvail.y - cellPadding.y * 2.0f);
                 const float graphWidth = avail.x;
                 const float graphHeight = ImGui::GetFrameHeight();
-                const float borderThickness = 2.0f * ctx.displayScale;
                 const float sliceWidth = graphWidth / (1 << stepGranularity);
                 const float slotWidth = graphWidth / 32.0f;
                 const float sepThickness = 1.5f * ctx.displayScale;
@@ -190,8 +189,6 @@ namespace settings::audio {
                     drawList->AddLine(ImVec2(x, basePos.y), ImVec2(x, basePos.y + graphHeight),
                                       kGraphSlotSeparatorColor, sepThickness);
                 }
-                drawList->AddRect(basePos, ImVec2(basePos.x + graphWidth, basePos.y + graphHeight), kGraphBorderColor,
-                                  0.05, 0, borderThickness);
             }
 
             ImGui::EndTable();
