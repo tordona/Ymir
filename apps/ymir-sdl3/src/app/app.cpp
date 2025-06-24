@@ -2208,6 +2208,14 @@ void App::RunEmulator() {
             // Get window size
             int ww, wh;
             SDL_GetWindowSize(screen.window, &ww, &wh);
+
+#if defined(__APPLE__)
+            // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
+            const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
+            ww *= pixelDensity;
+            wh *= pixelDensity;
+#endif
+
             wh -= menuBarHeight;
 
             double scaleFactor = 1.0;
@@ -2296,7 +2304,17 @@ void App::RunEmulator() {
         screen.resolutionChanged = false;
 
         // Render ImGui widgets
+#if defined(__APPLE__)
+        // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
+        const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
+        SDL_SetRenderScale(renderer, pixelDensity, pixelDensity);
+#endif
+
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+
+#if defined(__APPLE__)
+        SDL_SetRenderScale(renderer, 1.0f, 1.0f);
+#endif
 
         SDL_RenderPresent(renderer);
 
