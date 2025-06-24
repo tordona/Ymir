@@ -583,6 +583,8 @@ void Settings::ResetToDefaults() {
     audio.volume = 0.8;
     audio.mute = false;
 
+    audio.stepGranularity = 5;
+
     audio.midiInputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
     audio.midiOutputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
 
@@ -821,11 +823,12 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     if (auto tblAudio = data["Audio"]) {
         auto inputPort = audio.midiInputPort.Get();
         auto outputPort = audio.midiOutputPort.Get();
+        auto stepGranularity = audio.stepGranularity.Get();
 
         Parse(tblAudio, "Volume", audio.volume);
         Parse(tblAudio, "Mute", audio.mute);
 
-        Parse(tblAudio, "SlotStepping", emuConfig.audio.slotStepping);
+        Parse(tblAudio, "StepGranularity", stepGranularity);
 
         Parse(tblAudio, "MidiInputPortId", inputPort.id);
         Parse(tblAudio, "MidiOutputPortId", outputPort.id);
@@ -833,6 +836,8 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblAudio, "MidiOutputPortType", outputPort.type);
         Parse(tblAudio, "InterpolationMode", emuConfig.audio.interpolation);
         Parse(tblAudio, "ThreadedSCSP", emuConfig.audio.threadedSCSP);
+
+        audio.stepGranularity = std::min(stepGranularity, 5u);
 
         audio.midiInputPort = inputPort;
         audio.midiOutputPort = outputPort;
@@ -1088,7 +1093,7 @@ SettingsSaveResult Settings::Save() {
         {"Audio", toml::table{{
             {"Volume", audio.volume.Get()},
             {"Mute", audio.mute.Get()},
-            {"SlotStepping", emuConfig.audio.slotStepping.Get()},
+            {"StepGranularity", audio.stepGranularity.Get()},
             {"MidiInputPortId", audio.midiInputPort.Get().id},
             {"MidiOutputPortId", audio.midiOutputPort.Get().id},
             {"MidiInputPortType", ToTOML(audio.midiInputPort.Get().type)},

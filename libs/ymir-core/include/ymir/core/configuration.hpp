@@ -92,15 +92,6 @@ struct Configuration {
 
         /// @brief Runs the SCSP and MC68EC000 CPU in a dedicated thread.
         util::Observable<bool> threadedSCSP = false;
-
-        /// @brief Step the SCSP per slot instead of per sample.
-        ///
-        /// This option increases the emulation granularity of the SCSP by 32 times, scheduling one slot at a time
-        /// instead of a sample (which processes all 32 slots at once). This improves timing accuracy but significantly
-        /// lowers performance.
-        ///
-        /// Virtually no commercial games rely on this much accuracy. May be useful for homebrew developers in some way.
-        util::Observable<bool> slotStepping = false;
     } audio;
 
     /// @brief CD Block configuration.

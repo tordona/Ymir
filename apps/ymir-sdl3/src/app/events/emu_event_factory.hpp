@@ -112,7 +112,7 @@ EmuEvent EnableThreadedVDP(bool enable);
 EmuEvent IncludeVDP1InVDPRenderThread(bool enable);
 
 EmuEvent EnableThreadedSCSP(bool enable);
-EmuEvent SetSCSPSlotStepping(bool enable);
+EmuEvent SetSCSPStepGranularity(uint32 granularity);
 
 EmuEvent LoadState(uint32 slot);
 EmuEvent SaveState(uint32 slot);

@@ -289,6 +289,8 @@ public:
         util::Observable<float> volume;
         util::Observable<bool> mute;
 
+        util::Observable<uint32> stepGranularity;
+
         util::Observable<MidiPort> midiInputPort;
         util::Observable<MidiPort> midiOutputPort;
     } audio;

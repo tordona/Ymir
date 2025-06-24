@@ -21,28 +21,19 @@ class Scheduler;
 
 /// @brief Contains the context for a scheduled event.
 ///
-/// Passed as a parameter to scheduled event handlers to let them reschedule the event relative to the previous trigger
-/// or the current cycle count.
+/// Passed as a parameter to scheduled event handlers to let them reschedule the event relative to the previous trigger.
 ///
-/// By default, events are not rescheduled unless requested by the methods in this struct.
+/// By default, events are not rescheduled unless requested through `EventContext::Reschedule(uint64)`.
 struct EventContext {
-    /// @brief Reschedules the event with an offset from the current deadline.
+    /// @brief Reschedules the event with an offset from the previous deadline.
     /// @param[in] interval the interval in cycles from the previous deadline
-    void RescheduleFromPrevious(uint64 interval) {
-        action = Action::RescheduleFromPrevious;
-        this->interval = interval;
-    }
-
-    /// @brief Reschedules the event with an offset from the current cycle count.
-    /// @param[in] interval the interval in cycles from the current cycle count
-    void RescheduleFromNow(uint64 interval) {
-        action = Action::RescheduleFromNow;
+    void Reschedule(uint64 interval) {
+        reschedule = true;
         this->interval = interval;
     }
 
 private:
-    enum class Action { Unschedule, RescheduleFromPrevious, RescheduleFromNow };
-    Action action = Action::Unschedule;
+    bool reschedule = false;
     uint64 interval = 0;
     friend class Scheduler;
 };
@@ -290,7 +281,7 @@ private:
 
     /// @brief A schedulable event.
     struct Event {
-        uint64 target;           ///< Deadline in cycles
+        uint64 target;           ///< Deadline in cycles relative to the component's clock
         uint64 countNumerator;   ///< Cycle scaling factor numerator
         uint64 countDenominator; ///< Cycle scaling factor denominator
         void *userContext;       ///< User context pointer
@@ -329,12 +320,10 @@ private:
                 while (scaledCurrCount >= target) {
                     EventContext eventContext;
                     callback(eventContext, userContext);
-                    switch (eventContext.action) {
-                    case EventContext::Action::Unschedule: target = kNoDeadline; break;
-                    case EventContext::Action::RescheduleFromNow:
-                        target = scaledCurrCount + eventContext.interval;
-                        break;
-                    case EventContext::Action::RescheduleFromPrevious: target += eventContext.interval; break;
+                    if (eventContext.reschedule) {
+                        target += eventContext.interval;
+                    } else {
+                        target = kNoDeadline;
                     }
                 }
                 event.target = target;

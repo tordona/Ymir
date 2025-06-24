@@ -17,6 +17,8 @@ void AudioSettingsView::Display() {
     auto &settings = m_context.settings.audio;
     auto &config = m_context.saturn.configuration.audio;
 
+    auto *drawList = ImGui::GetWindowDrawList();
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
@@ -150,19 +152,63 @@ void AudioSettingsView::Display() {
     ImGui::SeparatorText("Accuracy");
     ImGui::PopFont();
 
-    bool slotStepping = config.slotStepping;
-    if (MakeDirty(ImGui::Checkbox("Update SCSP on every slot instead of sample", &slotStepping))) {
-        m_context.EnqueueEvent(events::emu::SetSCSPSlotStepping(slotStepping));
+    int stepGranularity = settings.stepGranularity;
+    if (MakeDirty(ImGui::SliderInt("Emulation step granularity", &stepGranularity, 0, 5, "%d",
+                                   ImGuiSliderFlags_AlwaysClamp))) {
+        // m_context.EnqueueEvent(events::emu::SetSCSPStepGranularity(stepGranularity));
+        settings.stepGranularity = stepGranularity;
     }
     widgets::ExplanationTooltip(
-        "Increases emulation granularity for the SCSP from samples to slots.\n"
+        "Adjusts emulation granularity for the SCSP.\n"
         "\n"
-        "This setting causes the SCSP to be emulated in much smaller timeslices (32 times as often as sample-level "
-        "processing), significantly lowering performance in exchange for a higher level of accuracy that doesn't "
-        "benefit the vast majority of commercial games.\n"
+        "Increasing this setting causes the SCSP to be emulated in smaller timeslices (up to 32 times as often as "
+        "sample-level processing), significantly lowering performance in exchange for a higher level of accuracy that "
+        "doesn't benefit the vast majority of commercial games.\n"
         "\n"
         "This option might be of interest to homebrew developers who need extra accuracy in some way.",
         m_context.displayScale);
+
+    {
+        static constexpr ImU32 kGraphBorderColor = 0xE0BBE0F0;
+        static constexpr ImU32 kGraphBackgroundColor = 0xAA253840;
+        static constexpr ImU32 kGraphSliceFillColor = 0xE04AC3F7;
+        static constexpr ImU32 kGraphSliceFillColorAlt = 0xE02193C4;
+        static constexpr ImU32 kGraphSlotSeparatorColor = 0xE02A6F8C;
+
+        const auto basePos = ImGui::GetCursorScreenPos();
+        const auto avail = ImGui::GetContentRegionAvail();
+        const auto innerSpacing = ImGui::GetStyle().ItemInnerSpacing;
+        const auto framePadding = ImGui::GetStyle().FramePadding;
+        const float textHeight = ImGui::GetTextLineHeightWithSpacing();
+        const float graphWidth = ImGui::CalcItemWidth();
+        const float graphHeight = ImGui::GetFrameHeight();
+        const float borderThickness = 2.0f * m_context.displayScale;
+        const float sliceWidth = graphWidth / (1 << stepGranularity);
+        const float slotWidth = graphWidth / 32.0f;
+        const float sepThickness = 1.5f * m_context.displayScale;
+
+        ImGui::Dummy(ImVec2(graphWidth, graphHeight));
+        drawList->AddRectFilled(basePos, ImVec2(basePos.x + graphWidth, basePos.y + graphHeight),
+                                kGraphBackgroundColor);
+        for (uint32 i = 0; i < (1 << stepGranularity); ++i) {
+            const float xStart = basePos.x + i * sliceWidth;
+            const float xEnd = xStart + sliceWidth;
+            drawList->AddRectFilled(ImVec2(xStart, basePos.y), ImVec2(xEnd, basePos.y + graphHeight),
+                                    (i & 1) ? kGraphSliceFillColorAlt : kGraphSliceFillColor);
+        }
+        for (uint32 i = 1; i < 32; ++i) {
+            const float x = basePos.x + i * slotWidth;
+            drawList->AddLine(ImVec2(x, basePos.y), ImVec2(x, basePos.y + graphHeight), kGraphSlotSeparatorColor,
+                              sepThickness);
+        }
+        drawList->AddRect(basePos, ImVec2(basePos.x + graphWidth, basePos.y + graphHeight), kGraphBorderColor, 0.05, 0,
+                          borderThickness);
+        drawList->AddText(ImVec2(basePos.x + graphWidth + innerSpacing.x, basePos.y + framePadding.y), 0xFFFFFFFF,
+                          fmt::format("Step size: {} {}{}", (32 >> stepGranularity),
+                                      (stepGranularity < 5 ? "slots" : "slot"),
+                                      (stepGranularity == 0 ? " (one sample)" : ""))
+                              .c_str());
+    }
 
     // -----------------------------------------------------------------------------------------------------------------
 

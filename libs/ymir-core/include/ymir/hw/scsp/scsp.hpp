@@ -127,6 +127,17 @@ public:
 
     void UpdateClockRatios(const sys::ClockRatios &clockRatios);
 
+    // Configures the SCSP step granularity in powers of two.
+    // The value must be between 0 and 5, with:
+    //   0 = step 32 slots (one sample) at a time (least granular, default)
+    //   5 = step 1 slot at a time (most granular)
+    // Values greater than 5 are clamped down to 5.
+    void SetStepGranularity(uint32 granularity);
+
+    [[nodiscard]] uint32 GetStepGranularity() const noexcept {
+        return 5u - m_stepGranularity;
+    }
+
     // Feeds CDDA data into the buffer and returns how many thirds of the buffer are used
     uint32 ReceiveCDDA(std::span<uint8, 2352> data);
 
@@ -181,6 +192,7 @@ private:
     core::EventID m_sampleTickEvent;
 
     // Processes a slot tick.
+    template <uint32 stepShift>
     static void OnSlotTickEvent(core::EventContext &eventContext, void *userContext);
 
     // Processes a sample tick.
@@ -188,13 +200,14 @@ private:
 
     // Transitional event used when switching from slot to sample ticks.
     // Processes slot by slot until the slot index aligns back to 0, then switches to sample tick events.
+    template <uint32 stepShiftOld, uint32 stepShiftNew>
     static void OnTransitionalTickEvent(core::EventContext &eventContext, void *userContext);
 
-    // Enables or disables stepping the SCSP per slot instead of per sample.
-    void SetSlotStepping(bool enable);
-
-    // Whether to schedule a full sample (false) or individual slot steps (true).
-    bool m_slotStepping = false;
+    // The emulation step granularity expressed as a bit shift.
+    // Note that this is inverted relative to the values given by the public interface (5 - value), therefore:
+    //   5 = step 32 slots (one sample) at a time (least granular, default)
+    //   0 = step 1 slot at a time (most granular)
+    uint32 m_stepGranularity = 5u;
 
     CBOutputSample m_cbOutputSample;
     CBTriggerSoundRequestInterrupt m_cbTriggerSoundRequestInterrupt;
@@ -1076,7 +1089,8 @@ private:
     // -------------------------------------------------------------------------
     // Audio processing
 
-    void TickSlot();   // Processes a single slot (16 SCSP cycles)
+    template <uint32 stepShift>
+    void TickSlots();  // Processes a single slot (16 SCSP cycles)
     void TickSample(); // Processes a full sample (512 SCSP cycles)
 
     void RunM68K(uint64 cycles);
@@ -1084,7 +1098,8 @@ private:
 
     // Emulates one slot's worth of cycles.
     // This executes the 7 slot operations once, and 4 DSP program steps.
-    void StepSlot();
+    template <uint32 stepShift>
+    void StepSlots();
 
     // Emulates an entire sample's worth of cycles.
     // This executes the 7 slot operations 32 times, and all 128 DSP program steps.

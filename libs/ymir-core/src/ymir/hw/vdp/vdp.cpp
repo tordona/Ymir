@@ -467,7 +467,7 @@ void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext
     auto &vdp = *static_cast<VDP *>(userContext);
     vdp.UpdatePhase();
     const uint64 cycles = vdp.GetPhaseCycles();
-    eventContext.RescheduleFromPrevious(cycles);
+    eventContext.Reschedule(cycles);
 }
 
 void VDP::SetVideoStandard(VideoStandard videoStandard) {

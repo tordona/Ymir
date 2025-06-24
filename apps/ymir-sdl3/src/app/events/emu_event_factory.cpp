@@ -473,8 +473,8 @@ EmuEvent EnableThreadedSCSP(bool enable) {
     return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = enable; });
 }
 
-EmuEvent SetSCSPSlotStepping(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.slotStepping = enable; });
+EmuEvent SetSCSPStepGranularity(uint32 granularity) {
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.SCSP.SetStepGranularity(granularity); });
 }
 
 EmuEvent LoadState(uint32 slot) {

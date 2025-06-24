@@ -500,7 +500,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
 void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext) {
     auto &cdb = *static_cast<CDBlock *>(userContext);
     cdb.ProcessDriveState();
-    eventContext.RescheduleFromNow(cdb.m_targetDriveCycles);
+    eventContext.Reschedule(cdb.m_targetDriveCycles);
 }
 
 void CDBlock::OnCommandExecEvent(core::EventContext &eventContext, void *userContext) {
