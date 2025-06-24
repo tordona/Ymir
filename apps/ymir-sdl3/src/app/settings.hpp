@@ -112,7 +112,18 @@ public:
 
     // Auto-saves if the settings have been dirty for a while
     void CheckDirty();
+
+    // Marks settings as dirty
     void MakeDirty();
+
+    // Convenience method that marks settings as dirty when the parameter is true.
+    // Can be used to simplify expressions.
+    bool MakeDirty(bool dirty) {
+        if (dirty) {
+            MakeDirty();
+        }
+        return dirty;
+    }
 
     // ---------------------------------------------------------------------------------------------
 

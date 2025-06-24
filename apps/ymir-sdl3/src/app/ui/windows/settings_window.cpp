@@ -14,7 +14,8 @@ SettingsWindow::SettingsWindow(SharedContext &context)
     , m_videoSettingsView(context)
     , m_audioSettingsView(context)
     , m_cartSettingsView(context)
-    , m_cdblockSettingsView(context) {
+    , m_cdblockSettingsView(context)
+    , m_tweaksSettingsView(context) {
 
     m_windowConfig.name = "Settings";
 }
@@ -79,6 +80,10 @@ void SettingsWindow::DrawContents() {
         }
         if (ImGui::BeginTabItem("CD Block", nullptr, tabFlag(SettingsTab::CDBlock))) {
             m_cdblockSettingsView.Display();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Tweaks", nullptr, tabFlag(SettingsTab::Tweaks))) {
+            m_tweaksSettingsView.Display();
             ImGui::EndTabItem();
         }
 

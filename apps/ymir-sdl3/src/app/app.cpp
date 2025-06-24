@@ -1898,6 +1898,9 @@ void App::RunEmulator() {
                     if (ImGui::MenuItem("CD Block")) {
                         m_settingsWindow.OpenTab(ui::SettingsTab::CDBlock);
                     }
+                    if (ImGui::MenuItem("Tweaks")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::Tweaks);
+                    }
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Debug")) {

@@ -224,7 +224,7 @@ void IPLSettingsView::Display() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + reloadButtonWidth + itemSpacingWidth * 2));
     std::string iplPath = fmt::format("{}", settings.path);
-    if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath))) {
+    if (MakeDirty(ImGui::InputText("##ipl_path", &iplPath, ImGuiInputTextFlags_ElideLeft))) {
         settings.path = std::u8string{iplPath.begin(), iplPath.end()};
     }
     ImGui::SameLine();

@@ -4,6 +4,7 @@
 #include <app/events/gui_event_factory.hpp>
 
 #include <app/ui/widgets/common_widgets.hpp>
+#include <app/ui/widgets/settings_widgets.hpp>
 
 namespace app::ui {
 
@@ -116,22 +117,8 @@ void VideoSettingsView::Display() {
     ImGui::SeparatorText("Enhancements");
     ImGui::PopFont();
 
-    bool deinterlace = settings.deinterlace.Get();
-    if (MakeDirty(ImGui::Checkbox("Deinterlace video", &deinterlace))) {
-        settings.deinterlace = deinterlace;
-    }
-    widgets::ExplanationTooltip(
-        "When enabled, high-resolution modes will be rendered in progressive mode instead of interlaced.\n"
-        "Significantly impacts performance in those modes when enabled.",
-        m_context.displayScale);
-
-    bool transparentMeshes = settings.transparentMeshes.Get();
-    if (MakeDirty(ImGui::Checkbox("Transparent meshes", &transparentMeshes))) {
-        settings.transparentMeshes = transparentMeshes;
-    }
-    widgets::ExplanationTooltip(
-        "When enabled, meshes (checkerboard patterns) will be rendered as transparent polygons instead.",
-        m_context.displayScale);
+    widgets::settings::video::Deinterlace(m_context);
+    widgets::settings::video::TransparentMeshes(m_context);
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -141,38 +128,7 @@ void VideoSettingsView::Display() {
 
     // TODO: renderer backend options
 
-    bool threadedVDP = config.threadedVDP;
-    if (MakeDirty(ImGui::Checkbox("Threaded VDP2 renderer", &threadedVDP))) {
-        m_context.EnqueueEvent(events::emu::EnableThreadedVDP(threadedVDP));
-    }
-    widgets::ExplanationTooltip(
-        "Runs the software VDP2 renderer in a dedicated thread.\n"
-        "Greatly improves performance and seems to cause no issues to games.\n"
-        "When disabled, VDP2 rendering is done on the emulator thread.\n"
-        "\n"
-        "It is HIGHLY recommended to leave this option enabled as there are no known drawbacks.",
-        m_context.displayScale);
-
-    if (!threadedVDP) {
-        ImGui::BeginDisabled();
-    }
-    ImGui::Indent();
-    bool includeVDP1InRenderThread = config.includeVDP1InRenderThread;
-    if (MakeDirty(ImGui::Checkbox("Include VDP1 rendering in VDP2 renderer thread", &includeVDP1InRenderThread))) {
-        m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(includeVDP1InRenderThread));
-    }
-    widgets::ExplanationTooltip(
-        "If VDP2 rendering is running on a dedicated thread, move the software VDP1 renderer to that thread.\n"
-        "Improves performance by about 10% at the cost of accuracy.\n"
-        "A few select games may freeze or refuse to start when this option is enabled.\n"
-        "When this option or Threaded VDP2 renderer is disabled, VDP1 rendering is done on the emulator thread.\n"
-        "\n"
-        "Try enabling this option if you need to squeeze a bit more performance.",
-        m_context.displayScale);
-    ImGui::Unindent();
-    if (!threadedVDP) {
-        ImGui::EndDisabled();
-    }
+    widgets::settings::video::ThreadedVDP(m_context);
 }
 
 } // namespace app::ui

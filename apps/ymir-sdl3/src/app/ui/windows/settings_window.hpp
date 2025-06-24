@@ -13,6 +13,7 @@
 #include <app/ui/views/settings/ipl_settings_view.hpp>
 #include <app/ui/views/settings/system_settings_view.hpp>
 #include <app/ui/views/settings/video_settings_view.hpp>
+#include <app/ui/views/settings/tweaks_settings_view.hpp>
 
 namespace app::ui {
 
@@ -38,6 +39,7 @@ private:
     AudioSettingsView m_audioSettingsView;
     CartridgeSettingsView m_cartSettingsView;
     CDBlockSettingsView m_cdblockSettingsView;
+    TweaksSettingsView m_tweaksSettingsView;
 };
 
 } // namespace app::ui

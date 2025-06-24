@@ -192,7 +192,7 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
     std::string imagePath = fmt::format("{}", settings.imagePath);
-    if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath))) {
+    if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath, ImGuiInputTextFlags_ElideLeft))) {
         settings.imagePath = std::u8string{imagePath.begin(), imagePath.end()};
     }
     ImGui::SameLine();
@@ -249,7 +249,7 @@ void CartridgeSettingsView::DrawROMSettings() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
     std::string imagePath = fmt::format("{}", settings.imagePath);
-    if (MakeDirty(ImGui::InputText("##rom_image_path", &imagePath))) {
+    if (MakeDirty(ImGui::InputText("##rom_image_path", &imagePath, ImGuiInputTextFlags_ElideLeft))) {
         settings.imagePath = std::u8string{imagePath.begin(), imagePath.end()};
     }
     ImGui::SameLine();

@@ -5,6 +5,7 @@
 
 #include <app/ui/widgets/common_widgets.hpp>
 #include <app/ui/widgets/datetime_widgets.hpp>
+#include <app/ui/widgets/settings_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
 #include <util/regions.hpp>
@@ -132,15 +133,7 @@ void SystemSettingsView::Display() {
     ImGui::SeparatorText("Accuracy");
     ImGui::PopFont();
 
-    bool emulateSH2Cache = sysConfig.emulateSH2Cache;
-    if (MakeDirty(ImGui::Checkbox("Emulate SH-2 cache", &emulateSH2Cache))) {
-        m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(emulateSH2Cache));
-    }
-    widgets::ExplanationTooltip("Enables emulation of the SH-2 cache.\n"
-                                "A few games require this to work properly.\n"
-                                "Reduces emulation performance by about 10%.\n\n"
-                                "Upon enabling this option, both SH-2 CPUs' caches will be flushed.",
-                                m_context.displayScale);
+    widgets::settings::system::EmulateSH2Cache(m_context);
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -260,7 +253,7 @@ void SystemSettingsView::Display() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
     std::string imagePath = fmt::format("{}", settings.internalBackupRAMImagePath);
-    if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath))) {
+    if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath, ImGuiInputTextFlags_ElideLeft))) {
         settings.internalBackupRAMImagePath = std::u8string{imagePath.begin(), imagePath.end()};
         m_bupSettingsDirty = true;
     }

@@ -139,6 +139,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/settings/system_settings_view.hpp
     src/app/ui/views/settings/video_settings_view.cpp
     src/app/ui/views/settings/video_settings_view.hpp
+    src/app/ui/views/settings/tweaks_settings_view.cpp
+    src/app/ui/views/settings/tweaks_settings_view.hpp
 
     src/app/ui/widgets/cartridge_widgets.cpp
     src/app/ui/widgets/cartridge_widgets.hpp
@@ -152,6 +154,8 @@ add_executable(ymir-sdl3
     src/app/ui/widgets/peripheral_widgets.hpp
     src/app/ui/widgets/savestate_widgets.cpp
     src/app/ui/widgets/savestate_widgets.hpp
+    src/app/ui/widgets/settings_widgets.cpp
+    src/app/ui/widgets/settings_widgets.hpp
     src/app/ui/widgets/system_widgets.cpp
     src/app/ui/widgets/system_widgets.hpp
     src/app/ui/widgets/unbound_actions_widget.cpp

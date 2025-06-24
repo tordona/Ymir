@@ -111,7 +111,8 @@ void GeneralSettingsView::Display() {
                 std::string currPath = fmt::format("{}", profile.GetPath(profPath));
 
                 ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + clearButtonWidth + itemSpacingWidth * 2));
-                if (MakeDirty(ImGui::InputTextWithHint(label.c_str(), currPath.c_str(), &imagePath))) {
+                if (MakeDirty(ImGui::InputTextWithHint(label.c_str(), currPath.c_str(), &imagePath,
+                                                       ImGuiInputTextFlags_ElideLeft))) {
                     profile.SetPathOverride(profPath, std::u8string{imagePath.begin(), imagePath.end()});
                 }
                 ImGui::SameLine();
