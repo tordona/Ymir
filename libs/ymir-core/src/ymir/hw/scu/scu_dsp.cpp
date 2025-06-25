@@ -72,11 +72,16 @@ void SCUDSP::Reset(bool hard) {
     dmaReadAddr = 0;
     dmaWriteAddr = 0;
     dmaAddrInc = 0;
+
+    m_cyclesSpillover = 0u;
 }
 
 template <bool debug>
 void SCUDSP::Run(uint64 cycles) {
-    // TODO: proper cycle counting
+    // SCU DSP runs at half of the main clock rate
+    cycles += m_cyclesSpillover;
+    m_cyclesSpillover = cycles & 1u;
+    cycles >>= 1u;
 
     RunDMA<debug>(cycles);
 
@@ -239,6 +244,7 @@ void SCUDSP::SaveState(state::SCUDSPState &state) const {
     state.dmaReadAddr = dmaReadAddr;
     state.dmaWriteAddr = dmaWriteAddr;
     state.dmaAddrInc = dmaAddrInc;
+    state.cyclesSpillover = m_cyclesSpillover;
 }
 
 bool SCUDSP::ValidateState(const state::SCUDSPState &state) const {
@@ -282,6 +288,7 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     dmaReadAddr = state.dmaReadAddr & 0x7FFFFFC;
     dmaWriteAddr = state.dmaWriteAddr & 0x7FFFFFC;
     dmaAddrInc = state.dmaAddrInc;
+    m_cyclesSpillover = state.cyclesSpillover;
 }
 
 FORCE_INLINE void SCUDSP::FetchInstruction() {

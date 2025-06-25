@@ -401,6 +401,8 @@ private:
 
     CBTriggerDSPEnd m_cbTriggerDSPEnd;
 
+    uint64 m_cyclesSpillover;
+
     debug::ISCUTracer *m_tracer = nullptr;
 
     void FetchInstruction();

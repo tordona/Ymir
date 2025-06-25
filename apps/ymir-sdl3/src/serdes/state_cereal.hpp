@@ -216,6 +216,7 @@ void serialize(Archive &ar, SCUDSPState &s, const uint32 version) {
     // - New fields
     //   - nextInstr = programRAM[PC]
     //   - looping = false
+    //   - cyclesSpillover = 0
     // - Removed fields
     //   - uint32 nextPC
     //   - uint8 jmpCounter
@@ -242,6 +243,11 @@ void serialize(Archive &ar, SCUDSPState &s, const uint32 version) {
     }
     ar(s.dmaRun, s.dmaToD0, s.dmaHold, s.dmaCount, s.dmaSrc, s.dmaDst);
     ar(s.dmaReadAddr, s.dmaWriteAddr, s.dmaAddrInc);
+    if (version >= 6) {
+        ar(s.cyclesSpillover);
+    } else {
+        s.cyclesSpillover = 0u;
+    }
 }
 
 template <class Archive>
