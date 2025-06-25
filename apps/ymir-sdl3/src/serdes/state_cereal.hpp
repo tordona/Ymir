@@ -164,7 +164,7 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
         // Besides the DRAM cartridge, only the Backup RAM cartridge was also available.
         //
         // Reject save states with unexpected sizes to prevent potential memory allocation attacks.
-        cereal::size_type size{};
+        cereal::size_type size;
         ar(size);
         switch (s.cartType) {
         case SCUState::CartType::DRAM8Mbit:
@@ -269,7 +269,7 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
     ar(s.regs1, s.regs2);
     ar(s.HPhase, s.VPhase);
     if (version < 6) {
-        uint16 VCounter{};
+        uint16 VCounter;
         ar(VCounter);
         s.regs2.VCNT = VCounter;
     }
@@ -467,7 +467,7 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     } else {
         // Reconstruct circular buffer
         auto cddaBuffer = std::make_unique<std::array<uint8, 2048 * 75>>();
-        uint32 cddaReadPos{}, cddaWritePos{};
+        uint32 cddaReadPos, cddaWritePos;
         ar(*cddaBuffer, cddaReadPos, cddaWritePos, s.cddaReady);
 
         // Use the most recent samples if there is too much data in the old buffer since the new buffer is smaller
@@ -553,15 +553,14 @@ void serialize(Archive &ar, SCSPState &s, const uint32 version) {
     serialize(ar, s.dsp, version);
     ar(s.m68kCycles);
     if (version < 6) {
-        uint64 sampleCycles{};
+        uint64 sampleCycles;
         ar(sampleCycles);
     }
     ar(s.sampleCounter);
     if (version < 4) {
-        uint16 egCycle{};
-        ar(egCycle);
-        bool egStep{};
-        ar(egStep);
+        uint16 egCycle;
+        bool egStep;
+        ar(egCycle, egStep);
     }
     ar(s.lfsr);
     if (version >= 6) {
@@ -626,7 +625,7 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
     if (version >= 4) {
         ar(s.LSA, s.LEA);
     } else {
-        uint32 tmp{};
+        uint32 tmp;
         ar(tmp);
         s.LSA = tmp;
         ar(tmp);
@@ -661,7 +660,7 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
     if (version >= 3) {
         ar(s.extra0C);
         if (version == 3) {
-            uint16 extra10{};
+            uint16 extra10;
             ar(extra10);
             s.MM = bit::test<15>(extra10);
         }
@@ -684,11 +683,11 @@ void serialize(Archive &ar, SCSPSlotState &s, const uint32 version) {
         s.egAttackBug = false;
     }
     if (version < 6) {
-        uint32 sampleCount{};
+        uint32 sampleCount;
         ar(sampleCount);
     }
     if (version < 4) {
-        uint32 currAddress{};
+        uint32 currAddress;
         ar(currAddress);
     }
     ar(s.currSample, s.currPhase);
@@ -735,7 +734,7 @@ void serialize(Archive &ar, SCSPDSP &s, const uint32 version) {
     if (version >= 6) {
         ar(s.MIXS, s.MIXSGen, s.MIXSNull);
     } else {
-        std::array<sint32, 16> MIXS{};
+        std::array<sint32, 16> MIXS;
         ar(MIXS);
         std::copy_n(MIXS.begin(), MIXS.size(), s.MIXS.begin());
         std::fill(s.MIXS.begin() + MIXS.size(), s.MIXS.end(), 0);
