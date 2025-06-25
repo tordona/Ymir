@@ -56,7 +56,6 @@ public:
         }
 
         programRAM[PC++].u32 = value;
-        nextInstr.u32 = 0;
     }
 
     template <bool poke>
