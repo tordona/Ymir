@@ -20,6 +20,7 @@ void TweaksSettingsView::Display() {
     ImGui::TextUnformatted("The options listed in this tab affect emulation accuracy.\n"
                            "If you encounter an issue running some games, try using the recommended or maximum "
                            "quality/accuracy presets below.\n"
+                           "The performance presets may cause issues with some games.\n"
                            "When reporting issues, make sure to include this list:");
     ImGui::PopTextWrapPos();
 
