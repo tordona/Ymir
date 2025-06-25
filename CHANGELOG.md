@@ -14,11 +14,12 @@
 - App: Close windows when pressing B or Circle on gamepads while nothing is focused. (#251)
 - App: Enable gamepad navigation on GUI elements. (#251)
 - App: Store relative paths in Ymir.toml. (#207)
+- App: Use window-based DPI to adjust UI scale, allowing the UI to adapt to displays with different DPI settings. (#221; @Wunkolo)
 - Backup RAM: Support interleaved backup image formats such as the ones produced by Yaba Sanshiro or the MiSTer core. (#87)
 - Backup RAM: Support standard BUP backup files. (#87)
-- SCSP: Added MIDI In and Out support. (#258; @GlaireDaggers)
 - SCSP: Added option to increase emulation granularity for improved timing accuracy (thanks to @celeriyacon).
 - SCSP: Double-buffer DSP MIXS memory (thanks to @celeriyacon).
+- SCSP: Implemented MIDI In and Out. (#258; @GlaireDaggers)
 - SCSP: Interleave DSP execution and slot processing (thanks to @celeriyacon).
 - VDP: Added option to deinterlace video. (#66)
 - VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia). (#233)
@@ -27,6 +28,7 @@
 ### Fixes
 
 - App: Fix rare crash when loading a backup memory image in the Backup Memory Manager.
+- App: Fix window scaling on macOS Retina displays when using HiDPI mode. (#221, #266; @Wunkolo)
 - App: Prevent loading internal backup memory image as backup RAM cartridge image.
 - CD Block: Start new playbacks from starting FAD when previous playback has ended. Fixes WipEout freeze after SEGA logo.
 - Media: Fix pregap handling in single BIN images.
