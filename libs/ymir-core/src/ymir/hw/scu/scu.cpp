@@ -1166,7 +1166,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
 
     case 0x80: // (DSP_PPAF) DSP Program Control Port
         if (bit::test<15>(value)) {
-            m_dsp.WritePC(bit::extract<0, 7>(value));
+            m_dsp.WritePC<poke>(bit::extract<0, 7>(value));
         }
         if (bit::test<25>(value)) {
             m_dsp.programPaused = true;

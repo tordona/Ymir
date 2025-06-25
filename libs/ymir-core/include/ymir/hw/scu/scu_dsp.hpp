@@ -59,7 +59,14 @@ public:
         nextInstr.u32 = 0;
     }
 
+    template <bool poke>
     void WritePC(uint8 value) {
+        if constexpr (!poke) {
+            // Cannot write while program is executing
+            if (programExecuting) {
+                return;
+            }
+        }
         PC = value;
         nextInstr.u32 = 0;
     }
