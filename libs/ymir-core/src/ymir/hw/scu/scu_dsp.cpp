@@ -547,6 +547,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Loop(DSPInstr command) {
             looping = true;
         } else {
             // BTM
+            FetchInstruction();
             PC = loopTop;
         }
     } else {
