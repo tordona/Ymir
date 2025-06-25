@@ -185,7 +185,8 @@ static SCUDSPInstruction DisassembleDMA(uint32 opcode) {
 
 static SCUDSPInstruction DisassembleJump(uint32 opcode) {
     SCUDSPInstruction instr{.type = SCUDSPInstruction::Type::JMP, .jmp = {}};
-    instr.jmp.cond = TranslateCondition(bit::extract<19, 24>(opcode));
+    instr.jmp.cond =
+        bit::test<25>(opcode) ? TranslateCondition(bit::extract<19, 24>(opcode)) : SCUDSPInstruction::Cond::None;
     instr.jmp.target = bit::extract<0, 7>(opcode);
     return instr;
 }

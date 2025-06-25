@@ -147,7 +147,8 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
     // - New fields
     //   - enum SCUState::CartType: added ROM
 
-    ar(s.dma, s.dsp);
+    ar(s.dma);
+    serialize(ar, s.dsp, version);
     ar(s.cartType);
 
     if (version >= 4) {
@@ -210,13 +211,35 @@ void serialize(Archive &ar, SCUDMAState &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, SCUDSPState &s) {
+void serialize(Archive &ar, SCUDSPState &s, const uint32 version) {
+    // v6:
+    // - New fields
+    //   - nextInstr = programRAM[PC]
+    //   - looping = false
+    // - Removed fields
+    //   - uint32 nextPC
+    //   - uint8 jmpCounter
+
     ar(s.programRAM, s.dataRAM);
     ar(s.programExecuting, s.programPaused, s.programEnded, s.programStep);
     ar(s.PC, s.dataAddress);
-    ar(s.nextPC, s.jmpCounter);
+    if (version >= 6) {
+        ar(s.nextInstr);
+    } else {
+        s.nextInstr = s.programRAM[s.PC];
+    }
+    if (version < 6) {
+        uint32 nextPC;
+        uint8 jmpCounter;
+        ar(nextPC, jmpCounter);
+    }
     ar(s.sign, s.zero, s.carry, s.overflow);
     ar(s.CT, s.ALU, s.AC, s.P, s.RX, s.RY, s.LOP, s.TOP);
+    if (version >= 6) {
+        ar(s.looping);
+    } else {
+        s.looping = false;
+    }
     ar(s.dmaRun, s.dmaToD0, s.dmaHold, s.dmaCount, s.dmaSrc, s.dmaDst);
     ar(s.dmaReadAddr, s.dmaWriteAddr, s.dmaAddrInc);
 }

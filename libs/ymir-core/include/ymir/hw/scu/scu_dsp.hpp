@@ -56,6 +56,12 @@ public:
         }
 
         programRAM[PC++].u32 = value;
+        nextInstr.u32 = 0;
+    }
+
+    void WritePC(uint8 value) {
+        PC = value;
+        nextInstr.u32 = 0;
     }
 
     template <bool peek>
@@ -278,7 +284,7 @@ public:
         case 0b1010: loopCount = value & 0xFFF; break;
         case 0b1100:
             loopTop = PC;
-            DelayedJump(value);
+            PC = value;
             break;
         }
     }
@@ -287,7 +293,8 @@ public:
     // Auxiliary operations
 
     // Checks if the current DSP flags pass the given condition
-    FORCE_INLINE bool CondCheck(uint8 cond) const {
+    template <bool debug>
+    FORCE_INLINE bool CondCheck(uint8 cond) {
         // 000001: NZ  (Z=0)
         // 000010: NS  (S=0)
         // 000011: NZS (Z=0 && S=0)
@@ -298,26 +305,16 @@ public:
         // 100011: ZS  (Z=1 || S=1)
         // 100100: C   (C=1)
         // 101000: T0  (T0=1)
-        switch (cond) {
-        case 0b000001: return !zero;
-        case 0b000010: return !sign;
-        case 0b000011: return !zero && !sign;
-        case 0b000100: return !carry;
-        case 0b001000: return !dmaRun;
-
-        case 0b100001: return zero;
-        case 0b100010: return sign;
-        case 0b100011: return zero || sign;
-        case 0b100100: return carry;
-        case 0b101000: return dmaRun;
+        if (bit::test<3>(cond)) {
+            RunDMA<debug>(1);
         }
-        return false;
-    }
-
-    // Prepares a delayed jump to the given target address
-    FORCE_INLINE void DelayedJump(uint8 target) {
-        nextPC = target & 0xFF;
-        jmpCounter = 2;
+        bool result = false;
+        result |= bit::test<0>(cond) && zero;
+        result |= bit::test<1>(cond) && sign;
+        result |= bit::test<2>(cond) && carry;
+        result |= bit::test<3>(cond) && dmaRun;
+        const bool invert = bit::test<5>(cond);
+        return result == invert;
     }
 
     // -------------------------------------------------------------------------
@@ -350,8 +347,7 @@ public:
     uint8 PC; // program address
     uint8 dataAddress;
 
-    uint32 nextPC;    // jump target
-    uint8 jmpCounter; // when it reaches zero, perform the jump
+    DSPInstr nextInstr; // next instruction to execute
 
     bool sign;
     bool zero;
@@ -386,6 +382,7 @@ public:
 
     uint8 loopTop;    // TOP
     uint16 loopCount; // LOP (12 bits)
+    bool looping;     // In LPS?
 
     bool dmaRun;         // DMA transfer in progress (T0)
     bool dmaToD0;        // DMA transfer direction: false=D0 to DSP, true=DSP to D0
@@ -404,6 +401,8 @@ private:
 
     debug::ISCUTracer *m_tracer = nullptr;
 
+    void FetchInstruction();
+
     // Command interpreters
 
 #define TPL_DEBUG template <bool debug>
@@ -411,7 +410,7 @@ private:
     TPL_DEBUG void Cmd_LoadImm(DSPInstr instr);
     TPL_DEBUG void Cmd_Special(DSPInstr instr);
     TPL_DEBUG void Cmd_Special_DMA(DSPInstr instr);
-    void Cmd_Special_Jump(DSPInstr instr);
+    TPL_DEBUG void Cmd_Special_Jump(DSPInstr instr);
     void Cmd_Special_Loop(DSPInstr instr);
     void Cmd_Special_End(DSPInstr instr);
 #undef TPL_DEBUG

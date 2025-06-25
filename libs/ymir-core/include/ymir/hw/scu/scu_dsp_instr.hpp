@@ -69,9 +69,10 @@ union DSPInstr {
         } dmaInfo;
 
         struct JumpControl {
-            uint32 target : 8;    // 00-07 - Jump Target
-            uint32 unused : 11;   // 08-18 - Unused
-            uint32 condition : 6; // 19-24 - Jump Condition
+            uint32 target : 8;      // 00-07 - Jump Target
+            uint32 unused : 11;     // 08-18 - Unused
+            uint32 condition : 6;   // 19-24 - Jump Condition
+            uint32 conditional : 1; //    25 - Conditional jump
         } jumpInfo;
 
         struct LoopControl {

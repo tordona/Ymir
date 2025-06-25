@@ -43,8 +43,7 @@ void SCUDSP::Reset(bool hard) {
     PC = 0;
     dataAddress = 0;
 
-    nextPC = ~0;
-    jmpCounter = 0;
+    nextInstr.u32 = 0;
 
     sign = false;
     zero = false;
@@ -62,6 +61,7 @@ void SCUDSP::Reset(bool hard) {
 
     loopTop = 0;
     loopCount = 0;
+    looping = false;
 
     dmaRun = false;
     dmaToD0 = false;
@@ -92,20 +92,11 @@ void SCUDSP::Run(uint64 cycles) {
         }
 
         // Execute next command
-        const DSPInstr &instruction = programRAM[PC++];
+        const DSPInstr instruction = nextInstr;
         switch (instruction.instructionInfo.instructionClass) {
         case 0b00: Cmd_Operation<debug>(instruction); break;
         case 0b10: Cmd_LoadImm<debug>(instruction); break;
         case 0b11: Cmd_Special<debug>(instruction); break;
-        }
-
-        // Update PC
-        if (jmpCounter > 0) {
-            jmpCounter--;
-            if (jmpCounter == 0) {
-                PC = nextPC;
-                nextPC = ~0;
-            }
         }
 
         // Clear stepping flag to ensure the DSP only runs one command when stepping
@@ -223,8 +214,6 @@ void SCUDSP::SaveState(state::SCUDSPState &state) const {
     state.programStep = programStep;
     state.PC = PC;
     state.dataAddress = dataAddress;
-    state.nextPC = nextPC;
-    state.jmpCounter = jmpCounter;
     state.sign = sign;
     state.zero = zero;
     state.carry = carry;
@@ -237,6 +226,7 @@ void SCUDSP::SaveState(state::SCUDSPState &state) const {
     state.RY = RY;
     state.LOP = loopCount;
     state.TOP = loopTop;
+    state.looping = looping;
     state.dmaRun = dmaRun;
     state.dmaToD0 = dmaToD0;
     state.dmaHold = dmaHold;
@@ -266,8 +256,6 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     programStep = state.programStep;
     PC = state.PC;
     dataAddress = state.dataAddress;
-    nextPC = state.nextPC;
-    jmpCounter = state.jmpCounter;
     sign = state.sign;
     zero = state.zero;
     carry = state.carry;
@@ -280,6 +268,7 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     RY = state.RY;
     loopCount = state.LOP & 0xFFF;
     loopTop = state.TOP;
+    looping = state.looping;
     dmaRun = state.dmaRun;
     dmaToD0 = state.dmaToD0;
     dmaHold = state.dmaHold;
@@ -291,8 +280,21 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     dmaAddrInc = state.dmaAddrInc;
 }
 
+FORCE_INLINE void SCUDSP::FetchInstruction() {
+    if (looping) {
+        if (loopCount == 0) {
+            looping = false;
+        }
+        loopCount = (loopCount - 1) & 0xFFF;
+    } else {
+        nextInstr = programRAM[PC++];
+    }
+}
+
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
+    FetchInstruction();
+
     // D1-Bus MOVs to MC0-3 using the a bank that was read by any of the three busses prevents writes and CT updates.
     // MOV to M0-3 is unaffected because it writes directly to CT as opposed to M0-3 reads which hit Data RAM.
     //
@@ -437,6 +439,8 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
 
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_LoadImm(DSPInstr instr) {
+    FetchInstruction();
+
     const uint8 dst = instr.loadInfo.loadControl.storageLocation;
     sint32 imm;
     if (instr.loadInfo.loadControl.conditionalLoad) {
@@ -445,7 +449,7 @@ FORCE_INLINE void SCUDSP::Cmd_LoadImm(DSPInstr instr) {
         imm = instr.loadInfo.conditional.imm;
 
         const uint8 cond = instr.loadInfo.conditional.condition;
-        if (!CondCheck(cond)) {
+        if (!CondCheck<debug>(cond)) {
             return;
         }
     } else {
@@ -462,7 +466,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special(DSPInstr instr) {
     const uint32 cmdSubcategory = instr.specialInfo.specialControl.specialClass;
     switch (cmdSubcategory) {
     case 0b00: Cmd_Special_DMA<debug>(instr); break;
-    case 0b01: Cmd_Special_Jump(instr); break;
+    case 0b01: Cmd_Special_Jump<debug>(instr); break;
     case 0b10: Cmd_Special_Loop(instr); break;
     case 0b11: Cmd_Special_End(instr); break;
     }
@@ -470,6 +474,8 @@ FORCE_INLINE void SCUDSP::Cmd_Special(DSPInstr instr) {
 
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
+    FetchInstruction();
+
     // Finish previous DMA transfer
     if (dmaRun) {
         RunDMA<debug>(1); // TODO: cycles?
@@ -514,38 +520,46 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
     devlog::trace<grp::dsp>("DSP DMA command: {:04X} @ {:02X}", command.u32, PC);
 }
 
+template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Special_Jump(DSPInstr command) {
     // JMP <cond>,SImm
     // JMP SImm
-    const uint32 cond = command.specialInfo.jumpInfo.condition;
-    if (cond != 0 && !CondCheck(cond)) {
-        return;
+    FetchInstruction();
+
+    if (command.specialInfo.jumpInfo.conditional) {
+        const uint32 cond = command.specialInfo.jumpInfo.condition;
+        if (cond != 0 && !CondCheck<debug>(cond)) {
+            return;
+        }
     }
 
-    const uint8 target = command.specialInfo.jumpInfo.target;
-    DelayedJump(target);
+    PC = command.specialInfo.jumpInfo.target;
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Special_Loop(DSPInstr command) {
     if (loopCount != 0) {
         if (command.specialInfo.loopInfo.repeat) {
             // LPS
-            DelayedJump(PC - 1);
+            FetchInstruction();
+            looping = true;
         } else {
             // BTM
-            DelayedJump(loopTop);
+            PC = loopTop;
         }
+    } else {
+        FetchInstruction();
+        looping = false;
     }
-    loopCount--;
-    loopCount &= 0xFFF;
+    loopCount = (loopCount - 1) & 0xFFF;
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Special_End(DSPInstr command) {
     // END
     // ENDI
+    FetchInstruction();
+
     programExecuting = false;
     programEnded = true;
-    ++PC;
     if (command.specialInfo.endInfo.interrupt) {
         m_cbTriggerDSPEnd();
     }

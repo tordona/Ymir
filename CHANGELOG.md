@@ -54,6 +54,7 @@
 - VDP2: Invert back screen color calculation ratio. Fixes black background on Sakura Taisen FMVs. (#241)
 - VDP2: Move existing VCounter into VDP2 VCNT register. Fixes Assault Suit Leynos 2 freeze when going in-game and King of Fighters '95 not booting. (#75)
 - VDP2: Synchronize background enable events with the renderer thread. Fixes FMV slicing issues on slow machines on Sakura Taisen.
+- ymdasm: Fix SCU DSP unconditional JMP disassembly.
 
 
 ## Version 0.1.4+1

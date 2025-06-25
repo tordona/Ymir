@@ -312,9 +312,8 @@ void SCU::DumpDSPRegs(std::ostream &out) const {
     write(m_dsp.programEnded);
     write(m_dsp.programStep);
     write(m_dsp.PC);
+    write(m_dsp.nextInstr.u32);
     write(m_dsp.dataAddress);
-    write(m_dsp.nextPC);
-    write(m_dsp.jmpCounter);
     write(m_dsp.sign);
     write(m_dsp.zero);
     write(m_dsp.carry);
@@ -327,6 +326,7 @@ void SCU::DumpDSPRegs(std::ostream &out) const {
     write(m_dsp.RY);
     write(m_dsp.loopTop);
     write(m_dsp.loopCount);
+    write(m_dsp.looping);
     write(m_dsp.dmaRun);
     write(m_dsp.dmaToD0);
     write(m_dsp.dmaHold);
@@ -1166,7 +1166,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
 
     case 0x80: // (DSP_PPAF) DSP Program Control Port
         if (bit::test<15>(value)) {
-            m_dsp.PC = bit::extract<0, 7>(value);
+            m_dsp.WritePC(bit::extract<0, 7>(value));
         }
         if (bit::test<25>(value)) {
             m_dsp.programPaused = true;

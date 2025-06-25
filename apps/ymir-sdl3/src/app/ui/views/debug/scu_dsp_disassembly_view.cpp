@@ -88,16 +88,16 @@ void SCUDSPDisassemblyView::Display() {
                     using enum scu::SCUDSPInstruction::Cond;
                     switch (cond) {
                     case None: return true;
-                    case NZ: return m_dsp.CondCheck(0b000001);
-                    case NS: return m_dsp.CondCheck(0b000010);
-                    case NZS: return m_dsp.CondCheck(0b000011);
-                    case NC: return m_dsp.CondCheck(0b000100);
-                    case NT0: return m_dsp.CondCheck(0b001000);
-                    case Z: return m_dsp.CondCheck(0b100001);
-                    case S: return m_dsp.CondCheck(0b100010);
-                    case ZS: return m_dsp.CondCheck(0b100011);
-                    case C: return m_dsp.CondCheck(0b100100);
-                    case T0: return m_dsp.CondCheck(0b101000);
+                    case NZ: return m_dsp.CondCheck<false>(0b000001);
+                    case NS: return m_dsp.CondCheck<false>(0b000010);
+                    case NZS: return m_dsp.CondCheck<false>(0b000011);
+                    case NC: return m_dsp.CondCheck<false>(0b000100);
+                    case NT0: return m_dsp.CondCheck<false>(0b001000);
+                    case Z: return m_dsp.CondCheck<false>(0b100001);
+                    case S: return m_dsp.CondCheck<false>(0b100010);
+                    case ZS: return m_dsp.CondCheck<false>(0b100011);
+                    case C: return m_dsp.CondCheck<false>(0b100100);
+                    case T0: return m_dsp.CondCheck<false>(0b101000);
                     default: return false;
                     }
                 };

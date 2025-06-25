@@ -43,8 +43,7 @@ struct SCUDSPState {
     uint8 PC;
     uint8 dataAddress;
 
-    uint32 nextPC;
-    uint8 jmpCounter;
+    uint32 nextInstr;
 
     bool sign;
     bool zero;
@@ -61,6 +60,7 @@ struct SCUDSPState {
 
     uint16 LOP;
     uint8 TOP;
+    bool looping;
 
     bool dmaRun;
     bool dmaToD0;
