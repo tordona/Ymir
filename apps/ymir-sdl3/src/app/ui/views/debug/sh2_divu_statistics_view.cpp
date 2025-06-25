@@ -18,28 +18,28 @@ void SH2DivisionUnitStatisticsView::Display() {
         ImGui::TableNextRow();
 
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::Text("%" PRIu64, m_tracer.divStats.div32s);
             ImGui::PopFont();
             ImGui::TextUnformatted("32x32 divisions");
         }
 
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::Text("%" PRIu64, m_tracer.divStats.div64s);
             ImGui::PopFont();
             ImGui::TextUnformatted("64x32 divisions");
         }
 
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::Text("%" PRIu64, m_tracer.divStats.overflows);
             ImGui::PopFont();
             ImGui::TextUnformatted("overflows");
         }
 
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::Text("%" PRIu64, m_tracer.divStats.interrupts);
             ImGui::PopFont();
             ImGui::TextUnformatted("interrupts");

@@ -37,8 +37,13 @@ struct License {
     const char *url;
 };
 
+struct FontInfo {
+    ImFont *font;
+    float size;
+};
+
 struct FontDesc {
-    using FontFn = ImFont *(*)(SharedContext &ctx);
+    using FontFn = FontInfo (*)(SharedContext &ctx);
 
     const char *name;
     const License &license;
@@ -90,9 +95,9 @@ static const struct {
 
 
 static const FontDesc fontDescs[] = {
-    { .name = "Spline Sans",      .license = licenseOFL, .url = "https://github.com/SorkinType/SplineSans",     .fontFn = [](SharedContext &ctx) -> ImFont * { return ctx.fonts.sansSerif.medium.regular; } },
-    { .name = "Spline Sans Mono", .license = licenseOFL, .url = "https://github.com/SorkinType/SplineSansMono", .fontFn = [](SharedContext &ctx) -> ImFont * { return ctx.fonts.monospace.medium.regular; } },
-    { .name = "Zen Dots",         .license = licenseOFL, .url = "https://github.com/googlefonts/zen-dots",      .fontFn = [](SharedContext &ctx) -> ImFont * { return ctx.fonts.display.small;            } },
+    { .name = "Spline Sans",      .license = licenseOFL, .url = "https://github.com/SorkinType/SplineSans",     .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.sansSerif.regular, 16.0f}; } },
+    { .name = "Spline Sans Mono", .license = licenseOFL, .url = "https://github.com/SorkinType/SplineSansMono", .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.monospace.regular, 16.0f}; } },
+    { .name = "Zen Dots",         .license = licenseOFL, .url = "https://github.com/googlefonts/zen-dots",      .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.display,           24.0f}; } },
 };
 // clang-format on
 
@@ -148,20 +153,20 @@ void AboutWindow::DrawAboutTab() {
                  ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale,
                         m_context.images.ymirLogo.size.y * m_context.displayScale));
 
-    ImGui::PushFont(m_context.fonts.display.large);
+    ImGui::PushFont(m_context.fonts.display, m_context.fonts.sizes.display);
     ImGui::TextUnformatted("Ymir");
     ImGui::PopFont();
-    ImGui::PushFont(m_context.fonts.sansSerif.xlarge.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.xlarge);
     ImGui::TextUnformatted("Version " Ymir_FULL_VERSION);
     ImGui::PopFont();
 #if Ymir_DEV_BUILD
     ImGui::SameLine();
-    ImGui::PushFont(m_context.fonts.sansSerif.xlarge.regular);
+    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.xlarge);
     ImGui::TextUnformatted("(development build)");
     ImGui::PopFont();
 #endif
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.regular);
+    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
     ImGui::TextUnformatted("A Sega Saturn emulator");
     ImGui::PopFont();
 
@@ -197,7 +202,7 @@ void AboutWindow::DrawDependenciesTab() {
 
     // -----------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::TextUnformatted("Libraries");
     ImGui::PopFont();
 
@@ -212,7 +217,7 @@ void AboutWindow::DrawDependenciesTab() {
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::TextUnformatted(dep.name);
             ImGui::PopFont();
             if (dep.version != nullptr) {
@@ -256,7 +261,7 @@ void AboutWindow::DrawDependenciesTab() {
 
     ImGui::Separator();
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::TextUnformatted("Fonts");
     ImGui::PopFont();
 
@@ -278,7 +283,8 @@ void AboutWindow::DrawDependenciesTab() {
             ImGui::PopStyleColor(2);
             if (ImGui::IsItemHovered() && (ImGui::TableGetColumnFlags(0) & ImGuiTableColumnFlags_IsHovered)) {
                 ImGui::BeginTooltip();
-                ImGui::PushFont(font.fontFn(m_context));
+                auto [fontPtr, fontSize] = font.fontFn(m_context);
+                ImGui::PushFont(fontPtr, fontSize);
                 ImGui::TextUnformatted("The quick brown fox jumps over the lazy dog\n"
                                        "0123456789 `~!@#$%^&*()_+-=[]{}<>,./?;:'\"\\|\n"
                                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ  \u00C0\u00C9\u00CE\u00D5\u00DA\u00D1\u00C7\u00DD\n"
@@ -288,7 +294,7 @@ void AboutWindow::DrawDependenciesTab() {
             }
             ImGui::SetCursorPos(cursor);
 
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::TextUnformatted(font.name);
             ImGui::PopFont();
 
@@ -306,24 +312,24 @@ void AboutWindow::DrawDependenciesTab() {
 
 void AboutWindow::DrawAcknowledgementsTab() {
     {
-        ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
         ImGui::TextUnformatted("Ymir was made possible by");
         ImGui::PopFont();
 
         auto ack = [&](const char *name, const char *url) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::TextLinkOpenURL(name, url);
             ImGui::PopFont();
         };
 
         auto ackWithAuthor = [&](const char *name, const char *author, const char *url) {
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
             ImGui::TextLinkOpenURL(name, url);
             ImGui::PopFont();
 
             ImGui::SameLine();
 
-            ImGui::PushFont(m_context.fonts.sansSerif.medium.regular);
+            ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
             ImGui::Text("by %s", author);
             ImGui::PopFont();
         };
@@ -362,7 +368,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
 
         ImGui::NewLine();
 
-        ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
         ImGui::TextUnformatted("Helpful tools and test suites");
         ImGui::PopFont();
 
@@ -377,10 +383,11 @@ void AboutWindow::DrawAcknowledgementsTab() {
 
         ImGui::NewLine();
 
-        ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
         ImGui::TextUnformatted("Other emulators that inspired Ymir");
         ImGui::PopFont();
 
+        ackWithAuthor("Saturn MiSTer", "Sergiy Dvodnenko (srg320)", "https://github.com/MiSTer-devel/Saturn_MiSTer");
         ackWithAuthor("Mednafen", "various contributors", "https://mednafen.github.io/");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(libretro git mirror)##mednafen", "https://github.com/libretro-mirrors/mednafen-git");
@@ -399,7 +406,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
 
         ImGui::NewLine();
 
-        ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
         ImGui::TextUnformatted("Special thanks");
         ImGui::PopFont();
 
@@ -423,7 +430,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ImGui::SameLine(0, 0);
         ImGui::TextUnformatted(".");
 
-        ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
         ImGui::TextUnformatted("And YOU!");
         ImGui::PopFont();
     }

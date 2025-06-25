@@ -80,9 +80,9 @@ private:
 
     void RebindInputs();
 
-    void RescaleUI(float displayScale, bool reloadFonts);
+    void RescaleUI(float displayScale);
     ImGuiStyle &ReloadStyle(float displayScale);
-    void ReloadFonts(float displayScale);
+    void LoadFonts();
 
     template <int port>
     void ReadPeripheral(ymir::peripheral::PeripheralReport &report);

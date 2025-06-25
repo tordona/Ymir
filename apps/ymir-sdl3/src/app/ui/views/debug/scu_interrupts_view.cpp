@@ -55,7 +55,7 @@ void SCUInterruptsView::DisplayInternalInterrupts() {
 
     ImGui::Separator();
 
-    ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
     ImGui::TextUnformatted("Internal");
     ImGui::PopFont();
 
@@ -92,12 +92,12 @@ void SCUInterruptsView::DisplayInternalInterrupts() {
                 ImGui::TextUnformatted(name.data());
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                 ImGui::Text("%X", vector);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                 ImGui::Text("%X", level);
                 ImGui::PopFont();
             }
@@ -123,7 +123,7 @@ void SCUInterruptsView::DisplayInternalInterrupts() {
 }
 
 void SCUInterruptsView::DisplayExternalInterrupts() {
-    ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
     ImGui::TextUnformatted("External (A-Bus)");
     ImGui::PopFont();
 
@@ -149,17 +149,17 @@ void SCUInterruptsView::DisplayExternalInterrupts() {
                 }
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                 ImGui::Text("%X", i);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                 ImGui::Text("%X", 0x50 + i);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                 ImGui::Text("%X", (i < 4) ? 7 : (i < 8) ? 4 : 1);
                 ImGui::PopFont();
             }

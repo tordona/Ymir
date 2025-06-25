@@ -16,7 +16,7 @@ void VideoSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Display");
     ImGui::PopFont();
 
@@ -112,7 +112,7 @@ void VideoSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Enhancements");
     ImGui::PopFont();
 
@@ -121,7 +121,7 @@ void VideoSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
 

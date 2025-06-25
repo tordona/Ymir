@@ -189,61 +189,26 @@ struct SharedContext {
 
     struct Fonts {
         struct {
-            // 14 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } small;
-
-            // 16 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } medium;
-
-            // 20 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } large;
-
-            // 28 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } xlarge;
+            ImFont *regular = nullptr;
+            ImFont *bold = nullptr;
         } sansSerif;
 
         struct {
-            // 14 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } small;
-
-            // 16 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } medium;
-
-            // 20 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } large;
-
-            // 28 pt
-            struct {
-                ImFont *regular = nullptr;
-                ImFont *bold = nullptr;
-            } xlarge;
+            ImFont *regular = nullptr;
+            ImFont *bold = nullptr;
         } monospace;
 
+        ImFont *display = nullptr;
+
         struct {
-            ImFont *small = nullptr;
-            ImFont *large = nullptr;
-        } display;
+            float small = 14.0f;
+            float medium = 16.0f;
+            float large = 20.0f;
+            float xlarge = 28.0f;
+
+            float display = 64.0f;
+            float displaySmall = 24.0f;
+        } sizes;
     } fonts;
 
     struct Images {

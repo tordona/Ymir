@@ -349,7 +349,7 @@ void BackupMemoryView::ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<ymir:
 }
 
 void BackupMemoryView::DrawFileTableHeader() {
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float monoCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -366,7 +366,7 @@ void BackupMemoryView::DrawFileTableHeader() {
 void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 index, bool selectable) {
     ImGui::TableNextRow();
     if (ImGui::TableNextColumn()) {
-        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
         if (selectable) {
             bool selected = m_selected.contains(index);
             ImGui::SetNextItemSelectionUserData(index);
@@ -378,7 +378,7 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
         ImGui::PopFont();
     }
     if (ImGui::TableNextColumn()) {
-        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
         ImGui::Text("%s", file.header.comment.c_str());
         ImGui::PopFont();
     }
@@ -510,7 +510,7 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("The following files already exist in %s:", m_name.c_str());
 
-        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
         const float monoCharWidth = ImGui::CalcTextSize("F").x;
         ImGui::PopFont();
 
@@ -549,7 +549,7 @@ void BackupMemoryView::DisplayFileImportOverwriteModal(std::span<bup::BackupFile
                     ImGui::TableNextRow();
                     // filename
                     if (ImGui::TableNextColumn()) {
-                        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                         ImGui::Text("%s", ovFile.file.header.filename.c_str());
                         ImGui::PopFont();
                     }
@@ -662,7 +662,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(250 * m_context.displayScale, 0), ImVec2(FLT_MAX, FLT_MAX));
     if (ImGui::BeginPopupModal(kTitle, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
         const float monoCharWidth = ImGui::CalcTextSize("F").x;
         ImGui::PopFont();
 
@@ -689,7 +689,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
                         ImGui::TableNextRow();
                         // filename
                         if (ImGui::TableNextColumn()) {
-                            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                             ImGui::Text("%s", file.file.filename.c_str());
                             ImGui::PopFont();
                         }
@@ -721,7 +721,7 @@ void BackupMemoryView::DisplayFileImportResultModal() {
                         ImGui::TableNextRow();
                         // path
                         if (ImGui::TableNextColumn()) {
-                            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                             ImGui::Text("%s", fmt::format("{}", file.file).c_str());
                             ImGui::PopFont();
                         }

@@ -27,7 +27,7 @@ void GeneralSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Performance");
     ImGui::PopFont();
 
@@ -51,7 +51,7 @@ void GeneralSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Behavior");
     ImGui::PopFont();
 
@@ -63,7 +63,7 @@ void GeneralSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Rewind buffer");
     ImGui::PopFont();
 
@@ -88,7 +88,7 @@ void GeneralSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Profile paths");
     ImGui::PopFont();
 

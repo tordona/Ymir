@@ -438,9 +438,11 @@ void App::RunEmulator() {
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
 
+    LoadFonts();
+
     // RescaleUI also loads the style and fonts
     bool rescaleUIPending = false;
-    RescaleUI(SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay()), false);
+    RescaleUI(SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay()));
     {
         auto &videoSettings = m_context.settings.video;
 
@@ -474,7 +476,7 @@ void App::RunEmulator() {
         // TODO: load from persistent state
 
         // This is equivalent to ImGui::GetFrameHeight() without requiring a window
-        const float menuBarHeight = (io.FontDefault->FontSize + style.FramePadding.y * 2.0f) * m_context.displayScale;
+        const float menuBarHeight = (14.0f + style.FramePadding.y * 2.0f) * m_context.displayScale;
 
         const auto &videoSettings = m_context.settings.video;
         const bool forceAspectRatio = videoSettings.forceAspectRatio;
@@ -1418,7 +1420,7 @@ void App::RunEmulator() {
             case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
                 if (!m_context.settings.video.overrideUIScale) {
                     const float windowScale = SDL_GetWindowDisplayScale(screen.window);
-                    RescaleUI(windowScale, true);
+                    RescaleUI(windowScale);
                 }
                 break;
             case SDL_EVENT_QUIT: goto end_loop; break;
@@ -1458,7 +1460,7 @@ void App::RunEmulator() {
         if (rescaleUIPending) {
             rescaleUIPending = false;
             const float windowScale = SDL_GetWindowDisplayScale(screen.window);
-            RescaleUI(windowScale, true);
+            RescaleUI(windowScale);
         }
 
         // Process all axis changes
@@ -2502,10 +2504,10 @@ void App::OpenWelcomeModal(bool scanIPLROMs) {
                      ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale * 0.7f,
                             m_context.images.ymirLogo.size.y * m_context.displayScale * 0.7f));
 
-        ImGui::PushFont(m_context.fonts.display.large);
+        ImGui::PushFont(m_context.fonts.display, m_context.fonts.sizes.display);
         ImGui::TextUnformatted("Ymir");
         ImGui::PopFont();
-        ImGui::PushFont(m_context.fonts.sansSerif.xlarge.regular);
+        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
         ImGui::TextUnformatted("Welcome to Ymir!");
         ImGui::PopFont();
         ImGui::NewLine();
@@ -2638,7 +2640,7 @@ void App::RebindInputs() {
     m_context.settings.RebindInputs();
 }
 
-void App::RescaleUI(float displayScale, bool reloadFonts) {
+void App::RescaleUI(float displayScale) {
     if (m_context.settings.video.overrideUIScale) {
         displayScale = m_context.settings.video.uiScale;
     }
@@ -2647,12 +2649,6 @@ void App::RescaleUI(float displayScale, bool reloadFonts) {
     m_context.displayScale = displayScale;
     devlog::info<grp::base>("UI scaling set to {:.1f}%", m_context.displayScale * 100.0f);
     ReloadStyle(m_context.displayScale);
-
-    if (reloadFonts) {
-        // Delete the current font-texture to ensure `ImGui::NewFrame` generates a new one
-        ImGui_ImplSDLRenderer3_DestroyFontsTexture();
-    }
-    ReloadFonts(m_context.displayScale);
 }
 
 ImGuiStyle &App::ReloadStyle(float displayScale) {
@@ -2698,6 +2694,7 @@ ImGuiStyle &App::ReloadStyle(float displayScale) {
     style.DisplayWindowPadding = ImVec2(21, 21);
     style.DisplaySafeAreaPadding = ImVec2(3, 3);
     style.ScaleAllSizes(displayScale);
+    style.FontScaleMain = displayScale;
 
     // Setup Dear ImGui colors
     ImVec4 *colors = ImGui::GetStyle().Colors;
@@ -2763,31 +2760,24 @@ ImGuiStyle &App::ReloadStyle(float displayScale) {
     return style;
 }
 
-void App::ReloadFonts(float displayScale) {
+void App::LoadFonts() {
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use
     // ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among
-    // multiple.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
     // - If the file cannot be loaded, the function will return a nullptr. Please handle those errors in your
     // application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling
-    // ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font
-    // rendering.
+    // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype for higher quality font rendering.
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double
     // backslash \\ !
-    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder.
-    // See Makefile.emscripten for details. io.Fonts->AddFontDefault();
-    // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf", 18.0f);
-    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    // ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, nullptr,
-    // io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != nullptr);
-    // io.Fonts->Build();
+    // - Our Emscripten build process allows embedding fonts to be accessible at runtime from the "fonts/" folder. See
+    // Makefile.emscripten for details.
+
     ImGuiIO &io = ImGui::GetIO();
+    ImGuiStyle &style = ImGui::GetStyle();
+
+    style.FontSizeBase = 16.0f;
 
     ImFontConfig config;
     config.FontDataOwnedByAtlas = false;
@@ -2816,35 +2806,22 @@ void App::ReloadFonts(float displayScale) {
     // Reload fonts
     io.Fonts->Clear();
 
-    auto loadFont = [&](const char *path, float size) {
+    auto loadFont = [&](const char *path) {
         cmrc::file file = embedfs.open(path);
-        return io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), size, &config, ranges.Data);
+        ImFont *font = io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), 16, &config, ranges.Data);
+        IM_ASSERT(font != nullptr);
+        return font;
     };
 
-    m_context.fonts.sansSerif.small.regular = loadFont("fonts/SplineSans-Medium.ttf", 14 * displayScale);
-    m_context.fonts.sansSerif.small.bold = loadFont("fonts/SplineSans-Bold.ttf", 14 * displayScale);
-    m_context.fonts.sansSerif.medium.regular = loadFont("fonts/SplineSans-Medium.ttf", 16 * displayScale);
-    m_context.fonts.sansSerif.medium.bold = loadFont("fonts/SplineSans-Bold.ttf", 16 * displayScale);
-    m_context.fonts.sansSerif.large.regular = loadFont("fonts/SplineSans-Medium.ttf", 20 * displayScale);
-    m_context.fonts.sansSerif.large.bold = loadFont("fonts/SplineSans-Bold.ttf", 20 * displayScale);
-    m_context.fonts.sansSerif.xlarge.regular = loadFont("fonts/SplineSans-Medium.ttf", 28 * displayScale);
-    m_context.fonts.sansSerif.xlarge.bold = loadFont("fonts/SplineSans-Bold.ttf", 28 * displayScale);
+    m_context.fonts.sansSerif.regular = loadFont("fonts/SplineSans-Medium.ttf");
+    m_context.fonts.sansSerif.bold = loadFont("fonts/SplineSans-Bold.ttf");
 
-    m_context.fonts.monospace.small.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 14 * displayScale);
-    m_context.fonts.monospace.small.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 14 * displayScale);
-    m_context.fonts.monospace.medium.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 16 * displayScale);
-    m_context.fonts.monospace.medium.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 16 * displayScale);
-    m_context.fonts.monospace.large.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 20 * displayScale);
-    m_context.fonts.monospace.large.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 20 * displayScale);
-    m_context.fonts.monospace.xlarge.regular = loadFont("fonts/SplineSansMono-Medium.ttf", 28 * displayScale);
-    m_context.fonts.monospace.xlarge.bold = loadFont("fonts/SplineSansMono-Bold.ttf", 28 * displayScale);
+    m_context.fonts.monospace.regular = loadFont("fonts/SplineSansMono-Medium.ttf");
+    m_context.fonts.monospace.bold = loadFont("fonts/SplineSansMono-Bold.ttf");
 
-    m_context.fonts.display.small = loadFont("fonts/ZenDots-Regular.ttf", 24 * displayScale);
-    m_context.fonts.display.large = loadFont("fonts/ZenDots-Regular.ttf", 64 * displayScale);
+    m_context.fonts.display = loadFont("fonts/ZenDots-Regular.ttf");
 
-    io.Fonts->Build();
-
-    io.FontDefault = m_context.fonts.sansSerif.medium.regular;
+    io.FontDefault = m_context.fonts.sansSerif.regular;
 }
 
 template <int port>

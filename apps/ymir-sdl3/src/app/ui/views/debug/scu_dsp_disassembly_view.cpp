@@ -14,7 +14,7 @@ SCUDSPDisassemblyView::SCUDSPDisassemblyView(SharedContext &context)
 
 void SCUDSPDisassemblyView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -39,17 +39,17 @@ void SCUDSPDisassemblyView::Display() {
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                 ImGui::TextColored(m_colors.disasm.address, "%02X", pc);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                 ImGui::TextColored(m_colors.disasm.bytes, "%08X", opcode);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
 
                 auto drawMnemonic = [&](std::string_view mnemonic) {
                     ImGui::TextColored(m_colors.disasm.mnemonic, "%s", mnemonic.data());

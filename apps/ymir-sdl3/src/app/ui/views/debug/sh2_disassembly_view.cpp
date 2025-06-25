@@ -13,7 +13,7 @@ SH2DisassemblyView::SH2DisassemblyView(SharedContext &context, ymir::sh2::SH2 &s
 void SH2DisassemblyView::Display() {
     using namespace ymir;
 
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const ImVec2 disasmCharSize = ImGui::CalcTextSize("x");
     const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
     ImGui::PopFont();
@@ -28,7 +28,7 @@ void SH2DisassemblyView::Display() {
         // TODO: branch arrows
         // TODO: cursor
 
-        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
         auto &probe = m_sh2.GetProbe();
         const uint32 pc = probe.PC() & ~1;
         const uint32 pr = probe.PR() & ~1;

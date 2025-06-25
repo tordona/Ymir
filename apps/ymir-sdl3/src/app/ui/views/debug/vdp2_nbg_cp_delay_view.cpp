@@ -15,7 +15,7 @@ void VDP2NBGCharPatDelayView::Display() {
     auto &regs2 = probe.GetVDP2Regs();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -110,7 +110,7 @@ void VDP2NBGCharPatDelayView::Display() {
             const uint32 max = hires ? 4 : 8;
             for (uint32 i = 0; i < max; ++i) {
                 if (ImGui::TableNextColumn()) {
-                    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
                     switch (timings[i]) {
                     case vdp::CyclePatterns::PatNameNBG0: ImGui::TextUnformatted("PN0"); break;
                     case vdp::CyclePatterns::PatNameNBG1: ImGui::TextUnformatted("PN1"); break;

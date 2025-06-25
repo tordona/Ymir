@@ -18,7 +18,7 @@ void InputSettingsView::Display() {
     if (ImGui::BeginTable("periph_ports", 2, ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_BordersInnerV)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
             ImGui::SeparatorText("Port 1");
             ImGui::PopFont();
 
@@ -27,7 +27,7 @@ void InputSettingsView::Display() {
             }
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
             ImGui::SeparatorText("Port 2");
             ImGui::PopFont();
 
@@ -37,7 +37,7 @@ void InputSettingsView::Display() {
         }
         ImGui::EndTable();
     }
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Gamepads");
     ImGui::PopFont();
 
@@ -287,7 +287,7 @@ void InputSettingsView::Display() {
             drawText(fmt::format("{:.2f}%", value * 100.0f).c_str(), 1, active ? kAxisActiveColor : kAxisAtRestColor);
         };
 
-        ImGui::PushFont(m_context.fonts.sansSerif.medium.bold);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
         ImGui::Text("Gamepad %u", id + 1);
         ImGui::PopFont();
         ImGui::PushID(id);

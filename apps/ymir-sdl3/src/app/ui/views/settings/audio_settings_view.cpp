@@ -22,7 +22,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("General");
     ImGui::PopFont();
 
@@ -40,7 +40,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Quality");
     ImGui::PopFont();
 
@@ -48,7 +48,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("MIDI");
     ImGui::PopFont();
 
@@ -133,7 +133,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Accuracy");
     ImGui::PopFont();
 
@@ -142,7 +142,7 @@ void AudioSettingsView::Display() {
     // -----------------------------------------------------------------------------------------------------------------
 
     if constexpr (false) { // NOTE: disabled because it is unimplemented
-        ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
         ImGui::SeparatorText("Performance");
         ImGui::PopFont();
 

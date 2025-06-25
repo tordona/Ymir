@@ -90,7 +90,7 @@ void TweaksSettingsView::Display() {
         tweaksList = fmt::to_string(buf);
     }
 
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     ImGui::InputTextMultiline("##tweaks_list", &tweaksList, ImVec2(availWidth, 0),
                               ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll);
     ImGui::PopFont();
@@ -105,7 +105,7 @@ void TweaksSettingsView::Display() {
 void TweaksSettingsView::DisplayEnhancements() {
     auto &settings = m_context.settings;
 
-    ImGui::PushFont(m_context.fonts.sansSerif.xlarge.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.xlarge);
     ImGui::SeparatorText("Enhancements");
     ImGui::PopFont();
 
@@ -144,7 +144,7 @@ void TweaksSettingsView::DisplayEnhancements() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Video");
     ImGui::PopFont();
 
@@ -156,7 +156,7 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
     auto &settings = m_context.settings;
     auto &config = m_context.saturn.configuration;
 
-    ImGui::PushFont(m_context.fonts.sansSerif.xlarge.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.xlarge);
     ImGui::SeparatorText("Accuracy");
     ImGui::PopFont();
 
@@ -217,7 +217,7 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("System");
     ImGui::PopFont();
 
@@ -225,7 +225,7 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Video");
     ImGui::PopFont();
 
@@ -234,7 +234,7 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Audio");
     ImGui::PopFont();
 
@@ -243,7 +243,7 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("CD Block");
     ImGui::PopFont();
 

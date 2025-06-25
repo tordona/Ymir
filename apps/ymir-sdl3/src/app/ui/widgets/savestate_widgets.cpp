@@ -67,7 +67,7 @@ void RewindBar(SharedContext &context, float alpha, const RewindBarStyle &style)
 
         ImDrawList *drawList = ImGui::GetWindowDrawList();
 
-        ImGui::PushFont(context.fonts.monospace.small.bold);
+        ImGui::PushFont(context.fonts.monospace.bold, context.fonts.sizes.small);
 
         const ImVec2 startSize = ImGui::CalcTextSize(startStr.c_str());
         const ImVec2 endSize = ImGui::CalcTextSize(endStr.c_str());

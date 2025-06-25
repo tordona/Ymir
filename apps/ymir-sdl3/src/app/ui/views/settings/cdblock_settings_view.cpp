@@ -12,7 +12,7 @@ CDBlockSettingsView::CDBlockSettingsView(SharedContext &context)
 void CDBlockSettingsView::Display() {
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.large.bold);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Tweaks");
     ImGui::PopFont();
 

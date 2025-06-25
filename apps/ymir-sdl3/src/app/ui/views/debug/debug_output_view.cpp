@@ -17,7 +17,7 @@ void DebugOutputView::Display() {
     }
 
     if (ImGui::BeginChild("##scu_debug_output")) {
-        ImGui::PushFont(m_context.fonts.monospace.small.regular);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
         const size_t count = m_tracer.debugMessages.Count();
         for (size_t i = 0; i < count; i++) {
             ImGui::Text("%s", m_tracer.debugMessages.Read(i).c_str());

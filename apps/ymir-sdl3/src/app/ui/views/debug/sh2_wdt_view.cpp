@@ -13,7 +13,7 @@ void SH2WatchdogTimerView::Display() {
     auto &wdt = probe.WDT();
     auto &intc = probe.INTC();
 
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -24,7 +24,7 @@ void SH2WatchdogTimerView::Display() {
 
             ImGui::BeginGroup();
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
             if (ImGui::InputScalar("##wtcsr", ImGuiDataType_U8, &WTCSR, nullptr, nullptr, "%02X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
                 wdt.WriteWTCSR<true>(WTCSR);
@@ -76,7 +76,7 @@ void SH2WatchdogTimerView::Display() {
 
             ImGui::BeginGroup();
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-            ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
             if (ImGui::InputScalar("##rstcsr", ImGuiDataType_U8, &RSTCSR, nullptr, nullptr, "%02X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
                 wdt.WriteRSTCSR<true>(RSTCSR);
@@ -108,7 +108,7 @@ void SH2WatchdogTimerView::Display() {
     {
         ImGui::BeginGroup();
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-        ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
         ImGui::InputScalar("##wtcnt", ImGuiDataType_U8, &wdt.WTCNT, nullptr, nullptr, "%02X",
                            ImGuiInputTextFlags_CharsHexadecimal);
         ImGui::PopFont();
@@ -124,7 +124,7 @@ void SH2WatchdogTimerView::Display() {
     ImGui::BeginGroup();
     uint8 vector = intc.GetVector(sh2::InterruptSource::WDT_ITI);
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     if (ImGui::InputScalar("##vcrwdt.witvn", ImGuiDataType_U8, &vector, nullptr, nullptr, "%02X",
                            ImGuiInputTextFlags_CharsHexadecimal)) {
         intc.SetVector(sh2::InterruptSource::WDT_ITI, vector);
@@ -140,7 +140,7 @@ void SH2WatchdogTimerView::Display() {
     uint8 level = intc.GetLevel(sh2::InterruptSource::WDT_ITI);
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
-    ImGui::PushFont(m_context.fonts.monospace.medium.regular);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     if (ImGui::InputScalar("##ipra_wdtipn", ImGuiDataType_U8, &level, nullptr, nullptr, "%X",
                            ImGuiInputTextFlags_CharsHexadecimal)) {
         intc.SetLevel(sh2::InterruptSource::WDT_ITI, std::min<uint8>(level, 0xF));
