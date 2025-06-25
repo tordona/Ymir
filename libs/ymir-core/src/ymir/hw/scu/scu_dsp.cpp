@@ -281,13 +281,15 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
 }
 
 FORCE_INLINE void SCUDSP::FetchInstruction() {
+    nextInstr = programRAM[PC];
     if (looping) {
         if (loopCount == 0) {
             looping = false;
+            ++PC;
         }
         loopCount = (loopCount - 1) & 0xFFF;
     } else {
-        nextInstr = programRAM[PC++];
+        ++PC;
     }
 }
 
@@ -540,7 +542,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Loop(DSPInstr command) {
     if (loopCount != 0) {
         if (command.specialInfo.loopInfo.repeat) {
             // LPS
-            FetchInstruction();
+            nextInstr = programRAM[PC];
             looping = true;
         } else {
             // BTM
