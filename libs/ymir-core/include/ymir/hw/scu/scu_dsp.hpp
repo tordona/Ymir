@@ -300,7 +300,7 @@ public:
     // Auxiliary operations
 
     // Checks if the current DSP flags pass the given condition
-    FORCE_INLINE bool CondCheck(uint8 cond) {
+    FORCE_INLINE bool CondCheck(uint8 cond) const {
         // 000001: NZ  (Z=0)
         // 000010: NS  (S=0)
         // 000011: NZS (Z=0 && S=0)
