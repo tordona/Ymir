@@ -6,6 +6,14 @@
 
 namespace ymir {
 
+namespace static_config {
+
+    // Reduces timeslices to the minimum possible -- one MSH2 instruction at a time.
+    // Maximizes component synchronization at a massive cost to performance.
+    static constexpr bool max_timing_granularity = false;
+
+} // namespace static_config
+
 namespace grp {
 
     // -----------------------------------------------------------------------------
@@ -316,7 +324,7 @@ template <bool debug, bool enableSH2Cache>
 void Saturn::Run() {
     static constexpr uint64 kSH2SyncMaxStep = 32;
 
-    const uint64 cycles = std::max<sint64>(m_scheduler.RemainingCount(), 0);
+    const uint64 cycles = static_config::max_timing_granularity ? 1 : std::max<sint64>(m_scheduler.RemainingCount(), 0);
 
     uint64 execCycles = 0;
     if (slaveSH2Enabled) {
