@@ -57,7 +57,7 @@ Use `-p <profile-path>` to point to a separate set of configuration and state fi
 
 The options are case-sensitive -- lowercase `-p` sets the profile path, uppercase `-P` makes the emulator start paused.
 
-Note that the Win32 variant of Ymir does not output anything to the console, but it does honor the command line parameters.
+Note that the Windows version does not output anything to the console, but it does honor the command line parameters.
 
 Ymir requires an IPL (BIOS) ROM to work. You can place the ROMs under the `roms` directory created alongside the executable on the first run.
 The emulator will scan and automatically select the IPL ROM matching the loaded disc. If no disc is loaded, it will use a ROM matching the first preferred region. Failing that, it will pick whatever is available.
