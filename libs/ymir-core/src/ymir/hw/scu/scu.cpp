@@ -1172,7 +1172,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
             m_dsp.programPaused = true;
         } else if (bit::test<26>(value)) {
             m_dsp.programPaused = false;
-        } else if (!m_dsp.programExecuting) {
+        } else /*if (!m_dsp.programExecuting)*/ {
             m_dsp.programExecuting = bit::test<16>(value);
             m_dsp.programStep = bit::test<17>(value);
             m_dsp.programEnded = false;
