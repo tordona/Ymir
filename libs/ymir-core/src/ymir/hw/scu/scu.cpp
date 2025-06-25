@@ -902,7 +902,7 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
         {
             uint32 value = 0;
             bit::deposit_into<0, 7>(value, m_dsp.PC);
-            bit::deposit_into<16>(value, m_dsp.programExecuting);
+            bit::deposit_into<16>(value, m_dsp.programExecuting && !m_dsp.programPaused);
             bit::deposit_into<18>(value, m_dsp.programEnded);
             bit::deposit_into<19>(value, m_dsp.overflow);
             bit::deposit_into<20>(value, m_dsp.carry);
@@ -1176,7 +1176,6 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         } else /*if (!m_dsp.programExecuting)*/ {
             m_dsp.programExecuting = bit::test<16>(value);
             m_dsp.programStep = bit::test<17>(value);
-            m_dsp.programEnded = false;
         }
         break;
     case 0x84: // (DSP_PPD) DSP Program RAM Data Port
