@@ -213,6 +213,7 @@ void SCUDSP::SaveState(state::SCUDSPState &state) const {
     state.programEnded = programEnded;
     state.programStep = programStep;
     state.PC = PC;
+    state.nextInstr = nextInstr.u32;
     state.dataAddress = dataAddress;
     state.sign = sign;
     state.zero = zero;
@@ -255,6 +256,7 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     programEnded = state.programEnded;
     programStep = state.programStep;
     PC = state.PC;
+    nextInstr.u32 = state.nextInstr;
     dataAddress = state.dataAddress;
     sign = state.sign;
     zero = state.zero;
