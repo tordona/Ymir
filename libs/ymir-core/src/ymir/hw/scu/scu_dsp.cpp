@@ -565,8 +565,8 @@ FORCE_INLINE void SCUDSP::Cmd_Special_End(DSPInstr command) {
     FetchInstruction();
 
     programExecuting = false;
-    programEnded = true;
     if (command.specialInfo.endInfo.interrupt) {
+        programEnded = true;
         m_cbTriggerDSPEnd();
     }
 }

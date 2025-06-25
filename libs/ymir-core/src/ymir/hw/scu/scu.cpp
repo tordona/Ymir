@@ -911,6 +911,7 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
             bit::deposit_into<23>(value, m_dsp.dmaRun);
             if constexpr (!peek) {
                 m_dsp.overflow = false;
+                m_dsp.programEnded = false;
             }
             return value;
         }
