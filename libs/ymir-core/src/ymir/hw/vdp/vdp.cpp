@@ -3306,7 +3306,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
 
         VDP2DrawSpritePixel<colorMode, transparentMeshes, false>(xx, params, spriteFB, spriteFBOffset);
         if constexpr (transparentMeshes) {
-            const uint32 offset = params.mixedFormat ? ((spriteFBOffset * sizeof(uint16)) & 0x3FFFE) : spriteFBOffset;
+            const uint32 offset =
+                params.mixedFormat ? ((spriteFBOffset * sizeof(uint16)) & 0x3FFFE) : spriteFBOffset & 0x3FFFF;
             if (m_VDP1RenderContext.meshFBValid[altField][fbIndex][offset]) {
                 const auto &tempFB = m_VDP1RenderContext.meshFB[altField][fbIndex];
                 VDP2DrawSpritePixel<colorMode, transparentMeshes, true>(xx, params, tempFB, spriteFBOffset);
