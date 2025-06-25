@@ -440,7 +440,7 @@ void App::RunEmulator() {
 
     // RescaleUI also loads the style and fonts
     bool rescaleUIPending = false;
-    RescaleUI(false);
+    RescaleUI(SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay()), false);
     {
         auto &videoSettings = m_context.settings.video;
 
@@ -1414,9 +1414,11 @@ void App::RunEmulator() {
                 // evt.gsensor.data;
                 break;
 
+            case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: [[fallthrough]];
             case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
                 if (!m_context.settings.video.overrideUIScale) {
-                    RescaleUI(true);
+                    const float windowScale = SDL_GetWindowDisplayScale(screen.window);
+                    RescaleUI(windowScale, true);
                 }
                 break;
             case SDL_EVENT_QUIT: goto end_loop; break;
@@ -1455,7 +1457,8 @@ void App::RunEmulator() {
         }
         if (rescaleUIPending) {
             rescaleUIPending = false;
-            RescaleUI(true);
+            const float windowScale = SDL_GetWindowDisplayScale(screen.window);
+            RescaleUI(windowScale, true);
         }
 
         // Process all axis changes
@@ -2202,11 +2205,21 @@ void App::RunEmulator() {
             const bool fitWindowToScreen =
                 (videoSettings.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
 
-            const float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
+            float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
 
             // Get window size
             int ww, wh;
             SDL_GetWindowSize(screen.window, &ww, &wh);
+
+#if defined(__APPLE__)
+            // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
+            const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
+            ww *= pixelDensity;
+            wh *= pixelDensity;
+
+            menuBarHeight *= pixelDensity;
+#endif
+
             wh -= menuBarHeight;
 
             double scaleFactor = 1.0;
@@ -2295,7 +2308,17 @@ void App::RunEmulator() {
         screen.resolutionChanged = false;
 
         // Render ImGui widgets
+#if defined(__APPLE__)
+        // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
+        const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
+        SDL_SetRenderScale(renderer, pixelDensity, pixelDensity);
+#endif
+
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+
+#if defined(__APPLE__)
+        SDL_SetRenderScale(renderer, 1.0f, 1.0f);
+#endif
 
         SDL_RenderPresent(renderer);
 
@@ -2615,14 +2638,11 @@ void App::RebindInputs() {
     m_context.settings.RebindInputs();
 }
 
-void App::RescaleUI(bool reloadFonts) {
-    float displayScale;
+void App::RescaleUI(float displayScale, bool reloadFonts) {
     if (m_context.settings.video.overrideUIScale) {
         displayScale = m_context.settings.video.uiScale;
-    } else {
-        displayScale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-        devlog::info<grp::base>("Primary display DPI scaling: {:.1f}%", displayScale * 100.0f);
     }
+    devlog::info<grp::base>("Window DPI scaling: {:.1f}%", displayScale * 100.0f);
 
     m_context.displayScale = displayScale;
     devlog::info<grp::base>("UI scaling set to {:.1f}%", m_context.displayScale * 100.0f);
