@@ -451,7 +451,7 @@ FORCE_INLINE void SCUDSP::Cmd_LoadImm(DSPInstr instr) {
         imm = instr.loadInfo.conditional.imm;
 
         const uint8 cond = instr.loadInfo.conditional.condition;
-        if (!CondCheck<debug>(cond)) {
+        if (!CondCheck(cond)) {
             return;
         }
     } else {
@@ -468,7 +468,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special(DSPInstr instr) {
     const uint32 cmdSubcategory = instr.specialInfo.specialControl.specialClass;
     switch (cmdSubcategory) {
     case 0b00: Cmd_Special_DMA<debug>(instr); break;
-    case 0b01: Cmd_Special_Jump<debug>(instr); break;
+    case 0b01: Cmd_Special_Jump(instr); break;
     case 0b10: Cmd_Special_Loop(instr); break;
     case 0b11: Cmd_Special_End(instr); break;
     }
@@ -522,7 +522,6 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
     devlog::trace<grp::dsp>("DSP DMA command: {:04X} @ {:02X}", command.u32, PC);
 }
 
-template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Special_Jump(DSPInstr command) {
     // JMP <cond>,SImm
     // JMP SImm
@@ -530,7 +529,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Jump(DSPInstr command) {
 
     if (command.specialInfo.jumpInfo.conditional) {
         const uint32 cond = command.specialInfo.jumpInfo.condition;
-        if (cond != 0 && !CondCheck<debug>(cond)) {
+        if (cond != 0 && !CondCheck(cond)) {
             return;
         }
     }

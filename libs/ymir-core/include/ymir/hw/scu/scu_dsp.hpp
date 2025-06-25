@@ -300,7 +300,6 @@ public:
     // Auxiliary operations
 
     // Checks if the current DSP flags pass the given condition
-    template <bool debug>
     FORCE_INLINE bool CondCheck(uint8 cond) {
         // 000001: NZ  (Z=0)
         // 000010: NS  (S=0)
@@ -312,9 +311,6 @@ public:
         // 100011: ZS  (Z=1 || S=1)
         // 100100: C   (C=1)
         // 101000: T0  (T0=1)
-        if (bit::test<3>(cond)) {
-            RunDMA<debug>(1);
-        }
         bool result = false;
         result |= bit::test<0>(cond) && zero;
         result |= bit::test<1>(cond) && sign;
@@ -417,7 +413,7 @@ private:
     TPL_DEBUG void Cmd_LoadImm(DSPInstr instr);
     TPL_DEBUG void Cmd_Special(DSPInstr instr);
     TPL_DEBUG void Cmd_Special_DMA(DSPInstr instr);
-    TPL_DEBUG void Cmd_Special_Jump(DSPInstr instr);
+    void Cmd_Special_Jump(DSPInstr instr);
     void Cmd_Special_Loop(DSPInstr instr);
     void Cmd_Special_End(DSPInstr instr);
 #undef TPL_DEBUG
