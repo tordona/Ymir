@@ -2203,7 +2203,7 @@ void App::RunEmulator() {
             const bool fitWindowToScreen =
                 (videoSettings.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
 
-            const float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
+            float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
 
             // Get window size
             int ww, wh;
@@ -2214,6 +2214,8 @@ void App::RunEmulator() {
             const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
             ww *= pixelDensity;
             wh *= pixelDensity;
+
+            menuBarHeight *= pixelDensity;
 #endif
 
             wh -= menuBarHeight;
