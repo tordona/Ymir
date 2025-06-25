@@ -2780,46 +2780,33 @@ void App::LoadFonts() {
     style.FontSizeBase = 16.0f;
 
     ImFontConfig config;
-    config.FontDataOwnedByAtlas = false;
     // TODO: config.MergeMode = true; to merge multiple fonts into one; useful for combining latin + JP + icons
+    // TODO: use config.GlyphExcludeRanges to exclude glyph ranges when merging fonts
 
-    ImVector<ImWchar> ranges;
-    ImFontGlyphRangesBuilder builder;
-    builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
-    // builder.AddRanges(io.Fonts->GetGlyphRangesChineseFull());
-    // builder.AddRanges(io.Fonts->GetGlyphRangesCyrillic());
-    // builder.AddRanges(io.Fonts->GetGlyphRangesGreek());
-    // builder.AddRanges(io.Fonts->GetGlyphRangesJapanese());
-    // builder.AddRanges(io.Fonts->GetGlyphRangesKorean());
-    // builder.AddRanges(io.Fonts->GetGlyphRangesThai());
-    // builder.AddRanges(io.Fonts->GetGlyphRangesVietnamese());
-    builder.AddChar(0x2014); // Em-dash
-    builder.AddChar(0x2190); // Left arrow
-    builder.AddChar(0x2191); // Up arrow
-    builder.AddChar(0x2192); // Right arrow
-    builder.AddChar(0x2193); // Down arrow
-    builder.BuildRanges(&ranges);
-
-    // Get embedded file system
     auto embedfs = cmrc::Ymir_sdl3_rc::get_filesystem();
 
-    // Reload fonts
     io.Fonts->Clear();
 
-    auto loadFont = [&](const char *path) {
+    auto loadFont = [&](std::string_view name, const char *path) {
+        std::span configName{config.Name};
+        std::fill(configName.begin(), configName.end(), '\0');
+        name = name.substr(0, configName.size());
+        std::copy(name.begin(), name.end(), configName.begin());
+
         cmrc::file file = embedfs.open(path);
-        ImFont *font = io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), 16, &config, ranges.Data);
+
+        ImFont *font = io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), style.FontSizeBase, &config);
         IM_ASSERT(font != nullptr);
         return font;
     };
 
-    m_context.fonts.sansSerif.regular = loadFont("fonts/SplineSans-Medium.ttf");
-    m_context.fonts.sansSerif.bold = loadFont("fonts/SplineSans-Bold.ttf");
+    m_context.fonts.sansSerif.regular = loadFont("SplineSans Medium", "fonts/SplineSans-Medium.ttf");
+    m_context.fonts.sansSerif.bold = loadFont("SplineSans Bold", "fonts/SplineSans-Bold.ttf");
 
-    m_context.fonts.monospace.regular = loadFont("fonts/SplineSansMono-Medium.ttf");
-    m_context.fonts.monospace.bold = loadFont("fonts/SplineSansMono-Bold.ttf");
+    m_context.fonts.monospace.regular = loadFont("SplineSansMono Medium", "fonts/SplineSansMono-Medium.ttf");
+    m_context.fonts.monospace.bold = loadFont("SplineSansMono Bold", "fonts/SplineSansMono-Bold.ttf");
 
-    m_context.fonts.display = loadFont("fonts/ZenDots-Regular.ttf");
+    m_context.fonts.display = loadFont("ZenDots Regular", "fonts/ZenDots-Regular.ttf");
 
     io.FontDefault = m_context.fonts.sansSerif.regular;
 }
