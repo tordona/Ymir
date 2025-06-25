@@ -4919,14 +4919,28 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
     const uint32 xShift = doubleResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
 
+    uint32 mosaicCounterX = 0;
+
     for (uint32 x = 0; x < maxX; x++) {
         const uint32 xx = x << xShift;
-        util::ScopeGuard sgDoublePixel{[&] {
-            if (doubleResH) {
-                const Pixel pixel = layerState.pixels.GetPixel(xx);
-                layerState.pixels.SetPixel(xx + 1, pixel);
+
+        // Apply horizontal mosaic if enabled
+        if (bgParams.mosaicEnable) {
+            const uint8 currMosaicCounterX = mosaicCounterX;
+            mosaicCounterX++;
+            if (mosaicCounterX >= regs.mosaicH) {
+                mosaicCounterX = 0;
             }
-        }};
+            if (currMosaicCounterX > 0) {
+                // Simply copy over the data from the previous pixel
+                const Pixel pixel = layerState.pixels.GetPixel(xx - 1);
+                layerState.pixels.SetPixel(xx, pixel);
+                if (doubleResH) {
+                    layerState.pixels.SetPixel(xx + 1, pixel);
+                }
+                continue;
+            }
+        }
 
         const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y) : RotParamA;
 
@@ -4936,6 +4950,9 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
         // Handle transparent pixels in coefficient table
         if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
             layerState.pixels.transparent[xx] = true;
+            if (doubleResH) {
+                layerState.pixels.transparent[xx + 1] = true;
+            }
             continue;
         }
 
@@ -4956,12 +4973,18 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
         if (windowState[x]) {
             // Make pixel transparent if inside a window
             layerState.pixels.transparent[xx] = true;
+            if (doubleResH) {
+                layerState.pixels.transparent[xx + 1] = true;
+            }
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
-            layerState.pixels.SetPixel(xx, VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
-                                               bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH,
-                                               rotParams.pageShiftV, scrollCoord,
-                                               m_rotParamStates[rotParamSelector].charFetcher));
+            const Pixel pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
+                bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH, rotParams.pageShiftV, scrollCoord,
+                m_rotParamStates[rotParamSelector].charFetcher);
+            layerState.pixels.SetPixel(xx, pixel);
+            if (doubleResH) {
+                layerState.pixels.SetPixel(xx + 1, pixel);
+            }
         } else if (rotParams.screenOverProcess == ScreenOverProcess::RepeatChar) {
             // Out of bounds - repeat character
             static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
@@ -4974,10 +4997,17 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             const uint32 dotY = bit::extract<0, 2>(scrollY);
             const CoordU32 dotCoord{dotX, dotY};
 
-            layerState.pixels.SetPixel(xx, VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, 0));
+            const Pixel pixel = VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, 0);
+            layerState.pixels.SetPixel(xx, pixel);
+            if (doubleResH) {
+                layerState.pixels.SetPixel(xx + 1, pixel);
+            }
         } else {
             // Out of bounds - transparent
             layerState.pixels.transparent[xx] = true;
+            if (doubleResH) {
+                layerState.pixels.transparent[xx + 1] = true;
+            }
         }
     }
 }

@@ -49,6 +49,7 @@
 - System: Tighten synchronization between the two SH-2 CPUs and remove artificial timeslice limit. Improves performance and fixes Fighters Megamix and Sonic Jam intermittent boot issues. (#236, #242)
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 - VDP1: Significantly slow down command execution when running the VDP1 renderer on the emulator thread. Fixes Dragon Ball Z - Shinbutouden freeze after SEGA logo. (#233)
+- VDP2: Apply horizontal mosaic effect to rotation background layer. Fixes missing effect on Race Drivin' Time Warner logo. (#267)
 - VDP2: Apply window effect to sprite layer. Fixes graphics going out of bounds in many games. (#173)
 - VDP2: Check for invalid access patterns to determine if NBG characters should be delayed. Fixes background offsets in many games. (#169, #190, #226)
 - VDP2: Disable NBG1-3 only if both RBG0 and RBG1 are enabled simultaneously.
