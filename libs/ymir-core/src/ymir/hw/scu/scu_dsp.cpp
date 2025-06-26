@@ -96,8 +96,10 @@ void SCUDSP::Run(uint64 cycles) {
             return;
         }
 
-        // Execute next command
+        // Execute next command and fetch next instruction
         const DSPInstr instruction = nextInstr;
+        nextInstr = programRAM[PC];
+
         switch (instruction.instructionInfo.instructionClass) {
         case 0b00: Cmd_Operation<debug>(instruction); break;
         case 0b10: Cmd_LoadImm<debug>(instruction); break;
@@ -291,8 +293,7 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     m_cyclesSpillover = state.cyclesSpillover;
 }
 
-FORCE_INLINE void SCUDSP::FetchInstruction() {
-    nextInstr = programRAM[PC];
+FORCE_INLINE void SCUDSP::IncrementPC() {
     if (looping) {
         if (loopCount == 0) {
             looping = false;
@@ -306,7 +307,7 @@ FORCE_INLINE void SCUDSP::FetchInstruction() {
 
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
-    FetchInstruction();
+    IncrementPC();
 
     // D1-Bus MOVs to MC0-3 using the a bank that was read by any of the three busses prevents writes and CT updates.
     // MOV to M0-3 is unaffected because it writes directly to CT as opposed to M0-3 reads which hit Data RAM.
@@ -452,9 +453,21 @@ FORCE_INLINE void SCUDSP::Cmd_Operation(DSPInstr instr) {
 
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_LoadImm(DSPInstr instr) {
-    FetchInstruction();
-
     const uint8 dst = instr.loadInfo.loadControl.storageLocation;
+
+    const bool writeToPC = dst == 0b1100;
+    if (looping) {
+        if (loopCount == 0) {
+            looping = false;
+            if (!writeToPC) {
+                ++PC;
+            }
+        }
+        loopCount = (loopCount - 1) & 0xFFF;
+    } else if (!writeToPC) {
+        ++PC;
+    }
+
     sint32 imm;
     if (instr.loadInfo.loadControl.conditionalLoad) {
         // Conditional transfer
@@ -487,7 +500,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special(DSPInstr instr) {
 
 template <bool debug>
 FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
-    FetchInstruction();
+    IncrementPC();
 
     // Finish previous DMA transfer
     if (dmaRun) {
@@ -536,7 +549,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
 FORCE_INLINE void SCUDSP::Cmd_Special_Jump(DSPInstr command) {
     // JMP <cond>,SImm
     // JMP SImm
-    FetchInstruction();
+    IncrementPC();
 
     if (command.specialInfo.jumpInfo.conditional) {
         const uint32 cond = command.specialInfo.jumpInfo.condition;
@@ -549,27 +562,25 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Jump(DSPInstr command) {
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Special_Loop(DSPInstr command) {
-    if (loopCount != 0) {
-        if (command.specialInfo.loopInfo.repeat) {
-            // LPS
-            nextInstr = programRAM[PC];
-            looping = true;
-        } else {
-            // BTM
-            FetchInstruction();
-            PC = loopTop;
-        }
+    if (command.specialInfo.loopInfo.repeat) {
+        // LPS
+        looping = true;
+        IncrementPC();
     } else {
-        FetchInstruction();
-        looping = false;
+        // BTM
+        if (loopCount != 0) {
+            PC = loopTop;
+            loopCount = (loopCount - 1) & 0xFFF;
+        } else {
+            IncrementPC();
+        }
     }
-    loopCount = (loopCount - 1) & 0xFFF;
 }
 
 FORCE_INLINE void SCUDSP::Cmd_Special_End(DSPInstr command) {
     // END
     // ENDI
-    FetchInstruction();
+    IncrementPC();
 
     programExecuting = false;
     if (command.specialInfo.endInfo.interrupt && !programEnded) {

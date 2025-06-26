@@ -405,7 +405,7 @@ private:
 
     debug::ISCUTracer *m_tracer = nullptr;
 
-    void FetchInstruction();
+    void IncrementPC();
 
     // Command interpreters
 
