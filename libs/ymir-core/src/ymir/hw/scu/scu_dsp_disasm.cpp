@@ -35,10 +35,10 @@ static SCUDSPInstruction::OpDst TranslateOpDestination(uint32 src) {
     case 0b0111: return WA0;
     case 0b1010: return LOP;
     case 0b1011: return TOP;
-    case 0b1100: return M0;
-    case 0b1101: return M1;
-    case 0b1110: return M2;
-    case 0b1111: return M3;
+    case 0b1100: return CT0;
+    case 0b1101: return CT1;
+    case 0b1110: return CT2;
+    case 0b1111: return CT3;
     default: return Invalid;
     }
 }
@@ -271,10 +271,10 @@ std::string_view ToString(SCUDSPInstruction::OpDst opDst) {
     using enum SCUDSPInstruction::OpDst;
     switch (opDst) {
     case None: return "";
-    case M0: return "M0";
-    case M1: return "M1";
-    case M2: return "M2";
-    case M3: return "M3";
+    case CT0: return "CT0";
+    case CT1: return "CT1";
+    case CT2: return "CT2";
+    case CT3: return "CT3";
     case MC0: return "MC0";
     case MC1: return "MC1";
     case MC2: return "MC2";

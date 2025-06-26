@@ -11,7 +11,7 @@ struct SCUDSPInstruction {
     enum class Cond : uint8 { None, NZ, NS, NZS, NC, NT0, Z, S, ZS, C, T0 };
 
     enum class OpSrc : uint8 { None, M0, M1, M2, M3, MC0, MC1, MC2, MC3, ALUL, ALUH, Invalid };
-    enum class OpDst : uint8 { None, M0, M1, M2, M3, MC0, MC1, MC2, MC3, RX, P, RA0, WA0, LOP, TOP, Invalid };
+    enum class OpDst : uint8 { None, CT0, CT1, CT2, CT3, MC0, MC1, MC2, MC3, RX, P, RA0, WA0, LOP, TOP, Invalid };
     enum class MVIDst : uint8 { None, MC0, MC1, MC2, MC3, RX, P, RA0, WA0, LOP, PC, Invalid };
 
     enum class ALUOp : uint8 { NOP, AND, OR, XOR, ADD, SUB, AD2, SR, RR, SL, RL, RL8, Invalid };
