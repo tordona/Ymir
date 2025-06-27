@@ -16,7 +16,7 @@ FORCE_INLINE auto SafeDiv(auto dividend, auto divisor) {
 
 class Slope {
 public:
-    static constexpr sint64 kFracBits = 16;
+    static constexpr sint64 kFracBits = 24;
     static constexpr sint64 kFracOne = 1ll << kFracBits;
 
     FORCE_INLINE static constexpr sint64 ToFrac(sint32 value) {
