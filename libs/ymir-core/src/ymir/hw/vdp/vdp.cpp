@@ -1749,20 +1749,11 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     bool transparent = true;
     const bool flipU = control.flipH;
     bool hasEndCode = false;
-    bool skipOutOfBounds = false;
     int endCodeCount = 0;
     uint32 nextU = flipU ? charSizeH - 1 : 0;
     sint32 uInc = flipU ? -1 : +1;
     bool first = true;
     for (TexturedLineStepper line{coord1, coord2, charSizeH, flipU}; line.CanStep(); line.Step()) {
-        if (VDP1IsPixelSystemClipped<deinterlace>(line.Coord())) {
-            if (skipOutOfBounds) {
-                break;
-            }
-            continue;
-        }
-        skipOutOfBounds = true;
-
         // Load new texel if U coordinate changed.
         // Note that the very first pixel in the line always passes the check.
         if (line.UChanged()) {
