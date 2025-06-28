@@ -583,7 +583,7 @@ void Settings::ResetToDefaults() {
     audio.volume = 0.8;
     audio.mute = false;
 
-    audio.stepGranularity = 5;
+    audio.stepGranularity = 0;
 
     audio.midiInputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
     audio.midiOutputPort = Settings::Audio::MidiPort{.id = {}, .type = Settings::Audio::MidiPort::Type::None};
