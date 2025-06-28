@@ -52,6 +52,90 @@ public:
         }
     }
 
+    // Clips the slope to the area 0x0..width x height.
+    // Returns the number of increments skipped.
+    FORCE_INLINE uint32 SystemClip(sint32 width, sint32 height) {
+        // Add one pixel of padding to compensate for minor inaccuracies
+        ++width;
+        ++height;
+
+        uint32 length = (majcounterend - majcounter) / majinc;
+
+        // Bail out early if the line length is zero
+        if (length == 0) {
+            return 0u;
+        }
+
+        const sint64 xinc = xmajor ? majinc : mininc;
+        const sint64 yinc = xmajor ? mininc : majinc;
+        const sint64 fxs = FracX();
+        const sint64 fys = FracY();
+        const sint64 fxe = fxs + xinc * length;
+        const sint64 fye = fys + yinc * length;
+        const sint64 xs = fxs >> kFracBits;
+        const sint64 ys = fys >> kFracBits;
+        const sint64 xe = fxe >> kFracBits;
+        const sint64 ye = fye >> kFracBits;
+
+        // Bail out early if the line is entirely in-bounds
+        if (xs >= 0 && xs <= width && ys >= 0 && ys <= height && xe >= 0 && xe <= width && ye >= 0 && ye <= height) {
+            return 0u;
+        }
+
+        // Fully clip line if it is entirely out of bounds
+        if ((xs < 0 && xe < 0) || (xs > width && xe > width) || (ys < 0 && ye < 0) || (ys > height && ye > height)) {
+            majcounterend = majcounter;
+            return 0u;
+        }
+
+        // Determine how many pixels to clip from the start
+        uint32 xclip;
+        if (xinc > 0 && xs < 0) {
+            xclip = -xs - 1;
+        } else if (xinc < 0 && xs > width) {
+            xclip = xs - width;
+        } else {
+            xclip = 0;
+        }
+        uint32 yclip;
+        if (yinc > 0 && ys < 0) {
+            yclip = -ys - 1;
+        } else if (yinc < 0 && ys > height) {
+            yclip = ys - height;
+        } else {
+            yclip = 0;
+        }
+
+        // Use the higher of the two counts to step the line ahead
+        uint32 startClip = std::max(xclip, yclip);
+        startClip = std::min(startClip, length - 1u);
+        majcounter += majinc * startClip;
+        mincounter += mininc * startClip;
+        length -= startClip;
+
+        // Determine how many pixels to clip from the end
+        if (xinc < 0 && xe < 0) {
+            xclip = -xe - 1;
+        } else if (xinc > 0 && xe > width) {
+            xclip = xe - width;
+        } else {
+            xclip = 0;
+        }
+        if (yinc < 0 && ye < 0) {
+            yclip = -ye - 1;
+        } else if (yinc > 0 && ye > height) {
+            yclip = ye - height;
+        } else {
+            yclip = 0;
+        }
+
+        uint32 endClip = std::max(xclip, yclip);
+        endClip = std::min(endClip, length - 1u);
+        majcounterend -= majinc * endClip;
+
+        return startClip;
+    }
+
     // Steps the slope to the next coordinate.
     // Should not be invoked when CanStep() returns false
     FORCE_INLINE void Step() {
@@ -275,6 +359,13 @@ public:
         u = ustart;
     }
 
+    // Clips the slope to the area 0x0..(width-1)x(height-1)
+    FORCE_INLINE void SystemClip(uint32 width, uint32 height) {
+        const uint32 steps = LineStepper::SystemClip(width, height);
+        u += uinc * steps;
+        ustart += uinc * steps;
+    }
+
     // Steps the slope to the next coordinate.
     // The U coordinate is stepped in proportion to the horizontal character size
     // Should not be invoked when CanStep() returns false
@@ -291,11 +382,6 @@ public:
     // Retrieves the current fractinal U texel coordinate.
     FORCE_INLINE uint64 FracU() const {
         return u;
-    }
-
-    // Determines if the U texel coordinate has changed on this step.
-    FORCE_INLINE bool UChanged() const {
-        return u == ustart || ((u - uinc) >> kFracBits) != (u >> kFracBits);
     }
 
     uint64 ustart; // starting U texel coordinate, fractional

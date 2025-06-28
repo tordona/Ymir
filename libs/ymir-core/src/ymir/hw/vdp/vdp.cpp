@@ -1703,20 +1703,14 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
 template <bool deinterlace, bool transparentMeshes>
 FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
                                     VDP1GouraudParams &gouraudParams) {
-    if (VDP1IsLineSystemClipped<deinterlace>(coord1, coord2)) {
-        return;
-    }
+    const VDP1Regs &regs1 = VDP1GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
+    const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
 
-    bool skipOutOfBounds = false;
-    for (LineStepper line{coord1, coord2}; line.CanStep(); line.Step()) {
-        if (VDP1IsPixelSystemClipped<deinterlace>(line.Coord())) {
-            if (skipOutOfBounds) {
-                break;
-            }
-            continue;
-        }
-        skipOutOfBounds = true;
+    LineStepper line{coord1, coord2};
+    line.SystemClip(m_VDP1RenderContext.sysClipH, m_VDP1RenderContext.sysClipV << doubleV);
 
+    for (; line.CanStep(); line.Step()) {
         gouraudParams.U = line.FracPos();
         VDP1PlotPixel<deinterlace, transparentMeshes>(line.Coord(), pixelParams, gouraudParams);
         if (line.NeedsAntiAliasing()) {
@@ -1732,7 +1726,8 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
         return;
     }
 
-    const VDP1Regs &regs = VDP1GetRegs();
+    const VDP1Regs &regs1 = VDP1GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
 
     const uint32 charSizeH = lineParams.charSizeH;
     const uint32 charSizeV = lineParams.charSizeV;
@@ -1753,79 +1748,81 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     uint32 nextU = flipU ? charSizeH - 1 : 0;
     sint32 uInc = flipU ? -1 : +1;
     bool first = true;
-    for (TexturedLineStepper line{coord1, coord2, charSizeH, flipU}; line.CanStep(); line.Step()) {
-        // Load new texel if U coordinate changed.
-        // Note that the very first pixel in the line always passes the check.
-        if (line.UChanged()) {
-            const uint32 currU = line.U();
 
-            for (uint32 u = nextU; u != currU + uInc; u += uInc) {
-                const bool useHighSpeedShrink = mode.highSpeedShrink && line.uinc > Slope::kFracOne;
-                const uint32 adjustedU = useHighSpeedShrink ? ((u & ~1) | (uint32)regs.evenOddCoordSelect) : u;
+    const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    TexturedLineStepper line{coord1, coord2, charSizeH, flipU};
+    line.SystemClip(m_VDP1RenderContext.sysClipH, m_VDP1RenderContext.sysClipV << doubleV);
 
-                const uint32 charIndex = adjustedU + v * charSizeH;
+    for (; line.CanStep(); line.Step()) {
+        const uint32 currU = line.U();
 
-                auto processEndCode = [&](bool endCode) {
-                    if (endCode && !mode.endCodeDisable) {
-                        hasEndCode = true;
-                        endCodeCount++;
-                    } else {
-                        hasEndCode = false;
-                    }
-                };
+        // Load new texels if U coordinate changed
+        for (uint32 u = nextU; u != currU + uInc; u += uInc) {
+            const bool useHighSpeedShrink = mode.highSpeedShrink && line.uinc > Slope::kFracOne;
+            const uint32 adjustedU = useHighSpeedShrink ? ((u & ~1) | (uint32)regs1.evenOddCoordSelect) : u;
 
-                // Read next texel
-                switch (mode.colorMode) {
-                case 0: // 4 bpp, 16 colors, bank mode
-                    color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
-                    color = (color >> ((~u & 1) * 4)) & 0xF;
-                    processEndCode(color == 0xF);
-                    transparent = color == 0x0;
-                    color |= lineParams.colorBank;
-                    break;
-                case 1: // 4 bpp, 16 colors, lookup table mode
-                    color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
-                    color = (color >> ((~u & 1) * 4)) & 0xF;
-                    processEndCode(color == 0xF);
-                    transparent = color == 0x0;
-                    color = VDP1ReadRendererVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
-                    break;
-                case 2: // 8 bpp, 64 colors, bank mode
-                    color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex) & 0x3F;
-                    processEndCode(color == 0xFF);
-                    transparent = color == 0x0;
-                    color |= lineParams.colorBank & 0xFFC0;
-                    break;
-                case 3: // 8 bpp, 128 colors, bank mode
-                    color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex) & 0x7F;
-                    processEndCode(color == 0xFF);
-                    transparent = color == 0x00;
-                    color |= lineParams.colorBank & 0xFF80;
-                    break;
-                case 4: // 8 bpp, 256 colors, bank mode
-                    color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
-                    processEndCode(color == 0xFF);
-                    transparent = color == 0x00;
-                    color |= lineParams.colorBank & 0xFF00;
-                    break;
-                case 5: // 16 bpp, 32768 colors, RGB mode
-                    color = VDP1ReadRendererVRAM<uint16>(lineParams.charAddr + charIndex * sizeof(uint16));
-                    processEndCode(color == 0x7FFF);
-                    transparent = color == 0x0000;
-                    break;
+            const uint32 charIndex = adjustedU + v * charSizeH;
+
+            auto processEndCode = [&](bool endCode) {
+                if (endCode && !mode.endCodeDisable) {
+                    hasEndCode = true;
+                    endCodeCount++;
+                } else {
+                    hasEndCode = false;
                 }
+            };
 
-                if (endCodeCount == 2) {
-                    break;
-                }
-            }
-            if (endCodeCount == 2) {
+            // Read next texel
+            switch (mode.colorMode) {
+            case 0: // 4 bpp, 16 colors, bank mode
+                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
+                color = (color >> ((~u & 1) * 4)) & 0xF;
+                processEndCode(color == 0xF);
+                transparent = color == 0x0;
+                color |= lineParams.colorBank;
+                break;
+            case 1: // 4 bpp, 16 colors, lookup table mode
+                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
+                color = (color >> ((~u & 1) * 4)) & 0xF;
+                processEndCode(color == 0xF);
+                transparent = color == 0x0;
+                color = VDP1ReadRendererVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
+                break;
+            case 2: // 8 bpp, 64 colors, bank mode
+                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex) & 0x3F;
+                processEndCode(color == 0xFF);
+                transparent = color == 0x0;
+                color |= lineParams.colorBank & 0xFFC0;
+                break;
+            case 3: // 8 bpp, 128 colors, bank mode
+                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex) & 0x7F;
+                processEndCode(color == 0xFF);
+                transparent = color == 0x00;
+                color |= lineParams.colorBank & 0xFF80;
+                break;
+            case 4: // 8 bpp, 256 colors, bank mode
+                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
+                processEndCode(color == 0xFF);
+                transparent = color == 0x00;
+                color |= lineParams.colorBank & 0xFF00;
+                break;
+            case 5: // 16 bpp, 32768 colors, RGB mode
+                color = VDP1ReadRendererVRAM<uint16>(lineParams.charAddr + charIndex * sizeof(uint16));
+                processEndCode(color == 0x7FFF);
+                transparent = color == 0x0000;
                 break;
             }
 
-            nextU = currU + uInc;
-            first = false;
+            if (endCodeCount == 2) {
+                break;
+            }
         }
+        if (endCodeCount == 2) {
+            break;
+        }
+
+        nextU = currU + uInc;
+        first = false;
 
         if (hasEndCode || (transparent && !mode.transparentPixelDisable)) {
             continue;
