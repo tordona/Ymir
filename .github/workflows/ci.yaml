@@ -9,7 +9,7 @@ on:
 jobs:
   build-windows-x64:
     name: windows-x64
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
       # Set up MASM for lzma
