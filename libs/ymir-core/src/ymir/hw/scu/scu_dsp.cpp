@@ -207,7 +207,12 @@ void SCUDSP::RunDMA(uint64 cycles) {
                 dmaReadAddr += 4;
             }
         } else if (toD0) {
-            dmaWriteAddr = (addrD0 + 2) & ~3;
+            if (bus == BusID::BBus) {
+                dmaWriteAddr = addrD0 - dmaAddrInc * 2 + 4;
+            } else {
+                dmaWriteAddr = addrD0 - dmaAddrInc + 2;
+            }
+            dmaWriteAddr &= ~3;
         } else {
             dmaReadAddr = addrD0;
         }
