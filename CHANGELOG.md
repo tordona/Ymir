@@ -5,10 +5,10 @@
 ### New features and improvements
 
 - App: Added command-line option `-P` to force emulator to start paused.
+- App: Added new Tweaks tab to Settings window consolidating all accuracy, compatibility and enhancement settings.
 - App: Added option to create internal backup RAM files per game. (#99)
 - App: Added option to override UI scale. (#251)
 - App: Added option to toggle fullscreen by double-clicking the display. (#197)
-- App: Added new Tweaks tab to Settings window consolidating all accuracy, compatibility and enhancement settings.
 - App: Added recent games list to File menu. (#196)
 - App: Automatically center Settings window when opening it. (#251)
 - App: Close windows when pressing B or Circle on gamepads while nothing is focused. (#251)
@@ -21,10 +21,10 @@
 - SCSP: Double-buffer DSP MIXS memory (thanks to @celeriyacon).
 - SCSP: Implemented MIDI In and Out. (#258; @GlaireDaggers)
 - SCSP: Interleave DSP execution and slot processing (thanks to @celeriyacon).
-- VDP: Added option to deinterlace video. (#66)
-- VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia). (#233)
 - VDP1: Added option to replace meshes with 50% transparency.
 - VDP1: Clip sprites to visible area to speed up rendering, especially of very large sprites.
+- VDP: Added option to deinterlace video. (#66)
+- VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia). (#233)
 
 ### Fixes
 
@@ -46,8 +46,8 @@
 - SMPC: Change fixed bits from 111 to 100 in TH/TR control mode responses for the first data byte of the Control Pad and 3D Control Pad peripherals. Fixes Golden Axe booting back to BIOS. (#231)
 - SMPC: Eliminate spurious INTBACK interrupts.
 - SMPC: Prevent COMREG writes when a command is in progress. Fixes some boot issues leading to the "Disc unsuitable for this system" message. (#219)
-- SMPC: Prioritize INTBACK continue requests over break requests.
 - SMPC: Prevent optimized INTBACK report from occurring unless a continue request was sent. Fixes input issues with Yaul-based homebrew.
+- SMPC: Prioritize INTBACK continue requests over break requests.
 - System: Tighten synchronization between the two SH-2 CPUs and remove artificial timeslice limit. Improves performance and fixes Fighters Megamix and Sonic Jam intermittent boot issues. (#236, #242)
 - VDP1: Lower command limit to work around problematic games that don't set up a terminator in the command table. (#213, #216)
 - VDP1: Significantly slow down command execution when running the VDP1 renderer on the emulator thread. Fixes Dragon Ball Z - Shinbutouden freeze after SEGA logo. (#233)
