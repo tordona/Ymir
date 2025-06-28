@@ -113,10 +113,13 @@ struct SCUDSPDisassembler {
             switch (instr.operation.d1BusOp) {
             case D1BusOp::NOP: disasm.NOP("NOP"); break;
             case D1BusOp::MOV_SIMM_D:
-                Mnemonic("MOV ")
-                    .S8(instr.operation.d1BusSrc.imm)
-                    .Comma()
-                    .OperandWrite(ymir::scu::ToString(instr.operation.d1BusDst));
+                Mnemonic("MOV ");
+                if (ymir::scu::IsD1ImmSigned(instr.operation.d1BusDst)) {
+                    S8(instr.operation.d1BusSrc.imm);
+                } else {
+                    U8(instr.operation.d1BusSrc.imm);
+                }
+                Comma().OperandWrite(ymir::scu::ToString(instr.operation.d1BusDst));
                 break;
             case D1BusOp::MOV_S_D:
                 Mnemonic("MOV ")

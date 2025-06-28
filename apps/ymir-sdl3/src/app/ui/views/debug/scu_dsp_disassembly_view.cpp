@@ -194,7 +194,11 @@ void SCUDSPDisassemblyView::Display() {
                     case scu::SCUDSPInstruction::D1BusOp::MOV_SIMM_D:
                         drawMnemonic("MOV ");
                         ImGui::SameLine(0, 0);
-                        drawS8(disasm.operation.d1BusSrc.imm);
+                        if (scu::IsD1ImmSigned(disasm.operation.d1BusDst)) {
+                            drawS8(disasm.operation.d1BusSrc.imm);
+                        } else {
+                            drawU8(disasm.operation.d1BusSrc.imm);
+                        }
                         drawComma();
                         drawRegWrite(scu::ToString(disasm.operation.d1BusDst));
                         break;
