@@ -200,10 +200,14 @@ void SCUDSP::RunDMA(uint64 cycles) {
 
     // Update RA0/WA0 if not holding address
     if (!dmaHold) {
-        if (toD0) {
+        if (bus == BusID::BBus && dmaAddrInc == 0) {
+            if (toD0) {
+                dmaWriteAddr += 4;
+            } else {
+                dmaReadAddr += 4;
+            }
+        } else if (toD0) {
             dmaWriteAddr = (addrD0 + 2) & ~3;
-        } else if (bus == BusID::BBus && dmaAddrInc == 0) {
-            dmaReadAddr += 4;
         } else {
             dmaReadAddr = addrD0;
         }
