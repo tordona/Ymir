@@ -579,10 +579,10 @@ FORCE_INLINE void SCUDSP::Cmd_Special_Loop(DSPInstr command) {
         // BTM
         if (loopCount != 0) {
             PC = loopTop;
-            loopCount = (loopCount - 1) & 0xFFF;
         } else {
             IncrementPC();
         }
+        loopCount = (loopCount - 1) & 0xFFF;
     }
 }
 
