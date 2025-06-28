@@ -341,10 +341,12 @@ void SMPC::Write(uint32 address, uint8 value) {
                 const bool breakFlag = bit::test<6>(IREG[0]);
                 if (continueFlag) {
                     devlog::trace<grp::base>("INTBACK continue request");
-                    // HACK: delay by a long while to fix Virtua Racing which expects the status report before VBlank
-                    // OUT and the peripheral reports after VBlank OUT
                     SF = true;
-                    m_scheduler.ScheduleFromNow(m_commandEvent, 100000);
+                    if (!m_optimize) {
+                        // HACK: delay by a long while to fix Virtua Racing which expects the status report before
+                        // VBlank OUT and the peripheral reports after VBlank OUT
+                        m_scheduler.ScheduleFromNow(m_commandEvent, 100000);
+                    }
                     // INTBACK();
                 } else if (breakFlag) {
                     devlog::trace<grp::base>("INTBACK break request");
@@ -753,7 +755,7 @@ void SMPC::TriggerOptimizedINTBACKRead() {
     if (m_optimize) {
         m_optimize = false;
 
-        if (m_intbackInProgress && m_getPeripheralData) {
+        if (SF && m_intbackInProgress && m_getPeripheralData) {
             devlog::trace<grp::base>("Optimized INTBACK triggered");
             m_scheduler.ScheduleFromNow(m_commandEvent, 0);
         }
@@ -847,6 +849,7 @@ void SMPC::WriteINTBACKPeripheralReport() {
     if (m_intbackReportOffset == m_intbackReport.size()) {
         m_intbackInProgress = false;
         m_intbackReportOffset = 0;
+        m_optimize = false;
     }
 
     SR.bit7 = 1;                  // fixed 1
