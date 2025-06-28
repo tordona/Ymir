@@ -7,7 +7,7 @@ on:
 jobs:
   build-windows:
     name: windows-${{ matrix.c_compiler }}-${{ matrix.architecture.name }}
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     strategy:
       fail-fast: false
