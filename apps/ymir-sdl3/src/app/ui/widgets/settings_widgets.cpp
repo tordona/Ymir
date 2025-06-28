@@ -124,7 +124,7 @@ namespace settings::audio {
         int stepGranularity = settings.stepGranularity;
 
         if (ImGui::BeginTable("scsp_step_granularity", 2, ImGuiTableFlags_SizingStretchProp)) {
-            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed);
+            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 200.0f * ctx.displayScale);
             ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
 
             ImGui::TableNextRow();
@@ -152,6 +152,14 @@ namespace settings::audio {
             if (ImGui::TableNextColumn()) {
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("Step size: %s", StepGranularityToString(stepGranularity).c_str());
+                widgets::ExplanationTooltip(
+                    "The entire bar encompasses one sample. The SCSP processes 32 slots per sample, represented by the "
+                    "subdivisions in the bar.\n\n"
+                    "The different colored regions indicate which portions of the sample are emulated on each step "
+                    "with the current granularity setting. Higher granularity results in tighter synchronization "
+                    "between the SCSP and other components (more accuracy) but lower performance due to additional "
+                    "context switching.",
+                    ctx.displayScale);
             }
             if (ImGui::TableNextColumn()) {
                 static constexpr ImU32 kGraphBackgroundColor = 0xAA253840;
@@ -172,7 +180,6 @@ namespace settings::audio {
 
                 auto *drawList = ImGui::GetWindowDrawList();
 
-                ImGui::Dummy(ImVec2(graphWidth, graphHeight));
                 drawList->AddRectFilled(basePos, ImVec2(basePos.x + graphWidth, basePos.y + graphHeight),
                                         kGraphBackgroundColor);
                 for (uint32 i = 0; i < (1 << stepGranularity); ++i) {
@@ -186,6 +193,8 @@ namespace settings::audio {
                     drawList->AddLine(ImVec2(x, basePos.y), ImVec2(x, basePos.y + graphHeight),
                                       kGraphSlotSeparatorColor, sepThickness);
                 }
+
+                ImGui::Dummy(ImVec2(graphWidth, graphHeight));
             }
 
             ImGui::EndTable();
