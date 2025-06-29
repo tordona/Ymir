@@ -2750,7 +2750,10 @@ FORCE_INLINE void VDP::VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWind
         // true   false     inside   true
         // false  true      inside   true
         // true   true      outside  false
-        const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
+        const auto sy = static_cast<sint32>(y);
+        const auto startY = static_cast<sint16>(windowParam.startY);
+        const auto endY = static_cast<sint16>(windowParam.endY);
+        const bool insideY = y >= startY && y <= endY;
         if (!insideY && !inverted) {
             // Short-circuit
             windowState.fill(false);
@@ -2763,32 +2766,32 @@ FORCE_INLINE void VDP::VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWind
         // Read line window if enabled
         if (windowParam.lineWindowTableEnable) {
             const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
-            sint16 startVal = VDP2ReadRendererVRAM<uint16>(address + 0);
-            sint16 endVal = VDP2ReadRendererVRAM<uint16>(address + 2);
+            startX = VDP2ReadRendererVRAM<uint16>(address + 0);
+            endX = VDP2ReadRendererVRAM<uint16>(address + 2);
+        }
 
-            // Some games set out-of-range window parameters and expects them to work.
-            // It seems like window coordinates should be signed...
-            //
-            // Panzer Dragoon 2 Zwei:
-            //   0000 to FFFE -> empty window
-            //   FFFE to 02C0 -> full line
-            //
-            // Panzer Dragoon Saga:
-            //   0000 to FFFF -> empty window
-            //
-            // Handle these cases here
-            if (startVal < 0) {
-                startVal = 0;
+        // Some games set out-of-range window parameters and expect them to work.
+        // It seems like window coordinates should be signed...
+        //
+        // Panzer Dragoon 2 Zwei:
+        //   0000 to FFFE -> empty window
+        //   FFFE to 02C0 -> full line
+        //
+        // Panzer Dragoon Saga:
+        //   0000 to FFFF -> empty window
+        //
+        // Snatcher:
+        //   FFFC to 0286 -> full line
+        //
+        // Handle these cases here
+        if (startX < 0) {
+            startX = 0;
+        }
+        if (endX < 0) {
+            if (startX >= endX) {
+                startX = 0x3FF;
             }
-            if (endVal < 0) {
-                if (startVal >= endVal) {
-                    startVal = 0x3FF;
-                }
-                endVal = 0;
-            }
-
-            startX = bit::extract<0, 9>(startVal);
-            endX = bit::extract<0, 9>(endVal);
+            endX = 0;
         }
 
         // For normal screen modes, X coordinates don't use bit 0
@@ -2849,7 +2852,10 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
         // true   false     inside   true
         // false  true      inside   true
         // true   true      outside  false
-        const bool insideY = y >= windowParam.startY && y <= windowParam.endY;
+        const auto sy = static_cast<sint32>(y);
+        const auto startY = static_cast<sint16>(windowParam.startY);
+        const auto endY = static_cast<sint16>(windowParam.endY);
+        const bool insideY = sy >= startY && sy <= endY;
         if (!insideY && inverted) {
             // Short-circuit
             windowState.fill(true);
@@ -2862,32 +2868,32 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
         // Read line window if enabled
         if (windowParam.lineWindowTableEnable) {
             const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
-            sint16 startVal = VDP2ReadRendererVRAM<uint16>(address + 0);
-            sint16 endVal = VDP2ReadRendererVRAM<uint16>(address + 2);
+            startX = VDP2ReadRendererVRAM<uint16>(address + 0);
+            endX = VDP2ReadRendererVRAM<uint16>(address + 2);
+        }
 
-            // Some games set out-of-range window parameters and expects them to work.
-            // It seems like window coordinates should be signed...
-            //
-            // Panzer Dragoon 2 Zwei:
-            //   0000 to FFFE -> empty window
-            //   FFFE to 02C0 -> full line
-            //
-            // Panzer Dragoon Saga:
-            //   0000 to FFFF -> empty window
-            //
-            // Handle these cases here
-            if (startVal < 0) {
-                startVal = 0;
+        // Some games set out-of-range window parameters and expect them to work.
+        // It seems like window coordinates should be signed...
+        //
+        // Panzer Dragoon 2 Zwei:
+        //   0000 to FFFE -> empty window
+        //   FFFE to 02C0 -> full line
+        //
+        // Panzer Dragoon Saga:
+        //   0000 to FFFF -> empty window
+        //
+        // Snatcher:
+        //   FFFC to 0286 -> full line
+        //
+        // Handle these cases here
+        if (startX < 0) {
+            startX = 0;
+        }
+        if (endX < 0) {
+            if (startX >= endX) {
+                startX = 0x3FF;
             }
-            if (endVal < 0) {
-                if (startVal >= endVal) {
-                    startVal = 0x3FF;
-                }
-                endVal = 0;
-            }
-
-            startX = bit::extract<0, 9>(startVal);
-            endX = bit::extract<0, 9>(endVal);
+            endX = 0;
         }
 
         // For normal screen modes, X coordinates don't use bit 0

@@ -19,3 +19,4 @@ Snatcher
   Sets up window parameters such that the starting point is greater than the ending point.
   Specifically:
     01FF to 0001 -> empty window (all outside)
+    FFFC to 0286 -> full line (all inside)

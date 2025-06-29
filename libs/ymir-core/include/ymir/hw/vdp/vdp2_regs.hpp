@@ -2170,7 +2170,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWPSXn(uint8 index, uint16 value) {
-        windowParams[index].startX = bit::extract<0, 9>(value);
+        windowParams[index].startX = value;
     }
     FORCE_INLINE void WriteWPSX0(uint16 value) {
         WriteWPSXn(0, value);
@@ -2190,7 +2190,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWPEXn(uint8 index, uint16 value) {
-        windowParams[index].endX = bit::extract<0, 9>(value);
+        windowParams[index].endX = value;
     }
     FORCE_INLINE void WriteWPEX0(uint16 value) {
         WriteWPEXn(0, value);
@@ -2210,7 +2210,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWPSYn(uint8 index, uint16 value) {
-        windowParams[index].startY = bit::extract<0, 8>(value);
+        windowParams[index].startY = value;
     }
     FORCE_INLINE void WriteWPSY0(uint16 value) {
         WriteWPSYn(0, value);
@@ -2230,7 +2230,7 @@ struct VDP2Regs {
     }
 
     FORCE_INLINE void WriteWPEYn(uint8 index, uint16 value) {
-        windowParams[index].endY = bit::extract<0, 8>(value);
+        windowParams[index].endY = value;
     }
     FORCE_INLINE void WriteWPEY0(uint16 value) {
         WriteWPEYn(0, value);
