@@ -1733,6 +1733,16 @@ void App::RunEmulator() {
                         m_context.settings.MakeDirty();
                     }
                     ImGui::SameLine();
+                    if (ImGui::SmallButton("3:2")) {
+                        videoSettings.forcedAspect = 3.0 / 2.0;
+                        m_context.settings.MakeDirty();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("16:10")) {
+                        videoSettings.forcedAspect = 16.0 / 10.0;
+                        m_context.settings.MakeDirty();
+                    }
+                    ImGui::SameLine();
                     if (ImGui::SmallButton("16:9")) {
                         videoSettings.forcedAspect = 16.0 / 9.0;
                         m_context.settings.MakeDirty();

@@ -28,6 +28,14 @@ void VideoSettingsView::Display() {
         settings.forcedAspect = 4.0 / 3.0;
     }
     ImGui::SameLine();
+    if (MakeDirty(ImGui::Button("3:2"))) {
+        settings.forcedAspect = 3.0 / 2.0;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::Button("16:10"))) {
+        settings.forcedAspect = 16.0 / 10.0;
+    }
+    ImGui::SameLine();
     if (MakeDirty(ImGui::Button("16:9"))) {
         settings.forcedAspect = 16.0 / 9.0;
     }
