@@ -1103,25 +1103,17 @@ private:
     void VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                         const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
 
-    // Precalculates window state for a given set of parameters using AND logic.
+    // Precalculates window state for a given set of parameters using AND or OR logic.
     //
     // y is the scanline to draw
     // windowSet contains the windows
     // windowParams contains additional window parameters
     // windowState is the window state output
-    template <bool hasSpriteWindow>
-    void VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
-                           const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
-
-    // Precalculates window state for a given set of parameters using OR logic.
     //
-    // y is the scanline to draw
-    // windowSet contains the windows
-    // windowParams contains additional window parameters
-    // windowState is the window state output
-    template <bool hasSpriteWindow>
-    void VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
-                          const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
+    // logicOR determines if the windows should be combined with OR logic (true) or AND logic (false)
+    template <bool logicOR, bool hasSpriteWindow>
+    void VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                             const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
 
     // Computes the access patterns for NBGs and RBGs.
     //

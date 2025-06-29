@@ -2719,18 +2719,18 @@ FORCE_INLINE void VDP::VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow>
     }
 
     if (windowSet.logic == WindowLogic::And) {
-        VDP2CalcWindowAnd(y, windowSet, windowParams, windowState);
+        VDP2CalcWindowLogic<false>(y, windowSet, windowParams, windowState);
     } else {
-        VDP2CalcWindowOr(y, windowSet, windowParams, windowState);
+        VDP2CalcWindowLogic<true>(y, windowSet, windowParams, windowState);
     }
 }
 
-template <bool hasSpriteWindow>
-FORCE_INLINE void VDP::VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
-                                         const std::array<WindowParams, 2> &windowParams,
-                                         std::array<bool, kMaxResH> &windowState) {
-    // Initialize to all inside if using AND logic
-    windowState.fill(true);
+template <bool logicOR, bool hasSpriteWindow>
+FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
+                                           const std::array<WindowParams, 2> &windowParams,
+                                           std::array<bool, kMaxResH> &windowState) {
+    // Initialize to all inside if using AND logic or all outside if using OR logic
+    windowState.fill(!logicOR);
 
     // Check normal windows
     for (int i = 0; i < 2; i++) {
@@ -2754,9 +2754,11 @@ FORCE_INLINE void VDP::VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWind
         const auto startY = static_cast<sint16>(windowParam.startY);
         const auto endY = static_cast<sint16>(windowParam.endY);
         const bool insideY = y >= startY && y <= endY;
-        if (!insideY && !inverted) {
+        if (!insideY && (inverted == logicOR)) {
             // Short-circuit
-            windowState.fill(false);
+            // - fill with outside if using AND logic and not inverted
+            // - fill with inside if using OR logic and inverted
+            windowState.fill(logicOR);
             return;
         }
 
@@ -2801,120 +2803,20 @@ FORCE_INLINE void VDP::VDP2CalcWindowAnd(uint32 y, const WindowSet<hasSpriteWind
         }
 
         // Fill in horizontal coordinate
-        if (inverted) {
-            if (startX < windowState.size()) {
-                endX = std::min<sint16>(endX, windowState.size() - 1);
-                if (endX >= startX) {
-                    std::fill(windowState.begin() + startX, windowState.begin() + endX + 1, false);
-                }
-            }
-        } else {
-            std::fill_n(windowState.begin(), startX, false);
-            if (endX < windowState.size()) {
-                std::fill(windowState.begin() + endX + 1, windowState.end(), false);
-            }
-        }
-    }
-
-    // Check sprite window
-    if constexpr (hasSpriteWindow) {
-        if (windowSet.enabled[2]) {
-            const bool inverted = windowSet.inverted[2];
-            for (uint32 x = 0; x < m_HRes; x++) {
-                windowState[x] &= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
-            }
-        }
-    }
-}
-
-template <bool hasSpriteWindow>
-FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
-                                        const std::array<WindowParams, 2> &windowParams,
-                                        std::array<bool, kMaxResH> &windowState) {
-    // Initialize to all outside if using OR logic
-    windowState.fill(false);
-
-    // Check normal windows
-    for (int i = 0; i < 2; i++) {
-        // Skip if disabled
-        if (!windowSet.enabled[i]) {
-            continue;
-        }
-
-        const WindowParams &windowParam = windowParams[i];
-        const bool inverted = windowSet.inverted[i];
-
-        // Check vertical coordinate
-        //
-        // Truth table: (state: false=outside, true=inside)
-        // state  inverted  result   st != ao
-        // false  false     outside  false
-        // true   false     inside   true
-        // false  true      inside   true
-        // true   true      outside  false
-        const auto sy = static_cast<sint32>(y);
-        const auto startY = static_cast<sint16>(windowParam.startY);
-        const auto endY = static_cast<sint16>(windowParam.endY);
-        const bool insideY = sy >= startY && sy <= endY;
-        if (!insideY && inverted) {
-            // Short-circuit
-            windowState.fill(true);
-            return;
-        }
-
-        sint16 startX = windowParam.startX;
-        sint16 endX = windowParam.endX;
-
-        // Read line window if enabled
-        if (windowParam.lineWindowTableEnable) {
-            const uint32 address = windowParam.lineWindowTableAddress + y * sizeof(uint16) * 2;
-            startX = VDP2ReadRendererVRAM<uint16>(address + 0);
-            endX = VDP2ReadRendererVRAM<uint16>(address + 2);
-        }
-
-        // Some games set out-of-range window parameters and expect them to work.
-        // It seems like window coordinates should be signed...
-        //
-        // Panzer Dragoon 2 Zwei:
-        //   0000 to FFFE -> empty window
-        //   FFFE to 02C0 -> full line
-        //
-        // Panzer Dragoon Saga:
-        //   0000 to FFFF -> empty window
-        //
-        // Snatcher:
-        //   FFFC to 0286 -> full line
-        //
-        // Handle these cases here
-        if (startX < 0) {
-            startX = 0;
-        }
-        if (endX < 0) {
-            if (startX >= endX) {
-                startX = 0x3FF;
-            }
-            endX = 0;
-        }
-
-        // For normal screen modes, X coordinates don't use bit 0
-        if (VDP2GetRegs().TVMD.HRESOn < 2) {
-            startX >>= 1;
-            endX >>= 1;
-        }
-
-        // Fill in horizontal coordinate
-        if (inverted) {
-            std::fill_n(windowState.begin(), startX, true);
-            if (endX < windowState.size()) {
-                std::fill(windowState.begin() + endX + 1, windowState.end(), true);
-            }
-
-        } else {
+        if (inverted != logicOR) {
+            // - fill [startX..endX] with outside if using AND logic and inverted
+            // - fill [startX..endX] with inside if using OR logic and not inverted
             if (startX < windowState.size()) {
                 endX = std::min<sint16>(endX, windowState.size() - 1);
                 if (startX <= endX) {
-                    std::fill(windowState.begin() + startX, windowState.begin() + endX + 1, true);
+                    std::fill(windowState.begin() + startX, windowState.begin() + endX + 1, logicOR);
                 }
+            }
+        } else {
+            // Fill complement of [startX..endX] with outside if using AND logic or inside if using OR logic
+            std::fill_n(windowState.begin(), startX, logicOR);
+            if (endX < windowState.size()) {
+                std::fill(windowState.begin() + endX + 1, windowState.end(), logicOR);
             }
         }
     }
@@ -2924,7 +2826,11 @@ FORCE_INLINE void VDP::VDP2CalcWindowOr(uint32 y, const WindowSet<hasSpriteWindo
         if (windowSet.enabled[2]) {
             const bool inverted = windowSet.inverted[2];
             for (uint32 x = 0; x < m_HRes; x++) {
-                windowState[x] |= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+                if constexpr (logicOR) {
+                    windowState[x] |= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+                } else {
+                    windowState[x] &= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+                }
             }
         }
     }
