@@ -1672,6 +1672,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
                 dstColor.r = srcColor.r >> 1u;
                 dstColor.g = srcColor.g >> 1u;
                 dstColor.b = srcColor.b >> 1u;
+                dstColor.msb = srcColor.msb;
                 break;
             case 3: // Half-transparency
                 // If background is not transparent, blend half of original graphic and half of background
