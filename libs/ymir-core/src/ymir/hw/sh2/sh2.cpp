@@ -305,26 +305,6 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         m_cyclesExecuted += InterpretNext<debug, enableCache>();
 
-        /*if (PC == 0x600a13c) {
-            // smpc_peripheral_intback_issue
-            __debugbreak();
-        } else if (PC == 0x6009f54) {
-            // entering _system_manager_handler
-            __debugbreak();
-        } else if (PC == 0x6009f5c) {
-            // collection_complete is false  (in _system_manager_handler)
-            __debugbreak();
-        } else if (PC == 0x6009f8e) {
-            // leaving _system_manager_handler
-            __debugbreak();
-        } else if (PC == 0x6009f9e) {
-            // collection_complete = true    (in _system_manager_handler)
-            __debugbreak();
-        } else if (PC == 0x600a192) {
-            // collection_complete = false   (in smpc_peripheral_process)
-            __debugbreak();
-        }*/
-
         // If PC is in any of these places, something went horribly wrong
         /*if ((PC & 1) || ((PC >> 29u) != 0b000 && (PC >> 29u) != 0b001 && (PC >> 29u) != 0b101)) {
             __debugbreak();
