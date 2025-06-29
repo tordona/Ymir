@@ -634,15 +634,14 @@ void CDBlock::PokeReg(uint32 address, T value) {
 
 bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {
     // Handle "no change" parameters
-    if (startParam == 0xFFFFFF || endParam == 0xFFFFFF || repeatParam == 0xFF) {
-        // "No change" must be specified on all parameters at once, and is only valid while paused
-        if (startParam == 0xFFFFFF && endParam == 0xFFFFFF && repeatParam == 0xFF) {
-            if ((m_status.statusCode & 0xF) == kStatusCodePause || (m_status.statusCode & 0xF) == kStatusCodeScan) {
-                m_status.statusCode = kStatusCodePlay;
-                return true;
-            }
-        }
-        return false;
+    if (startParam == 0xFFFFFF) {
+        startParam = m_playStartParam;
+    }
+    if (endParam == 0xFFFFFF) {
+        endParam = m_playEndParam;
+    }
+    if (repeatParam == 0xFF) {
+        repeatParam = m_playRepeatParam;
     }
 
     const bool isStartFAD = bit::test<23>(startParam);
@@ -658,8 +657,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
     // Store playback parameters
     m_playStartParam = startParam;
     m_playEndParam = endParam;
-    m_playRepeatParam = repeatParam & 0xF;
-    m_playMaxRepeat = m_playRepeatParam;
+    m_playRepeatParam = repeatParam;
+    m_playMaxRepeat = m_playRepeatParam & 0xF;
     m_playFile = false;
 
     // Make sure we have a disc
