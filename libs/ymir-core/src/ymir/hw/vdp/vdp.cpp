@@ -2695,26 +2695,26 @@ FORCE_INLINE void VDP::VDP2CalcWindows(uint32 y) {
         auto &bgParams = regs.bgParams[i];
         auto &bgWindow = m_bgWindows[i];
 
-        VDP2CalcWindow(y, bgParams.windowSet, regs.windowParams, bgWindow);
+        VDP2CalcWindow(y, bgParams.windowSet, regs.windowParams, std::span{bgWindow}.first(m_HRes));
     }
 
     // Calculate window for rotation parameters
-    VDP2CalcWindow(y, regs.commonRotParams.windowSet, regs.windowParams, m_rotParamsWindow);
+    VDP2CalcWindow(y, regs.commonRotParams.windowSet, regs.windowParams, std::span{m_rotParamsWindow}.first(m_HRes));
 
     // Calculate window for sprite layer
-    VDP2CalcWindow(y, regs.spriteParams.windowSet, regs.windowParams, m_spriteLayerState.window);
+    VDP2CalcWindow(y, regs.spriteParams.windowSet, regs.windowParams,
+                   std::span{m_spriteLayerState.window}.first(m_HRes));
 
     // Calculate window for color calculations
-    VDP2CalcWindow(y, regs.colorCalcParams.windowSet, regs.windowParams, m_colorCalcWindow);
+    VDP2CalcWindow(y, regs.colorCalcParams.windowSet, regs.windowParams, std::span{m_colorCalcWindow}.first(m_HRes));
 }
 
 template <bool hasSpriteWindow>
 FORCE_INLINE void VDP::VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
-                                      const std::array<WindowParams, 2> &windowParams,
-                                      std::array<bool, kMaxResH> &windowState) {
+                                      const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState) {
     // If no windows are enabled, consider the pixel outside of windows
     if (!std::any_of(windowSet.enabled.begin(), windowSet.enabled.end(), std::identity{})) {
-        windowState.fill(false);
+        std::fill(windowState.begin(), windowState.end(), false);
         return;
     }
 
@@ -2728,9 +2728,9 @@ FORCE_INLINE void VDP::VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow>
 template <bool logicOR, bool hasSpriteWindow>
 FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                                            const std::array<WindowParams, 2> &windowParams,
-                                           std::array<bool, kMaxResH> &windowState) {
+                                           std::span<bool> windowState) {
     // Initialize to all inside if using AND logic or all outside if using OR logic
-    windowState.fill(!logicOR);
+    std::fill(windowState.begin(), windowState.end(), !logicOR);
 
     // Check normal windows
     for (int i = 0; i < 2; i++) {
@@ -2758,7 +2758,7 @@ FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWi
             // Short-circuit
             // - fill with outside if using AND logic and not inverted
             // - fill with inside if using OR logic and inverted
-            windowState.fill(logicOR);
+            std::fill(windowState.begin(), windowState.end(), logicOR);
             return;
         }
 
@@ -3373,8 +3373,7 @@ template <uint32 bgIndex, bool deinterlace, bool altField>
 FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     static_assert(bgIndex < 4, "Invalid NBG index");
 
-    using FnDraw =
-        void (VDP::*)(uint32 y, const BGParams &, LayerState &, NormBGLayerState &, const std::array<bool, kMaxResH> &);
+    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, NormBGLayerState &, std::span<const bool>);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
@@ -3421,7 +3420,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     const BGParams &bgParams = regs.bgParams[bgIndex + 1];
     LayerState &layerState = m_layerStates[bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
-    const auto &windowState = m_bgWindows[bgIndex + 1];
+    auto windowState = std::span<const bool>{m_bgWindows[bgIndex + 1]}.first(m_HRes);
 
     if constexpr (bgIndex < 2) {
         VDP2UpdateLineScreenScroll<!deinterlace || altField>(y, bgParams, bgState);
@@ -3454,7 +3453,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
 
     static constexpr bool selRotParam = bgIndex == 0;
 
-    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const std::array<bool, kMaxResH> &);
+    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, std::span<const bool>);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
@@ -3500,7 +3499,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
     const VDP2Regs &regs = VDP2GetRegs();
     const BGParams &bgParams = regs.bgParams[bgIndex];
     LayerState &layerState = m_layerStates[bgIndex + 1];
-    const auto &windowState = m_bgWindows[bgIndex];
+    auto windowState = std::span<const bool>{m_bgWindows[bgIndex]}.first(m_HRes);
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
@@ -4675,7 +4674,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
 template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
 NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
+                                           NormBGLayerState &bgState, std::span<const bool> windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
 
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
@@ -4775,7 +4774,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
 template <ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           NormBGLayerState &bgState, const std::array<bool, kMaxResH> &windowState) {
+                                           NormBGLayerState &bgState, std::span<const bool> windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
 
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
@@ -4842,7 +4841,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                             const std::array<bool, kMaxResH> &windowState) {
+                                             std::span<const bool> windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
 
     const bool doubleResH = regs.TVMD.HRESOn & 0b010;
@@ -4944,7 +4943,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
 
 template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                             const std::array<bool, kMaxResH> &windowState) {
+                                             std::span<const bool> windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
 
     const bool doubleResH = regs.TVMD.HRESOn & 0b010;

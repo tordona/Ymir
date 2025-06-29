@@ -1101,7 +1101,7 @@ private:
     // windowState is the window state output
     template <bool hasSpriteWindow>
     void VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
-                        const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
+                        const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState);
 
     // Precalculates window state for a given set of parameters using AND or OR logic.
     //
@@ -1113,7 +1113,7 @@ private:
     // logicOR determines if the windows should be combined with OR logic (true) or AND logic (false)
     template <bool logicOR, bool hasSpriteWindow>
     void VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
-                             const std::array<WindowParams, 2> &windowParams, std::array<bool, kMaxResH> &windowState);
+                             const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState);
 
     // Computes the access patterns for NBGs and RBGs.
     //
@@ -1204,7 +1204,7 @@ private:
     // deinterlace determines whether to deinterlace video output
     template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
     void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
-                                const std::array<bool, kMaxResH> &windowState);
+                                std::span<const bool> windowState);
 
     // Draws a normal bitmap BG scanline.
     //
@@ -1219,7 +1219,7 @@ private:
     // deinterlace determines whether to deinterlace video output
     template <ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
     void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
-                                const std::array<bool, kMaxResH> &windowState);
+                                std::span<const bool> windowState);
 
     // Draws a rotation scroll BG scanline.
     //
@@ -1235,7 +1235,7 @@ private:
     // colorMode is the CRAM color mode.
     template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                  const std::array<bool, kMaxResH> &windowState);
+                                  std::span<const bool> windowState);
 
     // Draws a rotation bitmap BG scanline.
     //
@@ -1249,7 +1249,7 @@ private:
     // colorMode is the CRAM color mode.
     template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                  const std::array<bool, kMaxResH> &windowState);
+                                  std::span<const bool> windowState);
 
     // Selects a rotation parameter set based on the current parameter selection mode.
     //
