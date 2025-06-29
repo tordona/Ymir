@@ -122,8 +122,8 @@ void BackupMemoryView::Display() {
         FileDialogParams params{};
         params.dialogTitle = fmt::format("Import backup files to {}", m_name);
         params.defaultPath = m_context.profile.GetPath(ProfilePath::ExportedBackups);
-        params.filters.push_back({"Backup files", "bup"});
-        params.filters.push_back({"All files", "*"});
+        params.filters.push_back({"Backup files (*.bup, *.ymbup)", "bup;ymbup"});
+        params.filters.push_back({"All files (*.*)", "*"});
         params.userdata = this;
         params.callback = util::WrapMultiSelectionCallback<&BackupMemoryView::ProcessFileImport,
                                                            &BackupMemoryView::ProcessCancelFileImport,
@@ -160,10 +160,10 @@ void BackupMemoryView::Display() {
             FileDialogParams params{};
             params.dialogTitle = fmt::format("Export {} from {}", filename, m_name);
             params.defaultPath = m_context.profile.GetPath(ProfilePath::ExportedBackups) /
-                                 fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", filename, bupDate.year,
+                                 fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.ymbup", filename, bupDate.year,
                                              bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
-            params.filters.push_back({"Backup file", "bup"});
-            params.filters.push_back({"All files", "*"});
+            params.filters.push_back({"Backup files (*.bup, *.ymbup)", "bup;ymbup"});
+            params.filters.push_back({"All files (*.*)", "*"});
             params.userdata = this;
             params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessSingleFileExport,
                                                                 &BackupMemoryView::ProcessCancelFileExport,
@@ -217,8 +217,8 @@ void BackupMemoryView::Display() {
         FileDialogParams params{};
         params.dialogTitle = fmt::format("Load {} image", m_name);
         params.defaultPath = m_context.profile.GetPath(ProfilePath::BackupMemory) / bupMemFilename;
-        params.filters.push_back({"Backup memory image file", "bin;sav"});
-        params.filters.push_back({"All files", "*"});
+        params.filters.push_back({"Backup memory image files (*.bin, *.sav)", "bin;sav"});
+        params.filters.push_back({"All files (*.*)", "*"});
         params.userdata = this;
         params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessImageImport,
                                                             &BackupMemoryView::ProcessCancelImageImport,
@@ -237,8 +237,8 @@ void BackupMemoryView::Display() {
         FileDialogParams params{};
         params.dialogTitle = fmt::format("Save {} image", m_name);
         params.defaultPath = m_context.profile.GetPath(ProfilePath::BackupMemory) / bupMemFilename;
-        params.filters.push_back({"Backup memory image file", "bin;sav"});
-        params.filters.push_back({"All files", "*"});
+        params.filters.push_back({"Backup memory image files (*.bin, *.sav)", "bin;sav"});
+        params.filters.push_back({"All files (*.*)", "*"});
         params.userdata = this;
         params.callback = util::WrapSingleSelectionCallback<&BackupMemoryView::ProcessImageExport,
                                                             &BackupMemoryView::ProcessCancelImageExport,
