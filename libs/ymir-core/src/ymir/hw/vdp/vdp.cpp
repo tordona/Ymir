@@ -5501,6 +5501,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
                                                   CoordU32 dotCoord) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
+    const VDP2Regs &regs = VDP2GetRegs();
+
     Pixel pixel{};
 
     auto [dotX, dotY] = dotCoord;
@@ -5514,12 +5516,15 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
     const uint32 palNum = bgParams.supplBitmapPalNum;
 
     // Determine special color calculation flag
-    auto getSpecialColorCalcFlag = [&](bool colorDataMSB) {
+    const auto &specFuncCode = regs.specialFunctionCodes[bgParams.specialFunctionSelect];
+    auto getSpecialColorCalcFlag = [&](uint8 specColorCode, bool colorDataMSB) {
         using enum SpecialColorCalcMode;
         switch (bgParams.specialColorCalcMode) {
         case PerScreen: return bgParams.colorCalcEnable;
         case PerCharacter: return bgParams.colorCalcEnable && bgParams.supplBitmapSpecialColorCalc;
-        case PerDot: return bgParams.colorCalcEnable && bgParams.supplBitmapSpecialColorCalc;
+        case PerDot:
+            return bgParams.colorCalcEnable && bgParams.supplBitmapSpecialColorCalc &&
+                   specFuncCode.colorMatches[specColorCode];
         case ColorDataMSB: return bgParams.colorCalcEnable && colorDataMSB;
         }
         util::unreachable();
@@ -5531,7 +5536,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(pixel.color.msb);
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<1, 3>(dotData), pixel.color.msb);
 
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
@@ -5539,7 +5544,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(pixel.color.msb);
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<1, 3>(dotData), pixel.color.msb);
 
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
@@ -5547,21 +5552,21 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
         const uint32 colorIndex = dotData & 0x7FF;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && (dotData & 0x7FF) == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(pixel.color.msb);
+        pixel.specialColorCalc = getSpecialColorCalcFlag(bit::extract<1, 3>(dotData), pixel.color.msb);
 
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(true);
+        pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);
 
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
         const uint32 dotData = VDP2ReadRendererVRAM<uint32>(dotAddress);
         pixel.color = Color888{.u32 = dotData};
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
-        pixel.specialColorCalc = getSpecialColorCalcFlag(true);
+        pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);
     }
 
     // Compute priority
