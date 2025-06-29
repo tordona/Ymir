@@ -1708,7 +1708,7 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
     const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
 
     LineStepper line{coord1, coord2};
-    line.SystemClip(m_VDP1RenderContext.sysClipH, m_VDP1RenderContext.sysClipV << doubleV);
+    line.SystemClip(m_VDP1RenderContext.sysClipH, (m_VDP1RenderContext.sysClipV << doubleV) | doubleV);
 
     for (; line.CanStep(); line.Step()) {
         gouraudParams.U = line.FracPos();
@@ -1751,7 +1751,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
 
     const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
     TexturedLineStepper line{coord1, coord2, charSizeH, flipU};
-    line.SystemClip(m_VDP1RenderContext.sysClipH, m_VDP1RenderContext.sysClipV << doubleV);
+    line.SystemClip(m_VDP1RenderContext.sysClipH, (m_VDP1RenderContext.sysClipV << doubleV) | doubleV);
 
     for (; line.CanStep(); line.Step()) {
         const uint32 currU = line.U();

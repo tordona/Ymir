@@ -6,6 +6,8 @@
 
 ### Fixes
 
+- VDP1: Extend line clipping to the left and top edges by one pixel to compensate for some inaccuracies.
+
 
 ## Version 0.1.5
 
