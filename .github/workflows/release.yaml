@@ -99,6 +99,7 @@ jobs:
           Copy-Item -Path ".\vendor\libchdr\deps\zstd-1.5.6\LICENSE"   -Destination ".\licenses\zstd-LICENSE"
           Copy-Item -Path ".\vendor\lz4\lz4\lib\LICENSE"               -Destination ".\licenses\lz4-LICENSE"
           Copy-Item -Path ".\vendor\mio\LICENSE"                       -Destination ".\licenses\mio-LICENSE"
+          Copy-Item -Path ".\vendor\rtmidi\LICENSE"                    -Destination ".\licenses\RtMidi-LICENSE"
           Copy-Item -Path ".\vendor\SDL\LICENSE.txt"                   -Destination ".\licenses\SDL-LICENSE.txt"
           Copy-Item -Path ".\vendor\tomlplusplus\LICENSE"              -Destination ".\licenses\tomlplusplus-LICENSE"
           Copy-Item -Path ".\vendor\xxHash\xxHash\LICENSE"             -Destination ".\licenses\xxHash-LICENSE"
@@ -215,6 +216,7 @@ jobs:
           cp -f vendor/libchdr/deps/zstd-1.5.6/LICENSE licenses/zstd-LICENSE
           cp -f vendor/lz4/lz4/lib/LICENSE             licenses/lz4-LICENSE
           cp -f vendor/mio/LICENSE                     licenses/mio-LICENSE
+          cp -f vendor/rtmidi/LICENSE                  licenses/RtMidi-LICENSE
           cp -f vendor/SDL/LICENSE.txt                 licenses/SDL-LICENSE.txt
           cp -f vendor/tomlplusplus/LICENSE            licenses/tomlplusplus-LICENSE
           cp -f vendor/xxHash/xxHash/LICENSE           licenses/xxHash-LICENSE
@@ -304,6 +306,7 @@ jobs:
           cp -f vendor/libchdr/deps/zstd-1.5.6/LICENSE licenses/zstd-LICENSE
           cp -f vendor/lz4/lz4/lib/LICENSE             licenses/lz4-LICENSE
           cp -f vendor/mio/LICENSE                     licenses/mio-LICENSE
+          cp -f vendor/rtmidi/LICENSE                  licenses/RtMidi-LICENSE
           cp -f vendor/SDL/LICENSE.txt                 licenses/SDL-LICENSE.txt
           cp -f vendor/tomlplusplus/LICENSE            licenses/tomlplusplus-LICENSE
           cp -f vendor/xxHash/xxHash/LICENSE           licenses/xxHash-LICENSE
