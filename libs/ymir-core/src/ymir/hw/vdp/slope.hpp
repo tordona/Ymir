@@ -78,28 +78,30 @@ public:
         const sint64 ye = fye >> kFracBits;
 
         // Bail out early if the line is entirely in-bounds
-        if (xs >= 0 && xs <= width && ys >= 0 && ys <= height && xe >= 0 && xe <= width && ye >= 0 && ye <= height) {
+        if (xs >= -1 && xs <= width && ys >= -1 && ys <= height && xe >= -1 && xe <= width && ye >= -1 &&
+            ye <= height) {
             return 0u;
         }
 
         // Fully clip line if it is entirely out of bounds
-        if ((xs < 0 && xe < 0) || (xs > width && xe > width) || (ys < 0 && ye < 0) || (ys > height && ye > height)) {
+        if ((xs < -1 && xe < -1) || (xs > width && xe > width) || (ys < -1 && ye < -1) ||
+            (ys > height && ye > height)) {
             majcounterend = majcounter;
             return 0u;
         }
 
         // Determine how many pixels to clip from the start
         uint32 xclip;
-        if (xinc > 0 && xs < 0) {
-            xclip = -xs - 1;
+        if (xinc > 0 && xs < -1) {
+            xclip = -xs - 2;
         } else if (xinc < 0 && xs > width) {
             xclip = xs - width;
         } else {
             xclip = 0;
         }
         uint32 yclip;
-        if (yinc > 0 && ys < 0) {
-            yclip = -ys - 1;
+        if (yinc > 0 && ys < -1) {
+            yclip = -ys - 2;
         } else if (yinc < 0 && ys > height) {
             yclip = ys - height;
         } else {
@@ -114,15 +116,15 @@ public:
         length -= startClip;
 
         // Determine how many pixels to clip from the end
-        if (xinc < 0 && xe < 0) {
-            xclip = -xe - 1;
+        if (xinc < 0 && xe < -1) {
+            xclip = -xe - 2;
         } else if (xinc > 0 && xe > width) {
             xclip = xe - width;
         } else {
             xclip = 0;
         }
-        if (yinc < 0 && ye < 0) {
-            yclip = -ye - 1;
+        if (yinc < 0 && ye < -1) {
+            yclip = -ye - 2;
         } else if (yinc > 0 && ye > height) {
             yclip = ye - height;
         } else {
