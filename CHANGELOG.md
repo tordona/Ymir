@@ -14,6 +14,7 @@
 - VDP1: Include source color MSB when rendering polygons in half-luminance mode. Fixes intro FMV background on Crows - The Battle Action. (#107)
 - VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
 - VDP2: Handle bad window parameters set by Snatcher on the "Act 1" title screen (and probably many other places). (#259)
+- VDP2: Fix transparent VDP1 color data handling. Fixes missing graphics in Rayman's level select screens.
 - ymdasm: Fix reversed SCU DSP DMA immediate/data RAM operand.
 - ymdasm: Mask and translate several SCU DSP immediates.
 

@@ -653,11 +653,17 @@ struct SpriteParams {
 };
 
 struct SpriteData {
-    uint16 colorData = 0;        // DC10-0
-    uint8 colorCalcRatio = 0;    // CC2-0
-    uint8 priority = 0;          // PR2-0
-    bool shadowOrWindow = false; // SD
-    bool normalShadow = false;   // True if color data matches normal shadow pattern
+    enum class Special : uint8 {
+        Normal,      // Any other value
+        Shadow,      // Normal shadow pattern (all ones in DC except LSB)
+        Transparent, // Raw value is all zeros
+    };
+
+    uint16 colorData = 0;              // DC10-0
+    uint8 colorCalcRatio = 0;          // CC2-0
+    uint8 priority = 0;                // PR2-0
+    bool shadowOrWindow = false;       // SD
+    Special special = Special::Normal; // Color data special patterns
 };
 
 // Special Function Codes, derived from SFCODE.

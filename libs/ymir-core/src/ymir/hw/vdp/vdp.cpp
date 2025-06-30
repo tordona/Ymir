@@ -3335,7 +3335,7 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     const SpriteData spriteData = VDP2FetchSpriteData(spriteFB, spriteFBOffset);
     if constexpr (applyMesh) {
         // Ignore transparent pixels when applying the transparent mesh layer
-        if (spriteData.colorData == 0) {
+        if (spriteData.special == SpriteData::Special::Transparent) {
             return;
         }
     }
@@ -3357,13 +3357,13 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
         layerState.pixels.transparent[x] = false;
     } else {
         layerState.pixels.color[x] = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
-        layerState.pixels.transparent[x] = spriteData.colorData == 0;
+        layerState.pixels.transparent[x] = spriteData.special == SpriteData::Special::Transparent;
     }
     layerState.pixels.priority[x] = params.priorities[spriteData.priority];
 
     attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
     attr.shadowOrWindow = spriteData.shadowOrWindow;
-    attr.normalShadow = spriteData.normalShadow;
+    attr.normalShadow = spriteData.special == SpriteData::Special::Shadow;
     if constexpr (transparentMeshes && !applyMesh) {
         attr.transparentMesh = false;
     }
@@ -5616,6 +5616,24 @@ FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(const SpriteFB &fb, uin
     }
 }
 
+// Determines the type of sprite data (if any) based on color data.
+//
+// colorData is the raw color data.
+//
+// colorDataBits specifies the bit width of the color data.
+template <uint32 colorDataBits>
+static SpriteData::Special GetSpecialPattern(uint16 rawData) {
+    // Normal shadow pattern (LSB = 0, rest of the bits = 1)
+    static constexpr uint16 kNormalShadowValue = (1u << (colorDataBits + 1u)) - 2u;
+    if (rawData == 0) {
+        return SpriteData::Special::Transparent;
+    } else if (bit::extract<0, colorDataBits>(rawData) == kNormalShadowValue) {
+        return SpriteData::Special::Shadow;
+    } else {
+        return SpriteData::Special::Normal;
+    }
+}
+
 FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(const SpriteFB &fb, uint32 fbOffset, uint8 type) {
     assert(type < 8);
 
@@ -5629,55 +5647,62 @@ FORCE_INLINE SpriteData VDP::VDP2FetchWordSpriteData(const SpriteFB &fb, uint32 
         data.colorData = bit::extract<0, 10>(rawData);
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14, 15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
+        data.special = GetSpecialPattern<10>(rawData);
         break;
+
     case 0x1:
         data.colorData = bit::extract<0, 10>(rawData);
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
+        data.special = GetSpecialPattern<10>(rawData);
         break;
+
     case 0x2:
         data.colorData = bit::extract<0, 10>(rawData);
         data.colorCalcRatio = bit::extract<11, 13>(rawData);
         data.priority = bit::extract<14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
+        data.special = GetSpecialPattern<10>(rawData);
         break;
+
     case 0x3:
         data.colorData = bit::extract<0, 10>(rawData);
         data.colorCalcRatio = bit::extract<11, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
+        data.special = GetSpecialPattern<10>(rawData);
         break;
+
     case 0x4:
         data.colorData = bit::extract<0, 9>(rawData);
         data.colorCalcRatio = bit::extract<10, 12>(rawData);
         data.priority = bit::extract<13, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<9>(data.colorData);
+        data.special = GetSpecialPattern<9>(rawData);
         break;
+
     case 0x5:
         data.colorData = bit::extract<0, 10>(rawData);
         data.colorCalcRatio = bit::extract<11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<10>(data.colorData);
+        data.special = GetSpecialPattern<10>(rawData);
         break;
+
     case 0x6:
         data.colorData = bit::extract<0, 9>(rawData);
         data.colorCalcRatio = bit::extract<10, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<9>(data.colorData);
+        data.special = GetSpecialPattern<9>(rawData);
         break;
+
     case 0x7:
         data.colorData = bit::extract<0, 8>(rawData);
         data.colorCalcRatio = bit::extract<9, 11>(rawData);
         data.priority = bit::extract<12, 14>(rawData);
         data.shadowOrWindow = bit::test<15>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<8>(data.colorData);
+        data.special = GetSpecialPattern<8>(rawData);
         break;
     }
     return data;
@@ -5695,54 +5720,54 @@ FORCE_INLINE SpriteData VDP::VDP2FetchByteSpriteData(const SpriteFB &fb, uint32 
     case 0x8:
         data.colorData = bit::extract<0, 6>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<6>(data.colorData);
+        data.special = GetSpecialPattern<6>(rawData);
         break;
+
     case 0x9:
         data.colorData = bit::extract<0, 5>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
+        data.special = GetSpecialPattern<5>(rawData);
         break;
+
     case 0xA:
         data.colorData = bit::extract<0, 5>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
+        data.special = GetSpecialPattern<5>(rawData);
         break;
+
     case 0xB:
         data.colorData = bit::extract<0, 5>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<5>(data.colorData);
+        data.special = GetSpecialPattern<5>(rawData);
         break;
+
     case 0xC:
         data.colorData = bit::extract<0, 7>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
+        data.special = GetSpecialPattern<7>(rawData);
         break;
+
     case 0xD:
         data.colorData = bit::extract<0, 7>(rawData);
         data.colorCalcRatio = bit::extract<6>(rawData);
         data.priority = bit::extract<7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
+        data.special = GetSpecialPattern<7>(rawData);
         break;
+
     case 0xE:
         data.colorData = bit::extract<0, 7>(rawData);
         data.priority = bit::extract<6, 7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
+        data.special = GetSpecialPattern<7>(rawData);
         break;
+
     case 0xF:
         data.colorData = bit::extract<0, 7>(rawData);
         data.colorCalcRatio = bit::extract<6, 7>(rawData);
-        data.normalShadow = VDP2IsNormalShadow<7>(data.colorData);
+        data.special = GetSpecialPattern<7>(rawData);
         break;
     }
     return data;
-}
-
-template <uint32 colorDataBits>
-FORCE_INLINE bool VDP::VDP2IsNormalShadow(uint16 colorData) {
-    // Check against normal shadow pattern (LSB = 0, rest of the bits = 1)
-    static constexpr uint16 kNormalShadowValue = ~(~0 << (colorDataBits + 1)) & ~1;
-    return (colorData == kNormalShadowValue);
 }
 
 template <bool deinterlace>

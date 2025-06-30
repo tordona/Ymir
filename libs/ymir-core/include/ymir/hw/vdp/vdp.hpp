@@ -1369,14 +1369,6 @@ private:
     // type is the sprite type (between 8 and 15).
     SpriteData VDP2FetchByteSpriteData(const SpriteFB &fb, uint32 fbOffset, uint8 type);
 
-    // Determines the type of sprite shadow (if any) based on color data.
-    //
-    // colorData is the raw color data.
-    //
-    // colorDataBits specifies the bit width of the color data.
-    template <uint32 colorDataBits>
-    static bool VDP2IsNormalShadow(uint16 colorData);
-
     // Retrieves the Y display coordinate based on the current interlace mode.
     //
     // y is the Y coordinate to translate
