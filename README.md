@@ -1,7 +1,8 @@
 # Ymir
-A work-in-progress Sega Saturn emulator.
 
-[![Release](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml) <a href="https://discord.gg/NN3A7n5dzn">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a>
+[![Release](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml) <a href="https://discord.gg/NN3A7n5dzn">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a> <a href="https://patreon.com/StrikerX3">![Patreon Shield](https://img.shields.io/badge/Patreon-F96854?style=flat&logo=patreon&logoColor=white)</a>
+
+A work-in-progress Sega Saturn emulator.
 
 Join the [Discord community](https://discord.gg/NN3A7n5dzn).
 
@@ -38,7 +39,7 @@ Grab the latest release [here](https://github.com/StrikerX3/Ymir/releases/latest
 Check the [Releases](https://github.com/StrikerX3/Ymir/releases) page for previous versions.
 
 Ymir does not require installation. Simply download it to any directory and run the executable.
-On Windows you might also need to install the latest [Microsoft Visual C++ Redistributable package](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) ([x86_64 installer](https://aka.ms/vs/17/release/vc_redist.x64.exe), [AArch64/ARM64 installer](https://aka.ms/vs/17/release/vc_redist.arm64.exe)).
+On Windows you might also need to install the latest [Microsoft Visual C++ Redistributable package](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) ([x86_64 installer](https://aka.ms/vs/17/release/vc_redist.x64.exe)).
 
 The program accepts command-line arguments. Invoke `ymir-sdl3 --help` to list the options:
 
