@@ -4,6 +4,8 @@
 
 ### New features and improvements
 
+- App: Added new 3:2 and 16:10 forced aspect ratio options.
+
 ### Fixes
 
 - CD Block: Fix handling of "no change" PlayDisc parameters. Fixes X-Men: Children of the Atom CDDA tracks not resuming after pausing. (#274)

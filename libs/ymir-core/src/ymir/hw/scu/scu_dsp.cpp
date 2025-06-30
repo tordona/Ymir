@@ -100,6 +100,8 @@ void SCUDSP::Run(uint64 cycles) {
         const DSPInstr instruction = nextInstr;
         nextInstr = programRAM[PC];
 
+        RunDMA<debug>(1);
+
         switch (instruction.instructionInfo.instructionClass) {
         case 0b00: Cmd_Operation<debug>(instruction); break;
         case 0b10: Cmd_LoadImm<debug>(instruction); break;
@@ -144,7 +146,7 @@ void SCUDSP::RunDMA(uint64 cycles) {
     const uint32 ctIndex = toD0 ? dmaSrc : dmaDst;
     const bool useDataRAM = ctIndex <= 3;
     const bool useProgramRAM = !toD0 && ctIndex == 4;
-    uint8 programRAMIndex = 0; // TODO: check if this is correct
+    uint8 programRAMIndex = PC;
 
     TraceDSPDMA<debug>(m_tracer, dmaToD0, addrD0, ctIndex, dmaCount, dmaAddrInc, dmaHold);
 
@@ -216,6 +218,12 @@ void SCUDSP::RunDMA(uint64 cycles) {
         } else {
             dmaReadAddr = addrD0;
         }
+    }
+
+    // Clear program pipeline if writing to Program RAM
+    if (useProgramRAM) {
+        nextInstr.u32 = 0;
+        PC = loopTop;
     }
 
     dmaRun = false;
