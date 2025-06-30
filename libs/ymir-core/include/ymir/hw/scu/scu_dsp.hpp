@@ -253,10 +253,10 @@ public:
         case 0b0111: dmaWriteAddr = (value << 2u) & 0x7FF'FFFC; break;
         case 0b1010: loopCount = value & 0xFFF; break;
         case 0b1011: loopTop = value; break;
-        case 0b1100: // M0
-        case 0b1101: // M1
-        case 0b1110: // M2
-        case 0b1111: // M3
+        case 0b1100: // CT0
+        case 0b1101: // CT1
+        case 0b1110: // CT2
+        case 0b1111: // CT3
             CT.array[index & 3] = value & 0x3F;
             incCT &= ~(1u << ((index & 3) * 8));
             break;
