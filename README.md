@@ -7,12 +7,12 @@ A work-in-progress Sega Saturn emulator.
 Join the [Discord community](https://discord.gg/NN3A7n5dzn).
 
 <div class="grid" markdown>
-  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/cd-player.png"/>
-  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/sonic-r.png"/>
-  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/virtua-fighter-2.png"/>
-  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/radiant-silvergun.png"/>
-  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/panzer-dragoon-saga.png"/>
-  <img width="49%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/nights-into-dreams.png"/>
+  <img width="49.75%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/cd-player.png"/>
+  <img width="49.75%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/sonic-r.png"/>
+  <img width="49.75%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/virtua-fighter-2.png"/>
+  <img width="49.75%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/radiant-silvergun.png"/>
+  <img width="49.75%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/panzer-dragoon-saga.png"/>
+  <img width="49.75%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/nights-into-dreams.png"/>
   <img width="100%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/debugger.png"/>
 </div>
 
