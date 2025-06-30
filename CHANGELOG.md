@@ -43,14 +43,14 @@
 - VDP1: Added option to replace meshes with 50% transparency.
 - VDP1: Clip sprites to visible area to speed up rendering, especially of very large sprites.
 - VDP: Added option to deinterlace video. (#66)
-- VDP: Added option to move VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia). (#233)
+- VDP: Moved VDP1 rendering to the emulator thread to improve compatibility with some games (e.g. Grandia) and added an option to move it back to the VDP rendering thread. (#233)
 
 ### Fixes
 
 - App: Fix rare crash when loading a backup memory image in the Backup Memory Manager.
 - App: Fix window scaling on macOS Retina displays when using HiDPI mode. (#221, #266; @Wunkolo)
 - App: Prevent loading internal backup memory image as backup RAM cartridge image.
-- CD Block: Start new playbacks from starting FAD when previous playback has ended. Fixes WipEout freeze after SEGA logo.
+- CD Block: Start new playbacks from starting FAD when previous playback has ended. Fixes WipEout freeze after SEGA logo and many other freezes, no-boots and softlocks.
 - Media: Fix pregap handling in single BIN images.
 - SCSP: Apply DAC18B to output (thanks to @celeriyacon). Fixes quiet audio in many games. (#237)
 - SCSP: Fix loss of accuracy on MIXS send level calculation (thanks to @celeriyacon).
