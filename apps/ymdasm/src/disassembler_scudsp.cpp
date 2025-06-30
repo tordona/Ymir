@@ -185,10 +185,10 @@ struct SCUDSPDisassembler {
             }
             Comma();
             if (instr.dma.countType) {
+                U8(instr.dma.count.imm);
+            } else {
                 auto reg = fmt::format("M{}{}", (instr.dma.count.ct < 4 ? "" : "C"), instr.dma.count.ct & 3);
                 OperandRead(reg);
-            } else {
-                U8(instr.dma.count.imm);
             }
             break;
         case InstrType::JMP:

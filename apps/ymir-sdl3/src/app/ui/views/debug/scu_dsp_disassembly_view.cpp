@@ -273,10 +273,10 @@ void SCUDSPDisassemblyView::Display() {
                     }
                     drawComma();
                     if (disasm.dma.countType) {
+                        drawU8(disasm.dma.count.imm);
+                    } else {
                         auto reg = fmt::format("M{}{}", (disasm.dma.count.ct < 4 ? "" : "C"), disasm.dma.count.ct & 3);
                         drawRegRead(reg);
-                    } else {
-                        drawU8(disasm.dma.count.imm);
                     }
                     break;
                 case scu::SCUDSPInstruction::Type::JMP:
