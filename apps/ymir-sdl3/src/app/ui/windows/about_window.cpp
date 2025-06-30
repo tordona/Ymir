@@ -377,7 +377,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ackWithAuthor("saturn-tests", "StrikerX3", "https://github.com/StrikerX3/saturn-tests");
         ackWithAuthor("SH-4 single step tests", "raddad772", "https://github.com/SingleStepTests/sh4");
         ackWithAuthor("M68000 single step tests", "raddad772", "https://github.com/SingleStepTests/m68000");
-        ackWithAuthor("scsptest, scspadpcm, sh2test and scutest", "celeriyacon", "https://github.com/celeriyacon");
+        ackWithAuthor("scspadpcm, scsptest, sh2test and scutest", "celeriyacon", "https://github.com/celeriyacon");
 
         // -----------------------------------------------------------------------------
 
@@ -388,19 +388,28 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ImGui::PopFont();
 
         ackWithAuthor("Saturn MiSTer", "Sergiy Dvodnenko (srg320)", "https://github.com/MiSTer-devel/Saturn_MiSTer");
+        
         ackWithAuthor("Mednafen", "various contributors", "https://mednafen.github.io/");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(libretro git mirror)##mednafen", "https://github.com/libretro-mirrors/mednafen-git");
+        
         ackWithAuthor("Yaba Sanshiro 2", "devmiyax", "https://github.com/devmiyax/yabause");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##yaba_sanshiro_2", "https://www.uoyabause.org/");
+        
         ackWithAuthor("Yabause", "Guillaume Duhamel and contributors", "https://github.com/Yabause/yabause");
+        
         ackWithAuthor("Mesen2", "Sour and contributors", "https://github.com/SourMesen/Mesen2");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##mesen", "https://www.mesen.ca/");
+        
         ackWithAuthor("openMSX", "openMSX developers", "https://github.com/openMSX/openMSX");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##openmsx", "https://openmsx.org/");
+        
+        ackWithAuthor("DuckStation", "Stenzek and contributors", "https://github.com/stenzek/duckstation");
+        ImGui::SameLine();
+        ImGui::TextLinkOpenURL("(site)##duckstation", "https://www.duckstation.org/");
 
         // -----------------------------------------------------------------------------
 
@@ -427,6 +436,12 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ImGui::TextUnformatted(" and users ");
         ImGui::SameLine(0, 0);
         ImGui::TextLinkOpenURL("reporting issues and feature requests", "https://github.com/StrikerX3/Ymir/issues");
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(".");
+
+        ImGui::TextUnformatted("To the ");
+        ImGui::SameLine(0, 0);
+        ImGui::TextLinkOpenURL("Patreon supporters", "https://www.patreon.com/StrikerX3");
         ImGui::SameLine(0, 0);
         ImGui::TextUnformatted(".");
 
