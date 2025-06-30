@@ -225,6 +225,11 @@ public:
     // D1-Bus writes to [d]
     template <bool debug>
     FORCE_INLINE void WriteD1Bus(uint8 index, uint32 value) {
+        // Finish previous DMA transfer
+        if (dmaRun) {
+            RunDMA<debug>(1); // TODO: cycles?
+        }
+
         switch (index) {
         case 0b0000: // MC0
         case 0b0001: // MC1
