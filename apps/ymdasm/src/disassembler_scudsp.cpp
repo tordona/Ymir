@@ -33,6 +33,11 @@ struct SCUDSPDisassembler {
         return *this;
     }
 
+    SCUDSPDisassembler &U32(uint32 imm) {
+        disasm.ImmHex(imm, "#");
+        return *this;
+    }
+
     SCUDSPDisassembler &Mnemonic(std::string_view mnemonic) {
         disasm.Mnemonic(mnemonic);
         return *this;
@@ -114,10 +119,24 @@ struct SCUDSPDisassembler {
             case D1BusOp::NOP: disasm.NOP("NOP"); break;
             case D1BusOp::MOV_SIMM_D:
                 Mnemonic("MOV ");
-                if (ymir::scu::IsD1ImmSigned(instr.operation.d1BusDst)) {
-                    S8(instr.operation.d1BusSrc.imm);
-                } else {
-                    U8(instr.operation.d1BusSrc.imm);
+                switch (instr.operation.d1BusDst) {
+                case ymir::scu::SCUDSPInstruction::OpDst::MC0: [[fallthrough]];
+                case ymir::scu::SCUDSPInstruction::OpDst::MC1: [[fallthrough]];
+                case ymir::scu::SCUDSPInstruction::OpDst::MC2: [[fallthrough]];
+                case ymir::scu::SCUDSPInstruction::OpDst::MC3: S8(instr.operation.d1BusSrc.imm); break;
+                case ymir::scu::SCUDSPInstruction::OpDst::RX: S8(instr.operation.d1BusSrc.imm); break;
+                case ymir::scu::SCUDSPInstruction::OpDst::P: S8(instr.operation.d1BusSrc.imm); break;
+                case ymir::scu::SCUDSPInstruction::OpDst::RA0: [[fallthrough]];
+                case ymir::scu::SCUDSPInstruction::OpDst::WA0:
+                    U32((instr.operation.d1BusSrc.imm << 2) & 0x7FF'FFFC);
+                    break;
+                case ymir::scu::SCUDSPInstruction::OpDst::LOP: U32(instr.operation.d1BusSrc.imm & 0xFFF); break;
+                case ymir::scu::SCUDSPInstruction::OpDst::TOP: U8(instr.operation.d1BusSrc.imm); break;
+                case ymir::scu::SCUDSPInstruction::OpDst::CT0: [[fallthrough]];
+                case ymir::scu::SCUDSPInstruction::OpDst::CT1: [[fallthrough]];
+                case ymir::scu::SCUDSPInstruction::OpDst::CT2: [[fallthrough]];
+                case ymir::scu::SCUDSPInstruction::OpDst::CT3: U8(instr.operation.d1BusSrc.imm & 0x3F); break;
+                default: S8(instr.operation.d1BusSrc.imm); break;
                 }
                 Comma().OperandWrite(ymir::scu::ToString(instr.operation.d1BusDst));
                 break;
@@ -132,7 +151,21 @@ struct SCUDSPDisassembler {
             break;
         }
         case InstrType::MVI:
-            Mnemonic("MVI ").S32(instr.mvi.imm).Comma().OperandWrite(ymir::scu::ToString(instr.mvi.dst));
+            Mnemonic("MVI ");
+            switch (instr.mvi.dst) {
+            case ymir::scu::SCUDSPInstruction::MVIDst::MC0: [[fallthrough]];
+            case ymir::scu::SCUDSPInstruction::MVIDst::MC1: [[fallthrough]];
+            case ymir::scu::SCUDSPInstruction::MVIDst::MC2: [[fallthrough]];
+            case ymir::scu::SCUDSPInstruction::MVIDst::MC3: U32(instr.mvi.imm & 0x3F); break;
+            case ymir::scu::SCUDSPInstruction::MVIDst::RX: U32(instr.mvi.imm); break;
+            case ymir::scu::SCUDSPInstruction::MVIDst::P: S32(instr.mvi.imm); break;
+            case ymir::scu::SCUDSPInstruction::MVIDst::WA0: [[fallthrough]];
+            case ymir::scu::SCUDSPInstruction::MVIDst::RA0: U32((instr.mvi.imm << 2) & 0x7FF'FFFC); break;
+            case ymir::scu::SCUDSPInstruction::MVIDst::LOP: U32(instr.mvi.imm & 0xFFF); break;
+            case ymir::scu::SCUDSPInstruction::MVIDst::PC: U32(instr.mvi.imm & 0xFF); break;
+            default: S32(instr.mvi.imm); break;
+            }
+            Comma().OperandWrite(ymir::scu::ToString(instr.mvi.dst));
             if (instr.mvi.cond != ymir::scu::SCUDSPInstruction::Cond::None) {
                 Comma().Cond(instr.mvi.cond);
             }

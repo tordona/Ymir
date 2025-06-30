@@ -342,25 +342,4 @@ std::string_view ToString(SCUDSPInstruction::DMARAMOp dmaRamOp) {
     }
 }
 
-bool IsD1ImmSigned(SCUDSPInstruction::OpDst opDst) {
-    using enum SCUDSPInstruction::OpDst;
-    switch (opDst) {
-    case MC0: return true;
-    case MC1: return true;
-    case MC2: return true;
-    case MC3: return true;
-    case RX: return true;
-    case P: return true;
-    case RA0: return true;
-    case WA0: return true;
-    case LOP: return true;
-    case TOP: return false;
-    case CT0: return false;
-    case CT1: return false;
-    case CT2: return false;
-    case CT3: return false;
-    default: return true;
-    }
-}
-
 } // namespace ymir::scu

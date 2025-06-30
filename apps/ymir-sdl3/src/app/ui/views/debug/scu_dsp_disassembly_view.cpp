@@ -71,10 +71,13 @@ void SCUDSPDisassemblyView::Display() {
 
                 auto drawU8 = [&](uint8 imm) { ImGui::TextColored(m_colors.disasm.immediate, "#0x%X", imm); };
                 auto drawS8 = [&](sint8 imm) {
-                    ImGui::TextColored(m_colors.disasm.immediate, "#%s0x%X", (imm < 0 ? "-" : ""), abs(imm));
+                    ImGui::TextColored(m_colors.disasm.immediate, "#%s0x%X", (imm < 0 ? "-" : ""),
+                                       static_cast<uint8>(abs(imm)));
                 };
+                auto drawU32 = [&](uint32 imm) { ImGui::TextColored(m_colors.disasm.immediate, "#0x%X", imm); };
                 auto drawS32 = [&](sint32 imm) {
-                    ImGui::TextColored(m_colors.disasm.immediate, "#%s0x%X", (imm < 0 ? "-" : ""), abs(imm));
+                    ImGui::TextColored(m_colors.disasm.immediate, "#%s0x%X", (imm < 0 ? "-" : ""),
+                                       static_cast<uint32>(abs(imm)));
                 };
 
                 auto drawRegRead = [&](std::string_view reg) {
@@ -194,10 +197,28 @@ void SCUDSPDisassemblyView::Display() {
                     case scu::SCUDSPInstruction::D1BusOp::MOV_SIMM_D:
                         drawMnemonic("MOV ");
                         ImGui::SameLine(0, 0);
-                        if (scu::IsD1ImmSigned(disasm.operation.d1BusDst)) {
-                            drawS8(disasm.operation.d1BusSrc.imm);
-                        } else {
-                            drawU8(disasm.operation.d1BusSrc.imm);
+                        switch (disasm.operation.d1BusDst) {
+                        case ymir::scu::SCUDSPInstruction::OpDst::MC0: [[fallthrough]];
+                        case ymir::scu::SCUDSPInstruction::OpDst::MC1: [[fallthrough]];
+                        case ymir::scu::SCUDSPInstruction::OpDst::MC2: [[fallthrough]];
+                        case ymir::scu::SCUDSPInstruction::OpDst::MC3: drawS8(disasm.operation.d1BusSrc.imm); break;
+                        case ymir::scu::SCUDSPInstruction::OpDst::RX: drawS8(disasm.operation.d1BusSrc.imm); break;
+                        case ymir::scu::SCUDSPInstruction::OpDst::P: drawS8(disasm.operation.d1BusSrc.imm); break;
+                        case ymir::scu::SCUDSPInstruction::OpDst::RA0: [[fallthrough]];
+                        case ymir::scu::SCUDSPInstruction::OpDst::WA0:
+                            drawU32((disasm.operation.d1BusSrc.imm << 2) & 0x7FF'FFFC);
+                            break;
+                        case ymir::scu::SCUDSPInstruction::OpDst::LOP:
+                            drawU32(disasm.operation.d1BusSrc.imm & 0xFFF);
+                            break;
+                        case ymir::scu::SCUDSPInstruction::OpDst::TOP: drawU8(disasm.operation.d1BusSrc.imm); break;
+                        case ymir::scu::SCUDSPInstruction::OpDst::CT0: [[fallthrough]];
+                        case ymir::scu::SCUDSPInstruction::OpDst::CT1: [[fallthrough]];
+                        case ymir::scu::SCUDSPInstruction::OpDst::CT2: [[fallthrough]];
+                        case ymir::scu::SCUDSPInstruction::OpDst::CT3:
+                            drawU8(disasm.operation.d1BusSrc.imm & 0x3F);
+                            break;
+                        default: drawS8(disasm.operation.d1BusSrc.imm); break;
                         }
                         drawComma();
                         drawRegWrite(scu::ToString(disasm.operation.d1BusDst));
@@ -216,7 +237,19 @@ void SCUDSPDisassemblyView::Display() {
                 case scu::SCUDSPInstruction::Type::MVI:
                     drawMnemonic("MVI");
                     ImGui::SameLine();
-                    drawS32(disasm.mvi.imm);
+                    switch (disasm.mvi.dst) {
+                    case scu::SCUDSPInstruction::MVIDst::MC0: [[fallthrough]];
+                    case scu::SCUDSPInstruction::MVIDst::MC1: [[fallthrough]];
+                    case scu::SCUDSPInstruction::MVIDst::MC2: [[fallthrough]];
+                    case scu::SCUDSPInstruction::MVIDst::MC3: drawU32(disasm.mvi.imm & 0x3F); break;
+                    case scu::SCUDSPInstruction::MVIDst::RX: drawU32(disasm.mvi.imm); break;
+                    case scu::SCUDSPInstruction::MVIDst::P: drawS32(disasm.mvi.imm); break;
+                    case scu::SCUDSPInstruction::MVIDst::WA0: [[fallthrough]];
+                    case scu::SCUDSPInstruction::MVIDst::RA0: drawU32((disasm.mvi.imm << 2) & 0x7FF'FFFC); break;
+                    case scu::SCUDSPInstruction::MVIDst::LOP: drawU32(disasm.mvi.imm & 0xFFF); break;
+                    case scu::SCUDSPInstruction::MVIDst::PC: drawU32(disasm.mvi.imm & 0xFF); break;
+                    default: drawS32(disasm.mvi.imm); break;
+                    }
                     drawComma();
                     drawRegWrite(scu::ToString(disasm.mvi.dst));
                     if (disasm.mvi.cond != scu::SCUDSPInstruction::Cond::None) {

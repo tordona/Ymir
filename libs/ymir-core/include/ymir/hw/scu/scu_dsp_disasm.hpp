@@ -82,6 +82,4 @@ std::string_view ToString(SCUDSPInstruction::MVIDst mviDst);
 std::string_view ToString(SCUDSPInstruction::ALUOp aluOp);
 std::string_view ToString(SCUDSPInstruction::DMARAMOp dmaRamOp);
 
-bool IsD1ImmSigned(SCUDSPInstruction::OpDst opDst);
-
 } // namespace ymir::scu
