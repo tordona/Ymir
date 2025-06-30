@@ -100,12 +100,16 @@ void SCUDSP::Run(uint64 cycles) {
         const DSPInstr instruction = nextInstr;
         nextInstr = programRAM[PC];
 
-        RunDMA<debug>(1);
+        const bool doDMA = dmaRun;
 
         switch (instruction.instructionInfo.instructionClass) {
         case 0b00: Cmd_Operation<debug>(instruction); break;
         case 0b10: Cmd_LoadImm<debug>(instruction); break;
         case 0b11: Cmd_Special<debug>(instruction); break;
+        }
+
+        if (doDMA) {
+            RunDMA<debug>(1);
         }
 
         // Clear stepping flag to ensure the DSP only runs one command when stepping

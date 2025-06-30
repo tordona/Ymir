@@ -212,12 +212,6 @@ public:
         {
             const uint8 ctIndex = bit::extract<0, 1>(index);
             const uint8 inc = bit::extract<2>(index);
-
-            // Finish previous DMA transfer
-            if (dmaRun) {
-                RunDMA<debug>(1); // TODO: cycles?
-            }
-
             incCT |= inc << (ctIndex * 8u);
             const uint32 ctAddr = CT.array[ctIndex];
             return dataRAM[ctIndex][ctAddr];
@@ -231,11 +225,6 @@ public:
     // D1-Bus writes to [d]
     template <bool debug>
     FORCE_INLINE void WriteD1Bus(uint8 index, uint32 value) {
-        // Finish previous DMA transfer
-        if (dmaRun) {
-            RunDMA<debug>(1); // TODO: cycles?
-        }
-
         switch (index) {
         case 0b0000: // MC0
         case 0b0001: // MC1
@@ -266,11 +255,6 @@ public:
     // Immediate writes to [d]
     template <bool debug>
     FORCE_INLINE void WriteImm(uint8 index, uint32 value) {
-        // Finish previous DMA transfer
-        if (dmaRun) {
-            RunDMA<debug>(1); // TODO: cycles?
-        }
-
         switch (index) {
         case 0b0000: // MC0
         case 0b0001: // MC1
