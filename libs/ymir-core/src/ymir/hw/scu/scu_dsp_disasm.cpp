@@ -164,9 +164,9 @@ static SCUDSPInstruction DisassembleDMA(uint32 opcode) {
     instr.dma.hold = bit::test<14>(opcode);
     instr.dma.countType = bit::test<13>(opcode);
     if (instr.dma.countType) {
-        instr.dma.count.imm = bit::extract<0, 7>(opcode);
-    } else {
         instr.dma.count.ct = bit::extract<0, 3>(opcode);
+    } else {
+        instr.dma.count.imm = bit::extract<0, 7>(opcode);
     }
 
     {
