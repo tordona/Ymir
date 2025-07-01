@@ -50,7 +50,7 @@ public:
     void WriteProgram(uint32 value) {
         if constexpr (!poke) {
             // Cannot write while program is executing
-            if (programExecuting) {
+            if (programExecuting && !programPaused) {
                 return;
             }
         }
@@ -62,7 +62,7 @@ public:
     void WritePC(uint8 value) {
         if constexpr (!poke) {
             // Cannot write while program is executing
-            if (programExecuting) {
+            if (programExecuting && !programPaused) {
                 return;
             }
         }
@@ -74,7 +74,7 @@ public:
     uint32 ReadData() {
         if constexpr (!peek) {
             // Cannot read while program is executing
-            if (programExecuting) {
+            if (programExecuting && !programPaused) {
                 return 0;
             }
         }
@@ -91,7 +91,7 @@ public:
     void WriteData(uint32 value) {
         if constexpr (!poke) {
             // Cannot write while program is executing
-            if (programExecuting) {
+            if (programExecuting && !programPaused) {
                 return;
             }
         }
