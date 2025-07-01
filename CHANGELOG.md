@@ -12,6 +12,7 @@
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.
 - SCU: Allow SCU DSP program and data RAM reads or writes while the program is paused (thanks to @celeriyacon).
 - SCU: Interleave SCU DSP DMA transfers with program execution when not writing to Program RAM or accessing the CT used by DMA (thanks to @celeriyacon).
+- SCU: DSP data RAM reads should return 0xFFFFFFFF while program is running (thanks to @celeriyacon).
 - SCU: Various fixes to SCU DSP DMA transfers to DSP Program RAM (thanks to @celeriyacon).
 - VDP1: Extend line clipping to the left and top edges by one pixel to compensate for some inaccuracies.
 - VDP1: Include source color MSB when rendering polygons in half-luminance mode. Fixes intro FMV background on Crows - The Battle Action. (#107)

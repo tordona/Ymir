@@ -75,7 +75,7 @@ public:
         if constexpr (!peek) {
             // Cannot read while program is executing
             if (programExecuting && !programPaused) {
-                return 0;
+                return 0xFFFFFFFF;
             }
         }
 
