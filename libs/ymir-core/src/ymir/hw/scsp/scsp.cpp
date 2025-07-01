@@ -918,13 +918,14 @@ FORCE_INLINE void SCSP::SlotProcessStep1_4(Slot &slot) {
         static constexpr const char *loopNames[] = {"->|", ">->", "<-<", ">-<"};
         devlog::trace<grp::kyonex>(
             "Slot {:02d} key {} {:2d}-bit addr={:05X} loop={:04X}-{:04X} {} OCT={:02d} FNS={:03X} KRS={:X} "
-            "EG {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X} ALFOWS={:X} "
-            "ALFOS={:X}",
+            "EG {:d} {:02d} {:02d} {:02d} {:02d} DL={:03X} EGHOLD={} LPSLNK={} mod X={:02X} Y={:02X} lv={:X} "
+            "ALFOWS={:X} ALFOS={:X}",
             slot.index, (slot.keyOnBit ? " ON" : "OFF"), (slot.pcm8Bit ? 8 : 16), slot.startAddress,
             slot.loopStartAddress, slot.loopEndAddress, loopNames[static_cast<uint32>(slot.loopControl)], slot.octave,
-            slot.freqNumSwitch, slot.keyRateScaling, slot.attackRate, slot.decay1Rate, slot.decay2Rate,
-            slot.releaseRate, slot.decayLevel, static_cast<uint8>(slot.egHold), static_cast<uint8>(slot.loopStartLink),
-            slot.modXSelect, slot.modYSelect, slot.modLevel, static_cast<uint8>(slot.ampLFOWaveform), slot.ampLFOSens);
+            slot.freqNumSwitch, slot.keyRateScaling, static_cast<uint8>(slot.egState), slot.attackRate, slot.decay1Rate,
+            slot.decay2Rate, slot.releaseRate, slot.decayLevel, static_cast<uint8>(slot.egHold),
+            static_cast<uint8>(slot.loopStartLink), slot.modXSelect, slot.modYSelect, slot.modLevel,
+            static_cast<uint8>(slot.ampLFOWaveform), slot.ampLFOSens);
     }
     if (slot.index == 31) {
         if constexpr (devlog::debug_enabled<grp::kyonex>) {

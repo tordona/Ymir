@@ -78,6 +78,7 @@ namespace grp {
     //   regs
     //     kyonex
     //   dma
+    //   midi
 
     struct base {
         static constexpr bool enabled = true;
@@ -688,7 +689,7 @@ private:
             bit::deposit_into<11, 15>(value, m_monitorSlotCall);
         } else {
             devlog::trace<grp::regs>(
-                "Monitor slot {} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
+                "Monitor slot {:02d} read -> {:04X}  address={:05X} sample={:04X} egstate={} eglevel={:03X}",
                 m_monitorSlotCall, value, slot.startAddress + slot.currSample, slot.currSample,
                 static_cast<uint8>(slot.egState), slot.egLevel);
         }
