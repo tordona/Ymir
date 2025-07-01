@@ -279,6 +279,9 @@ public:
         case 0b1100:
             loopTop = PC;
             PC = value;
+            if (dmaRun) {
+                dmaPC = PC;
+            }
             break;
         }
     }
@@ -384,6 +387,7 @@ public:
     uint32 dmaWriteAddr; // DMA write address (WA0, 25 bits, starting from 2)
     uint32 dmaAddrInc;   // DMA address increment
     uint32 dmaAddrD0;    // Current DMA D0 address
+    uint32 dmaPC;        // Initial DMA PC address (when writing to Program RAM)
 
 private:
     sys::Bus &m_bus;

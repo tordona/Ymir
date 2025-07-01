@@ -101,6 +101,9 @@ void SCUDSP::Run(uint64 cycles) {
         nextInstr = programRAM[PC];
 
         const bool doDMA = dmaRun;
+        if (dmaRun) {
+            dmaPC = PC;
+        }
 
         switch (instruction.instructionInfo.instructionClass) {
         case 0b00: Cmd_Operation<debug>(instruction); break;
@@ -146,7 +149,7 @@ void SCUDSP::RunDMA(uint64 cycles) {
     const uint32 ctIndex = toD0 ? dmaSrc : dmaDst;
     const bool useDataRAM = ctIndex <= 3;
     const bool useProgramRAM = !toD0 && ctIndex == 4;
-    uint8 programRAMIndex = PC;
+    uint8 programRAMIndex = dmaPC;
 
     do {
         --cycles;

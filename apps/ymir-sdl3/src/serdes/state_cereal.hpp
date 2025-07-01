@@ -215,6 +215,7 @@ void serialize(Archive &ar, SCUDSPState &s, const uint32 version) {
     // v7:
     // - New fields
     //   - dmaAddrD0 = 0
+    //   - dmaPC = PC
     // v6:
     // - New fields
     //   - nextInstr = programRAM[PC]
@@ -247,9 +248,10 @@ void serialize(Archive &ar, SCUDSPState &s, const uint32 version) {
     ar(s.dmaRun, s.dmaToD0, s.dmaHold, s.dmaCount, s.dmaSrc, s.dmaDst);
     ar(s.dmaReadAddr, s.dmaWriteAddr, s.dmaAddrInc);
     if (version >= 7) {
-        ar(s.dmaAddrD0);
+        ar(s.dmaAddrD0, s.dmaPC);
     } else {
         s.dmaAddrD0 = 0;
+        s.dmaPC = s.PC;
     }
     if (version >= 6) {
         ar(s.cyclesSpillover);

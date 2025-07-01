@@ -72,6 +72,7 @@ struct SCUDSPState {
     uint32 dmaWriteAddr;
     uint32 dmaAddrInc;
     uint32 dmaAddrD0;
+    uint8 dmaPC;
 
     uint64 cyclesSpillover;
 };
