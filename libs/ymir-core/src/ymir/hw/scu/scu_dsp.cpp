@@ -83,16 +83,16 @@ void SCUDSP::Run(uint64 cycles) {
     m_cyclesSpillover = cycles & 1u;
     cycles >>= 1u;
 
-    RunDMA<debug>(cycles);
-
     for (uint64 cy = 0; cy < cycles; cy++) {
         // Bail out if not executing
         if (!programExecuting && !programStep) {
+            RunDMA<debug>(0);
             return;
         }
 
         // Bail out if paused
         if (programPaused) {
+            RunDMA<debug>(0);
             return;
         }
 
@@ -109,7 +109,12 @@ void SCUDSP::Run(uint64 cycles) {
         }
 
         if (doDMA) {
-            RunDMA<debug>(1);
+            // Run entire DMA if writing to program RAM, otherwise run a single transfer
+            if (!dmaToD0 && dmaDst == 4) {
+                RunDMA<debug>(0);
+            } else {
+                RunDMA<debug>(1);
+            }
         }
 
         // Clear stepping flag to ensure the DSP only runs one command when stepping
@@ -130,19 +135,10 @@ void SCUDSP::RunDMA(uint64 cycles) {
     }
 
     const bool toD0 = dmaToD0;
-    uint32 addrD0 = toD0 ? dmaWriteAddr : dmaReadAddr;
-    const BusID bus = GetBusID(addrD0);
+    const BusID bus = GetBusID(dmaAddrD0);
     if (bus == BusID::None) {
         dmaRun = false;
         return;
-    }
-
-    if (dmaToD0) {
-        devlog::trace<grp::dsp>("Running DSP DMA transfer: DSP -> {:08X} (+{:X}), {} longwords", addrD0, dmaAddrInc,
-                                dmaCount);
-    } else {
-        devlog::trace<grp::dsp>("Running DSP DMA transfer: {:08X} -> DSP (+{:X}), {} longwords", addrD0, dmaAddrInc,
-                                dmaCount);
     }
 
     // Run transfer
@@ -152,44 +148,43 @@ void SCUDSP::RunDMA(uint64 cycles) {
     const bool useProgramRAM = !toD0 && ctIndex == 4;
     uint8 programRAMIndex = PC;
 
-    TraceDSPDMA<debug>(m_tracer, dmaToD0, addrD0, ctIndex, dmaCount, dmaAddrInc, dmaHold);
-
     do {
-        dmaCount--;
+        --cycles;
+        --dmaCount;
         if (toD0) {
             // Data RAM -> D0
             const uint32 value = useDataRAM ? dataRAM[ctIndex][CT.array[ctIndex]] : ~0u;
             if (bus == BusID::ABus) {
                 // A-Bus -> one 32-bit write
-                m_bus.Write<uint32>(addrD0, value);
-                addrD0 += dmaAddrInc;
+                m_bus.Write<uint32>(dmaAddrD0, value);
+                dmaAddrD0 += dmaAddrInc;
             } else if (bus == BusID::BBus) {
                 // B-Bus -> two 16-bit writes
-                m_bus.Write<uint16>(addrD0, value >> 16u);
-                addrD0 += dmaAddrInc;
-                m_bus.Write<uint16>(addrD0, value >> 0u);
-                addrD0 += dmaAddrInc;
+                m_bus.Write<uint16>(dmaAddrD0, value >> 16u);
+                dmaAddrD0 += dmaAddrInc;
+                m_bus.Write<uint16>(dmaAddrD0, value >> 0u);
+                dmaAddrD0 += dmaAddrInc;
             } else if (bus == BusID::WRAM) {
                 // WRAM -> one 32-bit write
-                m_bus.Write<uint32>(addrD0 & ~3, value);
-                addrD0 += dmaAddrInc;
+                m_bus.Write<uint32>(dmaAddrD0 & ~3, value);
+                dmaAddrD0 += dmaAddrInc;
             }
         } else {
             // D0 -> Data/Program RAM
             uint32 value;
             if (bus == BusID::ABus) {
                 // A-Bus -> one 32-bit read
-                value = m_bus.Read<uint32>(addrD0);
-                addrD0 += dmaAddrInc;
+                value = m_bus.Read<uint32>(dmaAddrD0);
+                dmaAddrD0 += dmaAddrInc;
             } else if (bus == BusID::BBus) {
                 // B-Bus -> two 16-bit reads
-                value = m_bus.Read<uint16>(addrD0 | 0) << 16u;
-                value |= m_bus.Read<uint16>(addrD0 | 2) << 0u;
-                addrD0 += 4;
+                value = m_bus.Read<uint16>(dmaAddrD0 | 0) << 16u;
+                value |= m_bus.Read<uint16>(dmaAddrD0 | 2) << 0u;
+                dmaAddrD0 += 4;
             } else if (bus == BusID::WRAM) {
                 // WRAM -> one 32-bit read
-                value = m_bus.Read<uint32>(addrD0);
-                addrD0 += dmaAddrInc;
+                value = m_bus.Read<uint32>(dmaAddrD0);
+                dmaAddrD0 += dmaAddrInc;
             }
             if (useDataRAM) {
                 dataRAM[ctIndex][CT.array[ctIndex]] = value;
@@ -197,40 +192,42 @@ void SCUDSP::RunDMA(uint64 cycles) {
                 programRAM[programRAMIndex++].u32 = value;
             }
         }
-        addrD0 &= 0x7FF'FFFF;
+        dmaAddrD0 &= 0x7FF'FFFF;
         if (useDataRAM) {
             CT.array[ctIndex]++;
             CT.array[ctIndex] &= 0x3F;
         }
-    } while (dmaCount != 0);
+    } while (dmaCount != 0 && cycles != 0);
 
-    // Update RA0/WA0 if not holding address
-    if (!dmaHold) {
-        if (dmaAddrInc == 0) {
-            if (toD0) {
-                dmaWriteAddr += 4;
+    if (dmaCount == 0) {
+        // Update RA0/WA0 if not holding address
+        if (!dmaHold) {
+            if (dmaAddrInc == 0) {
+                if (toD0) {
+                    dmaWriteAddr += 4;
+                } else {
+                    dmaReadAddr += 4;
+                }
+            } else if (toD0) {
+                if (bus == BusID::BBus) {
+                    dmaAddrD0 -= dmaAddrInc * 2;
+                } else {
+                    dmaAddrD0 -= dmaAddrInc;
+                }
+                dmaWriteAddr = (dmaAddrD0 + 4) & ~3;
             } else {
-                dmaReadAddr += 4;
+                dmaReadAddr = dmaAddrD0;
             }
-        } else if (toD0) {
-            if (bus == BusID::BBus) {
-                addrD0 -= dmaAddrInc * 2;
-            } else {
-                addrD0 -= dmaAddrInc;
-            }
-            dmaWriteAddr = (addrD0 + 4) & ~3;
-        } else {
-            dmaReadAddr = addrD0;
+        }
+
+        dmaRun = false;
+
+        // Clear program pipeline if writing to Program RAM
+        if (useProgramRAM) {
+            nextInstr.u32 = 0;
+            PC = loopTop;
         }
     }
-
-    // Clear program pipeline if writing to Program RAM
-    if (useProgramRAM) {
-        nextInstr.u32 = 0;
-        PC = loopTop;
-    }
-
-    dmaRun = false;
 }
 
 void SCUDSP::SaveState(state::SCUDSPState &state) const {
@@ -267,6 +264,7 @@ void SCUDSP::SaveState(state::SCUDSPState &state) const {
     state.dmaReadAddr = dmaReadAddr;
     state.dmaWriteAddr = dmaWriteAddr;
     state.dmaAddrInc = dmaAddrInc;
+    state.dmaAddrD0 = dmaAddrD0;
     state.cyclesSpillover = m_cyclesSpillover;
 }
 
@@ -311,6 +309,7 @@ void SCUDSP::LoadState(const state::SCUDSPState &state) {
     dmaReadAddr = state.dmaReadAddr & 0x7FFFFFC;
     dmaWriteAddr = state.dmaWriteAddr & 0x7FFFFFC;
     dmaAddrInc = state.dmaAddrInc;
+    dmaAddrD0 = state.dmaAddrD0 & 0x7FFFFFF;
     m_cyclesSpillover = state.cyclesSpillover;
 }
 
@@ -525,7 +524,7 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
 
     // Finish previous DMA transfer
     if (dmaRun) {
-        RunDMA<debug>(1); // TODO: cycles?
+        RunDMA<debug>(0);
     }
 
     dmaRun = true;
@@ -555,6 +554,10 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
         // DMAH [RAM],D0,[s]
         dmaSrc = command.specialInfo.dmaInfo.address;
         dmaAddrInc = (1u << addrInc) & ~1u;
+        dmaAddrD0 = dmaWriteAddr;
+        devlog::trace<grp::dsp>("Running DSP DMA transfer: DSP -> {:08X} (+{:X}), {} longwords", dmaAddrD0, dmaAddrInc,
+                                dmaCount);
+        TraceDSPDMA<debug>(m_tracer, dmaToD0, dmaAddrD0, dmaSrc, dmaCount, dmaAddrInc, dmaHold);
     } else {
         // DMA D0,[RAM],SImm
         // DMA D0,[RAM],[s]
@@ -562,6 +565,10 @@ FORCE_INLINE void SCUDSP::Cmd_Special_DMA(DSPInstr command) {
         // DMAH D0,[RAM],[s]
         dmaDst = command.specialInfo.dmaInfo.address;
         dmaAddrInc = (1u << (addrInc & 0x2u)) & ~1u;
+        dmaAddrD0 = dmaReadAddr;
+        devlog::trace<grp::dsp>("Running DSP DMA transfer: {:08X} -> DSP (+{:X}), {} longwords", dmaAddrD0, dmaAddrInc,
+                                dmaCount);
+        TraceDSPDMA<debug>(m_tracer, dmaToD0, dmaAddrD0, dmaDst, dmaCount, dmaAddrInc, dmaHold);
     }
 
     devlog::trace<grp::dsp>("DSP DMA command: {:04X} @ {:02X}", command.u32, PC);

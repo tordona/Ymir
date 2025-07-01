@@ -12,7 +12,7 @@ namespace ymir::state {
 // Current save state format version.
 // Increment once per release if there are any changes to the serializers.
 // Remember to document every change!
-inline constexpr uint32 kVersion = 6;
+inline constexpr uint32 kVersion = 7;
 
 } // namespace ymir::state
 
@@ -212,6 +212,9 @@ void serialize(Archive &ar, SCUDMAState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SCUDSPState &s, const uint32 version) {
+    // v7:
+    // - New fields
+    //   - dmaAddrD0 = 0
     // v6:
     // - New fields
     //   - nextInstr = programRAM[PC]
@@ -243,6 +246,11 @@ void serialize(Archive &ar, SCUDSPState &s, const uint32 version) {
     }
     ar(s.dmaRun, s.dmaToD0, s.dmaHold, s.dmaCount, s.dmaSrc, s.dmaDst);
     ar(s.dmaReadAddr, s.dmaWriteAddr, s.dmaAddrInc);
+    if (version >= 7) {
+        ar(s.dmaAddrD0);
+    } else {
+        s.dmaAddrD0 = 0;
+    }
     if (version >= 6) {
         ar(s.cyclesSpillover);
     } else {

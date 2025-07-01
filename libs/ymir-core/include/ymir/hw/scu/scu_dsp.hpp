@@ -210,6 +210,7 @@ public:
         case 0b0110: // MC2
         case 0b0111: // MC3
         {
+            RunPendingDMA<debug>(index & 3);
             const uint8 ctIndex = bit::extract<0, 1>(index);
             const uint8 inc = bit::extract<2>(index);
             incCT |= inc << (ctIndex * 8u);
@@ -225,17 +226,13 @@ public:
     // D1-Bus writes to [d]
     template <bool debug>
     FORCE_INLINE void WriteD1Bus(uint8 index, uint32 value) {
-        // Finish previous DMA transfer
-        if (dmaRun) {
-            RunDMA<debug>(1); // TODO: cycles?
-        }
-
         switch (index) {
         case 0b0000: // MC0
         case 0b0001: // MC1
         case 0b0010: // MC2
         case 0b0011: // MC3
         {
+            RunPendingDMA<debug>(index);
             const uint32 addr = CT.array[index];
             dataRAM[index][addr] = value;
             incCT |= 1u << (index * 8u);
@@ -251,6 +248,7 @@ public:
         case 0b1101: // CT1
         case 0b1110: // CT2
         case 0b1111: // CT3
+            RunPendingDMA<debug>(index & 3);
             CT.array[index & 3] = value & 0x3F;
             incCT &= ~(1u << ((index & 3) * 8));
             break;
@@ -266,6 +264,7 @@ public:
         case 0b0010: // MC2
         case 0b0011: // MC3
         {
+            RunPendingDMA<debug>(index);
             const uint32 addr = CT.array[index];
             dataRAM[index][addr] = value;
             CT.array[index]++;
@@ -384,6 +383,7 @@ public:
     uint32 dmaReadAddr;  // DMA read address (RA0, 25 bits, starting from 2)
     uint32 dmaWriteAddr; // DMA write address (WA0, 25 bits, starting from 2)
     uint32 dmaAddrInc;   // DMA address increment
+    uint32 dmaAddrD0;    // Current DMA D0 address
 
 private:
     sys::Bus &m_bus;
@@ -395,6 +395,14 @@ private:
     debug::ISCUTracer *m_tracer = nullptr;
 
     void IncrementPC();
+
+    // Run pending DMA transfer if the CT register is in use
+    template <bool debug>
+    FORCE_INLINE void RunPendingDMA(uint8 ctIndex) {
+        if (dmaRun && ctIndex == (dmaToD0 ? dmaSrc : dmaDst)) {
+            RunDMA<debug>(0);
+        }
+    }
 
     // Command interpreters
 
