@@ -6,6 +6,8 @@ A work-in-progress Sega Saturn emulator.
 
 Join the [Discord community](https://discord.gg/NN3A7n5dzn).
 
+Find the official compatibility list [here](https://docs.google.com/spreadsheets/d/1SLZzL9LelSlpEmTKy8cjaQnE7mew2uW1rfCgcekO58Q/edit?usp=sharing).
+
 <div class="grid" markdown>
   <img width="49.5%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/cd-player.png"/>
   <img width="49.5%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/sonic-r.png"/>
