@@ -5801,6 +5801,10 @@ InterlaceMode VDP::Probe::GetInterlaceMode() const {
     return m_vdp.m_state.regs2.TVMD.LSMDn;
 }
 
+const VDP1Regs &VDP::Probe::GetVDP1Regs() const {
+    return m_vdp.m_state.regs1;
+}
+
 const VDP2Regs &VDP::Probe::GetVDP2Regs() const {
     return m_vdp.m_state.regs2;
 }

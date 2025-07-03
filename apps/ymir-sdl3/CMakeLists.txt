@@ -110,6 +110,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/debug/sh2_registers_view.hpp
     src/app/ui/views/debug/sh2_wdt_view.cpp
     src/app/ui/views/debug/sh2_wdt_view.hpp
+    src/app/ui/views/debug/vdp1_registers_view.cpp
+    src/app/ui/views/debug/vdp1_registers_view.hpp
     src/app/ui/views/debug/vdp2_nbg_cp_delay_view.cpp
     src/app/ui/views/debug/vdp2_nbg_cp_delay_view.hpp
     src/app/ui/views/debug/vdp2_layers_enable_view.cpp
@@ -214,6 +216,8 @@ add_executable(ymir-sdl3
     src/app/ui/windows/debug/vdp_window_base.cpp
     src/app/ui/windows/debug/vdp_window_base.hpp
     src/app/ui/windows/debug/vdp_window_set.hpp
+    src/app/ui/windows/debug/vdp1_registers_window.cpp
+    src/app/ui/windows/debug/vdp1_registers_window.hpp
     src/app/ui/windows/debug/vdp2_nbg_cp_delay_window.cpp
     src/app/ui/windows/debug/vdp2_nbg_cp_delay_window.hpp
     src/app/ui/windows/debug/vdp2_layers_window.cpp
