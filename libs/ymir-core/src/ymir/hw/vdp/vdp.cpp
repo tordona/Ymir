@@ -3213,10 +3213,14 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     const VDP2Regs &regs2 = VDP2GetRegs();
 
     // VDP1 scaling:
-    // 2x horz: VDP1 TVM=000 and VDP2 HRESO=01x
+    // 2x horz resolution: VDP1 TVM=000 and VDP2 HRESO=01x
+    // 1/2x horz readout:  VDP1 TVM=001 and VDP2 HRESO=00x
     const bool doubleResH =
         !regs1.hdtvEnable && !regs1.fbRotEnable && !regs1.pixel8Bits && (regs2.TVMD.HRESOn & 0b110) == 0b010;
+    const bool halfResH =
+        !regs1.hdtvEnable && !regs1.fbRotEnable && regs1.pixel8Bits && (regs2.TVMD.HRESOn & 0b110) == 0b000;
     const uint32 xShift = doubleResH ? 1 : 0;
+    const uint32 xSpriteShift = halfResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
 
     const SpriteParams &params = regs2.spriteParams;
@@ -3236,7 +3240,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
                 const sint32 sy = screenCoord.y() >> 16;
                 return sx + sy * regs1.fbSizeH;
             } else {
-                return x + y * regs1.fbSizeH;
+                return (x << xSpriteShift) + y * regs1.fbSizeH;
             }
         }();
 

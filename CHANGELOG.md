@@ -5,6 +5,7 @@
 ### New features and improvements
 
 - App: Added new 3:2 and 16:10 forced aspect ratio options.
+- Debugger: Added basic VDP1 registers inspector window.
 
 ### Fixes
 
@@ -20,6 +21,7 @@
 - VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
 - VDP2: Fix single-density interlaced mode.
 - VDP2: Fix transparent VDP1 color data handling. Fixes missing graphics in Rayman's level select screens and Bubble Bobble's sky in the title screen. (#262)
+- VDP2: Halve sprite layer width when drawing 8-bit sprite layer in low-resolution VDP2 modes. Fixes text drawn twice as wide in Resident Evil options menu. (#180)
 - VDP2: Handle bad window parameters set by Snatcher on the "Act 1" title screen (and probably many other places). (#259)
 - ymdasm: Fix reversed SCU DSP DMA immediate/data RAM operand decoding.
 - ymdasm: Mask and translate several SCU DSP immediates.
