@@ -9,6 +9,7 @@
 
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/data_ops.hpp>
+#include <ymir/util/inline.hpp>
 #include <ymir/util/unreachable.hpp>
 
 #include <array>
@@ -926,6 +927,10 @@ union RegTVMD {
         uint16 _rsvd9_14 : 6;
         uint16 DISP : 1;
     };
+
+    [[nodiscard]] FORCE_INLINE bool IsInterlaced() const noexcept {
+        return LSMDn == InterlaceMode::SingleDensity || LSMDn == InterlaceMode::DoubleDensity;
+    }
 };
 static_assert(sizeof(RegTVMD) == sizeof(uint16));
 

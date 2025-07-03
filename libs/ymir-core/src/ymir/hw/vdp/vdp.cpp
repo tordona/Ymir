@@ -734,8 +734,8 @@ void VDP::UpdateResolution() {
 
     m_HRes = hRes[m_state.regs2.TVMD.HRESOn];
     m_VRes = vRes[m_state.regs2.TVMD.VRESOn & (m_state.regs2.TVSTAT.PAL ? 3 : 1)];
-    if (m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
-        // Double-density interlace doubles the vertical resolution
+    if (m_state.regs2.TVMD.IsInterlaced()) {
+        // Interlaced modes double the vertical resolution
         m_VRes *= 2;
     }
 
@@ -1562,9 +1562,9 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
         if (!deinterlace && regs1.dblInterlaceEnable && (y & 1) == regs1.dblInterlaceDrawLine) {
             return;
         }
-        if (deinterlace || regs1.dblInterlaceEnable) {
-            y >>= 1;
-        }
+    }
+    if ((deinterlace && doubleDensity) || regs1.dblInterlaceEnable) {
+        y >>= 1;
     }
 
     // Reject pixels outside of clipping area
@@ -3113,7 +3113,7 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     const uint32 colorMode = regs2.vramControl.colorRAMMode;
     const bool rotate = regs1.fbRotEnable;
-    const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
+    const bool interlaced = regs2.TVMD.IsInterlaced();
 
     // Precalculate window state
     VDP2CalcWindows<deinterlace, false>(y);
@@ -3135,7 +3135,7 @@ void VDP::VDP2DrawLine(uint32 y) {
         VDP2DrawRotationBG<1>(y, colorMode); // RBG1
     } else {
         VDP2DrawRotationBG<0>(y, colorMode); // RBG0
-        if (doubleDensity) {
+        if (interlaced) {
             VDP2DrawNormalBG<0, deinterlace, false>(y, colorMode); // NBG0
             VDP2DrawNormalBG<1, deinterlace, false>(y, colorMode); // NBG1
             VDP2DrawNormalBG<2, deinterlace, false>(y, colorMode); // NBG2
@@ -3153,23 +3153,29 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     // Draw complementary field if deinterlace is enabled while in double-density interlace mode
     if constexpr (deinterlace) {
-        if (doubleDensity) {
-            // Precalculate window state
-            VDP2CalcWindows<true, true>(y);
+        if (interlaced) {
+            // The alternate VDP2 line only needs to be drawn in double-density mode
+            const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
+            if (doubleDensity) {
+                // Precalculate window state
+                VDP2CalcWindows<true, true>(y);
+            }
 
             // Draw sprite layer
-            (this->*fnDrawSprite[colorMode][rotate][true])(y);
+            (this->*fnDrawSprite[colorMode][rotate][doubleDensity])(y);
 
-            // Draw background layers
-            if (regs2.bgEnabled[5]) {
-                VDP2DrawRotationBG<0>(y, colorMode); // RBG0
-                VDP2DrawRotationBG<1>(y, colorMode); // RBG1
-            } else {
-                VDP2DrawRotationBG<0>(y, colorMode);           // RBG0
-                VDP2DrawNormalBG<0, true, true>(y, colorMode); // NBG0
-                VDP2DrawNormalBG<1, true, true>(y, colorMode); // NBG1
-                VDP2DrawNormalBG<2, true, true>(y, colorMode); // NBG2
-                VDP2DrawNormalBG<3, true, true>(y, colorMode); // NBG3
+            if (doubleDensity) {
+                // Draw background layers
+                if (regs2.bgEnabled[5]) {
+                    VDP2DrawRotationBG<0>(y, colorMode); // RBG0
+                    VDP2DrawRotationBG<1>(y, colorMode); // RBG1
+                } else {
+                    VDP2DrawRotationBG<0>(y, colorMode);           // RBG0
+                    VDP2DrawNormalBG<0, true, true>(y, colorMode); // NBG0
+                    VDP2DrawNormalBG<1, true, true>(y, colorMode); // NBG1
+                    VDP2DrawNormalBG<2, true, true>(y, colorMode); // NBG2
+                    VDP2DrawNormalBG<3, true, true>(y, colorMode); // NBG3
+                }
             }
 
             // Compose image
@@ -5774,7 +5780,7 @@ template <bool deinterlace>
 FORCE_INLINE uint32 VDP::VDP2GetY(uint32 y) const {
     const VDP2Regs &regs = VDP2GetRegs();
 
-    if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
+    if (regs.TVMD.IsInterlaced()) {
         return (y << 1) | (regs.TVSTAT.ODD & !deinterlace);
     } else {
         return y;
