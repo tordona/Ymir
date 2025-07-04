@@ -83,6 +83,8 @@ void SCUDSP::Run(uint64 cycles) {
     m_cyclesSpillover = cycles & 1u;
     cycles >>= 1u;
 
+    // FIXME: WipEout (USA) needs more accurate timings for the DSP to fix exploding geometry
+
     for (uint64 cy = 0; cy < cycles; cy++) {
         // Bail out if not executing
         if (!programExecuting && !programStep) {
@@ -111,12 +113,14 @@ void SCUDSP::Run(uint64 cycles) {
         case 0b11: Cmd_Special<debug>(instruction); break;
         }
 
+        // TODO: is this correct?
         if (doDMA) {
             // Run entire DMA if writing to program RAM, otherwise run a single transfer
             if (!dmaToD0 && dmaDst == 4) {
                 RunDMA<debug>(0);
             } else {
-                RunDMA<debug>(1);
+                // FIXME: WipEout (USA) doesn't go past menus if we run less DMA steps here
+                RunDMA<debug>(16);
             }
         }
 
