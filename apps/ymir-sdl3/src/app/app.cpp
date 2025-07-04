@@ -397,6 +397,8 @@ void App::RunEmulator() {
         uint64 vdp1Frames = 0;
     } screen;
 
+    screen.videoSync = m_context.settings.video.fullScreen;
+
     m_context.saturn.configuration.system.videoStandard.ObserveAndNotify(
         [&](core::config::sys::VideoStandard standard) {
             static constexpr double kNTSCFrameInterval = sys::kNTSCClocksPerFrame / sys::kNTSCClock;
@@ -680,7 +682,9 @@ void App::RunEmulator() {
                                                     std::unique_lock lock{screen.mtxFramebuffer};
                                                     std::copy_n(fb, width * height, screen.framebuffer.data());
                                                     screen.updated = true;
-                                                    screen.frameReadyEvent.Set();
+                                                    if (screen.videoSync) {
+                                                        screen.frameReadyEvent.Set();
+                                                    }
                                                 }
                                             }});
 
@@ -1240,6 +1244,9 @@ void App::RunEmulator() {
     bool showImGuiDemoWindow = false;
 #endif
 
+    screen.nextFrameTarget = clk::now();
+    double avgFrameDelay = 0.0;
+
     while (true) {
         bool fitWindowToScreenNow = false;
 
@@ -1248,28 +1255,49 @@ void App::RunEmulator() {
         screen.videoSync = fullScreen && !paused && m_audioSystem.IsSync();
         if (fullScreen && !paused && m_audioSystem.IsSync()) {
             // Deliver frame early if audio buffer is emptying (video sync is slowing down emulation too much).
-            // Attempt to maintain the audio buffer above 60%; present frames up to 30% sooner if it drops.
+            // Attempt to maintain the audio buffer between 30% and 70%.
+            // Smoothly adjust frame interval up or down if audio buffer exceeds either threshold.
             const uint32 audioBufferSize = m_audioSystem.GetBufferCount();
             const uint32 audioBufferCap = m_audioSystem.GetBufferCapacity();
-            const double audioBufferLevel = 0.6;
+            const double audioBufferMinLevel = 0.3;
+            const double audioBufferMaxLevel = 0.7;
+            const double audioBufferFrameAdjustWeight = 0.8;
+            const double audioBufferFrameAdjustFactor = 0.2;
             const double audioBufferPct = (double)audioBufferSize / audioBufferCap;
-            if (audioBufferPct < audioBufferLevel) {
-                const double adjustPct = std::clamp((audioBufferLevel - audioBufferPct) / audioBufferLevel, 0.0, 1.0);
-                screen.nextFrameTarget -=
-                    std::chrono::duration_cast<std::chrono::nanoseconds>(screen.frameInterval * adjustPct * 0.3);
+            if (audioBufferPct < audioBufferMinLevel) {
+                // Audio buffer is too low; lower frame interval
+                const double adjustPct =
+                    std::clamp((audioBufferMinLevel - audioBufferPct) / audioBufferMinLevel, 0.0, 1.0);
+                avgFrameDelay = avgFrameDelay + (adjustPct - avgFrameDelay) * audioBufferFrameAdjustWeight;
+
+            } else if (audioBufferPct > audioBufferMaxLevel) {
+                // Audio buffer is too high; increase frame interval
+                const double adjustPct =
+                    std::clamp((audioBufferPct - audioBufferMaxLevel) / (1.0 - audioBufferMaxLevel), 0.0, 1.0);
+                avgFrameDelay = avgFrameDelay - (avgFrameDelay + adjustPct) * audioBufferFrameAdjustWeight;
+
+            } else {
+                // Audio buffer is within range; restore frame interval to normal amount
+                avgFrameDelay *= 1.0 - audioBufferFrameAdjustWeight;
             }
 
-            // Sleep until the next frame presentation time
+            // Adjust frame presentation time
+            screen.nextFrameTarget -= std::chrono::duration_cast<std::chrono::nanoseconds>(
+                screen.frameInterval * avgFrameDelay * audioBufferFrameAdjustFactor);
+
+            // Sleep until 1ms before the next frame presentation time, then spin wait for the deadline
             auto now = clk::now();
-            if (now < screen.nextFrameTarget) {
-                std::this_thread::sleep_until(screen.nextFrameTarget);
+            if (now < screen.nextFrameTarget - 1ms) {
+                std::this_thread::sleep_until(screen.nextFrameTarget - 1ms);
+            }
+            while (clk::now() < screen.nextFrameTarget) {
             }
 
             // Update next frame target
-            auto now2 = clk::now();
-            if (now2 > screen.nextFrameTarget) {
-                // The frame was presented late; set next frame target time relative to now
-                screen.nextFrameTarget = now2 + screen.frameInterval;
+            now = clk::now();
+            if (now > screen.nextFrameTarget + screen.frameInterval) {
+                // The frame was presented too late; set next frame target time relative to now
+                screen.nextFrameTarget = now + screen.frameInterval;
             } else {
                 // The frame was presented on time; increment by the interval
                 screen.nextFrameTarget += screen.frameInterval;
