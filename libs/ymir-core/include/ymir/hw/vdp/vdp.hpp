@@ -891,6 +891,9 @@ private:
         // Precomputed screen coordinates (with 16 fractional bits).
         alignas(16) std::array<CoordS32, kMaxResH> screenCoords;
 
+        // Precomputed sprite coordinates (without fractional bits).
+        alignas(16) std::array<CoordS32, kMaxResH> spriteCoords;
+
         // Precomputed coefficient table line color.
         // Filled in only if the coefficient table is enabled and using line color data.
         alignas(16) std::array<Color888, kMaxResH> lineColor;

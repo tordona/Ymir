@@ -2543,14 +2543,15 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
 }
 
 FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
-    VDP2Regs &regs = VDP2GetRegs();
+    VDP1Regs &regs1 = VDP1GetRegs();
+    VDP2Regs &regs2 = VDP2GetRegs();
 
-    const uint32 baseAddress = regs.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
+    const uint32 baseAddress = regs2.commonRotParams.baseAddress & 0xFFF7C; // mask bit 6 (shifted left by 1)
     const bool readAll = y == 0;
     const auto &vram2 = VDP2GetVRAM();
 
     for (int i = 0; i < 2; i++) {
-        RotationParams &params = regs.rotParams[i];
+        RotationParams &params = regs2.rotParams[i];
         RotationParamState &state = m_rotParamStates[i];
 
         const bool readXst = readAll || params.readXst;
@@ -2608,25 +2609,33 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         sint32 scrY = state.scrY;
         uint32 KA = state.KA;
 
-        const bool doubleResH = regs.TVMD.HRESOn & 0b010;
+        // Current sprite coordinates (16 frac bits)
+        sint32 sprX;
+        sint32 sprY;
+        if (regs1.fbRotEnable) {
+            sprX = t.Xst + y * t.deltaXst;
+            sprY = t.Yst + y * t.deltaYst;
+        }
+
+        const bool doubleResH = regs2.TVMD.HRESOn & 0b010;
         const uint32 xShift = doubleResH ? 1 : 0;
         const uint32 maxX = m_HRes >> xShift;
 
         // Use per-dot coefficient if reading from CRAM or if any of the VRAM banks was designated as coefficient data
-        bool perDotCoeff = regs.vramControl.colorRAMCoeffTableEnable;
+        bool perDotCoeff = regs2.vramControl.colorRAMCoeffTableEnable;
         if (!perDotCoeff) {
-            perDotCoeff = regs.vramControl.rotDataBankSelA0 == RotDataBankSel::Coefficients ||
-                          regs.vramControl.rotDataBankSelB0 == RotDataBankSel::Coefficients;
-            if (regs.vramControl.partitionVRAMA) {
-                perDotCoeff |= regs.vramControl.rotDataBankSelA1 == RotDataBankSel::Coefficients;
+            perDotCoeff = regs2.vramControl.rotDataBankSelA0 == RotDataBankSel::Coefficients ||
+                          regs2.vramControl.rotDataBankSelB0 == RotDataBankSel::Coefficients;
+            if (regs2.vramControl.partitionVRAMA) {
+                perDotCoeff |= regs2.vramControl.rotDataBankSelA1 == RotDataBankSel::Coefficients;
             }
-            if (regs.vramControl.partitionVRAMB) {
-                perDotCoeff |= regs.vramControl.rotDataBankSelB1 == RotDataBankSel::Coefficients;
+            if (regs2.vramControl.partitionVRAMB) {
+                perDotCoeff |= regs2.vramControl.rotDataBankSelB1 == RotDataBankSel::Coefficients;
             }
         }
 
         // Precompute line color data parameters
-        const LineBackScreenParams &lineParams = regs.lineScreenParams;
+        const LineBackScreenParams &lineParams = regs2.lineScreenParams;
         const uint32 line = lineParams.perLine ? y : 0;
         const uint32 lineColorAddress = lineParams.baseAddress + line * sizeof(uint16);
         const uint32 baseLineColorCRAMAddress = VDP2ReadRendererVRAM<uint16>(lineColorAddress) * sizeof(uint16);
@@ -2671,6 +2680,16 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
             // Increment screen coordinates and coefficient table address by Hcnt
             scrX += scrXIncH;
             scrY += scrYIncH;
+
+            if (regs1.fbRotEnable) {
+                // Store sprite coordinates
+                state.spriteCoords[x].x() = sprX >> 16ll;
+                state.spriteCoords[x].y() = sprY >> 16ll;
+
+                // Increment sprite coordinates by Hcnt
+                sprX += t.deltaX;
+                sprY += t.deltaY;
+            }
         }
 
         // Increment screen coordinates and coefficient table address by Vcnt for the next iteration
@@ -3236,10 +3255,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
         const uint32 spriteFBOffset = [&] {
             if constexpr (rotate) {
                 const auto &rotParamState = m_rotParamStates[0];
-                const auto &screenCoord = rotParamState.screenCoords[x];
-                const sint32 sx = screenCoord.x() >> 16;
-                const sint32 sy = screenCoord.y() >> 16;
-                return sx + sy * regs1.fbSizeH;
+                const auto &coord = rotParamState.spriteCoords[x];
+                return coord.x() + coord.y() * regs1.fbSizeH;
             } else {
                 return (x << xSpriteShift) + y * regs1.fbSizeH;
             }

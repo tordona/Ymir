@@ -21,6 +21,7 @@
 - VDP1: Properly handle DIE/DIL in single-density interlaced mode. Fixes text drawn twice as tall in Resident Evil options menu. (#180)
 - VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
 - VDP2: Fix single-density interlaced mode.
+- VDP2: Fix sprite layer display when rotation mode is enabled. Fixes sliding 3D graphics on Hang-On GP and Highway 2000. (#167, #208, #277)
 - VDP2: Fix transparent VDP1 color data handling. Fixes missing graphics in Rayman's level select screens and Bubble Bobble's sky in the title screen. (#262)
 - VDP2: Halve sprite layer width when drawing 8-bit sprite layer in low-resolution VDP2 modes. Fixes text drawn twice as wide in Resident Evil options menu. (#180)
 - VDP2: Handle bad window parameters set by Snatcher on the "Act 1" title screen (and probably many other places). (#259)
