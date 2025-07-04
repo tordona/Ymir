@@ -9,6 +9,7 @@
 - App: Smooth out frame interval adjustments in full screen mode.
 - Debugger: Added basic VDP1 registers inspector window.
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
+- SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.
 
 ### Fixes
 

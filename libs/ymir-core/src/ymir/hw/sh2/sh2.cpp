@@ -457,7 +457,7 @@ T SH2::MemRead(uint32 address) {
                             for (uint32 offset = 0; offset < 16; offset += 4) {
                                 const uint32 addressInc = (address + 4 + offset) & 0xC;
                                 const uint32 memValue = m_bus.Read<uint32>((baseAddress + addressInc) & 0x7FFFFFF);
-                                util::WriteBE<uint32>(&entry.line[way][addressInc], memValue);
+                                util::WriteNE<uint32>(&entry.line[way][addressInc], memValue);
                             }
                         }
                     }
@@ -465,8 +465,8 @@ T SH2::MemRead(uint32 address) {
 
                 // If way is valid, fetch from cache
                 if (IsValidCacheWay(way)) {
-                    const uint32 byte = bit::extract<0, 3>(address);
-                    const T value = util::ReadBE<T>(&entry.line[way][byte]);
+                    const uint32 byte = bit::extract<0, 3>(address) ^ (4 - sizeof(T));
+                    const T value = util::ReadNE<T>(&entry.line[way][byte]);
                     if constexpr (!peek) {
                         m_cache.UpdateLRU(address, way);
                         devlog::trace<grp::cache>(m_logPrefix, "{}-bit SH-2 cached area read from {:08X} = {:X} (hit)",
@@ -569,8 +569,8 @@ void SH2::MemWrite(uint32 address, T value) {
                 auto &entry = m_cache.GetEntry(address);
                 const uint8 way = entry.FindWay(address);
                 if (IsValidCacheWay(way)) {
-                    const uint32 byte = bit::extract<0, 3>(address);
-                    util::WriteBE<T>(&entry.line[way][byte], value);
+                    const uint32 byte = bit::extract<0, 3>(address) ^ (4 - sizeof(T));
+                    util::WriteNE<T>(&entry.line[way][byte], value);
                     if constexpr (!poke) {
                         m_cache.UpdateLRU(address, way);
                     }
