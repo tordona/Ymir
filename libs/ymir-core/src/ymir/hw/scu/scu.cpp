@@ -154,21 +154,24 @@ void SCU::Advance(uint64 cycles) {
 template void SCU::Advance<false>(uint64 cycles);
 template void SCU::Advance<true>(uint64 cycles);
 
-void SCU::TriggerHBlank() {
-    m_intrStatus.VDP2_HBlankIN = 1;
-    UpdateInterruptLevel();
-    if (m_timerEnable) {
-        if (m_timer0Counter == m_timer0Compare) {
-            TriggerTimer0();
+void SCU::UpdateHBlank(bool hb, bool vb) {
+    if (hb) {
+        m_intrStatus.VDP2_HBlankIN = 1;
+        UpdateMasterInterruptLevel();
+        if (m_timerEnable) {
+            if (m_timer0Counter == m_timer0Compare) {
+                TriggerTimer0();
+            }
+            ++m_timer0Counter;
+            m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
+            TriggerDMATransfer(DMATrigger::HBlankIN);
         }
-        ++m_timer0Counter;
-        m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
-        TriggerDMATransfer(DMATrigger::HBlankIN);
     }
+    UpdateSlaveInterruptLevel(hb, vb);
 }
 
-void SCU::UpdateVBlank(bool level) {
-    if (level) {
+void SCU::UpdateVBlank(bool hb, bool vb) {
+    if (vb) {
         m_intrStatus.VDP2_VBlankIN = 1;
         TriggerDMATransfer(DMATrigger::VBlankIN);
     } else {
@@ -176,13 +179,14 @@ void SCU::UpdateVBlank(bool level) {
         m_timer0Counter = 0;
         TriggerDMATransfer(DMATrigger::VBlankOUT);
     }
-    UpdateInterruptLevel();
+    UpdateMasterInterruptLevel();
+    UpdateSlaveInterruptLevel(hb, vb);
 }
 
 void SCU::TriggerTimer0() {
     if (m_intrStatus.SCU_Timer0 != 1) {
         m_intrStatus.SCU_Timer0 = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
         TriggerDMATransfer(DMATrigger::Timer0);
     }
 }
@@ -190,7 +194,7 @@ void SCU::TriggerTimer0() {
 void SCU::TriggerTimer1() {
     if (m_intrStatus.SCU_Timer1 != 1) {
         m_intrStatus.SCU_Timer1 = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
         TriggerDMATransfer(DMATrigger::Timer1);
     }
 }
@@ -198,14 +202,14 @@ void SCU::TriggerTimer1() {
 void SCU::TriggerDSPEnd() {
     if (m_intrStatus.SCU_DSPEnd != 1) {
         m_intrStatus.SCU_DSPEnd = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
     }
 }
 
 void SCU::TriggerSoundRequest(bool level) {
     if (m_intrStatus.SCSP_SoundRequest != level) {
         m_intrStatus.SCSP_SoundRequest = level;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
         if (level) {
             TriggerDMATransfer(DMATrigger::SoundRequest);
         }
@@ -215,14 +219,14 @@ void SCU::TriggerSoundRequest(bool level) {
 void SCU::TriggerSystemManager() {
     if (m_intrStatus.SMPC_SystemManager != 1) {
         m_intrStatus.SMPC_SystemManager = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
     }
 }
 
 void SCU::TriggerPad() {
     if (m_intrStatus.SMPC_Pad != 1) {
         m_intrStatus.SMPC_Pad = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
     }
 }
 
@@ -248,13 +252,13 @@ void SCU::TriggerDMAEnd(uint32 level) {
         m_intrStatus.SCU_Level2DMAEnd = 1;
         break;
     }
-    UpdateInterruptLevel();
+    UpdateMasterInterruptLevel();
 }
 
 void SCU::TriggerDMAIllegal() {
     if (m_intrStatus.SCU_DMAIllegal != 1) {
         m_intrStatus.SCU_DMAIllegal = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
         TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
     }
 }
@@ -262,7 +266,7 @@ void SCU::TriggerDMAIllegal() {
 void SCU::TriggerSpriteDrawEnd() {
     if (m_intrStatus.VDP1_SpriteDrawEnd != 1) {
         m_intrStatus.VDP1_SpriteDrawEnd = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
         TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
     }
 }
@@ -270,7 +274,7 @@ void SCU::TriggerSpriteDrawEnd() {
 void SCU::TriggerExternalInterrupt0() {
     if (m_intrStatus.ABus_ExtIntr0 != 1) {
         m_intrStatus.ABus_ExtIntr0 = 1;
-        UpdateInterruptLevel();
+        UpdateMasterInterruptLevel();
     }
 }
 
@@ -285,8 +289,7 @@ void SCU::AcknowledgeExternalInterrupt() {
         m_intrMask.u32 = 0xBFFF;
     }
 
-    m_cbExternalMasterInterrupt(0, 0);
-    m_cbExternalSlaveInterrupt(0, 0);
+    m_cbExternalMasterInterrupt(0, 0x00);
 }
 
 void SCU::DumpDSPProgramRAM(std::ostream &out) const {
@@ -525,7 +528,7 @@ void SCU::WriteCartridge(uint32 address, T value) {
     }
 }
 
-FORCE_INLINE void SCU::UpdateInterruptLevel() {
+FORCE_INLINE void SCU::UpdateMasterInterruptLevel() {
     if (m_pendingIntrLevel > 0) {
         return;
     }
@@ -563,15 +566,6 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
         m_intrStatus.internal &= ~(1u << internalIndex);
 
         m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
-
-        // Also send VBlank IN and HBlank IN to slave SH2 if it is enabled
-        if (internalIndex == 0) {
-            m_cbExternalSlaveInterrupt(2, 0x43);
-        } else if (internalIndex == 2) {
-            m_cbExternalSlaveInterrupt(1, 0x41);
-        } else {
-            m_cbExternalSlaveInterrupt(0, 0);
-        }
     } else if (m_abusIntrAck) {
         devlog::trace<grp::intr>("Raising external interrupt {:X}, level {:X}", externalIndex, externalLevel);
         TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
@@ -582,7 +576,16 @@ FORCE_INLINE void SCU::UpdateInterruptLevel() {
 
         m_abusIntrAck = false;
         m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
-        m_cbExternalSlaveInterrupt(0, 0);
+    }
+}
+
+FORCE_INLINE void SCU::UpdateSlaveInterruptLevel(bool hb, bool vb) {
+    if (vb) {
+        m_cbExternalSlaveInterrupt(6, 0x43);
+    } else if (hb) {
+        m_cbExternalSlaveInterrupt(2, 0x41);
+    } else {
+        m_cbExternalSlaveInterrupt(0, 0x00);
     }
 }
 
@@ -1003,13 +1006,13 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     case 0xA2:        // (IMS) Interrupt Mask (bits 8-15)
         m_intrMask.u32 = (value << 8u) & 0x0000BF00;
         if constexpr (!poke) {
-            UpdateInterruptLevel();
+            UpdateMasterInterruptLevel();
         }
         break;
     case 0xA3: // (IMS) Interrupt Mask (bits 0-7)
         m_intrMask.u32 = (value << 0u) & 0x000000FF;
         if constexpr (!poke) {
-            UpdateInterruptLevel();
+            UpdateMasterInterruptLevel();
         }
         break;
 
@@ -1024,7 +1027,7 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     case 0xAB:        // (AIACK) A-Bus Interrupt Acknowledge (bits 0-7)
         m_abusIntrAck = bit::test<0>(value);
         if constexpr (!poke) {
-            UpdateInterruptLevel();
+            UpdateMasterInterruptLevel();
         }
         break;
 
@@ -1202,7 +1205,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     case 0xA0: // (IMS) Interrupt Mask
         m_intrMask.u32 = value & 0x0000BFFF;
         if constexpr (!poke) {
-            UpdateInterruptLevel();
+            UpdateMasterInterruptLevel();
         }
         break;
     case 0xA4: // (IST) Interrupt Status
@@ -1215,7 +1218,7 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
     case 0xA8: // (AIACK) A-Bus Interrupt Acknowledge
         m_abusIntrAck = bit::test<0>(value);
         if constexpr (!poke) {
-            UpdateInterruptLevel();
+            UpdateMasterInterruptLevel();
         }
         break;
 

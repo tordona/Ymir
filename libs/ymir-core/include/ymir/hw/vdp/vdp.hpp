@@ -42,9 +42,9 @@ public:
 
     void Reset(bool hard);
 
-    void MapCallbacks(CBTriggerEvent cbHBlank, CBHVBlankStateChange cbVBlankStateChange, CBTriggerEvent cbSpriteDrawEnd,
-                      CBTriggerEvent cbOptimizedINTBACKRead) {
-        m_cbHBlank = cbHBlank;
+    void MapCallbacks(CBHVBlankStateChange cbHBlankStateChange, CBHVBlankStateChange cbVBlankStateChange,
+                      CBTriggerEvent cbSpriteDrawEnd, CBTriggerEvent cbOptimizedINTBACKRead) {
+        m_cbHBlankStateChange = cbHBlankStateChange;
         m_cbVBlankStateChange = cbVBlankStateChange;
         m_cbTriggerSpriteDrawEnd = cbSpriteDrawEnd;
         m_cbTriggerOptimizedINTBACKRead = cbOptimizedINTBACKRead;
@@ -119,7 +119,7 @@ private:
     // Only valid when color RAM mode is one of the RGB555 modes.
     alignas(16) std::array<Color888, kVDP2CRAMSize / sizeof(uint16)> m_CRAMCache;
 
-    CBTriggerEvent m_cbHBlank;
+    CBHVBlankStateChange m_cbHBlankStateChange;
     CBHVBlankStateChange m_cbVBlankStateChange;
     CBTriggerEvent m_cbTriggerSpriteDrawEnd;
     CBTriggerEvent m_cbTriggerOptimizedINTBACKRead;

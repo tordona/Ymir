@@ -72,9 +72,8 @@ Saturn::Saturn()
         });
 
     masterSH2.MapCallbacks(SCU.CbAckExtIntr);
-    slaveSH2.MapCallbacks(SCU.CbAckExtIntr);
     SCU.MapCallbacks(masterSH2.CbExtIntr, slaveSH2.CbExtIntr);
-    VDP.MapCallbacks(SCU.CbTriggerHBlank, SCU.CbVBlankStateChange, SCU.CbTriggerSpriteDrawEnd,
+    VDP.MapCallbacks(SCU.CbHBlankStateChange, SCU.CbVBlankStateChange, SCU.CbTriggerSpriteDrawEnd,
                      SMPC.CbTriggerOptimizedINTBACKRead);
     SMPC.MapCallbacks(SCU.CbTriggerSystemManager, SCU.CbTriggerPad);
     SCSP.MapCallbacks(SCU.CbTriggerSoundRequest);

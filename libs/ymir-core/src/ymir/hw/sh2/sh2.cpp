@@ -1763,8 +1763,12 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
         // Acknowledge interrupt
         switch (INTC.pending.source) {
         case InterruptSource::IRL:
-            if (INTC.ICR.VECMD) {
+            if (!BCR1.MASTER && INTC.ICR.VECMD) {
+                // IRL on master -> fetch from SCU
                 m_cbAcknowledgeExternalInterrupt();
+            } else if (BCR1.MASTER) {
+                // IRL on slave -> clear it
+                SetExternalInterrupt(0, 0);
             }
             break;
         case InterruptSource::NMI:

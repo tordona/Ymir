@@ -116,8 +116,8 @@ public:
     // -------------------------------------------------------------------------
     // External interrupt triggers
 
-    void TriggerHBlank();
-    void UpdateVBlank(bool level);
+    void UpdateHBlank(bool hb, bool vb);
+    void UpdateVBlank(bool hb, bool vb);
     void TriggerTimer0();
     void TriggerTimer1();
     void TriggerDSPEnd();
@@ -130,6 +130,7 @@ public:
 
     void TriggerExternalInterrupt0();
     void AcknowledgeExternalInterrupt();
+    void AcknowledgeExternalSlaveInterrupt();
 
     // -------------------------------------------------------------------------
     // RAM/register dumps
@@ -180,7 +181,8 @@ private:
     uint8 m_pendingIntrLevel;
     uint8 m_pendingIntrIndex;
 
-    void UpdateInterruptLevel();
+    void UpdateMasterInterruptLevel();
+    void UpdateSlaveInterruptLevel(bool hb, bool vb);
 
     // -------------------------------------------------------------------------
     // DMA
@@ -276,7 +278,8 @@ public:
     const sh2::CBAcknowledgeExternalInterrupt CbAckExtIntr =
         util::MakeClassMemberRequiredCallback<&SCU::AcknowledgeExternalInterrupt>(this);
 
-    const vdp::CBTriggerEvent CbTriggerHBlank = util::MakeClassMemberRequiredCallback<&SCU::TriggerHBlank>(this);
+    const vdp::CBHVBlankStateChange CbHBlankStateChange =
+        util::MakeClassMemberRequiredCallback<&SCU::UpdateHBlank>(this);
     const vdp::CBHVBlankStateChange CbVBlankStateChange =
         util::MakeClassMemberRequiredCallback<&SCU::UpdateVBlank>(this);
     const vdp::CBTriggerEvent CbTriggerSpriteDrawEnd =
