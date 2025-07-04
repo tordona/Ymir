@@ -192,7 +192,11 @@ void CartridgeSettingsView::DrawBackupRAMSettings() {
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + itemSpacingWidth * 2));
     std::string imagePath = fmt::format("{}", settings.imagePath);
-    if (MakeDirty(ImGui::InputText("##bup_image_path", &imagePath, ImGuiInputTextFlags_ElideLeft))) {
+    std::string defaultPath =
+        fmt::format("{}", m_context.profile.GetPath(ProfilePath::PersistentState) /
+                              fmt::format("bup-ext-{}M.bin", CapacityToSize(settings.capacity) * 8 / 1024 / 1024));
+    if (MakeDirty(ImGui::InputTextWithHint("##bup_image_path", defaultPath.c_str(), &imagePath,
+                                           ImGuiInputTextFlags_ElideLeft))) {
         settings.imagePath = std::u8string{imagePath.begin(), imagePath.end()};
     }
     ImGui::SameLine();
@@ -317,6 +321,11 @@ void CartridgeSettingsView::LoadBackupImage(std::filesystem::path file) {
         }
     } else {
         // The user wants to create a new image file
+        if (file.empty()) {
+            file = fmt::format("{}",
+                               m_context.profile.GetPath(ProfilePath::PersistentState) /
+                                   fmt::format("bup-ext-{}M.bin", CapacityToSize(settings.capacity) * 8 / 1024 / 1024));
+        }
         bupMem.CreateFrom(file, CapacityToBupSize(settings.capacity), error);
         if (error) {
             m_context.EnqueueEvent(

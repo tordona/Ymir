@@ -1622,6 +1622,9 @@ std::filesystem::path Settings::Proximate(ProfilePath base, std::filesystem::pat
 }
 
 std::filesystem::path Settings::Absolute(ProfilePath base, std::filesystem::path path) const {
+    if (path.empty()) {
+        return "";
+    }
     if (path.is_absolute()) {
         return path;
     }

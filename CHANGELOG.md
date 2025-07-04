@@ -6,6 +6,7 @@
 
 - App: Added new 3:2 and 16:10 forced aspect ratio options.
 - Debugger: Added basic VDP1 registers inspector window.
+- Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 
 ### Fixes
 

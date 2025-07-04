@@ -313,6 +313,13 @@ EmuEvent InsertCartridgeFromSettings() {
                 return;
             }
 
+            // Use default path for specified size
+            if (settings.backupRAM.imagePath.empty()) {
+                settings.backupRAM.imagePath =
+                    ctx.profile.GetPath(ProfilePath::PersistentState) /
+                    fmt::format("bup-ext-{}M.bin", CapacityToSize(settings.backupRAM.capacity) * 8 / 1024 / 1024);
+            }
+
             // If a backup RAM cartridge is inserted, remove it first to unlock the file and reinsert the previous
             // cartridge in case of failure
             std::filesystem::path prevPath = "";
