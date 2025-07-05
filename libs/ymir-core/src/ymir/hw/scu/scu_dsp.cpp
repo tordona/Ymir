@@ -119,8 +119,10 @@ void SCUDSP::Run(uint64 cycles) {
             if (!dmaToD0 && dmaDst == 4) {
                 RunDMA<debug>(0);
             } else {
-                // FIXME: WipEout (USA) doesn't go past menus if we run less DMA steps here
-                RunDMA<debug>(16);
+                // FIXME/HACK: WipEout (USA) doesn't go past menus if we run less DMA steps here
+                // RunDMA<debug>(1);
+                // RunDMA<debug>(16);
+                RunDMA<debug>(0);
             }
         }
 
