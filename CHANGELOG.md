@@ -21,6 +21,7 @@
 - SCU: Split up MSH2/SSH2 interrupt handling.
 - SCU: Various fixes to SCU DSP DMA transfers to DSP Program RAM (thanks to @celeriyacon).
 - SH2: Fix cache LRU AND update mask. Fixes FMV glitches on Capcom games, WipEout and Mr. Bones when SH-2 cache emulation is enabled. (#202, #247, #270)
+- System: Tighten synchronization between SCU and SH-2 CPUs. Improves stability on WipEout (USA). (#202)
 - VDP1: Extend line clipping to the left and top edges by one pixel to compensate for some inaccuracies.
 - VDP1: Include source color MSB when rendering polygons in half-luminance mode. Fixes intro FMV background on Crows - The Battle Action. (#107)
 - VDP1: Properly handle DIE/DIL in single-density interlaced mode. Fixes text drawn twice as tall in Resident Evil options menu. (#180)

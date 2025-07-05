@@ -329,15 +329,21 @@ void Saturn::Run() {
     if (slaveSH2Enabled) {
         uint64 slaveCycles = m_ssh2SpilloverCycles;
         do {
+            const uint64 prevExecCycles = execCycles;
             const uint64 targetCycles = std::min(execCycles + kSH2SyncMaxStep, cycles);
             execCycles = masterSH2.Advance<debug, enableSH2Cache>(targetCycles, execCycles);
             slaveCycles = slaveSH2.Advance<debug, enableSH2Cache>(execCycles, slaveCycles);
+            SCU.Advance<debug>(execCycles - prevExecCycles);
         } while (execCycles < cycles);
         m_ssh2SpilloverCycles = slaveCycles - execCycles;
     } else {
-        execCycles = masterSH2.Advance<debug, enableSH2Cache>(cycles);
+        do {
+            const uint64 prevExecCycles = execCycles;
+            const uint64 targetCycles = std::min(execCycles + kSH2SyncMaxStep, cycles);
+            execCycles = masterSH2.Advance<debug, enableSH2Cache>(targetCycles, execCycles);
+            SCU.Advance<debug>(execCycles - prevExecCycles);
+        } while (execCycles < cycles);
     }
-    SCU.Advance<debug>(execCycles);
     VDP.Advance<debug>(execCycles);
 
     // SCSP+M68K and CD block are ticked by the scheduler
