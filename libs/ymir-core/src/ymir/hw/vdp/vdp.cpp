@@ -1791,9 +1791,10 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
                 color = VDP1ReadRendererVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
                 break;
             case 2: // 8 bpp, 64 colors, bank mode
-                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex) & 0x3F;
+                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex) & 0xFF;
                 processEndCode(color == 0xFF);
                 transparent = color == 0x0;
+                color &= 0x3F;
                 color |= lineParams.colorBank & 0xFFC0;
                 break;
             case 3: // 8 bpp, 128 colors, bank mode
