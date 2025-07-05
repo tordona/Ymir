@@ -1781,7 +1781,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
                 color = (color >> ((~u & 1) * 4)) & 0xF;
                 processEndCode(color == 0xF);
                 transparent = color == 0x0;
-                color |= lineParams.colorBank;
+                color |= lineParams.colorBank & 0xFFF0;
                 break;
             case 1: // 4 bpp, 16 colors, lookup table mode
                 color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
@@ -5651,8 +5651,9 @@ FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(const SpriteFB &fb, uin
 // colorDataBits specifies the bit width of the color data.
 template <uint32 colorDataBits>
 static SpriteData::Special GetSpecialPattern(uint16 rawData) {
-    // Normal shadow pattern (LSB = 0, rest of the bits = 1)
+    // Normal shadow pattern (LSB = 0, rest of the color data bits = 1)
     static constexpr uint16 kNormalShadowValue = (1u << (colorDataBits + 1u)) - 2u;
+
     if (rawData == 0) {
         return SpriteData::Special::Transparent;
     } else if (bit::extract<0, colorDataBits>(rawData) == kNormalShadowValue) {
