@@ -105,6 +105,8 @@ void SCUDSP::Run(uint64 cycles) {
         const bool doDMA = dmaRun;
         if (dmaRun) {
             dmaPC = PC;
+            // HACK: This fixes Grandia FMVs... what the heck is this DMA doing on real hardware?!?
+            RunDMA<debug>(0);
         }
 
         switch (instruction.instructionInfo.instructionClass) {
@@ -114,7 +116,7 @@ void SCUDSP::Run(uint64 cycles) {
         }
 
         // TODO: is this correct?
-        if (doDMA) {
+        /*if (doDMA) {
             // Run entire DMA if writing to program RAM, otherwise run a single transfer
             if (!dmaToD0 && dmaDst == 4) {
                 RunDMA<debug>(0);
@@ -124,7 +126,7 @@ void SCUDSP::Run(uint64 cycles) {
                 // RunDMA<debug>(16);
                 RunDMA<debug>(0);
             }
-        }
+        }*/
 
         // Clear stepping flag to ensure the DSP only runs one command when stepping
         programStep = false;
