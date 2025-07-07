@@ -20,7 +20,12 @@ void AnalogPadBindsView::Display(Settings::Input::Port::AnalogPadBinds &binds, u
     }
 
     if (ImGui::Button("Restore defaults")) {
-        m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds));
+        m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds, true));
+        MakeDirty();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear all")) {
+        m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds, false));
         MakeDirty();
     }
 

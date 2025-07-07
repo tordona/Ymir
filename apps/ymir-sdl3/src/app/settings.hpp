@@ -347,11 +347,15 @@ public:
 
     // Restores all default input binds for the specified control pad
     // Returns all unbound actions.
-    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ControlPadBinds &binds);
+    // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ControlPadBinds &binds,
+                                                                     bool useDefaults);
 
     // Restores all default input binds for the specified 3D control pad
     // Returns all unbound actions.
-    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::AnalogPadBinds &binds);
+    // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::AnalogPadBinds &binds,
+                                                                     bool useDefaults);
 
 private:
     SharedContext &m_context;

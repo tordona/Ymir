@@ -557,11 +557,11 @@ void Settings::ResetToDefaults() {
 
         (void)ResetHotkeys();
 
-        (void)ResetBinds(input.port1.controlPadBinds);
-        (void)ResetBinds(input.port2.controlPadBinds);
+        (void)ResetBinds(input.port1.controlPadBinds, true);
+        (void)ResetBinds(input.port2.controlPadBinds, true);
 
-        (void)ResetBinds(input.port1.analogPadBinds);
-        (void)ResetBinds(input.port2.analogPadBinds);
+        (void)ResetBinds(input.port1.analogPadBinds, true);
+        (void)ResetBinds(input.port2.analogPadBinds, true);
     }
 
     input.gamepad.lsDeadzone = 0.15f;
@@ -1413,7 +1413,7 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     return replacedActions;
 }
 
-std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ControlPadBinds &binds) {
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ControlPadBinds &binds, bool useDefaults) {
     using namespace input;
 
     using Key = KeyboardKey;
@@ -1462,38 +1462,55 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Contro
         }
     };
 
-    if (&binds == &input.port1.controlPadBinds) {
-        // Default port 1 Control Pad controller inputs
-        rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
-        rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
-        rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
-        rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
-        rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
-        rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
-        rebind(binds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
-        rebind(binds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
-        rebind(binds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
-        rebind(binds.up, {{{Key::W}}});
-        rebind(binds.down, {{{Key::S}}});
-        rebind(binds.left, {{{Key::A}}});
-        rebind(binds.right, {{{Key::D}}});
-        rebind(binds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
-    } else if (&binds == &input.port2.controlPadBinds) {
-        // Default port 2 Control Pad controller inputs
-        rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
-        rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
-        rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
-        rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
-        rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
-        rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
-        rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}});
-        rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}});
-        rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
-        rebind(binds.up, {{{Key::Up}, {Key::Home}}});
-        rebind(binds.down, {{{Key::Down}, {Key::End}}});
-        rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
-        rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
-        rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
+    if (useDefaults) {
+        if (&binds == &input.port1.controlPadBinds) {
+            // Default port 1 Control Pad controller inputs
+            rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
+            rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
+            rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
+            rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
+            rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
+            rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
+            rebind(binds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
+            rebind(binds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
+            rebind(binds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
+            rebind(binds.up, {{{Key::W}}});
+            rebind(binds.down, {{{Key::S}}});
+            rebind(binds.left, {{{Key::A}}});
+            rebind(binds.right, {{{Key::D}}});
+            rebind(binds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
+        } else if (&binds == &input.port2.controlPadBinds) {
+            // Default port 2 Control Pad controller inputs
+            rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
+            rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
+            rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
+            rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
+            rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
+            rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
+            rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}});
+            rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}});
+            rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
+            rebind(binds.up, {{{Key::Up}, {Key::Home}}});
+            rebind(binds.down, {{{Key::Down}, {Key::End}}});
+            rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
+            rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
+            rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
+        }
+    } else {
+        rebind(binds.a, {});
+        rebind(binds.b, {});
+        rebind(binds.c, {});
+        rebind(binds.x, {});
+        rebind(binds.y, {});
+        rebind(binds.z, {});
+        rebind(binds.l, {});
+        rebind(binds.r, {});
+        rebind(binds.start, {});
+        rebind(binds.up, {});
+        rebind(binds.down, {});
+        rebind(binds.left, {});
+        rebind(binds.right, {});
+        rebind(binds.dpad, {});
     }
 
     RebindInputs();
@@ -1501,7 +1518,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Contro
     return replacedActions;
 }
 
-std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::AnalogPadBinds &binds) {
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::AnalogPadBinds &binds, bool useDefaults) {
     using namespace input;
 
     using Key = KeyboardKey;
@@ -1551,46 +1568,67 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Analog
         }
     };
 
-    if (&binds == &input.port1.analogPadBinds) {
-        // Default port 1 Control Pad controller inputs
-        rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
-        rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
-        rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
-        rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
-        rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
-        rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
-        rebind(binds.l, {{{Key::Q}}});
-        rebind(binds.r, {{{Key::E}}});
-        rebind(binds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
-        rebind(binds.up, {{{Key::W}}});
-        rebind(binds.down, {{{Key::S}}});
-        rebind(binds.left, {{{Key::A}}});
-        rebind(binds.right, {{{Key::D}}});
-        rebind(binds.dpad, {{{0, GPAxis2::DPad}}});
-        rebind(binds.analogStick, {{{0, GPAxis2::LeftStick}}});
-        rebind(binds.analogL, {{{0, GPAxis1::LeftTrigger}}});
-        rebind(binds.analogR, {{{0, GPAxis1::RightTrigger}}});
-        rebind(binds.switchMode, {{{0, GPBtn::LeftThumb}}});
-    } else if (&binds == &input.port2.analogPadBinds) {
-        // Default port 2 Control Pad controller inputs
-        rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
-        rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
-        rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
-        rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
-        rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
-        rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
-        rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}}});
-        rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}}});
-        rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
-        rebind(binds.up, {{{Key::Up}, {Key::Home}}});
-        rebind(binds.down, {{{Key::Down}, {Key::End}}});
-        rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
-        rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
-        rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
-        rebind(binds.analogStick, {{{1, GPAxis2::LeftStick}}});
-        rebind(binds.analogL, {{{1, GPAxis1::LeftTrigger}}});
-        rebind(binds.analogR, {{{1, GPAxis1::RightTrigger}}});
-        rebind(binds.switchMode, {{{1, GPBtn::LeftThumb}}});
+    if (useDefaults) {
+        if (&binds == &input.port1.analogPadBinds) {
+            // Default port 1 Control Pad controller inputs
+            rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
+            rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
+            rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
+            rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
+            rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
+            rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
+            rebind(binds.l, {{{Key::Q}}});
+            rebind(binds.r, {{{Key::E}}});
+            rebind(binds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
+            rebind(binds.up, {{{Key::W}}});
+            rebind(binds.down, {{{Key::S}}});
+            rebind(binds.left, {{{Key::A}}});
+            rebind(binds.right, {{{Key::D}}});
+            rebind(binds.dpad, {{{0, GPAxis2::DPad}}});
+            rebind(binds.analogStick, {{{0, GPAxis2::LeftStick}}});
+            rebind(binds.analogL, {{{0, GPAxis1::LeftTrigger}}});
+            rebind(binds.analogR, {{{0, GPAxis1::RightTrigger}}});
+            rebind(binds.switchMode, {{{0, GPBtn::LeftThumb}}});
+        } else if (&binds == &input.port2.analogPadBinds) {
+            // Default port 2 Control Pad controller inputs
+            rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
+            rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
+            rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
+            rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
+            rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
+            rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
+            rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}}});
+            rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}}});
+            rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
+            rebind(binds.up, {{{Key::Up}, {Key::Home}}});
+            rebind(binds.down, {{{Key::Down}, {Key::End}}});
+            rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
+            rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
+            rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
+            rebind(binds.analogStick, {{{1, GPAxis2::LeftStick}}});
+            rebind(binds.analogL, {{{1, GPAxis1::LeftTrigger}}});
+            rebind(binds.analogR, {{{1, GPAxis1::RightTrigger}}});
+            rebind(binds.switchMode, {{{1, GPBtn::LeftThumb}}});
+        }
+    } else {
+        rebind(binds.a, {});
+        rebind(binds.b, {});
+        rebind(binds.c, {});
+        rebind(binds.x, {});
+        rebind(binds.y, {});
+        rebind(binds.z, {});
+        rebind(binds.l, {});
+        rebind(binds.r, {});
+        rebind(binds.start, {});
+        rebind(binds.up, {});
+        rebind(binds.down, {});
+        rebind(binds.left, {});
+        rebind(binds.right, {});
+        rebind(binds.dpad, {});
+        rebind(binds.analogStick, {});
+        rebind(binds.analogL, {});
+        rebind(binds.analogR, {});
+        rebind(binds.switchMode, {});
     }
 
     RebindInputs();

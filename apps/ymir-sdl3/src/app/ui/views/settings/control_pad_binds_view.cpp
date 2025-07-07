@@ -11,7 +11,12 @@ ControlPadBindsView::ControlPadBindsView(SharedContext &context)
 
 void ControlPadBindsView::Display(Settings::Input::Port::ControlPadBinds &binds, uint32 portIndex) {
     if (ImGui::Button("Restore defaults")) {
-        m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds));
+        m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds, true));
+        MakeDirty();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear all")) {
+        m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds, false));
         MakeDirty();
     }
 
