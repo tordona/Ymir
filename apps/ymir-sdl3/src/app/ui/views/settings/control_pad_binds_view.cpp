@@ -9,7 +9,7 @@ ControlPadBindsView::ControlPadBindsView(SharedContext &context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void ControlPadBindsView::Display(Settings::Input::Port::ControlPadBinds &binds, void *context) {
+void ControlPadBindsView::Display(Settings::Input::Port::ControlPadBinds &binds, uint32 portIndex) {
     if (ImGui::Button("Restore defaults")) {
         m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds));
         MakeDirty();
@@ -33,7 +33,7 @@ void ControlPadBindsView::Display(Settings::Input::Port::ControlPadBinds &binds,
             }
             for (uint32 i = 0; i < input::kNumBindsPerInput; i++) {
                 if (ImGui::TableNextColumn()) {
-                    m_inputCaptureWidget.DrawInputBindButton(bind, i, context);
+                    m_inputCaptureWidget.DrawInputBindButton(bind, i, &m_context.controlPadInputs[portIndex]);
                 }
             }
         };

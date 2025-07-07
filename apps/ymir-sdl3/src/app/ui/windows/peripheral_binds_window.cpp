@@ -35,12 +35,8 @@ void PeripheralBindsWindow::DrawContents() {
 
     switch (periph.GetType()) {
     case peripheral::PeripheralType::None: break;
-    case peripheral::PeripheralType::ControlPad:
-        m_controlPadView.Display(settings.controlPadBinds, &m_context.controlPadInputs[m_portIndex]);
-        break;
-    case peripheral::PeripheralType::AnalogPad:
-        m_analogPadView.Display(settings.analogPadBinds, &m_context.analogPadInputs[m_portIndex]);
-        break;
+    case peripheral::PeripheralType::ControlPad: m_controlPadView.Display(settings.controlPadBinds, m_portIndex); break;
+    case peripheral::PeripheralType::AnalogPad: m_analogPadView.Display(settings.analogPadBinds, m_portIndex); break;
     }
 }
 

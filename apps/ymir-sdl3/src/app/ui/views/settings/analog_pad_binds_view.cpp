@@ -7,7 +7,18 @@ AnalogPadBindsView::AnalogPadBindsView(SharedContext &context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void AnalogPadBindsView::Display(Settings::Input::Port::AnalogPadBinds &binds, void *context) {
+void AnalogPadBindsView::Display(Settings::Input::Port::AnalogPadBinds &binds, uint32 portIndex) {
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Mode:");
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Analog", m_context.analogPadInputs[portIndex].analogMode)) {
+        m_context.analogPadInputs[portIndex].analogMode = false;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Digital", !m_context.analogPadInputs[portIndex].analogMode)) {
+        m_context.analogPadInputs[portIndex].analogMode = true;
+    }
+
     if (ImGui::Button("Restore defaults")) {
         m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds));
         MakeDirty();
@@ -31,7 +42,7 @@ void AnalogPadBindsView::Display(Settings::Input::Port::AnalogPadBinds &binds, v
             }
             for (uint32 i = 0; i < input::kNumBindsPerInput; i++) {
                 if (ImGui::TableNextColumn()) {
-                    m_inputCaptureWidget.DrawInputBindButton(bind, i, context);
+                    m_inputCaptureWidget.DrawInputBindButton(bind, i, &m_context.analogPadInputs[portIndex]);
                 }
             }
         };

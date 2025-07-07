@@ -11,7 +11,7 @@ class ControlPadBindsView : public SettingsViewBase {
 public:
     ControlPadBindsView(SharedContext &context);
 
-    void Display(Settings::Input::Port::ControlPadBinds &binds, void *context);
+    void Display(Settings::Input::Port::ControlPadBinds &binds, uint32 portIndex);
 
 private:
     widgets::InputCaptureWidget m_inputCaptureWidget;
