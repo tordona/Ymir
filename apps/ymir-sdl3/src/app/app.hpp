@@ -35,23 +35,6 @@
 
 namespace app {
 
-namespace grp {
-
-    // -----------------------------------------------------------------------------
-    // Dev log groups
-
-    // Hierarchy:
-    //
-    // base
-
-    struct base {
-        static constexpr bool enabled = true;
-        static constexpr devlog::Level level = devlog::level::debug;
-        static constexpr std::string_view name = "App";
-    };
-
-} // namespace grp
-
 class App {
 public:
     App();

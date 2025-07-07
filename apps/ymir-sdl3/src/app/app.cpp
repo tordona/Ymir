@@ -1155,9 +1155,12 @@ void App::RunEmulator() {
         };
 
         auto registerModeSwitch = [&](input::Action action) {
-            inputContext.SetTriggerHandler(action, [](void *context, const input::InputElement &element) {
+            inputContext.SetTriggerHandler(action, [&](void *context, const input::InputElement &element) {
                 auto &input = *reinterpret_cast<SharedContext::AnalogPadInput *>(context);
                 input.analogMode ^= true;
+                int portNum = (context == &m_context.analogPadInputs[0]) ? 1 : 2;
+                m_context.DisplayMessage(fmt::format("Port {} 3D Control Pad switched to {} mode", portNum,
+                                                     (input.analogMode ? "analog" : "digital")));
             });
         };
 
@@ -2220,6 +2223,52 @@ void App::RunEmulator() {
 
                         drawList->AddTriangleFilled(p1, p2, p3, color);
                     }
+                }
+            }
+
+            // Draw messages
+            {
+                auto *drawList = ImGui::GetForegroundDrawList();
+                float messageX = viewport->WorkPos.x + style.FramePadding.x + style.ItemSpacing.x;
+                float messageY = viewport->WorkPos.y + style.FramePadding.y + style.ItemSpacing.y;
+                for (size_t i = 0; i < m_context.messages.Count(); ++i) {
+                    const Message *message = m_context.messages.Get(i);
+                    assert(message != nullptr);
+                    if (now >= message->timestamp + kMessageDisplayDuration + kMessageFadeOutDuration) {
+                        // Message is too old; don't display
+                        continue;
+                    }
+
+                    float alpha;
+                    if (now >= message->timestamp + kMessageDisplayDuration) {
+                        // Message is in fade-out phase
+                        const auto delta = static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                                                  now - message->timestamp - kMessageDisplayDuration)
+                                                                  .count());
+                        static constexpr auto length = static_cast<float>(
+                            std::chrono::duration_cast<std::chrono::nanoseconds>(kMessageFadeOutDuration).count());
+                        alpha = 1.0f - delta / length;
+                    } else {
+                        alpha = 1.0f;
+                    }
+
+                    const float textWrapWidth =
+                        viewport->WorkSize.x - style.FramePadding.x * 4.0f - style.ItemSpacing.x * 2.0f;
+
+                    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
+                    const auto textSize = ImGui::CalcTextSize(message->message.c_str(), nullptr, false, textWrapWidth);
+                    ImGui::PopFont();
+                    const ImVec2 textPos(messageX + style.FramePadding.x, messageY + style.FramePadding.y);
+
+                    drawList->AddRectFilled(ImVec2(messageX, messageY),
+                                            ImVec2(messageX + textSize.x + style.FramePadding.x * 2.0f,
+                                                   messageY + textSize.y + style.FramePadding.y * 2.0f),
+                                            ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, alpha * 0.5f)));
+                    drawList->AddText(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large, textPos,
+                                      ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, alpha)), message->message.c_str(),
+                                      nullptr, textWrapWidth);
+
+                    messageY += textSize.y + style.FramePadding.y * 2.0f;
                 }
             }
         }

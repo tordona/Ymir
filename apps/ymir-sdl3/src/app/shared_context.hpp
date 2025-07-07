@@ -2,6 +2,7 @@
 
 #include <ymir/ymir.hpp>
 
+#include <app/message.hpp>
 #include <app/profile.hpp>
 #include <app/rewind_buffer.hpp>
 #include <app/rom_manager.hpp>
@@ -33,6 +34,23 @@
 using MidiPortType = app::Settings::Audio::MidiPort::Type;
 
 namespace app {
+
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "App";
+    };
+
+} // namespace grp
 
 struct SharedContext {
     ymir::Saturn saturn;
@@ -225,8 +243,42 @@ struct SharedContext {
         moodycamel::BlockingConcurrentQueue<GUIEvent> gui;
     } eventQueues;
 
+    // Circular buffer of messages to be displayed
+    struct Messages {
+        std::array<Message, 10> list{};
+        size_t count = 0;
+        size_t head = 0;
+
+        void Add(std::string message) {
+            if (count < list.size()) {
+                list[count++] = {.message = message, .timestamp = std::chrono::steady_clock::now()};
+            } else {
+                list[head++] = {.message = message, .timestamp = std::chrono::steady_clock::now()};
+                if (head == list.size()) {
+                    head = 0;
+                }
+            }
+        }
+
+        [[nodiscard]] size_t Count() const {
+            return count;
+        }
+
+        [[nodiscard]] const Message *const Get(size_t index) const {
+            if (index >= count) {
+                return nullptr;
+            }
+            return &list[(head + index) % list.size()];
+        }
+    } messages;
+
     // -----------------------------------------------------------------------------------------------------------------
     // Convenience methods
+
+    void DisplayMessage(std::string message) {
+        devlog::info<grp::base>("{}", message);
+        messages.Add(message);
+    }
 
     void EnqueueEvent(EmuEvent &&event) {
         eventQueues.emulator.enqueue(std::move(event));

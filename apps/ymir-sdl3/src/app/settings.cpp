@@ -28,9 +28,9 @@ namespace grp {
 
     // Hierarchy:
     //
-    // base
+    // settings
 
-    struct base {
+    struct settings {
         static constexpr bool enabled = true;
         static constexpr devlog::Level level = devlog::level::debug;
         static constexpr std::string_view name = "Settings";
@@ -1138,7 +1138,7 @@ void Settings::CheckDirty() {
 
     if (m_dirty && (std::chrono::steady_clock::now() - m_dirtyTimestamp) > 250ms) {
         if (auto result = Save(); !result) {
-            devlog::warn<grp::base>("Failed to save settings: {}", result.string());
+            devlog::warn<grp::settings>("Failed to save settings: {}", result.string());
         }
         m_dirty = false;
     }
