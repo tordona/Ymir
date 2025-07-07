@@ -5,6 +5,7 @@
 ### New features and improvements
 
 - App: Added new 3:2 and 16:10 forced aspect ratio options.
+- App: Added simple message overlay system to display some basic notifications.
 - App: Improve full screen frame pacing even further by spin-waiting for up to 1 ms before the frame presentation target.
 - App: Smooth out frame interval adjustments in full screen mode.
 - Debugger: Added basic VDP1 registers inspector window.

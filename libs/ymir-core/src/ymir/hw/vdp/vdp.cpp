@@ -2915,6 +2915,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
         const uint8 bgPN = pn[i];
 
         // Skip bitmap NBGs
+        // TODO: handle bitmaps too; should handle each bank individually
         if (bgParams.bitmap) {
             continue;
         }
