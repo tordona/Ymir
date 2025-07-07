@@ -1,7 +1,5 @@
 #include "analog_pad_binds_view.hpp"
 
-#include <app/events/gui_event_factory.hpp>
-
 namespace app::ui {
 
 AnalogPadBindsView::AnalogPadBindsView(SharedContext &context)
