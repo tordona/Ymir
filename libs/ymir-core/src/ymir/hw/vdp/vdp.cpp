@@ -925,7 +925,9 @@ void VDP::BeginHPhaseLeftBorder() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.regs2.VCNT);
 
     m_state.regs2.TVSTAT.HBLANK = 0;
-    m_cbHBlankStateChange(false, m_state.regs2.TVSTAT.VBLANK);
+    if (m_state.VPhase == VerticalPhase::Active) {
+        m_cbHBlankStateChange(false, m_state.regs2.TVSTAT.VBLANK);
+    }
 
     // TODO: draw border
 }
