@@ -78,6 +78,7 @@ private:
     void LoadRecommendedCartridge();
 
     void LoadSaveStates();
+    void ClearSaveStates();
     void PersistSaveState(uint32 slot);
     void WriteSaveStateMeta();
     void EnableRewindBuffer(bool enable);
@@ -129,15 +130,16 @@ private:
     ui::PeripheralBindsWindow m_periphBindsWindow;
     ui::AboutWindow m_aboutWindow;
 
-    // Error modal dialog
+    // Generic modal dialog
 
     void DrawGenericModal();
 
     void OpenSimpleErrorModal(std::string message);
-    void OpenGenericModal(std::string title, std::function<void()> fnContents);
+    void OpenGenericModal(std::string title, std::function<void()> fnContents, bool showOKButton = true);
 
-    bool m_openGenericModal = false;  // Open error modal on the next frame
-    bool m_closeGenericModal = false; // Close error modal on the next frame
+    bool m_openGenericModal = false;          // Open generic modal on the next frame
+    bool m_closeGenericModal = false;         // Close generic modal on the next frame
+    bool m_showOkButtonInGenericModal = true; // Show OK button on generic modal
     std::string m_genericModalTitle = "Message";
     std::function<void()> m_genericModalContents;
 

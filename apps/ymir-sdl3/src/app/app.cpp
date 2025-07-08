@@ -1758,7 +1758,6 @@ void App::RunEmulator() {
                     if (ImGui::BeginMenu("Save states")) {
                         // TODO: shortcuts
                         // TODO: use context data to simplify save state actions
-                        // TODO: allow clearing save states
                         // TODO: save state manager to copy/move/swap/delete states
                         for (uint32 i = 0; i < m_context.saveStates.size(); ++i) {
                             const auto &state = m_context.saveStates[i];
@@ -1777,6 +1776,27 @@ void App::RunEmulator() {
 
                         ImGui::Separator();
 
+                        if (ImGui::MenuItem("Clear all", nullptr, nullptr,
+                                            !m_context.state.loadedDiscImagePath.empty())) {
+
+                            OpenGenericModal(
+                                "Clear all save states",
+                                [&] {
+                                    ImGui::TextUnformatted(
+                                        "Are you sure you wish to clear all save states for this game?");
+                                    if (ImGui::Button(
+                                            "Yes", ImVec2(80 * m_context.displayScale, 0 * m_context.displayScale))) {
+                                        ClearSaveStates();
+                                        m_closeGenericModal = true;
+                                    }
+                                    ImGui::SameLine();
+                                    if (ImGui::Button(
+                                            "No", ImVec2(80 * m_context.displayScale, 0 * m_context.displayScale))) {
+                                        m_closeGenericModal = true;
+                                    }
+                                },
+                                false);
+                        }
                         if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
                                             !m_context.state.loadedDiscImagePath.empty())) {
                             auto path = m_context.profile.GetPath(ProfilePath::SaveStates) /
@@ -3181,6 +3201,21 @@ void App::LoadSaveStates() {
     }
 }
 
+void App::ClearSaveStates() {
+    auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
+    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.GetDiscHash());
+
+    for (uint32 slot = 0; slot < m_context.saveStates.size(); slot++) {
+        std::unique_lock lock{m_context.locks.saveStates[slot]};
+        auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
+        auto &saveStateSlot = m_context.saveStates[slot];
+        saveStateSlot.state.reset();
+        saveStateSlot.timestamp = {};
+        std::filesystem::remove(statePath);
+    }
+    m_context.DisplayMessage("Save states cleared");
+}
+
 void App::PersistSaveState(uint32 slot) {
     if (slot >= m_context.saveStates.size()) {
         return;
@@ -3548,8 +3583,13 @@ void App::DrawGenericModal() {
 
         ImGui::PopTextWrapPos();
 
-        if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0 * m_context.displayScale)) ||
-            m_closeGenericModal) {
+        bool close = m_closeGenericModal;
+        if (m_showOkButtonInGenericModal) {
+            if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0 * m_context.displayScale))) {
+                close = true;
+            }
+        }
+        if (close) {
             ImGui::CloseCurrentPopup();
             m_genericModalContents = {};
             m_closeGenericModal = false;
@@ -3563,10 +3603,11 @@ void App::OpenSimpleErrorModal(std::string message) {
     OpenGenericModal("Error", [=] { ImGui::Text("%s", message.c_str()); });
 }
 
-void App::OpenGenericModal(std::string title, std::function<void()> fnContents) {
+void App::OpenGenericModal(std::string title, std::function<void()> fnContents, bool showOKButton) {
     m_openGenericModal = true;
     m_genericModalTitle = title;
     m_genericModalContents = fnContents;
+    m_showOkButtonInGenericModal = showOKButton;
 }
 
 void App::OnMidiInputReceived(double delta, std::vector<unsigned char> *msg, void *userData) {
