@@ -72,6 +72,7 @@ Saturn::Saturn()
         });
 
     masterSH2.MapCallbacks(SCU.CbAckExtIntr);
+    // Slave SH2 nIVECF pin is not connected, so the external interrupt vector fetch callback shouldn't be mapped
     SCU.MapCallbacks(masterSH2.CbExtIntr, slaveSH2.CbExtIntr);
     VDP.MapCallbacks(SCU.CbHBlankStateChange, SCU.CbVBlankStateChange, SCU.CbTriggerSpriteDrawEnd,
                      SMPC.CbTriggerOptimizedINTBACKRead);
