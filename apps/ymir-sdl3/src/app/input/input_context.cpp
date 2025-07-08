@@ -20,6 +20,14 @@ InputContext::InputContext() {
 // Input primitive processing
 
 void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool pressed) {
+    const auto index = static_cast<size_t>(key);
+    const bool changed = m_keyStates[index] != pressed || key == KeyboardKey::None;
+
+    m_currModifiers = modifiers;
+    if (key != KeyboardKey::None) {
+        m_keyStates[index] = pressed;
+    }
+
     // Canonicalize key event by converting modifier key presses into modifiers.
     // The "None" key is used for key modifier-only elements (e.g. Ctrl+Shift).
     switch (key) {
@@ -46,13 +54,6 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
     default: break;
     }
 
-    const auto index = static_cast<size_t>(key);
-    const bool changed = m_keyStates[index] != pressed || key == KeyboardKey::None;
-
-    m_currModifiers = modifiers;
-    if (key != KeyboardKey::None) {
-        m_keyStates[index] = pressed;
-    }
     ProcessEvent({.element = {KeyCombo{modifiers, key}}, .buttonPressed = pressed}, changed);
 }
 
@@ -315,6 +316,26 @@ void InputContext::ProcessEvent(const InputEvent &event, bool changed) {
             InvokeCaptureCallback(event);
         }
         return;
+    }
+
+    // Process button actions ignoring modifier keys
+    if (changed && ((event.element.type == InputElement::Type::KeyCombo &&
+                     event.element.keyCombo.modifiers != KeyModifier::None) ||
+                    (event.element.type == InputElement::Type::MouseCombo &&
+                     event.element.mouseCombo.modifiers != KeyModifier::None))) {
+
+        InputElement elementWithoutMods = event.element;
+        if (event.element.type == InputElement::Type::KeyCombo) {
+            elementWithoutMods.keyCombo.modifiers = KeyModifier::None;
+        } else { // InputElement::Type::MouseCombo
+            elementWithoutMods.mouseCombo.modifiers = KeyModifier::None;
+        }
+
+        if (auto action = m_actions.find(elementWithoutMods); action != m_actions.end()) {
+            if (auto handler = m_buttonHandlers.find(action->second.action); handler != m_buttonHandlers.end()) {
+                handler->second(action->second.context, elementWithoutMods, event.buttonPressed);
+            }
+        }
     }
 
     if (auto action = m_actions.find(event.element); action != m_actions.end()) {

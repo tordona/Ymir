@@ -19,6 +19,7 @@
 ### Fixes
 
 - CD Block: Fix handling of "no change" PlayDisc parameters. Fixes X-Men: Children of the Atom CDDA tracks not resuming after pausing. (#274)
+- Input: Modifier keys can now be used correctly as controller input binds and will no longer interfere with other controller inputs. (#282)
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.
 - SCU: Allow SCU DSP program and data RAM reads or writes while the program is paused (thanks to @celeriyacon).
 - SCU: Improve HBlank IN, VBlank IN and VBlank OUT interrupt signal handling.
