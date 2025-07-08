@@ -75,7 +75,8 @@ struct GUIEvent {
 
         // Emulator notifications
 
-        StateSaved, // A save state slot was just saved
+        StateLoaded, // A save state slot was just loaded
+        StateSaved,  // A save state slot was just saved
     };
 
     Type type;

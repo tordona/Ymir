@@ -163,7 +163,12 @@ struct SharedContext {
     ROMManager romManager;
     std::filesystem::path iplRomPath;
 
-    std::array<std::unique_ptr<ymir::state::State>, 10> saveStates;
+    struct SaveState {
+        std::unique_ptr<ymir::state::State> state;
+        std::chrono::system_clock::time_point timestamp;
+    };
+
+    std::array<SaveState, 10> saveStates;
     size_t currSaveStateSlot = 0;
 
     RewindBuffer rewindBuffer;

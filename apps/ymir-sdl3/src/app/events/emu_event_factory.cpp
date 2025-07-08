@@ -486,8 +486,8 @@ EmuEvent SetSCSPStepGranularity(uint32 granularity) {
 
 EmuEvent LoadState(uint32 slot) {
     return RunFunction([=](SharedContext &ctx) {
-        if (slot < ctx.saveStates.size() && ctx.saveStates[slot]) {
-            auto &state = *ctx.saveStates[slot];
+        if (slot < ctx.saveStates.size() && ctx.saveStates[slot].state) {
+            auto &state = *ctx.saveStates[slot].state;
             // If the IPL ROM is mismatched, load it if possible
             if (state.system.iplRomHash != ctx.saturn.GetIPLHash()) {
                 devlog::warn<grp::base>("Save state IPL ROM hash mismatch; attempting to load IPL ROM with hash {}",
@@ -523,7 +523,9 @@ EmuEvent LoadState(uint32 slot) {
                 }
             }
 
-            if (!ctx.saturn.LoadState(state)) {
+            if (ctx.saturn.LoadState(state)) {
+                ctx.EnqueueEvent(events::gui::StateLoaded(slot));
+            } else {
                 devlog::warn<grp::base>("Failed to load save state");
             }
         }
@@ -535,10 +537,11 @@ EmuEvent SaveState(uint32 slot) {
         if (slot < ctx.saveStates.size()) {
             {
                 std::unique_lock lock{ctx.locks.saveStates[slot]};
-                if (!ctx.saveStates[slot]) {
-                    ctx.saveStates[slot] = std::make_unique<state::State>();
+                if (!ctx.saveStates[slot].state) {
+                    ctx.saveStates[slot].state = std::make_unique<state::State>();
                 }
-                ctx.saturn.SaveState(*ctx.saveStates[slot]);
+                ctx.saturn.SaveState(*ctx.saveStates[slot].state);
+                ctx.saveStates[slot].timestamp = std::chrono::system_clock::now();
             }
             ctx.EnqueueEvent(events::gui::StateSaved(slot));
         }

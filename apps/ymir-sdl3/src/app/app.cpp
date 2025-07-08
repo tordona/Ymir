@@ -852,26 +852,46 @@ void App::RunEmulator() {
 
         // Select state
 
-        inputContext.SetTriggerHandler(actions::save_states::SelectState1,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 0; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState2,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 1; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState3,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 2; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState4,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 3; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState5,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 4; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState6,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 5; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState7,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 6; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState8,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 7; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState9,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 8; });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState10,
-                                       [&](void *, const input::InputElement &) { m_context.currSaveStateSlot = 9; });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState1, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 0;
+            m_context.DisplayMessage("Save state slot 0 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState2, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 1;
+            m_context.DisplayMessage("Save state slot 1 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState3, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 2;
+            m_context.DisplayMessage("Save state slot 2 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState4, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 3;
+            m_context.DisplayMessage("Save state slot 3 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState5, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 4;
+            m_context.DisplayMessage("Save state slot 4 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState6, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 5;
+            m_context.DisplayMessage("Save state slot 5 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState7, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 6;
+            m_context.DisplayMessage("Save state slot 6 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState8, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 7;
+            m_context.DisplayMessage("Save state slot 7 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState9, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 8;
+            m_context.DisplayMessage("Save state slot 8 selected");
+        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState10, [&](void *, const input::InputElement &) {
+            m_context.currSaveStateSlot = 9;
+            m_context.DisplayMessage("Save state slot 9 selected");
+        });
 
         // Load state
 
@@ -1559,6 +1579,9 @@ void App::RunEmulator() {
                 break;
             }
 
+            case EvtType::StateLoaded:
+                m_context.DisplayMessage(fmt::format("State {} loaded", std::get<uint32>(evt.value)));
+                break;
             case EvtType::StateSaved: PersistSaveState(std::get<uint32>(evt.value)); break;
             }
         }
@@ -1732,15 +1755,42 @@ void App::RunEmulator() {
 
                     ImGui::Separator();
 
+                    if (ImGui::BeginMenu("Save states")) {
+                        // TODO: shortcuts
+                        // TODO: use context data to simplify save state actions
+                        // TODO: allow clearing save states
+                        // TODO: save state manager to copy/move/swap/delete states
+                        for (uint32 i = 0; i < m_context.saveStates.size(); ++i) {
+                            const auto &state = m_context.saveStates[i];
+                            if (state.state) {
+                                const std::chrono::zoned_time zonedTime{std::chrono::current_zone(), state.timestamp};
+                                const auto localTime =
+                                    std::chrono::round<std::chrono::seconds>(zonedTime.get_local_time());
+                                if (ImGui::MenuItem(fmt::format("{}: {}", i, localTime).c_str(), nullptr, nullptr,
+                                                    true)) {
+                                    m_context.EnqueueEvent(events::emu::LoadState(i));
+                                }
+                            } else {
+                                ImGui::MenuItem(fmt::format("{}: (empty)", i).c_str(), nullptr, nullptr, false);
+                            }
+                        }
+
+                        ImGui::Separator();
+
+                        if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
+                                            !m_context.state.loadedDiscImagePath.empty())) {
+                            auto path = m_context.profile.GetPath(ProfilePath::SaveStates) /
+                                        ToString(m_context.saturn.GetDiscHash());
+
+                            SDL_OpenURL(fmt::format("file:///{}", path).c_str());
+                        }
+                        ImGui::EndMenu();
+                    }
+
+                    ImGui::Separator();
+
                     if (ImGui::MenuItem("Open profile directory")) {
                         SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root)).c_str());
-                    }
-                    if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
-                                        !m_context.state.loadedDiscImagePath.empty())) {
-                        auto path = m_context.profile.GetPath(ProfilePath::SaveStates) /
-                                    ToString(m_context.saturn.GetDiscHash());
-
-                        SDL_OpenURL(fmt::format("file:///{}", path).c_str());
                     }
 
                     ImGui::Separator();
@@ -3107,12 +3157,16 @@ void App::LoadSaveStates() {
         std::unique_lock lock{m_context.locks.saveStates[slot]};
         auto statePath = gameStatesPath / fmt::format("{}.savestate", slot);
         std::ifstream in{statePath, std::ios::binary};
+        auto &saveStateSlot = m_context.saveStates[slot];
         if (in) {
-            m_context.saveStates[slot] = std::make_unique<ymir::state::State>();
-            auto &state = *m_context.saveStates[slot];
             cereal::PortableBinaryInputArchive archive{in};
             try {
-                archive(state);
+                auto state = std::make_unique<ymir::state::State>();
+                archive(*state);
+                saveStateSlot.state.swap(state);
+                const auto lastWriteTime = std::filesystem::last_write_time(statePath);
+                const auto sysClockTime = std::chrono::clock_cast<std::chrono::system_clock>(lastWriteTime);
+                saveStateSlot.timestamp = sysClockTime;
             } catch (const cereal::Exception &e) {
                 devlog::error<grp::base>("Could not load save state from {}: {}", statePath, e.what());
             } catch (const std::exception &e) {
@@ -3121,7 +3175,8 @@ void App::LoadSaveStates() {
                 devlog::error<grp::base>("Could not load save state from {}: unspecified error", statePath);
             }
         } else {
-            m_context.saveStates[slot].reset();
+            saveStateSlot.state.reset();
+            saveStateSlot.timestamp = {};
         }
     }
 }
@@ -3132,8 +3187,8 @@ void App::PersistSaveState(uint32 slot) {
     }
 
     std::unique_lock lock{m_context.locks.saveStates[slot]};
-    if (m_context.saveStates[slot]) {
-        auto &state = *m_context.saveStates[slot];
+    if (m_context.saveStates[slot].state) {
+        auto &state = *m_context.saveStates[slot].state;
 
         // Create directory for this game's save states
         auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
@@ -3147,6 +3202,8 @@ void App::PersistSaveState(uint32 slot) {
         archive(state);
 
         WriteSaveStateMeta();
+
+        m_context.DisplayMessage(fmt::format("State {} saved", slot));
     }
 }
 
