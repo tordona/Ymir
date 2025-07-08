@@ -18,6 +18,7 @@
 - CD Block: Fix handling of "no change" PlayDisc parameters. Fixes X-Men: Children of the Atom CDDA tracks not resuming after pausing. (#274)
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.
 - SCU: Allow SCU DSP program and data RAM reads or writes while the program is paused (thanks to @celeriyacon).
+- SCU: Improve HBlank IN, VBlank IN and VBlank OUT interrupt signal handling.
 - SCU: Interleave SCU DSP DMA transfers with program execution when not writing to Program RAM or accessing the CT used by DMA (thanks to @celeriyacon).
 - SCU: DSP data RAM reads should return 0xFFFFFFFF while program is running (thanks to @celeriyacon).
 - SCU: Split up MSH2/SSH2 interrupt handling.

@@ -31,11 +31,11 @@ vec ofs  name
 
 All other vectors are available for user programs.
 
-* denotes auto-vector numbers; vectors vary when using external vector fetch
+* denotes auto-vector numbers; vectors vary when using external vector fetch (INTC ICR.VECMD=1)
 
 
-SCU interrupts
---------------
+SCU interrupts (SH-2 M)
+-----------------------
  bit  vec   lvl  source  reason
    0   40     F  VDP2    VBlank IN
    1   41     E  VDP2    VBlank OUT
@@ -70,6 +70,12 @@ SCU interrupts
   30   5E     1  A-Bus   External Interrupt 0E
   31   5F     1  A-Bus   External Interrupt 0F
 
+SCU interrupts (SH-2 S)
+----------------------
+ bit  vec   lvl  source  reason
+   0   43     6  VDP2    VBlank IN
+   1   42     4  VDP2    VBlank OUT   (undocumented)
+   2   41     2  VDP2    HBlank IN
 
 
 M68K interrupts

@@ -167,20 +167,27 @@ void SCU::UpdateHBlank(bool hb, bool vb) {
             TriggerDMATransfer(DMATrigger::HBlankIN);
         }
     }
-    UpdateSlaveInterruptLevel(hb, vb);
+    if (!vb) {
+        if (hb) {
+            m_cbExternalSlaveInterrupt(2, 0x41);
+        } else {
+            m_cbExternalSlaveInterrupt(0, 0x00);
+        }
+    }
 }
 
-void SCU::UpdateVBlank(bool hb, bool vb) {
+void SCU::UpdateVBlank(bool vb) {
     if (vb) {
         m_intrStatus.VDP2_VBlankIN = 1;
         TriggerDMATransfer(DMATrigger::VBlankIN);
+        m_cbExternalSlaveInterrupt(6, 0x43);
     } else {
         m_intrStatus.VDP2_VBlankOUT = 1;
         m_timer0Counter = 0;
         TriggerDMATransfer(DMATrigger::VBlankOUT);
+        m_cbExternalSlaveInterrupt(4, 0x42); // TODO: make this behavior optional
     }
     UpdateMasterInterruptLevel();
-    UpdateSlaveInterruptLevel(hb, vb);
 }
 
 void SCU::TriggerTimer0() {
@@ -576,16 +583,6 @@ FORCE_INLINE void SCU::UpdateMasterInterruptLevel() {
 
         m_abusIntrAck = false;
         m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
-    }
-}
-
-FORCE_INLINE void SCU::UpdateSlaveInterruptLevel(bool hb, bool vb) {
-    if (vb) {
-        m_cbExternalSlaveInterrupt(6, 0x43);
-    } else if (hb) {
-        m_cbExternalSlaveInterrupt(2, 0x41);
-    } else {
-        m_cbExternalSlaveInterrupt(0, 0x00);
     }
 }
 

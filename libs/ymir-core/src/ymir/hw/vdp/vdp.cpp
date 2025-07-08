@@ -964,7 +964,7 @@ void VDP::BeginVPhaseBottomBorder() {
     devlog::trace<grp::base>("## VBlank IN");
 
     m_state.regs2.TVSTAT.VBLANK = 1;
-    m_cbVBlankStateChange(m_state.regs2.TVSTAT.HBLANK, true);
+    m_cbVBlankStateChange(true);
 
     // TODO: draw border
 }
@@ -995,7 +995,7 @@ void VDP::BeginVPhaseLastLine() {
     devlog::trace<grp::base>("## VBlank OUT");
 
     m_state.regs2.TVSTAT.VBLANK = 0;
-    m_cbVBlankStateChange(m_state.regs2.TVSTAT.HBLANK, false);
+    m_cbVBlankStateChange(false);
 }
 
 // -----------------------------------------------------------------------------
