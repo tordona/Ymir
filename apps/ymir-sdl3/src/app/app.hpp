@@ -79,7 +79,10 @@ private:
 
     void LoadSaveStates();
     void ClearSaveStates();
-    void PersistSaveState(uint32 slot);
+    void LoadSaveStateSlot(size_t slot);
+    void SaveSaveStateSlot(size_t slot);
+    void SelectSaveStateSlot(size_t slot);
+    void PersistSaveState(size_t slot);
     void WriteSaveStateMeta();
     void EnableRewindBuffer(bool enable);
     void ToggleRewindBuffer();

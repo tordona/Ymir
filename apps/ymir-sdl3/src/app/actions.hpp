@@ -69,6 +69,54 @@ namespace save_states {
     inline constexpr auto SaveState9 = input::Action::Trigger(0x003039, "Save states", "Save state 9");
     inline constexpr auto SaveState10 = input::Action::Trigger(0x00303A, "Save states", "Save state 10");
 
+    inline const input::Action &GetSelectStateAction(uint32 index) {
+        switch (index) {
+        default: [[fallthrough]];
+        case 0: return SelectState1;
+        case 1: return SelectState2;
+        case 2: return SelectState3;
+        case 3: return SelectState4;
+        case 4: return SelectState5;
+        case 5: return SelectState6;
+        case 6: return SelectState7;
+        case 7: return SelectState8;
+        case 8: return SelectState9;
+        case 9: return SelectState10;
+        }
+    }
+
+    inline const input::Action &GetLoadStateAction(uint32 index) {
+        switch (index) {
+        default: [[fallthrough]];
+        case 0: return LoadState1;
+        case 1: return LoadState2;
+        case 2: return LoadState3;
+        case 3: return LoadState4;
+        case 4: return LoadState5;
+        case 5: return LoadState6;
+        case 6: return LoadState7;
+        case 7: return LoadState8;
+        case 8: return LoadState9;
+        case 9: return LoadState10;
+        }
+    }
+
+    inline const input::Action &GetSaveStateAction(uint32 index) {
+        switch (index) {
+        default: [[fallthrough]];
+        case 0: return SaveState1;
+        case 1: return SaveState2;
+        case 2: return SaveState3;
+        case 3: return SaveState4;
+        case 4: return SaveState5;
+        case 5: return SaveState6;
+        case 6: return SaveState7;
+        case 7: return SaveState8;
+        case 8: return SaveState9;
+        case 9: return SaveState10;
+        }
+    }
+
 } // namespace save_states
 
 namespace sys {

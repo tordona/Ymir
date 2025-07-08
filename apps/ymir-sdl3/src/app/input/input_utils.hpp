@@ -4,20 +4,26 @@
 
 #include <fmt/format.h>
 
+#include <concepts>
+
 namespace app::input {
 
-inline std::string ToShortcut(InputContext &ctx, Action action) {
+inline std::string ToShortcut(InputContext &ctx, std::same_as<Action> auto... actions) {
     fmt::memory_buffer buf{};
     auto inserter = std::back_inserter(buf);
     bool first = true;
-    for (auto &bind : ctx.GetMappedInputs(action)) {
-        if (first == true) {
-            first = false;
-        } else {
-            fmt::format_to(inserter, ", ");
-        }
-        fmt::format_to(inserter, "{}", input::ToHumanString(bind.element));
-    }
+    (
+        [&](Action action) {
+            for (auto &bind : ctx.GetMappedInputs(action)) {
+                if (first == true) {
+                    first = false;
+                } else {
+                    fmt::format_to(inserter, ", ");
+                }
+                fmt::format_to(inserter, "{}", input::ToHumanString(bind.element));
+            }
+        }(actions),
+        ...);
     return fmt::to_string(buf);
 }
 

@@ -852,132 +852,72 @@ void App::RunEmulator() {
 
         // Select state
 
-        inputContext.SetTriggerHandler(actions::save_states::SelectState1, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 0;
-            m_context.DisplayMessage("Save state slot 0 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState2, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 1;
-            m_context.DisplayMessage("Save state slot 1 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState3, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 2;
-            m_context.DisplayMessage("Save state slot 2 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState4, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 3;
-            m_context.DisplayMessage("Save state slot 3 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState5, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 4;
-            m_context.DisplayMessage("Save state slot 4 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState6, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 5;
-            m_context.DisplayMessage("Save state slot 5 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState7, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 6;
-            m_context.DisplayMessage("Save state slot 6 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState8, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 7;
-            m_context.DisplayMessage("Save state slot 7 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState9, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 8;
-            m_context.DisplayMessage("Save state slot 8 selected");
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SelectState10, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 9;
-            m_context.DisplayMessage("Save state slot 9 selected");
-        });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState1,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(0); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState2,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(1); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState3,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(2); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState4,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(3); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState5,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(4); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState6,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(5); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState7,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(6); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState8,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(7); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState9,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(8); });
+        inputContext.SetTriggerHandler(actions::save_states::SelectState10,
+                                       [&](void *, const input::InputElement &) { SelectSaveStateSlot(9); });
 
         // Load state
 
-        inputContext.SetTriggerHandler(actions::save_states::LoadState1, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 0;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState2, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 1;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState3, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 2;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState4, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 3;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState5, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 4;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState6, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 5;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState7, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 6;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState8, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 7;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState9, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 8;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::LoadState10, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 9;
-            m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
-        });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState1,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(0); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState2,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(1); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState3,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(2); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState4,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(3); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState5,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(4); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState6,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(5); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState7,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(6); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState8,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(7); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState9,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(8); });
+        inputContext.SetTriggerHandler(actions::save_states::LoadState10,
+                                       [&](void *, const input::InputElement &) { LoadSaveStateSlot(9); });
 
         // Save state
 
-        inputContext.SetTriggerHandler(actions::save_states::SaveState1, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 0;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState2, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 1;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState3, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 2;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState4, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 3;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState5, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 4;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState6, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 5;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState7, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 6;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState8, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 7;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState9, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 8;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
-        inputContext.SetTriggerHandler(actions::save_states::SaveState10, [&](void *, const input::InputElement &) {
-            m_context.currSaveStateSlot = 9;
-            m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
-        });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState1,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(0); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState2,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(1); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState3,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(2); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState4,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(3); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState5,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(4); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState6,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(5); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState7,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(6); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState8,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(7); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState9,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(8); });
+        inputContext.SetTriggerHandler(actions::save_states::SaveState10,
+                                       [&](void *, const input::InputElement &) { SaveSaveStateSlot(9); });
     }
 
     // System
@@ -1756,21 +1696,47 @@ void App::RunEmulator() {
                     ImGui::Separator();
 
                     if (ImGui::BeginMenu("Save states")) {
-                        // TODO: shortcuts
+                        ImGui::BeginDisabled();
+                        ImGui::TextUnformatted("Click to load/select state");
+                        ImGui::TextUnformatted("Shift+Click to save state");
+                        ImGui::EndDisabled();
+
+                        ImGui::Separator();
+
                         // TODO: use context data to simplify save state actions
-                        // TODO: save state manager to copy/move/swap/delete states
+                        // TODO: save state manager window to copy/move/swap/delete states
                         for (uint32 i = 0; i < m_context.saveStates.size(); ++i) {
                             const auto &state = m_context.saveStates[i];
                             if (state.state) {
                                 const std::chrono::zoned_time zonedTime{std::chrono::current_zone(), state.timestamp};
                                 const auto localTime =
                                     std::chrono::round<std::chrono::seconds>(zonedTime.get_local_time());
-                                if (ImGui::MenuItem(fmt::format("{}: {}", i, localTime).c_str(), nullptr, nullptr,
-                                                    true)) {
-                                    m_context.EnqueueEvent(events::emu::LoadState(i));
+                                const auto shortcut =
+                                    input::ToShortcut(inputContext, actions::save_states::GetSelectStateAction(i),
+                                                      actions::save_states::GetLoadStateAction(i),
+                                                      actions::save_states::GetSaveStateAction(i));
+
+                                if (ImGui::MenuItem(fmt::format("{}: {}", i, localTime).c_str(), shortcut.c_str(),
+                                                    m_context.currSaveStateSlot == i, true)) {
+                                    if (io.KeyShift) {
+                                        SaveSaveStateSlot(i);
+                                    } else {
+                                        LoadSaveStateSlot(i);
+                                    }
                                 }
                             } else {
-                                ImGui::MenuItem(fmt::format("{}: (empty)", i).c_str(), nullptr, nullptr, false);
+                                const auto shortcut =
+                                    input::ToShortcut(inputContext, actions::save_states::GetSelectStateAction(i),
+                                                      actions::save_states::GetSaveStateAction(i));
+
+                                if (ImGui::MenuItem(fmt::format("{}: (empty)", i).c_str(), shortcut.c_str(),
+                                                    m_context.currSaveStateSlot == i, true)) {
+                                    if (io.KeyShift) {
+                                        SaveSaveStateSlot(i);
+                                    } else {
+                                        SelectSaveStateSlot(i);
+                                    }
+                                }
                             }
                         }
 
@@ -3213,10 +3179,25 @@ void App::ClearSaveStates() {
         saveStateSlot.timestamp = {};
         std::filesystem::remove(statePath);
     }
-    m_context.DisplayMessage("Save states cleared");
+    m_context.DisplayMessage("All save states cleared");
 }
 
-void App::PersistSaveState(uint32 slot) {
+void App::LoadSaveStateSlot(size_t slot) {
+    m_context.currSaveStateSlot = std::min(slot, m_context.saveStates.size() - 1);
+    m_context.EnqueueEvent(events::emu::LoadState(m_context.currSaveStateSlot));
+}
+
+void App::SaveSaveStateSlot(size_t slot) {
+    m_context.currSaveStateSlot = std::min(slot, m_context.saveStates.size() - 1);
+    m_context.EnqueueEvent(events::emu::SaveState(m_context.currSaveStateSlot));
+}
+
+void App::SelectSaveStateSlot(size_t slot) {
+    m_context.currSaveStateSlot = std::min(slot, m_context.saveStates.size() - 1);
+    m_context.DisplayMessage(fmt::format("Save state slot {} selected", m_context.currSaveStateSlot));
+}
+
+void App::PersistSaveState(size_t slot) {
     if (slot >= m_context.saveStates.size()) {
         return;
     }
