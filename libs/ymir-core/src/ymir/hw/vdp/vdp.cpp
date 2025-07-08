@@ -5659,7 +5659,7 @@ static SpriteData::Special GetSpecialPattern(uint16 rawData) {
     // Normal shadow pattern (LSB = 0, rest of the color data bits = 1)
     static constexpr uint16 kNormalShadowValue = (1u << (colorDataBits + 1u)) - 2u;
 
-    if (rawData == 0) {
+    if ((rawData & 0x7FFF) == 0) {
         return SpriteData::Special::Transparent;
     } else if (bit::extract<0, colorDataBits>(rawData) == kNormalShadowValue) {
         return SpriteData::Special::Shadow;
