@@ -3309,13 +3309,13 @@ template <bool debug, bool enableCache, bool delaySlot>
 FORCE_INLINE uint64 SH2::TAS(const DecodedArgs &args) {
     const uint32 address = R[args.rn];
     // TODO: enable bus lock on this read
-    const uint8 tmp = MemReadByte<enableCache>(address);
+    const uint8 tmp = MemReadByte<false>(address);
     SR.T = tmp == 0;
     // TODO: disable bus lock on this write
     MemWriteByte<debug, enableCache>(address, tmp | 0x80);
 
     AdvancePC<delaySlot>();
-    return AccessCycles<enableCache>(address) * 2 + 2;
+    return AccessCycles<false>(address) + AccessCycles<enableCache>(address) + 2;
 }
 
 // tst Rm, Rn
