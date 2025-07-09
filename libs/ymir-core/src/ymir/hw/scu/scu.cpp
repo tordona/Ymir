@@ -616,9 +616,10 @@ void SCU::SetupDMATransferIncrements(DMAChannel &ch) {
 
 void SCU::DMAReadIndirectTransfer(uint8 level) {
     auto &ch = m_dmaChannels[level];
-    ch.currXferCount = m_bus.Read<uint32>(ch.currIndirectSrc + 0);
-    ch.currDstAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 4);
-    ch.currSrcAddr = m_bus.Read<uint32>(ch.currIndirectSrc + 8);
+    const uint32 currIndirectSrc = ch.currIndirectSrc;
+    ch.currXferCount = m_bus.Read<uint32>(currIndirectSrc + 0);
+    ch.currDstAddr = m_bus.Read<uint32>(currIndirectSrc + 4);
+    ch.currSrcAddr = m_bus.Read<uint32>(currIndirectSrc + 8);
     ch.currIndirectSrc += 3 * sizeof(uint32);
     ch.endIndirect = bit::test<31>(ch.currSrcAddr);
     ch.currSrcAddr &= 0x7FF'FFFF;
@@ -638,7 +639,7 @@ void SCU::DMAReadIndirectTransfer(uint8 level) {
     }
 
     TraceDMA(m_tracer, level, ch.currSrcAddr, ch.currDstAddr, ch.currXferCount, ch.currSrcAddrInc, ch.currDstAddrInc,
-             true, ch.currIndirectSrc);
+             true, currIndirectSrc);
 }
 
 void SCU::RunDMA() {
