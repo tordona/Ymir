@@ -33,6 +33,7 @@
 - SH2: Fix cache LRU AND update mask. Fixes FMV glitches on Capcom games, WipEout and Mr. Bones when SH-2 cache emulation is enabled. (#202, #247, #270)
 - SH2: TAS.B read bypasses cache.
 - SH2: The nIVECF pin of the SSH2 is disconnected, disallowing it from doing external interrupt vector fetches.
+- SMPC: Fix automatic switch to PAL or NTSC to match area code more consistently.
 - System: Tighten synchronization between SCU and SH-2 CPUs. Improves stability on WipEout (USA). (#202)
 - VDP1: Extend line clipping to the left and top edges by one pixel to compensate for some inaccuracies.
 - VDP1: Fix end codes for 64 and 128 color sprites. Fixes white sprite outlines in Scud - The Disposable Assassin and broken sprites in Primal Rage. (#268, #280)
