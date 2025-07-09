@@ -3150,7 +3150,8 @@ void App::LoadSaveStates() {
                 archive(*state);
                 saveStateSlot.state.swap(state);
                 const auto lastWriteTime = std::filesystem::last_write_time(statePath);
-                const auto sysClockTime = std::chrono::clock_cast<std::chrono::system_clock>(lastWriteTime);
+                const auto sysClockTime =
+                    std::chrono::utc_clock::to_sys(std::chrono::file_clock::to_utc(lastWriteTime));
                 saveStateSlot.timestamp = sysClockTime;
             } catch (const cereal::Exception &e) {
                 devlog::error<grp::base>("Could not load save state from {}: {}", statePath, e.what());
