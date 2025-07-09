@@ -103,6 +103,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_misc.h>
 
 #include <backends/imgui_impl_sdl3.h>
@@ -3149,10 +3150,15 @@ void App::LoadSaveStates() {
                 auto state = std::make_unique<ymir::state::State>();
                 archive(*state);
                 saveStateSlot.state.swap(state);
-                const auto lastWriteTime = std::filesystem::last_write_time(statePath);
-                const auto sysClockTime =
-                    std::chrono::utc_clock::to_sys(std::chrono::file_clock::to_utc(lastWriteTime));
-                saveStateSlot.timestamp = sysClockTime;
+
+                SDL_PathInfo pathInfo{};
+                if (SDL_GetPathInfo(fmt::format("{}", statePath).c_str(), &pathInfo)) {
+                    const time_t time = SDL_NS_TO_SECONDS(pathInfo.modify_time);
+                    const auto sysClockTime = std::chrono::system_clock::from_time_t(time);
+                    saveStateSlot.timestamp = sysClockTime;
+                } else {
+                    saveStateSlot.timestamp = std::chrono::system_clock::now();
+                }
             } catch (const cereal::Exception &e) {
                 devlog::error<grp::base>("Could not load save state from {}: {}", statePath, e.what());
             } catch (const std::exception &e) {
