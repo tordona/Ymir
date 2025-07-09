@@ -373,6 +373,7 @@ void VDP::SaveState(state::VDPState &state) const {
     for (size_t i = 0; i < 4; i++) {
         state.renderer.normBGLayerStates[i].fracScrollX = m_normBGLayerStates[i].fracScrollX;
         state.renderer.normBGLayerStates[i].fracScrollY = m_normBGLayerStates[i].fracScrollY;
+        state.renderer.normBGLayerStates[i].scrollAmountV = m_normBGLayerStates[i].scrollAmountV;
         state.renderer.normBGLayerStates[i].scrollIncH = m_normBGLayerStates[i].scrollIncH;
         state.renderer.normBGLayerStates[i].lineScrollTableAddress = m_normBGLayerStates[i].lineScrollTableAddress;
         state.renderer.normBGLayerStates[i].vertCellScrollOffset = m_normBGLayerStates[i].vertCellScrollOffset;
@@ -429,6 +430,7 @@ void VDP::LoadState(const state::VDPState &state) {
     for (size_t i = 0; i < 4; i++) {
         m_normBGLayerStates[i].fracScrollX = state.renderer.normBGLayerStates[i].fracScrollX;
         m_normBGLayerStates[i].fracScrollY = state.renderer.normBGLayerStates[i].fracScrollY;
+        m_normBGLayerStates[i].scrollAmountV = state.renderer.normBGLayerStates[i].scrollAmountV;
         m_normBGLayerStates[i].scrollIncH = state.renderer.normBGLayerStates[i].scrollIncH;
         m_normBGLayerStates[i].lineScrollTableAddress = state.renderer.normBGLayerStates[i].lineScrollTableAddress;
         m_normBGLayerStates[i].mosaicCounterY = state.renderer.normBGLayerStates[i].mosaicCounterY;
@@ -832,7 +834,6 @@ void VDP::BeginHPhaseActiveDisplay() {
         if (m_state.regs2.VCNT == 0) {
             devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
 
-            VDP2InitFrame();
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2BeginFrame());
         } else if (m_state.regs2.VCNT == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
@@ -995,6 +996,8 @@ void VDP::BeginVPhaseLastLine() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_state.regs2.VCNT);
 
     devlog::trace<grp::base>("## VBlank OUT");
+
+    VDP2InitFrame();
 
     m_state.regs2.TVSTAT.VBLANK = 0;
     m_cbVBlankStateChange(false);
@@ -2446,6 +2449,7 @@ FORCE_INLINE void VDP::VDP2InitNormalBG() {
     NormBGLayerState &bgState = m_normBGLayerStates[index];
     bgState.fracScrollX = 0;
     bgState.fracScrollY = 0;
+    bgState.scrollAmountV = bgParams.scrollAmountV;
     if (!m_deinterlaceRender && m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && VDP2GetRegs().TVSTAT.ODD) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
@@ -4711,7 +4715,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     const VDP2Regs &regs = VDP2GetRegs();
 
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
-    const uint32 fracScrollY = bgState.fracScrollY + bgParams.scrollAmountV;
+    const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV;
     bgState.fracScrollY += bgParams.scrollIncV;
     if (!deinterlace && regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         bgState.fracScrollY += bgParams.scrollIncV;
@@ -4811,7 +4815,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     const VDP2Regs &regs = VDP2GetRegs();
 
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
-    const uint32 fracScrollY = bgState.fracScrollY + bgParams.scrollAmountV;
+    const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV;
     bgState.fracScrollY += bgParams.scrollIncV;
     if (!deinterlace && regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
         bgState.fracScrollY += bgParams.scrollIncV;

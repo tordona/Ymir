@@ -303,6 +303,13 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
         s.renderer.normBGLayerStates[2].fracScrollY -= (s.regs2.SCYIN2 << 8u);
         s.renderer.normBGLayerStates[3].fracScrollY -= (s.regs2.SCYIN3 << 8u);
     }
+    if (version < 7) {
+        // Compensate for the lack of scrollAmountV in earlier versions
+        s.renderer.normBGLayerStates[0].scrollAmountV = (s.regs2.SCYIN0 << 8u) | (s.regs2.SCYDN0 >> 8u);
+        s.renderer.normBGLayerStates[1].scrollAmountV = (s.regs2.SCYIN1 << 8u) | (s.regs2.SCYDN1 >> 8u);
+        s.renderer.normBGLayerStates[2].scrollAmountV = (s.regs2.SCYIN2 << 8u);
+        s.renderer.normBGLayerStates[3].scrollAmountV = (s.regs2.SCYIN3 << 8u);
+    }
 }
 
 template <class Archive>
@@ -398,6 +405,12 @@ void serialize(Archive &ar, VDPState::VDPRendererState::VDP1RenderState &s, cons
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, const uint32 version) {
+    // v7:
+    // - New fields
+    //   - normBGLayerStates[0].scrollAmountV = (regs2.SCYIN0 << 8u) | (regs2.SCYDN0 >> 8u);
+    //   - normBGLayerStates[1].scrollAmountV = (regs2.SCYIN1 << 8u) | (regs2.SCYDN1 >> 8u);
+    //   - normBGLayerStates[2].scrollAmountV = (regs2.SCYIN2 << 8u);
+    //   - normBGLayerStates[3].scrollAmountV = (regs2.SCYIN3 << 8u);
     // v4:
     // - Changed fields
     //   - fracScrollX and fracScrollY no longer include the values of SC[XY][ID]N#. Therefore, they need to be
@@ -414,8 +427,11 @@ void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, con
     // - New fields
     //   - vertCellScrollOffset = 0
 
-    // NOTE: fracScrollX/Y compensation happens in the VDPState serializer
+    // NOTE: fracScrollX/Y and scrollAmountV compensation happens in the VDPState serializer
     ar(s.fracScrollX, s.fracScrollY, s.scrollIncH);
+    if (version >= 7) {
+        ar(s.scrollAmountV);
+    }
     ar(s.lineScrollTableAddress);
     if (version >= 4) {
         ar(s.vertCellScrollOffset);

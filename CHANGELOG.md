@@ -23,7 +23,7 @@
 - Input: Modifier keys can now be used correctly as controller input binds and will no longer interfere with other controller inputs. (#282)
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.
 - SCU: Allow SCU DSP program and data RAM reads or writes while the program is paused (thanks to @celeriyacon).
-- SCU: HBlank IN DMA transfers were being gated by timers.
+- SCU: HBlank IN DMA transfers should not be gated by timers. Fixes non-scrolling Shinobi-X cityscape background. (#193)
 - SCU: Improve HBlank IN, VBlank IN and VBlank OUT interrupt signal handling.
 - SCU: Interleave SCU DSP DMA transfers with program execution when not writing to Program RAM or accessing the CT used by DMA (thanks to @celeriyacon).
 - SCU: DSP data RAM reads should return 0xFFFFFFFF while program is running (thanks to @celeriyacon).
@@ -31,7 +31,7 @@
 - SCU: Split up MSH2/SSH2 interrupt handling.
 - SCU: Various fixes to SCU DSP DMA transfers to DSP Program RAM (thanks to @celeriyacon).
 - SH2: Fix cache LRU AND update mask. Fixes FMV glitches on Capcom games, WipEout and Mr. Bones when SH-2 cache emulation is enabled. (#202, #247, #270)
-- SH2: TAS.B read bypasses cache.
+- SH2: TAS.B read should bypass cache.
 - SH2: The nIVECF pin of the SSH2 is disconnected, disallowing it from doing external interrupt vector fetches.
 - SMPC: Fix automatic switch to PAL or NTSC to match area code more consistently.
 - System: Tighten synchronization between SCU and SH-2 CPUs. Improves stability on WipEout (USA). (#202)
@@ -47,6 +47,7 @@
 - VDP2: Fix transparent VDP1 color data handling. Fixes missing graphics in Rayman's level select screens and Bubble Bobble's sky in the title screen. (#262)
 - VDP2: Halve sprite layer width when drawing 8-bit sprite layer in low-resolution VDP2 modes. Fixes text drawn twice as wide in Resident Evil options menu. (#180)
 - VDP2: Handle bad window parameters set by Snatcher on the "Act 1" title screen (and probably many other places). (#259)
+- VDP2: Latch BG scroll registers earlier (at VBlank OUT) and latch vertical scroll registers (SCY[ID]Nn). Fixes bad vertical offset in Shinobi-X's NBG2 layer. (#193)
 - ymdasm: Fix reversed SCU DSP DMA immediate/data RAM operand decoding.
 - ymdasm: Mask and translate several SCU DSP immediates.
  
