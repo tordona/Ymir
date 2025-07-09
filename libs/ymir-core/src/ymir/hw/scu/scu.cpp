@@ -164,8 +164,8 @@ void SCU::UpdateHBlank(bool hb, bool vb) {
             }
             ++m_timer0Counter;
             m_scheduler.ScheduleFromNow(m_timer1Event, m_timer1Reload);
-            TriggerDMATransfer(DMATrigger::HBlankIN);
         }
+        TriggerDMATransfer(DMATrigger::HBlankIN);
     }
     if (!vb) {
         if (hb) {
