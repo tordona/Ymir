@@ -4741,12 +4741,10 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
     uint8 mosaicCounterX = 0;
     uint32 cellScrollY = 0;
+    uint32 vCellScrollX = fracScrollX >> (8u + 3u);
 
     if (bgParams.verticalCellScrollEnable) {
-        // Read first vertical scroll amount if scrolled partway through a cell at the start of the line
-        if (((fracScrollX >> 8u) & 7) != 0) {
-            cellScrollY = readCellScrollY();
-        }
+        cellScrollY = readCellScrollY();
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
@@ -4769,7 +4767,8 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
             }
         } else if (bgParams.verticalCellScrollEnable) {
             // Update vertical cell scroll amount
-            if (((fracScrollX >> 8u) & 7) == 0) {
+            if ((fracScrollX >> (8u + 3u)) != vCellScrollX) {
+                vCellScrollX = fracScrollX >> (8u + 3u);
                 cellScrollY = readCellScrollY();
             }
         }
@@ -4799,7 +4798,8 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
         // Mosaic takes priority
         if (!bgParams.mosaicEnable && bgParams.verticalCellScrollEnable) {
             // Update vertical cell scroll amount
-            if (((fracScrollX >> 8u) & 7) == 0) {
+            if ((fracScrollX >> (8u + 3u)) != vCellScrollX) {
+                vCellScrollX = fracScrollX >> (8u + 3u);
                 cellScrollY = readCellScrollY();
             }
         }
@@ -4841,6 +4841,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
     uint32 mosaicCounterX = 0;
     uint32 cellScrollY = 0;
+    uint32 vCellScrollX = fracScrollX >> (8u + 3u);
 
     for (uint32 x = 0; x < m_HRes; x++) {
         // Apply horizontal mosaic or vertical cell-scrolling
@@ -4862,7 +4863,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
             }
         } else if (bgParams.verticalCellScrollEnable) {
             // Update vertical cell scroll amount
-            if (((fracScrollX >> 8u) & 7) == 0) {
+            if ((fracScrollX >> (8u + 3u)) != vCellScrollX) {
+                vCellScrollX = fracScrollX >> (8u + 3u);
                 cellScrollY = readCellScrollY();
             }
         }
