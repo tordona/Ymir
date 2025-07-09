@@ -235,6 +235,8 @@ add_executable(ymir-sdl3
     src/util/regions.hpp
     src/util/ring_buffer.hpp
     src/util/sdl_file_dialog.hpp
+    src/util/std_lib.cpp
+    src/util/std_lib.hpp
 )
 add_executable(ymir::ymir-sdl3 ALIAS ymir-sdl3)
 set_target_properties(ymir-sdl3 PROPERTIES

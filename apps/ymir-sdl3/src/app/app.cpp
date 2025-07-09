@@ -99,6 +99,7 @@
 #include <serdes/state_cereal.hpp>
 
 #include <util/file_loader.hpp>
+#include <util/std_lib.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
@@ -120,7 +121,6 @@
 
 #include <RtMidi.h>
 
-#include <ctime>
 #include <mutex>
 #include <numbers>
 #include <span>
@@ -1709,16 +1709,14 @@ void App::RunEmulator() {
                         for (uint32 i = 0; i < m_context.saveStates.size(); ++i) {
                             const auto &state = m_context.saveStates[i];
                             if (state.state) {
-                                const time_t time = std::chrono::system_clock::to_time_t(state.timestamp);
-                                tm tm;
-                                const auto err = localtime_s(&tm, &time);
                                 const auto shortcut =
                                     input::ToShortcut(inputContext, actions::save_states::GetSelectStateAction(i),
                                                       actions::save_states::GetLoadStateAction(i),
                                                       actions::save_states::GetSaveStateAction(i));
 
-                                if (ImGui::MenuItem(fmt::format("{}: {}", i, tm).c_str(), shortcut.c_str(),
-                                                    m_context.currSaveStateSlot == i, true)) {
+                                if (ImGui::MenuItem(
+                                        fmt::format("{}: {}", i, util::to_local_time(state.timestamp)).c_str(),
+                                        shortcut.c_str(), m_context.currSaveStateSlot == i, true)) {
                                     if (io.KeyShift) {
                                         SaveSaveStateSlot(i);
                                     } else {
