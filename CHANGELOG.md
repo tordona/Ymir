@@ -21,6 +21,7 @@
 - CD Block: Fix handling of "no change" PlayDisc parameters. Fixes X-Men: Children of the Atom CDDA tracks not resuming after pausing. (#274)
 - Debugger: Indirect SCU DMA transfers were being traced with the updated indirect table address.
 - Input: Modifier keys can now be used correctly as controller input binds and will no longer interfere with other controller inputs. (#282)
+- Media: Skip blank lines in CUE files.
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.
 - SCU: Allow SCU DSP program and data RAM reads or writes while the program is paused (thanks to @celeriyacon).
 - SCU: HBlank IN DMA transfers should not be gated by timers. Fixes non-scrolling Shinobi-X cityscape background. (#193)

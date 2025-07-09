@@ -108,6 +108,11 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
         std::string keyword{};
         ins >> keyword;
 
+        // Skip blank lines
+        if (keyword.empty()) {
+            continue;
+        }
+
         if (!kValidCueKeywords.contains(keyword)) {
             // fmt::println("BIN/CUE: Found invalid keyword {} (line {})", keyword, lineNum);
             return false;
