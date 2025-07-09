@@ -2773,21 +2773,31 @@ FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWi
         // Check vertical coordinate
         //
         // Truth table: (state: false=outside, true=inside)
-        // state  inverted  result   st != ao
+        // state  inverted  result   st!=inv
         // false  false     outside  false
         // true   false     inside   true
         // false  true      inside   true
         // true   true      outside  false
+        //
+        // Short-circuiting rules for lines outside the vertical window range:
+        // # logic  inverted  outcome
+        // 1   AND  false     fill with outside
+        // 2   AND  true      skip - window has no effect on this line
+        // 3    OR  false     skip - window has no effect on this line
+        // 4    OR  true      fill with inside
+
         const auto sy = static_cast<sint32>(y);
         const auto startY = static_cast<sint16>(windowParam.startY);
         const auto endY = static_cast<sint16>(windowParam.endY);
-        const bool insideY = y >= startY && y <= endY;
-        if (!insideY && (inverted == logicOR)) {
-            // Short-circuit
-            // - fill with outside if using AND logic and not inverted
-            // - fill with inside if using OR logic and inverted
-            std::fill(windowState.begin(), windowState.end(), logicOR);
-            return;
+        if (y < startY || y > endY) {
+            if (logicOR == inverted) {
+                // Cases 1 and 4
+                std::fill(windowState.begin(), windowState.end(), logicOR);
+                return;
+            } else {
+                // Cases 2 and 3
+                continue;
+            }
         }
 
         sint16 startX = windowParam.startX;
