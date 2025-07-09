@@ -2544,7 +2544,7 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
         }
     }
     if constexpr (update) {
-        if (y > 0 && (y & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
+        if ((y & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
             bgState.lineScrollTableAddress = address;
         }
     }
