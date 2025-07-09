@@ -27,6 +27,7 @@
 - SCU: Improve HBlank IN, VBlank IN and VBlank OUT interrupt signal handling.
 - SCU: Interleave SCU DSP DMA transfers with program execution when not writing to Program RAM or accessing the CT used by DMA (thanks to @celeriyacon).
 - SCU: DSP data RAM reads should return 0xFFFFFFFF while program is running (thanks to @celeriyacon).
+- SCU: Run all pending DMA transfers instead of just the highest priority.
 - SCU: Split up MSH2/SSH2 interrupt handling.
 - SCU: Various fixes to SCU DSP DMA transfers to DSP Program RAM (thanks to @celeriyacon).
 - SH2: Fix cache LRU AND update mask. Fixes FMV glitches on Capcom games, WipEout and Mr. Bones when SH-2 cache emulation is enabled. (#202, #247, #270)
