@@ -4843,6 +4843,10 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     uint32 cellScrollY = 0;
     uint32 vCellScrollX = fracScrollX >> (8u + 3u);
 
+    if (bgParams.verticalCellScrollEnable) {
+        cellScrollY = readCellScrollY();
+    }
+
     for (uint32 x = 0; x < m_HRes; x++) {
         // Apply horizontal mosaic or vertical cell-scrolling
         // Mosaic takes priority
