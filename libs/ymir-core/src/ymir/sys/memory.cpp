@@ -21,6 +21,13 @@ void SystemMemory::MapMemory(Bus &bus) {
     m_internalBackupRAM.MapMemory(bus, 0x018'0000, 0x01F'FFFF);
     bus.MapArray(0x020'0000, 0x02F'FFFF, WRAMLow, true);
     bus.MapArray(0x600'0000, 0x7FF'FFFF, WRAMHigh, true);
+
+    // TODO: make this configurable
+    // VA0/VA1: 030'0000 is unmapped; reads return all ones
+    //     VA2: 030'0000 is a read/write mirror of 020'0000
+    bus.MapBoth(
+        0x030'0000, 0x03F'FFFF, nullptr, [](uint32, void *) -> uint8 { return 0xFF; },
+        [](uint32, void *) -> uint16 { return 0xFFFF; }, [](uint32, void *) -> uint32 { return 0xFFFFFFFF; });
 }
 
 void SystemMemory::LoadIPL(std::span<uint8, kIPLSize> ipl) {

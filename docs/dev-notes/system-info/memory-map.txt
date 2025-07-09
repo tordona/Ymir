@@ -48,7 +48,7 @@ Address range            Mirror size   Description
 0x010'0000..0x017'FFFF   0x80          SMPC registers
 0x018'0000..0x01F'FFFF   0x10000       Backup RAM
 0x020'0000..0x02F'FFFF   0x100000      Work RAM Low
-0x030'0000..0x03F'FFFF   -             Open bus? (reads random data, mostly 0x00)
+0x030'0000..0x03F'FFFF   -             Varies depending on system revision (see notes below)
 0x040'0000..0x07F'FFFF   -             Reads 0x0000
 0x080'0000..0x0FF'FFFF   -             Reads 0x0000 0x0001 0x0002 0x0003 0x0004 0x0005 0x0006 0x0007
 0x100'0000..0x17F'FFFF   -             Reads 0xFFFF; writes go to slave SH-2 FRT  (MINIT area)
@@ -78,6 +78,10 @@ Address range            Mirror size   Description
 
 Notes
 - With the exception of VDP1 registers, all regions are mirrored across the designated area
+- The region just above Work RAM Low varies based on system revision:
+  - VA0/VA1: open bus - writes are ignored, reads return all FFs
+  - VA2: read/write mirror of Work RAM Low
+  - VA3: unknown
 - Backup RAM
   - Only odd bytes mapped
   - Reads from even bytes return 0xFF
