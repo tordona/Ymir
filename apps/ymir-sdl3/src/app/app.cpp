@@ -120,6 +120,7 @@
 
 #include <RtMidi.h>
 
+#include <ctime>
 #include <mutex>
 #include <numbers>
 #include <span>
@@ -1708,15 +1709,15 @@ void App::RunEmulator() {
                         for (uint32 i = 0; i < m_context.saveStates.size(); ++i) {
                             const auto &state = m_context.saveStates[i];
                             if (state.state) {
-                                const std::chrono::zoned_time zonedTime{std::chrono::current_zone(), state.timestamp};
-                                const auto localTime =
-                                    std::chrono::round<std::chrono::seconds>(zonedTime.get_local_time());
+                                const time_t time = std::chrono::system_clock::to_time_t(state.timestamp);
+                                tm tm;
+                                const auto err = localtime_s(&tm, &time);
                                 const auto shortcut =
                                     input::ToShortcut(inputContext, actions::save_states::GetSelectStateAction(i),
                                                       actions::save_states::GetLoadStateAction(i),
                                                       actions::save_states::GetSaveStateAction(i));
 
-                                if (ImGui::MenuItem(fmt::format("{}: {}", i, localTime).c_str(), shortcut.c_str(),
+                                if (ImGui::MenuItem(fmt::format("{}: {}", i, tm).c_str(), shortcut.c_str(),
                                                     m_context.currSaveStateSlot == i, true)) {
                                     if (io.KeyShift) {
                                         SaveSaveStateSlot(i);
