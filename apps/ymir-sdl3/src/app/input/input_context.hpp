@@ -124,6 +124,7 @@ public:
 
 private:
     void ProcessEvent(const InputEvent &event, bool changed = true);
+    void ProcessButtonAction(const InputElement &element, bool pressed);
 
     CaptureCallback m_captureCallback;
 

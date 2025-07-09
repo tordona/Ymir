@@ -33,21 +33,25 @@ void InputContext::ProcessPrimitive(KeyboardKey key, KeyModifier modifiers, bool
     switch (key) {
     case KeyboardKey::LeftControl: [[fallthrough]];
     case KeyboardKey::RightControl:
+        ProcessButtonAction(KeyCombo{KeyModifier::Control, KeyboardKey::None}, pressed);
         key = KeyboardKey::None;
         modifiers |= KeyModifier::Control;
         break;
     case KeyboardKey::LeftShift: [[fallthrough]];
     case KeyboardKey::RightShift:
+        ProcessButtonAction(KeyCombo{KeyModifier::Shift, KeyboardKey::None}, pressed);
         key = KeyboardKey::None;
         modifiers |= KeyModifier::Shift;
         break;
     case KeyboardKey::LeftAlt: [[fallthrough]];
     case KeyboardKey::RightAlt:
+        ProcessButtonAction(KeyCombo{KeyModifier::Alt, KeyboardKey::None}, pressed);
         key = KeyboardKey::None;
         modifiers |= KeyModifier::Alt;
         break;
     case KeyboardKey::LeftGui: [[fallthrough]];
     case KeyboardKey::RightGui:
+        ProcessButtonAction(KeyCombo{KeyModifier::Super, KeyboardKey::None}, pressed);
         key = KeyboardKey::None;
         modifiers |= KeyModifier::Super;
         break;
@@ -324,18 +328,14 @@ void InputContext::ProcessEvent(const InputEvent &event, bool changed) {
                     (event.element.type == InputElement::Type::MouseCombo &&
                      event.element.mouseCombo.modifiers != KeyModifier::None))) {
 
-        InputElement elementWithoutMods = event.element;
+        InputElement element = event.element;
         if (event.element.type == InputElement::Type::KeyCombo) {
-            elementWithoutMods.keyCombo.modifiers = KeyModifier::None;
+            element.keyCombo.modifiers = KeyModifier::None;
         } else { // InputElement::Type::MouseCombo
-            elementWithoutMods.mouseCombo.modifiers = KeyModifier::None;
+            element.mouseCombo.modifiers = KeyModifier::None;
         }
 
-        if (auto action = m_actions.find(elementWithoutMods); action != m_actions.end()) {
-            if (auto handler = m_buttonHandlers.find(action->second.action); handler != m_buttonHandlers.end()) {
-                handler->second(action->second.context, elementWithoutMods, event.buttonPressed);
-            }
-        }
+        ProcessButtonAction(element, event.buttonPressed);
     }
 
     if (auto action = m_actions.find(event.element); action != m_actions.end()) {
@@ -345,9 +345,7 @@ void InputContext::ProcessEvent(const InputEvent &event, bool changed) {
         case InputElement::Type::MouseCombo: [[fallthrough]];
         case InputElement::Type::GamepadButton:
             if (changed) {
-                if (auto handler = m_buttonHandlers.find(action->second.action); handler != m_buttonHandlers.end()) {
-                    handler->second(action->second.context, event.element, event.buttonPressed);
-                }
+                ProcessButtonAction(event.element, event.buttonPressed);
             }
             if (event.buttonPressed && (action->second.action.kind == Action::Kind::RepeatableTrigger || changed)) {
                 if (auto handler = m_triggerHandlers.find(action->second.action); handler != m_triggerHandlers.end()) {
@@ -367,6 +365,14 @@ void InputContext::ProcessEvent(const InputEvent &event, bool changed) {
                 handler->second(action->second.context, event.element, event.axis2D.x, event.axis2D.y);
             }
             break;
+        }
+    }
+}
+
+void InputContext::ProcessButtonAction(const InputElement &element, bool pressed) {
+    if (auto action = m_actions.find(element); action != m_actions.end()) {
+        if (auto handler = m_buttonHandlers.find(action->second.action); handler != m_buttonHandlers.end()) {
+            handler->second(action->second.context, element, pressed);
         }
     }
 }
