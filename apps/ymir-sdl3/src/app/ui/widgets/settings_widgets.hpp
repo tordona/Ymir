@@ -12,6 +12,7 @@ namespace settings::system {
 
 namespace settings::video {
 
+    void DisplayRotation(SharedContext &ctx, bool newLine = false);
     void Deinterlace(SharedContext &ctx);
     void TransparentMeshes(SharedContext &ctx);
     void ThreadedVDP(SharedContext &ctx);

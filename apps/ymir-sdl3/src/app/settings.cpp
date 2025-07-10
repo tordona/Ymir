@@ -138,6 +138,21 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::
     }
 }
 
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Video::DisplayRotation &value) {
+    value = Settings::Video::DisplayRotation::Normal;
+    if (auto opt = node.value<std::string>()) {
+        if (*opt == "Normal"s) {
+            value = Settings::Video::DisplayRotation::Normal;
+        } else if (*opt == "90CW"s) {
+            value = Settings::Video::DisplayRotation::_90CW;
+        } else if (*opt == "180"s) {
+            value = Settings::Video::DisplayRotation::_180;
+        } else if (*opt == "90CCW"s) {
+            value = Settings::Video::DisplayRotation::_90CCW;
+        }
+    }
+}
+
 FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::Audio::MidiPort::Type &value) {
     value = Settings::Audio::MidiPort::Type::None;
     if (auto opt = node.value<std::string>()) {
@@ -258,6 +273,16 @@ FORCE_INLINE static const char *ToTOML(const core::config::audio::SampleInterpol
     default: [[fallthrough]];
     case core::config::audio::SampleInterpolationMode::NearestNeighbor: return "Nearest";
     case core::config::audio::SampleInterpolationMode::Linear: return "Linear";
+    }
+}
+
+FORCE_INLINE static const char *ToTOML(const Settings::Video::DisplayRotation value) {
+    switch (value) {
+    default: [[fallthrough]];
+    case Settings::Video::DisplayRotation::Normal: return "Normal";
+    case Settings::Video::DisplayRotation::_90CW: return "90CW";
+    case Settings::Video::DisplayRotation::_180: return "180";
+    case Settings::Video::DisplayRotation::_90CCW: return "90CCW";
     }
 }
 
@@ -571,6 +596,7 @@ void Settings::ResetToDefaults() {
     video.forceIntegerScaling = false;
     video.forceAspectRatio = true;
     video.forcedAspect = 4.0 / 3.0;
+    video.rotation = Video::DisplayRotation::Normal;
     video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
     video.fullScreen = false;
@@ -799,6 +825,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "ForceIntegerScaling", video.forceIntegerScaling);
         Parse(tblVideo, "ForceAspectRatio", video.forceAspectRatio);
         Parse(tblVideo, "ForcedAspect", video.forcedAspect);
+        Parse(tblVideo, "Rotation", video.rotation);
 
         Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
@@ -1078,6 +1105,7 @@ SettingsSaveResult Settings::Save() {
             {"ForceIntegerScaling", video.forceIntegerScaling},
             {"ForceAspectRatio", video.forceAspectRatio},
             {"ForcedAspect", video.forcedAspect},
+            {"Rotation", ToTOML(video.rotation)},
             {"AutoResizeWindow", video.autoResizeWindow},
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
             {"FullScreen", video.fullScreen.Get()},

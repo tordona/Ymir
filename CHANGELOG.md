@@ -7,6 +7,7 @@
 - App: Added save states to File menu.
 - App: Added new 3:2 and 16:10 forced aspect ratio options.
 - App: Added simple message overlay system to display some basic notifications. (#288)
+- App: Added display rotation options for TATE mode games. (#256)
 - App: Improve full screen frame pacing even further by spin-waiting for up to 1 ms before the frame presentation target.
 - App: Include timestamp on save states.
 - App: Notify about loading/saving save states or switching save state slots.
@@ -15,6 +16,7 @@
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - Settings: Added "Clear all" button to controller configuration window to clear all binds. (#288)
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.
+- System: Map 030'0000-03F'FFFF memory area.
 
 ### Fixes
 

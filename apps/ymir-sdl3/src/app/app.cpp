@@ -94,6 +94,7 @@
 
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/savestate_widgets.hpp>
+#include <app/ui/widgets/settings_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
 #include <serdes/state_cereal.hpp>
@@ -480,11 +481,13 @@ void App::RunEmulator() {
         // TODO: load from persistent state
 
         // This is equivalent to ImGui::GetFrameHeight() without requiring a window
-        const float menuBarHeight = (14.0f + style.FramePadding.y * 2.0f) * m_context.displayScale;
+        const float menuBarHeight = (16.0f + style.FramePadding.y * 2.0f) * m_context.displayScale;
 
         const auto &videoSettings = m_context.settings.video;
         const bool forceAspectRatio = videoSettings.forceAspectRatio;
         const double forcedAspect = videoSettings.forcedAspect;
+        const bool horzDisplay = videoSettings.rotation == Settings::Video::DisplayRotation::Normal ||
+                                 videoSettings.rotation == Settings::Video::DisplayRotation::_180;
 
         // Find reasonable default scale based on the primary display resolution
         SDL_Rect displayRect{};
@@ -499,14 +502,23 @@ void App::RunEmulator() {
 
         devlog::info<grp::base>("Primary display resolution: {}x{}", displayRect.w, displayRect.h);
 
-        // Take up to 90% of the available display with an integer multiple of 2 for the scale
-        const double maxScaleX = (double)displayRect.w / screen.width * 0.90;
-        const double maxScaleY = (double)displayRect.h / screen.height * 0.90;
-        const double scale = std::max(1.0, std::floor(std::min(maxScaleX, maxScaleY) / 2.0) * 2.0);
+        const double screenW = horzDisplay ? screen.width : screen.height;
+        const double screenH = horzDisplay ? screen.height : screen.width;
 
-        const double baseWidth =
-            forceAspectRatio ? ceil(screen.height * forcedAspect * screen.scaleY) : screen.width * screen.scaleX;
-        const double baseHeight = screen.height * screen.scaleY;
+        // Take 85% of the available display area
+        const double maxScaleX = (double)displayRect.w / screenW * 0.85;
+        const double maxScaleY = (double)displayRect.h / screenH * 0.85;
+        double scale = std::min(maxScaleX, maxScaleY);
+        if (videoSettings.forceIntegerScaling) {
+            scale = std::floor(scale);
+        }
+
+        double baseWidth =
+            forceAspectRatio ? std::ceil(screen.height * screen.scaleY * forcedAspect) : screen.width * screen.scaleX;
+        double baseHeight = screen.height * screen.scaleY;
+        if (!horzDisplay) {
+            std::swap(baseWidth, baseHeight);
+        }
         const int scaledWidth = baseWidth * scale;
         const int scaledHeight = baseHeight * scale;
 
@@ -1815,6 +1827,8 @@ void App::RunEmulator() {
                         m_context.settings.MakeDirty();
                     }
 
+                    ui::widgets::settings::video::DisplayRotation(m_context, true);
+
                     bool fullScreen = m_context.settings.video.fullScreen.Get();
                     if (ImGui::MenuItem("Full screen",
                                         input::ToShortcut(inputContext, actions::general::ToggleFullScreen).c_str(),
@@ -2121,15 +2135,19 @@ void App::RunEmulator() {
             if (videoSettings.displayVideoOutputInWindow) {
                 std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
-                auto &videoSettings = m_context.settings.video;
+                const bool horzDisplay = videoSettings.rotation == Settings::Video::DisplayRotation::Normal ||
+                                         videoSettings.rotation == Settings::Video::DisplayRotation::_180;
 
-                const double aspectRatio = videoSettings.forceAspectRatio
-                                               ? screen.scaleX / videoSettings.forcedAspect
-                                               : (double)screen.height / screen.width * screen.scaleY / screen.scaleX;
+                double aspectRatio = videoSettings.forceAspectRatio
+                                         ? screen.scaleX / videoSettings.forcedAspect
+                                         : (double)screen.height / screen.width * screen.scaleY / screen.scaleX;
+                if (!horzDisplay) {
+                    aspectRatio = 1.0 / aspectRatio;
+                }
 
                 ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
                 ImGui::SetNextWindowSizeConstraints(
-                    ImVec2(320, 224), ImVec2(FLT_MAX, FLT_MAX),
+                    (horzDisplay ? ImVec2(320, 224) : ImVec2(224, 320)), ImVec2(FLT_MAX, FLT_MAX),
                     [](ImGuiSizeCallbackData *data) {
                         double aspectRatio = *(double *)data->UserData;
                         data->DesiredSize.y =
@@ -2141,8 +2159,34 @@ void App::RunEmulator() {
                     const ImVec2 avail = ImGui::GetContentRegionAvail();
                     renderDispTexture(avail.x, avail.y);
 
-                    ImGui::Image((ImTextureID)dispTexture, avail, ImVec2(0, 0),
-                                 ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV));
+                    const ImVec2 pos = ImGui::GetCursorScreenPos();
+                    const auto tl = pos;
+                    const auto tr = ImVec2(pos.x + avail.x, pos.y);
+                    const auto br = ImVec2(pos.x + avail.x, pos.y + avail.y);
+                    const auto bl = ImVec2(pos.x, pos.y + avail.y);
+                    const auto uv1 = ImVec2(0, 0);
+                    const auto uv2 = ImVec2((float)screen.width / vdp::kMaxResH, 0);
+                    const auto uv3 = ImVec2((float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV);
+                    const auto uv4 = ImVec2(0, (float)screen.height / vdp::kMaxResV);
+
+                    auto *drawList = ImGui::GetWindowDrawList();
+                    switch (videoSettings.rotation) {
+                    default: [[fallthrough]];
+                    case Settings::Video::DisplayRotation::Normal:
+                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv1, uv2, uv3, uv4);
+                        break;
+                    case Settings::Video::DisplayRotation::_90CW:
+                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv4, uv1, uv2, uv3);
+                        break;
+                    case Settings::Video::DisplayRotation::_180:
+                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv3, uv4, uv1, uv2);
+                        break;
+                    case Settings::Video::DisplayRotation::_90CCW:
+                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv2, uv3, uv4, uv1);
+                        break;
+                    }
+
+                    ImGui::Dummy(avail);
                 }
                 ImGui::End();
                 ImGui::PopStyleVar();
@@ -2330,6 +2374,8 @@ void App::RunEmulator() {
             const bool screenSizeChanged = aspectRatioChanged || forceAspectRatioChanged || screen.resolutionChanged;
             const bool fitWindowToScreen =
                 (videoSettings.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
+            const bool horzDisplay = videoSettings.rotation == Settings::Video::DisplayRotation::Normal ||
+                                     videoSettings.rotation == Settings::Video::DisplayRotation::_180;
 
             float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
 
@@ -2351,9 +2397,12 @@ void App::RunEmulator() {
             double scaleFactor = 1.0;
 
             // Compute maximum scale to fit the display given the constraints above
-            const double baseWidth =
-                forceAspectRatio ? ceil(screen.height * forcedAspect * screen.scaleY) : screen.width * screen.scaleX;
-            const double baseHeight = screen.height * screen.scaleY;
+            double baseWidth = forceAspectRatio ? std::ceil(screen.height * screen.scaleY * forcedAspect)
+                                                : screen.width * screen.scaleX;
+            double baseHeight = screen.height * screen.scaleY;
+            if (!horzDisplay) {
+                std::swap(baseWidth, baseHeight);
+            }
             const double scaleX = (double)ww / baseWidth;
             const double scaleY = (double)wh / baseHeight;
             double scale = std::max(1.0, std::min(scaleX, scaleY));
@@ -2378,9 +2427,12 @@ void App::RunEmulator() {
                     screenScaleY = screen.prevScaleY;
                 }
                 if (screenSizeChanged) {
-                    const double baseWidth = forceAspectRatio ? ceil(screenHeight * prevForcedAspect * screenScaleY)
-                                                              : screenWidth * screenScaleX;
-                    const double baseHeight = screenHeight * screenScaleY;
+                    double baseWidth = forceAspectRatio ? std::ceil(screenHeight * screenScaleY * prevForcedAspect)
+                                                        : screenWidth * screenScaleX;
+                    double baseHeight = screenHeight * screenScaleY;
+                    if (!horzDisplay) {
+                        std::swap(baseWidth, baseHeight);
+                    }
                     const double scaleX = (double)ww / baseWidth;
                     const double scaleY = (double)wh / baseHeight;
                     scale = std::max(1.0, std::min(scaleX, scaleY));
@@ -2390,8 +2442,8 @@ void App::RunEmulator() {
             if (videoSettings.forceIntegerScaling) {
                 scale = floor(scale);
             }
-            const int scaledWidth = baseWidth * scale;
-            const int scaledHeight = baseHeight * scale;
+            int scaledWidth = baseWidth * scale;
+            int scaledHeight = baseHeight * scale;
 
             // Resize window without moving the display position relative to the screen
             if (fitWindowToScreen && (ww != scaledWidth || wh != scaledHeight)) {
@@ -2411,6 +2463,9 @@ void App::RunEmulator() {
                 int nwy = std::max(wy - dy / 2, wbl);
                 SDL_SetWindowPosition(screen.window, nwx, nwy);
             }
+            if (!horzDisplay) {
+                std::swap(scaledWidth, scaledHeight);
+            }
 
             // Render framebuffer to display texture
             renderDispTexture(scaledWidth, scaledHeight);
@@ -2418,6 +2473,15 @@ void App::RunEmulator() {
             // Determine how much slack there is on each axis in order to center the image on the window
             const int slackX = ww - scaledWidth;
             const int slackY = wh - scaledHeight;
+
+            double rotAngle;
+            switch (videoSettings.rotation) {
+            default: [[fallthrough]];
+            case Settings::Video::DisplayRotation::Normal: rotAngle = 0.0; break;
+            case Settings::Video::DisplayRotation::_90CW: rotAngle = 90.0; break;
+            case Settings::Video::DisplayRotation::_180: rotAngle = 180.0; break;
+            case Settings::Video::DisplayRotation::_90CCW: rotAngle = 270.0; break;
+            }
 
             // Draw the texture
             SDL_FRect srcRect{.x = 0.0f,
@@ -2428,7 +2492,7 @@ void App::RunEmulator() {
                               .y = floorf(slackY * 0.5f + menuBarHeight),
                               .w = (float)scaledWidth,
                               .h = (float)scaledHeight};
-            SDL_RenderTexture(renderer, dispTexture, &srcRect, &dstRect);
+            SDL_RenderTextureRotated(renderer, dispTexture, &srcRect, &dstRect, rotAngle, nullptr, SDL_FLIP_NONE);
         }
 
         screen.resolutionChanged = false;

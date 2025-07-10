@@ -27,6 +27,27 @@ namespace settings::system {
 
 namespace settings::video {
 
+    void DisplayRotation(SharedContext &ctx, bool newLine) {
+        auto &settings = ctx.settings.video;
+        ImGui::PushID("##disp_rot");
+        using Rot = Settings::Video::DisplayRotation;
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Display rotation:");
+        auto option = [&](const char *name, Rot value, bool sameLine = true) {
+            if (sameLine) {
+                ImGui::SameLine();
+            }
+            if (ctx.settings.MakeDirty(ImGui::RadioButton(name, settings.rotation == value))) {
+                settings.rotation = value;
+            }
+        };
+        option("Normal", Rot::Normal, !newLine);
+        option("90\u00B0 CW", Rot::_90CW);
+        option("180\u00B0", Rot::_180);
+        option("90\u00B0 CCW", Rot::_90CCW);
+        ImGui::PopID();
+    }
+
     void Deinterlace(SharedContext &ctx) {
         auto &settings = ctx.settings.video;
         bool deinterlace = settings.deinterlace.Get();

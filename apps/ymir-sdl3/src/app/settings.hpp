@@ -274,9 +274,12 @@ public:
     } input;
 
     struct Video {
+        enum class DisplayRotation { Normal, _90CW, _180, _90CCW };
+
         bool forceIntegerScaling;
         bool forceAspectRatio;
         double forcedAspect;
+        DisplayRotation rotation;
 
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;

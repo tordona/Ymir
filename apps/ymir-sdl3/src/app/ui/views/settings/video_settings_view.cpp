@@ -41,6 +41,8 @@ void VideoSettingsView::Display() {
     }
     // TODO: aspect ratio selector? slider?
 
+    widgets::settings::video::DisplayRotation(m_context);
+
     ImGui::Separator();
 
     MakeDirty(ImGui::Checkbox("Auto-fit window to screen", &settings.autoResizeWindow));
