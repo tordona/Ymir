@@ -19,7 +19,7 @@ void InputCaptureWidget::DrawInputBindButton(input::InputBind &bind, size_t elem
         m_capturing = true;
         switch (bind.action.kind) {
         case input::Action::Kind::Trigger: [[fallthrough]];
-        case input::Action::Kind::RepeatableTrigger: [[fallthrough]];
+        case input::Action::Kind::RepeatableTrigger: CaptureTrigger(bind, elementIndex, context); break;
         case input::Action::Kind::Button: CaptureButton(bind, elementIndex, context); break;
         case input::Action::Kind::Axis1D: CaptureAxis1D(bind, elementIndex, context); break;
         case input::Action::Kind::Axis2D: CaptureAxis2D(bind, elementIndex, context); break;
@@ -66,6 +66,43 @@ void InputCaptureWidget::DrawCapturePopup() {
 
 void InputCaptureWidget::CaptureButton(input::InputBind &bind, size_t elementIndex, void *context) {
     m_kind = input::Action::Kind::Button;
+    m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
+        if (!event.element.IsButton()) {
+            return false;
+        }
+
+        // Ignore released presses
+        if (!event.buttonPressed) {
+            return false;
+        }
+
+        // Don't map multiple modifier keys at once
+        if (event.element.type == input::InputElement::Type::KeyCombo &&
+            event.element.keyCombo.key == input::KeyboardKey::None) {
+            auto bmKeyMods = BitmaskEnum(event.element.keyCombo.modifiers);
+            if (!bmKeyMods.NoneExcept(input::KeyModifier::Control) && !bmKeyMods.NoneExcept(input::KeyModifier::Alt) &&
+                !bmKeyMods.NoneExcept(input::KeyModifier::Shift) && !bmKeyMods.NoneExcept(input::KeyModifier::Super)) {
+                return false;
+            }
+        }
+
+        if (bind.elements[elementIndex] == event.element) {
+            // User bound the same input element as before; do nothing
+            m_closePopup = true;
+            return true;
+        }
+
+        bind.elements[elementIndex] = event.element;
+        MakeDirty();
+        m_unboundActionsWidget.Capture(m_context.settings.UnbindInput(event.element));
+        m_context.EnqueueEvent(events::gui::RebindInputs());
+        m_closePopup = true;
+        return true;
+    });
+}
+
+void InputCaptureWidget::CaptureTrigger(input::InputBind &bind, size_t elementIndex, void *context) {
+    m_kind = input::Action::Kind::Trigger;
     m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
         if (!event.element.IsButton()) {
             return false;

@@ -1224,6 +1224,9 @@ void App::RunEmulator() {
     screen.nextFrameTarget = clk::now();
     double avgFrameDelay = 0.0;
 
+    bool imguiWantedKeyboardInput = false;
+    bool imguiWantedMouseInput = false;
+
     while (true) {
         bool fitWindowToScreenNow = false;
 
@@ -1286,11 +1289,17 @@ void App::RunEmulator() {
         SDL_Event evt{};
         while (SDL_PollEvent(&evt)) {
             ImGui_ImplSDL3_ProcessEvent(&evt);
-            if (io.WantCaptureKeyboard) {
-                inputContext.ClearAllKeyboardInputs();
+            if (io.WantCaptureKeyboard != imguiWantedKeyboardInput) {
+                imguiWantedKeyboardInput = io.WantCaptureKeyboard;
+                if (io.WantCaptureKeyboard) {
+                    inputContext.ClearAllKeyboardInputs();
+                }
             }
-            if (io.WantCaptureMouse) {
-                inputContext.ClearAllMouseInputs();
+            if (io.WantCaptureMouse != imguiWantedMouseInput) {
+                imguiWantedMouseInput = io.WantCaptureMouse;
+                if (io.WantCaptureMouse) {
+                    inputContext.ClearAllMouseInputs();
+                }
             }
 
             switch (evt.type) {
