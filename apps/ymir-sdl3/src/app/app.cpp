@@ -3369,7 +3369,7 @@ void App::EnableRewindBuffer(bool enable) {
             m_context.rewindBuffer.Stop();
             m_context.rewindBuffer.Reset();
         }
-        devlog::debug<grp::base>("Rewind buffer {}", (enable ? "enabled" : "disabled"));
+        m_context.DisplayMessage(fmt::format("Rewind buffer {}", (enable ? "enabled" : "disabled")));
     }
 }
 
