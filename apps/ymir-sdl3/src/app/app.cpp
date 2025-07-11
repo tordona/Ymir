@@ -1238,29 +1238,29 @@ void App::RunEmulator() {
             const uint32 audioBufferCap = m_audioSystem.GetBufferCapacity();
             const double audioBufferMinLevel = 0.3;
             const double audioBufferMaxLevel = 0.7;
-            const double audioBufferFrameAdjustWeight = 0.8;
-            const double audioBufferFrameAdjustFactor = 0.2;
+            const double frameIntervalAdjustWeight = 0.8; // how much weight the current value has over the moving avg
+            const double frameIntervalAdjustFactor = 0.2; // how much adjustment is applied to the frame interval
             const double audioBufferPct = (double)audioBufferSize / audioBufferCap;
             if (audioBufferPct < audioBufferMinLevel) {
                 // Audio buffer is too low; lower frame interval
                 const double adjustPct =
                     std::clamp((audioBufferMinLevel - audioBufferPct) / audioBufferMinLevel, 0.0, 1.0);
-                avgFrameDelay = avgFrameDelay + (adjustPct - avgFrameDelay) * audioBufferFrameAdjustWeight;
+                avgFrameDelay = avgFrameDelay + (adjustPct - avgFrameDelay) * frameIntervalAdjustWeight;
 
             } else if (audioBufferPct > audioBufferMaxLevel) {
                 // Audio buffer is too high; increase frame interval
                 const double adjustPct =
                     std::clamp((audioBufferPct - audioBufferMaxLevel) / (1.0 - audioBufferMaxLevel), 0.0, 1.0);
-                avgFrameDelay = avgFrameDelay - (avgFrameDelay + adjustPct) * audioBufferFrameAdjustWeight;
+                avgFrameDelay = avgFrameDelay - (adjustPct + avgFrameDelay) * frameIntervalAdjustWeight;
 
             } else {
                 // Audio buffer is within range; restore frame interval to normal amount
-                avgFrameDelay *= 1.0 - audioBufferFrameAdjustWeight;
+                avgFrameDelay *= 1.0 - frameIntervalAdjustWeight;
             }
 
             // Adjust frame presentation time
             screen.nextFrameTarget -= std::chrono::duration_cast<std::chrono::nanoseconds>(
-                screen.frameInterval * avgFrameDelay * audioBufferFrameAdjustFactor);
+                screen.frameInterval * avgFrameDelay * frameIntervalAdjustFactor);
 
             // Sleep until 1ms before the next frame presentation time, then spin wait for the deadline
             auto now = clk::now();
