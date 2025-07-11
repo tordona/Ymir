@@ -438,13 +438,15 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.resetButton);
 
     mapInput(m_actionInputs, hotkeys.turboSpeed);
+    mapInput(m_actionInputs, hotkeys.turboSpeedHold);
+    mapInput(m_actionInputs, hotkeys.toggleAlternateSpeed);
+    mapInput(m_actionInputs, hotkeys.speedLimiterIncrease);
+    mapInput(m_actionInputs, hotkeys.speedLimiterDecrease);
     mapInput(m_actionInputs, hotkeys.pauseResume);
     mapInput(m_actionInputs, hotkeys.fwdFrameStep);
     mapInput(m_actionInputs, hotkeys.revFrameStep);
     mapInput(m_actionInputs, hotkeys.rewind);
     mapInput(m_actionInputs, hotkeys.toggleRewindBuffer);
-
-    mapInput(m_actionInputs, hotkeys.turboSpeedHold);
 
     mapInput(m_actionInputs, hotkeys.toggleDebugTrace);
     mapInput(m_actionInputs, hotkeys.dumpMemory);
@@ -719,13 +721,15 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblHotkeys, "ResetButton", hotkeys.resetButton);
 
         Parse(tblHotkeys, "TurboSpeed", hotkeys.turboSpeed);
+        Parse(tblHotkeys, "TurboSpeedHold", hotkeys.turboSpeedHold);
+        Parse(tblHotkeys, "ToggleAlternateSpeed", hotkeys.toggleAlternateSpeed);
+        Parse(tblHotkeys, "SpeedLimiterIncrease", hotkeys.speedLimiterIncrease);
+        Parse(tblHotkeys, "SpeedLimiterDecrease", hotkeys.speedLimiterDecrease);
         Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
         Parse(tblHotkeys, "ForwardFrameStep", hotkeys.fwdFrameStep);
         Parse(tblHotkeys, "ReverseFrameStep", hotkeys.revFrameStep);
         Parse(tblHotkeys, "Rewind", hotkeys.rewind);
         Parse(tblHotkeys, "ToggleRewindBuffer", hotkeys.toggleRewindBuffer);
-
-        Parse(tblHotkeys, "TurboSpeedHold", hotkeys.turboSpeedHold);
 
         Parse(tblHotkeys, "ToggleDebugTrace", hotkeys.toggleDebugTrace);
         Parse(tblHotkeys, "DumpMemory", hotkeys.dumpMemory);
@@ -967,13 +971,15 @@ SettingsSaveResult Settings::Save() {
             {"ResetButton", ToTOML(hotkeys.resetButton)},
 
             {"TurboSpeed", ToTOML(hotkeys.turboSpeed)},
+            {"TurboSpeedHold", ToTOML(hotkeys.turboSpeedHold)},
+            {"ToggleAlternateSpeed", ToTOML(hotkeys.toggleAlternateSpeed)},
+            {"SpeedLimiterIncrease", ToTOML(hotkeys.speedLimiterIncrease)},
+            {"SpeedLimiterDecrease", ToTOML(hotkeys.speedLimiterDecrease)},
             {"PauseResume", ToTOML(hotkeys.pauseResume)},
             {"ForwardFrameStep", ToTOML(hotkeys.fwdFrameStep)},
             {"ReverseFrameStep", ToTOML(hotkeys.revFrameStep)},
             {"Rewind", ToTOML(hotkeys.rewind)},
             {"ToggleRewindBuffer", ToTOML(hotkeys.toggleRewindBuffer)},
-
-            {"TurboSpeedHold", ToTOML(hotkeys.turboSpeedHold)},
 
             {"ToggleDebugTrace", ToTOML(hotkeys.toggleDebugTrace)},
             {"DumpMemory", ToTOML(hotkeys.dumpMemory)},
@@ -1388,14 +1394,16 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     rebind(hotkeys.softReset, {KeyCombo{Mod::Control | Mod::Shift, Key::R}});
     rebind(hotkeys.resetButton, {KeyCombo{Mod::Shift, Key::R}});
 
-    rebind(hotkeys.turboSpeed, {KeyCombo{Mod::None, Key::Tab}, {0, GPBtn::Back}});
-    rebind(hotkeys.pauseResume, {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::Control, Key::P}});
+    rebind(hotkeys.turboSpeed, {KeyCombo{Mod::None, Key::Tab}});
+    rebind(hotkeys.turboSpeedHold, {KeyCombo{Mod::None, Key::GraveAccent}});
+    rebind(hotkeys.toggleAlternateSpeed, {KeyCombo{Mod::None, Key::Slash}});
+    rebind(hotkeys.speedLimiterIncrease, {KeyCombo{Mod::None, Key::Period}});
+    rebind(hotkeys.speedLimiterDecrease, {KeyCombo{Mod::None, Key::Comma}});
+    rebind(hotkeys.pauseResume, {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::None, Key::Spacebar}});
     rebind(hotkeys.fwdFrameStep, {KeyCombo{Mod::None, Key::RightBracket}});
     rebind(hotkeys.revFrameStep, {KeyCombo{Mod::None, Key::LeftBracket}});
     rebind(hotkeys.rewind, {KeyCombo{Mod::None, Key::Backspace}});
     rebind(hotkeys.toggleRewindBuffer, {KeyCombo{Mod::None, Key::F8}});
-
-    rebind(hotkeys.turboSpeedHold, {KeyCombo{Mod::None, Key::GraveAccent}});
 
     rebind(hotkeys.toggleDebugTrace, {KeyCombo{Mod::None, Key::F11}});
     rebind(hotkeys.dumpMemory, {KeyCombo{Mod::Control, Key::F11}});

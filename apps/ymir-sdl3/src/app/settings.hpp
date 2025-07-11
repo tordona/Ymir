@@ -170,13 +170,15 @@ public:
         input::InputBind resetButton{actions::sys::ResetButton};
 
         input::InputBind turboSpeed{actions::emu::TurboSpeed};
+        input::InputBind turboSpeedHold{actions::emu::TurboSpeedHold};
+        input::InputBind toggleAlternateSpeed{actions::emu::ToggleAlternateSpeed};
+        input::InputBind speedLimiterIncrease{actions::emu::SpeedLimiterIncrease};
+        input::InputBind speedLimiterDecrease{actions::emu::SpeedLimiterDecrease};
         input::InputBind pauseResume{actions::emu::PauseResume};
         input::InputBind fwdFrameStep{actions::emu::ForwardFrameStep};
         input::InputBind revFrameStep{actions::emu::ReverseFrameStep};
         input::InputBind rewind{actions::emu::Rewind};
         input::InputBind toggleRewindBuffer{actions::emu::ToggleRewindBuffer};
-
-        input::InputBind turboSpeedHold{actions::emu::TurboSpeedHold};
 
         input::InputBind toggleDebugTrace{actions::dbg::ToggleDebugTrace};
         input::InputBind dumpMemory{actions::dbg::DumpMemory};

@@ -130,15 +130,18 @@ namespace sys {
 namespace emu {
 
     inline constexpr auto TurboSpeed = input::Action::Button(0xE02000, "Emulation", "Turbo speed");
-    // TODO: inline constexpr auto SlowMotion = input::Action::Button(0xE02001, "Emulation", "Slow motion");
-    inline constexpr auto PauseResume = input::Action::Trigger(0xE02002, "Emulation", "Pause/resume");
-    inline constexpr auto ForwardFrameStep =
-        input::Action::RepeatableTrigger(0xE02003, "Emulation", "Forward frame step");
-    inline constexpr auto ReverseFrameStep =
-        input::Action::RepeatableTrigger(0xE02004, "Emulation", "Reverse frame step");
-    inline constexpr auto Rewind = input::Action::Button(0xE02005, "Emulation", "Rewind");
-
     inline constexpr auto TurboSpeedHold = input::Action::Trigger(0xE020F0, "Emulation", "Turbo speed (hold)");
+    inline constexpr auto ToggleAlternateSpeed =
+        input::Action::Trigger(0xE02001, "Emulation", "Toggle alternate speed");
+    inline constexpr auto SpeedLimiterIncrease = input::Action::RepeatableTrigger(0xE02002, "Emulation", "Speed up");
+    inline constexpr auto SpeedLimiterDecrease = input::Action::RepeatableTrigger(0xE02003, "Emulation", "Slow down");
+
+    inline constexpr auto PauseResume = input::Action::Trigger(0xE02004, "Emulation", "Pause/resume");
+    inline constexpr auto ForwardFrameStep =
+        input::Action::RepeatableTrigger(0xE02005, "Emulation", "Forward frame step");
+    inline constexpr auto ReverseFrameStep =
+        input::Action::RepeatableTrigger(0xE02006, "Emulation", "Reverse frame step");
+    inline constexpr auto Rewind = input::Action::Button(0xE02007, "Emulation", "Rewind");
 
     inline constexpr auto ToggleRewindBuffer = input::Action::Trigger(0xE02100, "Emulation", "Toggle rewind buffer");
 
