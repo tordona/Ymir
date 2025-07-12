@@ -3154,9 +3154,6 @@ void VDP::VDP2DrawLine(uint32 y) {
     const bool rotate = regs1.fbRotEnable;
     const bool interlaced = regs2.TVMD.IsInterlaced();
 
-    // Precalculate window state
-    VDP2CalcWindows<deinterlace, false>(y);
-
     // Load rotation parameters if any of the RBG layers is enabled
     if (regs2.bgEnabled[4] || regs2.bgEnabled[5]) {
         VDP2CalcRotationParameterTables(y);
@@ -3164,6 +3161,9 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     // Draw line color and back screen layers
     VDP2DrawLineColorAndBackScreens(y);
+
+    // Precalculate window state
+    VDP2CalcWindows<deinterlace, false>(y);
 
     // Draw sprite layer
     (this->*fnDrawSprite[colorMode][rotate][false])(y);
@@ -3226,11 +3226,9 @@ void VDP::VDP2DrawLine(uint32 y) {
 FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
     const VDP2Regs &regs = VDP2GetRegs();
 
-    const LineBackScreenParams &lineParams = regs.lineScreenParams;
-    const LineBackScreenParams &backParams = regs.backScreenParams;
-
     // Read line color screen color
     {
+        const LineBackScreenParams &lineParams = regs.lineScreenParams;
         const uint32 line = lineParams.perLine ? y : 0;
         const uint32 address = lineParams.baseAddress + line * sizeof(uint16);
         const uint32 cramAddress = VDP2ReadRendererVRAM<uint16>(address) * sizeof(uint16);
@@ -3239,6 +3237,7 @@ FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
 
     // Read back screen color
     {
+        const LineBackScreenParams &backParams = regs.backScreenParams;
         const uint32 line = backParams.perLine ? y : 0;
         const uint32 address = backParams.baseAddress + line * sizeof(Color555);
         const Color555 color555{.u16 = VDP2ReadRendererVRAM<uint16>(address)};
