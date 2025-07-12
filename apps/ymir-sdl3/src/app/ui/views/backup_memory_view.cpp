@@ -357,10 +357,23 @@ void BackupMemoryView::DrawFileTableHeader() {
     ImGui::TableSetupColumn("Comment", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 11.5f);
     ImGui::TableSetupColumn("Language", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 9);
     ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 6.5f);
-    ImGui::TableSetupColumn("Blks", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 4);
+    ImGui::TableSetupColumn("Blocks", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 7);
     ImGui::TableSetupColumn("Date/time", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableHeadersRow();
+
+    ImGui::TableNextRow();
+    for (uint32 i = 0; i < 6; ++i) {
+        if (!ImGui::TableSetColumnIndex(i)) {
+            continue;
+        }
+        ImGui::TableHeader(ImGui::TableGetColumnName(i));
+        if (i == 4) {
+            if (ImGui::BeginItemTooltip()) {
+                ImGui::TextUnformatted("Used blocks + header blocks");
+                ImGui::EndTooltip();
+            }
+        }
+    }
 }
 
 void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 index, bool selectable) {
@@ -395,7 +408,7 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
         ImGui::Text("%u", file.size);
     }
     if (ImGui::TableNextColumn()) {
-        ImGui::Text("%u", file.numBlocks);
+        ImGui::Text("%u+%u", file.numBlocks, file.numRawBlocks - file.numBlocks);
     }
     if (ImGui::TableNextColumn()) {
         util::BackupDateTime bupDate{file.header.date};

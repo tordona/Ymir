@@ -36,6 +36,7 @@ struct BackupFileHeader {
 struct BackupFileInfo {
     BackupFileHeader header;
     uint32 size; // in bytes (including block list)
+    uint32 numRawBlocks;
     uint32 numBlocks;
 };
 

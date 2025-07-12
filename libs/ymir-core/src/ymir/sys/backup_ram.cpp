@@ -454,8 +454,9 @@ BackupFileImportResult BackupMemory::Import(const BackupFile &file, bool overwri
     }
     params->info.header = file.header;
     params->blocks = blockList;
-    params->info.numBlocks = params->blocks.size();
+    params->info.numRawBlocks = params->blocks.size();
     params->info.size = file.data.size();
+    params->info.numBlocks = ((params->info.size + (m_blockSize >> 1u)) / m_blockSize) + 1u;
 
     return overwritten ? BackupFileImportResult::Overwritten : BackupFileImportResult::Imported;
 }
@@ -527,7 +528,8 @@ void BackupMemory::RebuildFileList(bool force) {
             continue;
         }
         params.blocks = ReadBlockList(i);
-        params.info.numBlocks = params.blocks.size();
+        params.info.numRawBlocks = params.blocks.size();
+        params.info.numBlocks = ((params.info.size + (m_blockSize >> 1u)) / m_blockSize) + 1u;
 
         // Mark blocks as used
         for (uint16 block : params.blocks) {
