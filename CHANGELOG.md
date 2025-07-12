@@ -16,6 +16,7 @@
 - Backup Manager: Show logical block usage (matching BIOS numbers) + header blocks. (#294)
 - Debugger: Added basic VDP1 registers inspector window.
 - Input: Changed default keybinds for Pause/Resume action from "Pause, Ctrl+P" to "Pause, Spacebar".
+- Input: Removed Return from default binds to Port 1 Start button to avoid conflict with full screen hotkey (Alt+Enter)
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - Settings: Added "Clear all" button to controller configuration window to clear all binds. (#288)
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.

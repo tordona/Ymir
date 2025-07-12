@@ -1527,7 +1527,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Contro
             rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
             rebind(binds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
             rebind(binds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
-            rebind(binds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
+            rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
             rebind(binds.up, {{{Key::W}}});
             rebind(binds.down, {{{Key::S}}});
             rebind(binds.left, {{{Key::A}}});
@@ -1633,7 +1633,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Analog
             rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
             rebind(binds.l, {{{Key::Q}}});
             rebind(binds.r, {{{Key::E}}});
-            rebind(binds.start, {{{Key::G}, {Key::F}, {Key::H}, {Key::Return}, {0, GPBtn::Start}}});
+            rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
             rebind(binds.up, {{{Key::W}}});
             rebind(binds.down, {{{Key::S}}});
             rebind(binds.left, {{{Key::A}}});
