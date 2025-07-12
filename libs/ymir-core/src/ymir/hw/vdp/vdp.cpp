@@ -433,6 +433,7 @@ void VDP::LoadState(const state::VDPState &state) {
         m_normBGLayerStates[i].scrollAmountV = state.renderer.normBGLayerStates[i].scrollAmountV;
         m_normBGLayerStates[i].scrollIncH = state.renderer.normBGLayerStates[i].scrollIncH;
         m_normBGLayerStates[i].lineScrollTableAddress = state.renderer.normBGLayerStates[i].lineScrollTableAddress;
+        m_normBGLayerStates[i].vertCellScrollOffset = state.renderer.normBGLayerStates[i].vertCellScrollOffset;
         m_normBGLayerStates[i].mosaicCounterY = state.renderer.normBGLayerStates[i].mosaicCounterY;
     }
 
