@@ -131,6 +131,12 @@ void GeneralSettingsView::Display() {
         ImGui::EndTable();
     }
 
+    MakeDirty(ImGui::Checkbox("Show speed indicators for modified speeds", &settings.showSpeedIndicatorForAllSpeeds));
+    widgets::ExplanationTooltip(
+        "When enabled, the speed indicator will be displayed for any emulation speed other than 100%.\n"
+        "When disabled, the speed indicator is only displayed while running in turbo speed.",
+        m_context.displayScale);
+
     MakeDirty(ImGui::Checkbox("Pause when unfocused", &settings.pauseWhenUnfocused));
     widgets::ExplanationTooltip(
         "The emulator will pause when the window loses focus and resume when it regains focus.\n"
