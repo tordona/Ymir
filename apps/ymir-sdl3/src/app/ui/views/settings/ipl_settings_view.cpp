@@ -74,14 +74,16 @@ void IPLSettingsView::Display() {
 
     int index = 0;
     if (ImGui::BeginTable("sys_ipl_roms", 6,
-                          ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti,
+                          ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable | ImGuiTableFlags_SortMulti |
+                              ImGuiTableFlags_SortTristate,
                           ImVec2(0, 250 * m_context.displayScale))) {
-        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch, 0.0f);
+        ImGui::TableSetupColumn("Path", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_DefaultSort, 0.0f);
         ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthFixed, 50 * m_context.displayScale);
         ImGui::TableSetupColumn("Date", ImGuiTableColumnFlags_WidthFixed, 75 * m_context.displayScale);
         ImGui::TableSetupColumn("Variant", ImGuiTableColumnFlags_WidthFixed, 60 * m_context.displayScale);
         ImGui::TableSetupColumn("Region", ImGuiTableColumnFlags_WidthFixed, 80 * m_context.displayScale);
-        ImGui::TableSetupColumn("##use", ImGuiTableColumnFlags_WidthFixed, useButtonWidth);
+        ImGui::TableSetupColumn("##use", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort,
+                                useButtonWidth);
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
 
@@ -94,7 +96,7 @@ void IPLSettingsView::Display() {
         if (const ImGuiTableSortSpecs *sortSpecs = ImGui::TableGetSortSpecs();
             sortSpecs->SpecsDirty && sortedIpl.size() > 1) {
 
-            for (int specIndex = 0; specIndex < sortSpecs->SpecsCount; ++specIndex) {
+            for (int specIndex = sortSpecs->SpecsCount - 1; specIndex >= 0; --specIndex) {
                 const ImGuiTableColumnSortSpecs &sortSpec = sortSpecs->Specs[specIndex];
 
                 const auto sortColumns = [&sortSpec](auto sortStart, auto sortEnd) -> void {

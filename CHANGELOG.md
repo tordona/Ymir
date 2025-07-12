@@ -37,6 +37,7 @@
 - SCU: Run all pending DMA transfers instead of just the highest priority.
 - SCU: Split up MSH2/SSH2 interrupt handling.
 - SCU: Various fixes to SCU DSP DMA transfers to DSP Program RAM (thanks to @celeriyacon).
+- Settings: Reverse IPL column sorting order.
 - SH2: Fix cache LRU AND update mask. Fixes FMV glitches on Capcom games, WipEout and Mr. Bones when SH-2 cache emulation is enabled. (#202, #247, #270)
 - SH2: TAS.B read should bypass cache.
 - SH2: The nIVECF pin of the SSH2 is disconnected, disallowing it from doing external interrupt vector fetches.
