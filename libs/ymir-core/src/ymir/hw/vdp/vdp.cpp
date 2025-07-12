@@ -3190,10 +3190,10 @@ void VDP::VDP2DrawLine(uint32 y) {
     // Compose image
     VDP2ComposeLine<deinterlace, false, transparentMeshes>(y);
 
-    // Draw complementary field if deinterlace is enabled while in double-density interlace mode
+    // Draw complementary field if deinterlace is enabled while in interlaced modes
     if constexpr (deinterlace) {
         if (interlaced) {
-            // The alternate VDP2 line only needs to be drawn in double-density mode
+            // The alternate VDP2 line only needs to be redrawn in double-density mode
             const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
             if (doubleDensity) {
                 // Precalculate window state
