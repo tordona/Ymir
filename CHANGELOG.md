@@ -19,7 +19,7 @@
 - Debugger: Added basic VDP1 registers inspector window.
 - Input: Added new keybinds for frame rate limit control: increase/decrease speed, switch between primary/alternate speed, reset speed. (#16)
 - Input: Changed default keybinds for Pause/Resume action from "Pause, Ctrl+P" to "Pause, Spacebar".
-- Input: Removed Return from default binds to Port 1 Start button to avoid conflict with full screen hotkey (Alt+Enter)
+- Input: Removed Return from default binds to Port 1 Start button to avoid conflict with full screen hotkey (Alt+Enter).
 - Settings: Added "Clear all" button to controller configuration window to clear all binds. (#288)
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.
@@ -63,7 +63,7 @@
 - VDP2: Handle bad window parameters set by Snatcher on the "Act 1" title screen (and probably many other places). (#259)
 - VDP2: Latch BG scroll registers earlier (at VBlank OUT) and latch vertical scroll registers (SCY[ID]Nn). Fixes bad vertical offset in Shinobi-X's NBG2 layer. (#193)
 - VDP2: Read first vertical cell scroll entry on bitmap backgrounds. Fixes misplaced lines in Street Fighter - Real Battle on Film FMVs. (#291)
-- VDP2: Update line screen scroll address at Y=0. Fixes line glitches in Rayman's backgrounds and Sonic Jam's Sonic 2 special stage.
+- VDP2: Update line screen scroll address at Y=0. Fixes line glitches in Rayman's backgrounds and Sonic Jam's Sonic 2 special stage graphics.
 - VDP2: Update vertical cell scroll every 8 cell dots correctly when the background is zoomed in.
 - ymdasm: Fix reversed SCU DSP DMA immediate/data RAM operand decoding.
 - ymdasm: Mask and translate several SCU DSP immediates.
