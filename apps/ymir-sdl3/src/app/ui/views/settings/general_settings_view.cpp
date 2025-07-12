@@ -72,18 +72,15 @@ void GeneralSettingsView::Display() {
     ImGui::SeparatorText("Behavior");
     ImGui::PopFont();
 
-    if (ImGui::BeginTable("emu_speed", 3, ImGuiTableFlags_SizingFixedFit)) {
-        ImGui::TableNextRow();
-        if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("Emulation speed");
-            widgets::ExplanationTooltip(
-                "You can adjust and switch between the primary and alternate speeds at any time.\n"
-                "The primary speed is meant to be the default speed for normal usage while the alternate speed is used "
-                "as a slow motion or speed-limited fast-forward option, but feel free to use them as you wish.\n"
-                "The primary and alternate speeds reset/default to 100% and 50% respectively.",
-                m_context.displayScale);
-        }
+    ImGui::TextUnformatted("Emulation speed");
+    widgets::ExplanationTooltip(
+        "You can adjust and switch between the primary and alternate speeds at any time.\n"
+        "The primary speed is meant to be the default speed for normal usage while the alternate speed is used "
+        "as a slow motion or speed-limited fast-forward option, but feel free to use them as you wish.\n"
+        "The primary and alternate speeds reset/default to 100% and 50% respectively.",
+        m_context.displayScale);
 
+    if (ImGui::BeginTable("emu_speed", 3, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             if (MakeDirty(ImGui::RadioButton("Primary##emu_speed", !settings.useAltSpeed))) {
