@@ -7,6 +7,8 @@
 #include <ymir/util/dev_log.hpp>
 #include <ymir/util/inline.hpp>
 
+#include <util/math.hpp>
+
 #include <cassert>
 
 using namespace std::literals;
@@ -134,6 +136,21 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::
             value = core::config::audio::SampleInterpolationMode::NearestNeighbor;
         } else if (*opt == "Linear"s) {
             value = core::config::audio::SampleInterpolationMode::Linear;
+        }
+    }
+}
+
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::General::FrameRateOSDPosition &value) {
+    value = Settings::General::FrameRateOSDPosition::TopRight;
+    if (auto opt = node.value<std::string>()) {
+        if (*opt == "TopLeft"s) {
+            value = Settings::General::FrameRateOSDPosition::TopLeft;
+        } else if (*opt == "TopRight"s) {
+            value = Settings::General::FrameRateOSDPosition::TopRight;
+        } else if (*opt == "BottomLeft"s) {
+            value = Settings::General::FrameRateOSDPosition::BottomLeft;
+        } else if (*opt == "BottomRight"s) {
+            value = Settings::General::FrameRateOSDPosition::BottomRight;
         }
     }
 }
@@ -273,6 +290,16 @@ FORCE_INLINE static const char *ToTOML(const core::config::audio::SampleInterpol
     default: [[fallthrough]];
     case core::config::audio::SampleInterpolationMode::NearestNeighbor: return "Nearest";
     case core::config::audio::SampleInterpolationMode::Linear: return "Linear";
+    }
+}
+
+FORCE_INLINE static const char *ToTOML(const Settings::General::FrameRateOSDPosition value) {
+    switch (value) {
+    case Settings::General::FrameRateOSDPosition::TopLeft: return "TopLeft";
+    default: [[fallthrough]];
+    case Settings::General::FrameRateOSDPosition::TopRight: return "TopRight";
+    case Settings::General::FrameRateOSDPosition::BottomLeft: return "BottomLeft";
+    case Settings::General::FrameRateOSDPosition::BottomRight: return "BottomRight";
     }
 }
 
@@ -424,6 +451,9 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.openSettings);
     mapInput(m_actionInputs, hotkeys.toggleWindowedVideoOutput);
     mapInput(m_actionInputs, hotkeys.toggleFullScreen);
+    mapInput(m_actionInputs, hotkeys.toggleFrameRateOSD);
+    mapInput(m_actionInputs, hotkeys.nextFrameRateOSDPos);
+    mapInput(m_actionInputs, hotkeys.prevFrameRateOSDPos);
 
     mapInput(m_actionInputs, hotkeys.toggleMute);
     mapInput(m_actionInputs, hotkeys.increaseVolume);
@@ -442,6 +472,8 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.toggleAlternateSpeed);
     mapInput(m_actionInputs, hotkeys.increaseSpeed);
     mapInput(m_actionInputs, hotkeys.decreaseSpeed);
+    mapInput(m_actionInputs, hotkeys.increaseSpeedLarge);
+    mapInput(m_actionInputs, hotkeys.decreaseSpeedLarge);
     mapInput(m_actionInputs, hotkeys.resetSpeed);
     mapInput(m_actionInputs, hotkeys.pauseResume);
     mapInput(m_actionInputs, hotkeys.fwdFrameStep);
@@ -567,6 +599,8 @@ void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
+    general.showFrameRateOSD = false;
+    general.frameRateOSDPosition = General::FrameRateOSDPosition::TopRight;
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 12;
     general.mainSpeedFactor = 1.0;
@@ -659,6 +693,8 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
+        Parse(tblGeneral, "ShowFrameRateOSD", general.showFrameRateOSD);
+        Parse(tblGeneral, "FrameRateOSDPosition", general.frameRateOSDPosition);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
         Parse(tblGeneral, "RewindCompressionLevel", general.rewindCompressionLevel);
         Parse(tblGeneral, "MainSpeedFactor", general.mainSpeedFactor);
@@ -666,8 +702,8 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "UseAltSpeed", general.useAltSpeed);
         Parse(tblGeneral, "PauseWhenUnfocused", general.pauseWhenUnfocused);
 
-        // Rounds to the nearest multiple of 10% and clamps to 10%..500% range.
-        auto adjustSpeed = [](double value) { return std::clamp(std::round(value * 10.0) / 10.0, 0.1, 5.0); };
+        // Rounds to the nearest multiple of 5% and clamps to 10%..500% range.
+        auto adjustSpeed = [](double value) { return std::clamp(util::RoundToMultiple(value, 0.05), 0.1, 5.0); };
         general.mainSpeedFactor = adjustSpeed(general.mainSpeedFactor);
         general.altSpeedFactor = adjustSpeed(general.altSpeedFactor);
 
@@ -719,6 +755,9 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblHotkeys, "OpenSettings", hotkeys.openSettings);
         Parse(tblHotkeys, "ToggleWindowedVideoOutput", hotkeys.toggleWindowedVideoOutput);
         Parse(tblHotkeys, "ToggleFullScreen", hotkeys.toggleFullScreen);
+        Parse(tblHotkeys, "ToggleFrameRateOSD", hotkeys.toggleFrameRateOSD);
+        Parse(tblHotkeys, "NextFrameRateOSDPosition", hotkeys.nextFrameRateOSDPos);
+        Parse(tblHotkeys, "PreviousFrameRateOSDPosition", hotkeys.prevFrameRateOSDPos);
 
         Parse(tblHotkeys, "ToggleMute", hotkeys.toggleMute);
         Parse(tblHotkeys, "IncreaseVolume", hotkeys.increaseVolume);
@@ -928,6 +967,8 @@ SettingsSaveResult Settings::Save() {
             {"PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM},
             {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
             {"BoostProcessPriority", general.boostProcessPriority},
+            {"ShowFrameRateOSD", general.showFrameRateOSD},
+            {"FrameRateOSDPosition", ToTOML(general.frameRateOSDPosition)},
             {"EnableRewindBuffer", general.enableRewindBuffer},
             {"RewindCompressionLevel", general.rewindCompressionLevel},
             {"MainSpeedFactor", general.mainSpeedFactor.Get()},
@@ -973,6 +1014,9 @@ SettingsSaveResult Settings::Save() {
             {"OpenSettings", ToTOML(hotkeys.openSettings)},
             {"ToggleWindowedVideoOutput", ToTOML(hotkeys.toggleWindowedVideoOutput)},
             {"ToggleFullScreen", ToTOML(hotkeys.toggleFullScreen)},
+            {"ToggleFrameRateOSD", ToTOML(hotkeys.toggleFrameRateOSD)},
+            {"NextFrameRateOSDPosition", ToTOML(hotkeys.nextFrameRateOSDPos)},
+            {"PreviousFrameRateOSDPosition", ToTOML(hotkeys.prevFrameRateOSDPos)},
             
             {"ToggleMute", ToTOML(hotkeys.toggleMute)},
             {"IncreaseVolume", ToTOML(hotkeys.increaseVolume)},
@@ -991,6 +1035,8 @@ SettingsSaveResult Settings::Save() {
             {"ToggleAlternateSpeed", ToTOML(hotkeys.toggleAlternateSpeed)},
             {"IncreaseSpeed", ToTOML(hotkeys.increaseSpeed)},
             {"DecreaseSpeed", ToTOML(hotkeys.decreaseSpeed)},
+            {"IncreaseSpeedLarge", ToTOML(hotkeys.increaseSpeedLarge)},
+            {"DecreaseSpeedLarge", ToTOML(hotkeys.decreaseSpeedLarge)},
             {"ResetSpeed", ToTOML(hotkeys.resetSpeed)},
             {"PauseResume", ToTOML(hotkeys.pauseResume)},
             {"ForwardFrameStep", ToTOML(hotkeys.fwdFrameStep)},
@@ -1398,6 +1444,9 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     rebind(hotkeys.openSettings, {KeyCombo{Mod::None, Key::F10}});
     rebind(hotkeys.toggleWindowedVideoOutput, {KeyCombo{Mod::None, Key::F9}});
     rebind(hotkeys.toggleFullScreen, {KeyCombo{Mod::Alt, Key::Return}});
+    rebind(hotkeys.toggleFrameRateOSD, {KeyCombo{Mod::Shift, Key::F1}});
+    rebind(hotkeys.nextFrameRateOSDPos, {KeyCombo{Mod::Control, Key::F1}});
+    rebind(hotkeys.prevFrameRateOSDPos, {KeyCombo{Mod::Control | Mod::Shift, Key::F1}});
 
     rebind(hotkeys.toggleMute, {KeyCombo{Mod::Control, Key::M}});
     rebind(hotkeys.increaseVolume, {KeyCombo{Mod::Control, Key::EqualsPlus}});
@@ -1416,6 +1465,8 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     rebind(hotkeys.toggleAlternateSpeed, {KeyCombo{Mod::None, Key::Slash}});
     rebind(hotkeys.increaseSpeed, {KeyCombo{Mod::None, Key::Period}});
     rebind(hotkeys.decreaseSpeed, {KeyCombo{Mod::None, Key::Comma}});
+    rebind(hotkeys.increaseSpeedLarge, {KeyCombo{Mod::Shift, Key::Period}});
+    rebind(hotkeys.decreaseSpeedLarge, {KeyCombo{Mod::Shift, Key::Comma}});
     rebind(hotkeys.resetSpeed, {KeyCombo{Mod::Control, Key::Slash}});
     rebind(hotkeys.pauseResume, {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::None, Key::Spacebar}});
     rebind(hotkeys.fwdFrameStep, {KeyCombo{Mod::None, Key::RightBracket}});

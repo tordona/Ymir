@@ -1,10 +1,12 @@
 #pragma once
 
+#include <ymir/util/inline.hpp>
+
 #include <cmath>
 
 namespace util {
 
-double RoundToMultiple(double value, double multiple) {
+FORCE_INLINE double RoundToMultiple(double value, double multiple) {
     return std::round(value / multiple) * multiple;
 }
 

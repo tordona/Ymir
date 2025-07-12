@@ -361,62 +361,7 @@ void App::RunEmulator() {
     auto embedfs = cmrc::Ymir_sdl3_rc::get_filesystem();
 
     // Screen parameters
-    struct ScreenParams {
-        ScreenParams()
-            : framebuffer(vdp::kMaxResH * vdp::kMaxResV) {
-            SetResolution(320, 224);
-            prevWidth = width;
-            prevHeight = height;
-            prevScaleX = scaleX;
-            prevScaleY = scaleY;
-        }
-
-        SDL_Window *window = nullptr;
-
-        uint32 width;
-        uint32 height;
-        uint32 scaleX;
-        uint32 scaleY;
-        uint32 fbScale = 1;
-
-        // Hacky garbage to help automatically resize window on resolution changes
-        bool resolutionChanged = false;
-        uint32 prevWidth;
-        uint32 prevHeight;
-        uint32 prevScaleX;
-        uint32 prevScaleY;
-
-        void SetResolution(uint32 width, uint32 height) {
-            const bool doubleResH = width >= 640;
-            const bool doubleResV = height >= 400;
-
-            this->prevWidth = this->width;
-            this->prevHeight = this->height;
-            this->prevScaleX = this->scaleX;
-            this->prevScaleY = this->scaleY;
-
-            this->width = width;
-            this->height = height;
-            this->scaleX = doubleResV && !doubleResH ? 2 : 1;
-            this->scaleY = doubleResH && !doubleResV ? 2 : 1;
-            this->resolutionChanged = true;
-        }
-
-        std::vector<uint32> framebuffer; // staging buffer
-        std::mutex mtxFramebuffer;
-        bool updated = false;
-        bool reduceLatency = false; // false = more performance; true = update frames more often
-
-        // Video sync
-        bool videoSync = false;
-        util::Event frameReadyEvent{false};   // emulator has written a new frame to the staging buffer
-        util::Event frameRequestEvent{false}; // GUI ready for the next frame
-        clk::time_point nextFrameTarget{};    // target time for next frame
-        clk::duration frameInterval{};        // interval between frames
-
-        uint64 frames = 0;
-        uint64 vdp1Frames = 0;
-    } screen;
+    auto &screen = m_context.screen;
 
     screen.videoSync = m_context.settings.video.fullScreen;
 
@@ -700,29 +645,61 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup framebuffer and render callbacks
 
-    m_context.saturn.VDP.SetRenderCallback({&screen, [](uint32 *fb, uint32 width, uint32 height, void *ctx) {
-                                                auto &screen = *static_cast<ScreenParams *>(ctx);
-                                                if (width != screen.width || height != screen.height) {
-                                                    screen.SetResolution(width, height);
-                                                }
-                                                ++screen.frames;
+    m_context.saturn.VDP.SetRenderCallback(
+        {&m_context, [](uint32 *fb, uint32 width, uint32 height, void *ctx) {
+             auto &sharedCtx = *static_cast<SharedContext *>(ctx);
+             auto &screen = sharedCtx.screen;
+             if (width != screen.width || height != screen.height) {
+                 screen.SetResolution(width, height);
+             }
+             ++screen.VDP2Frames;
 
-                                                if (screen.videoSync) {
-                                                    screen.frameRequestEvent.Wait(true);
-                                                }
-                                                if (screen.reduceLatency || !screen.updated || screen.videoSync) {
-                                                    std::unique_lock lock{screen.mtxFramebuffer};
-                                                    std::copy_n(fb, width * height, screen.framebuffer.data());
-                                                    screen.updated = true;
-                                                    if (screen.videoSync) {
-                                                        screen.frameReadyEvent.Set();
-                                                    }
-                                                }
-                                            }});
+             if (screen.videoSync) {
+                 screen.frameRequestEvent.Wait(true);
+             }
+             if (screen.reduceLatency || !screen.updated || screen.videoSync) {
+                 std::unique_lock lock{screen.mtxFramebuffer};
+                 std::copy_n(fb, width * height, screen.framebuffer.data());
+                 screen.updated = true;
+                 if (screen.videoSync) {
+                     screen.frameReadyEvent.Set();
+                 }
+             }
 
-    m_context.saturn.VDP.SetVDP1Callback({&screen, [](void *ctx) {
-                                              auto &screen = *static_cast<ScreenParams *>(ctx);
-                                              ++screen.vdp1Frames;
+             // Limit emulation speed if requested and not using video sync.
+             // When video sync is enabled, frame pacing is done by the GUI thread.
+             if (sharedCtx.emuSpeed.limitSpeed && !screen.videoSync &&
+                 sharedCtx.emuSpeed.GetCurrentSpeedFactor() != 1.0) {
+
+                 const auto frameInterval = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                     screen.frameInterval / sharedCtx.emuSpeed.GetCurrentSpeedFactor());
+
+                 // Sleep until 1ms before the next frame presentation time, then spin wait for the deadline.
+                 // Skip waiting if the frame target is too far into the future.
+                 auto now = clk::now();
+                 if (now < screen.nextEmuFrameTarget + frameInterval) {
+                     if (now < screen.nextEmuFrameTarget - 1ms) {
+                         std::this_thread::sleep_until(screen.nextEmuFrameTarget - 1ms);
+                     }
+                     while (clk::now() < screen.nextEmuFrameTarget) {
+                     }
+                 }
+
+                 now = clk::now();
+                 if (now > screen.nextEmuFrameTarget + frameInterval) {
+                     // The delay was too long for some reason; set next frame target time relative to now
+                     screen.nextEmuFrameTarget = now + frameInterval;
+                 } else {
+                     // The delay was on time; increment by the interval
+                     screen.nextEmuFrameTarget += frameInterval;
+                 }
+             }
+         }});
+
+    m_context.saturn.VDP.SetVDP1Callback({&m_context, [](void *ctx) {
+                                              auto &sharedCtx = *static_cast<SharedContext *>(ctx);
+                                              auto &screen = sharedCtx.screen;
+                                              ++screen.VDP1Frames;
                                           }});
 
     // ---------------------------------
@@ -841,6 +818,24 @@ void App::RunEmulator() {
                                        });
         inputContext.SetTriggerHandler(actions::general::ToggleFullScreen, [&](void *, const input::InputElement &) {
             m_context.settings.video.fullScreen = !m_context.settings.video.fullScreen;
+            m_context.settings.MakeDirty();
+        });
+        inputContext.SetTriggerHandler(actions::general::ToggleFrameRateOSD, [&](void *, const input::InputElement &) {
+            m_context.settings.general.showFrameRateOSD = !m_context.settings.general.showFrameRateOSD;
+            m_context.settings.MakeDirty();
+        });
+        inputContext.SetTriggerHandler(actions::general::NextFrameRateOSDPos, [&](void *, const input::InputElement &) {
+            const uint32 pos = static_cast<uint32>(m_context.settings.general.frameRateOSDPosition);
+            const uint32 nextPos = pos >= 3 ? 0 : pos + 1;
+            m_context.settings.general.frameRateOSDPosition =
+                static_cast<Settings::General::FrameRateOSDPosition>(nextPos);
+            m_context.settings.MakeDirty();
+        });
+        inputContext.SetTriggerHandler(actions::general::PrevFrameRateOSDPos, [&](void *, const input::InputElement &) {
+            const uint32 pos = static_cast<uint32>(m_context.settings.general.frameRateOSDPosition);
+            const uint32 prevPos = pos == 0 ? 3 : pos - 1;
+            m_context.settings.general.frameRateOSDPosition =
+                static_cast<Settings::General::FrameRateOSDPosition>(prevPos);
             m_context.settings.MakeDirty();
         });
     }
@@ -968,21 +963,6 @@ void App::RunEmulator() {
 
     // Emulation
     {
-        auto &generalSettings = m_context.settings.general;
-
-        auto getEmuSpeed = [&]() -> util::Observable<double> & {
-            return generalSettings.useAltSpeed.Get() ? generalSettings.altSpeedFactor : generalSettings.mainSpeedFactor;
-        };
-
-        auto increaseSpeed = [&](double step) {
-            auto &speed = getEmuSpeed();
-            speed = std::min(util::RoundToMultiple(speed + step, 0.1), 5.0);
-        };
-        auto decreaseSpeed = [&](double step) {
-            auto &speed = getEmuSpeed();
-            speed = std::max(util::RoundToMultiple(speed - step, 0.1), 0.1);
-        };
-
         inputContext.SetButtonHandler(actions::emu::TurboSpeed,
                                       [&](void *, const input::InputElement &, bool actuated) {
                                           m_context.emuSpeed.limitSpeed = !actuated;
@@ -993,28 +973,58 @@ void App::RunEmulator() {
             m_audioSystem.SetSync(m_context.emuSpeed.ShouldSyncToAudio());
         });
         inputContext.SetTriggerHandler(actions::emu::ToggleAlternateSpeed, [&](void *, const input::InputElement &) {
-            m_context.settings.general.useAltSpeed = !m_context.settings.general.useAltSpeed;
+            auto &settings = m_context.settings.general;
+            settings.useAltSpeed = !settings.useAltSpeed;
+            auto &speed = settings.useAltSpeed.Get() ? settings.altSpeedFactor : settings.mainSpeedFactor;
+            m_context.settings.MakeDirty();
             m_context.DisplayMessage(fmt::format("Using {} emulation speed: {:.0f}%",
-                                                 (generalSettings.useAltSpeed.Get() ? "alternate" : "primary"),
-                                                 getEmuSpeed().Get() * 100.0));
+                                                 (settings.useAltSpeed.Get() ? "alternate" : "primary"),
+                                                 speed.Get() * 100.0));
         });
         inputContext.SetTriggerHandler(actions::emu::IncreaseSpeed, [&](void *, const input::InputElement &) {
-            increaseSpeed(0.1);
+            auto &settings = m_context.settings.general;
+            auto &speed = settings.useAltSpeed.Get() ? settings.altSpeedFactor : settings.mainSpeedFactor;
+            speed = std::min(util::RoundToMultiple(speed + 0.05, 0.05), 5.0);
+            m_context.settings.MakeDirty();
             m_context.DisplayMessage(fmt::format("{} emulation speed increased to {:.0f}%",
-                                                 (generalSettings.useAltSpeed.Get() ? "Alternate" : "Primary"),
-                                                 getEmuSpeed().Get() * 100.0));
+                                                 (settings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 speed.Get() * 100.0));
         });
         inputContext.SetTriggerHandler(actions::emu::DecreaseSpeed, [&](void *, const input::InputElement &) {
-            decreaseSpeed(0.1);
+            auto &settings = m_context.settings.general;
+            auto &speed = settings.useAltSpeed.Get() ? settings.altSpeedFactor : settings.mainSpeedFactor;
+            speed = std::max(util::RoundToMultiple(speed - 0.05, 0.05), 0.1);
+            m_context.settings.MakeDirty();
             m_context.DisplayMessage(fmt::format("{} emulation speed decreased to {:.0f}%",
-                                                 (generalSettings.useAltSpeed.Get() ? "Alternate" : "Primary"),
-                                                 getEmuSpeed().Get() * 100.0));
+                                                 (settings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 speed.Get() * 100.0));
+        });
+        inputContext.SetTriggerHandler(actions::emu::IncreaseSpeedLarge, [&](void *, const input::InputElement &) {
+            auto &settings = m_context.settings.general;
+            auto &speed = settings.useAltSpeed.Get() ? settings.altSpeedFactor : settings.mainSpeedFactor;
+            speed = std::min(util::RoundToMultiple(speed + 0.25, 0.05), 5.0);
+            m_context.settings.MakeDirty();
+            m_context.DisplayMessage(fmt::format("{} emulation speed increased to {:.0f}%",
+                                                 (settings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 speed.Get() * 100.0));
+        });
+        inputContext.SetTriggerHandler(actions::emu::DecreaseSpeedLarge, [&](void *, const input::InputElement &) {
+            auto &settings = m_context.settings.general;
+            auto &speed = settings.useAltSpeed.Get() ? settings.altSpeedFactor : settings.mainSpeedFactor;
+            speed = std::max(util::RoundToMultiple(speed - 0.25, 0.05), 0.1);
+            m_context.settings.MakeDirty();
+            m_context.DisplayMessage(fmt::format("{} emulation speed decreased to {:.0f}%",
+                                                 (settings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 speed.Get() * 100.0));
         });
         inputContext.SetTriggerHandler(actions::emu::ResetSpeed, [&](void *, const input::InputElement &) {
-            getEmuSpeed() = generalSettings.useAltSpeed.Get() ? 0.5 : 1.0;
+            auto &settings = m_context.settings.general;
+            auto &speed = settings.useAltSpeed.Get() ? settings.altSpeedFactor : settings.mainSpeedFactor;
+            speed = settings.useAltSpeed.Get() ? 0.5 : 1.0;
+            m_context.settings.MakeDirty();
             m_context.DisplayMessage(fmt::format("{} emulation speed reset to {:.0f}%",
-                                                 (generalSettings.useAltSpeed.Get() ? "Alternate" : "Primary"),
-                                                 getEmuSpeed().Get() * 100.0));
+                                                 (settings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 speed.Get() * 100.0));
         });
 
         inputContext.SetTriggerHandler(actions::emu::PauseResume, [&](void *, const input::InputElement &) {
@@ -1290,60 +1300,91 @@ void App::RunEmulator() {
     while (true) {
         bool fitWindowToScreenNow = false;
 
-        // Wait for frame update from emulator core if in full screen mode and not paused or fast-forwarding
+        // Use video sync if in full screen mode and not paused or fast-forwarding
         const bool fullScreen = m_context.settings.video.fullScreen;
-        screen.videoSync = fullScreen && !paused && m_audioSystem.IsSync();
-        if (fullScreen && !paused && m_audioSystem.IsSync()) {
-            // Deliver frame early if audio buffer is emptying (video sync is slowing down emulation too much).
-            // Attempt to maintain the audio buffer between 30% and 70%.
-            // Smoothly adjust frame interval up or down if audio buffer exceeds either threshold.
-            const uint32 audioBufferSize = m_audioSystem.GetBufferCount();
-            const uint32 audioBufferCap = m_audioSystem.GetBufferCapacity();
-            const double audioBufferMinLevel = 0.3;
-            const double audioBufferMaxLevel = 0.7;
-            const double frameIntervalAdjustWeight = 0.8; // how much weight the current value has over the moving avg
-            const double frameIntervalAdjustFactor = 0.2; // how much adjustment is applied to the frame interval
-            const double audioBufferPct = (double)audioBufferSize / audioBufferCap;
-            if (audioBufferPct < audioBufferMinLevel) {
-                // Audio buffer is too low; lower frame interval
-                const double adjustPct =
-                    std::clamp((audioBufferMinLevel - audioBufferPct) / audioBufferMinLevel, 0.0, 1.0);
-                avgFrameDelay = avgFrameDelay + (adjustPct - avgFrameDelay) * frameIntervalAdjustWeight;
+        screen.videoSync = fullScreen && !paused && m_context.emuSpeed.limitSpeed;
 
-            } else if (audioBufferPct > audioBufferMaxLevel) {
-                // Audio buffer is too high; increase frame interval
-                const double adjustPct =
-                    std::clamp((audioBufferPct - audioBufferMaxLevel) / (1.0 - audioBufferMaxLevel), 0.0, 1.0);
-                avgFrameDelay = avgFrameDelay - (adjustPct + avgFrameDelay) * frameIntervalAdjustWeight;
+        const double frameIntervalAdjustFactor = 0.2; // how much adjustment is applied to the frame interval
 
+        if (m_context.emuSpeed.limitSpeed) {
+            if (m_context.emuSpeed.GetCurrentSpeedFactor() == 1.0) {
+                // Deliver frame early if audio buffer is emptying (video sync is slowing down emulation too much).
+                // Attempt to maintain the audio buffer between 30% and 70%.
+                // Smoothly adjust frame interval up or down if audio buffer exceeds either threshold.
+                const uint32 audioBufferSize = m_audioSystem.GetBufferCount();
+                const uint32 audioBufferCap = m_audioSystem.GetBufferCapacity();
+                const double audioBufferMinLevel = 0.3;
+                const double audioBufferMaxLevel = 0.7;
+                const double frameIntervalAdjustWeight =
+                    0.8; // how much weight the current value has over the moving avg
+                const double audioBufferPct = (double)audioBufferSize / audioBufferCap;
+                if (audioBufferPct < audioBufferMinLevel) {
+                    // Audio buffer is too low; lower frame interval
+                    const double adjustPct =
+                        std::clamp((audioBufferMinLevel - audioBufferPct) / audioBufferMinLevel, 0.0, 1.0);
+                    avgFrameDelay = avgFrameDelay + (adjustPct - avgFrameDelay) * frameIntervalAdjustWeight;
+
+                } else if (audioBufferPct > audioBufferMaxLevel) {
+                    // Audio buffer is too high; increase frame interval
+                    const double adjustPct =
+                        std::clamp((audioBufferPct - audioBufferMaxLevel) / (1.0 - audioBufferMaxLevel), 0.0, 1.0);
+                    avgFrameDelay = avgFrameDelay - (adjustPct + avgFrameDelay) * frameIntervalAdjustWeight;
+
+                } else {
+                    // Audio buffer is within range; restore frame interval to normal amount
+                    avgFrameDelay *= 1.0 - frameIntervalAdjustWeight;
+                }
             } else {
-                // Audio buffer is within range; restore frame interval to normal amount
-                avgFrameDelay *= 1.0 - frameIntervalAdjustWeight;
+                // Don't bother syncing to audio if not running at 100% speed
+                avgFrameDelay = 0.0;
             }
+
+            // TODO: don't let GUI go below 48 fps; duplicate frames if needed
+            static constexpr auto kMaxGUIFrameInterval =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(1s / 48.0);
+
+            auto baseFrameInterval = screen.frameInterval / m_context.emuSpeed.GetCurrentSpeedFactor();
+            if (baseFrameInterval > kMaxGUIFrameInterval) {
+                screen.dupFrames = std::ceil(baseFrameInterval / kMaxGUIFrameInterval);
+                baseFrameInterval /= screen.dupFrames;
+            } else {
+                screen.dupFrames = 1;
+            }
+            const auto frameInterval = std::chrono::duration_cast<std::chrono::nanoseconds>(baseFrameInterval);
 
             // Adjust frame presentation time
             screen.nextFrameTarget -= std::chrono::duration_cast<std::chrono::nanoseconds>(
-                screen.frameInterval * avgFrameDelay * frameIntervalAdjustFactor);
+                frameInterval * avgFrameDelay * frameIntervalAdjustFactor);
 
-            // Sleep until 1ms before the next frame presentation time, then spin wait for the deadline
-            auto now = clk::now();
-            if (now < screen.nextFrameTarget - 1ms) {
-                std::this_thread::sleep_until(screen.nextFrameTarget - 1ms);
-            }
-            while (clk::now() < screen.nextFrameTarget) {
+            if (screen.videoSync) {
+                // Sleep until 1ms before the next frame presentation time, then spin wait for the deadline
+                auto now = clk::now();
+                if (now < screen.nextFrameTarget - 1ms) {
+                    std::this_thread::sleep_until(screen.nextFrameTarget - 1ms);
+                }
+                while (clk::now() < screen.nextFrameTarget) {
+                }
             }
 
             // Update next frame target
-            now = clk::now();
-            if (now > screen.nextFrameTarget + screen.frameInterval) {
-                // The frame was presented too late; set next frame target time relative to now
-                screen.nextFrameTarget = now + screen.frameInterval;
-            } else {
-                // The frame was presented on time; increment by the interval
-                screen.nextFrameTarget += screen.frameInterval;
+            {
+                if (fullScreen) {
+                    auto now = clk::now();
+                    if (now > screen.nextFrameTarget + frameInterval) {
+                        // The frame was presented too late; set next frame target time relative to now
+                        screen.nextFrameTarget = now + frameInterval;
+                    } else {
+                        // The frame was presented on time; increment by the interval
+                        screen.nextFrameTarget += frameInterval;
+                    }
+                }
+                if (++screen.dupFrameCounter >= screen.dupFrames) {
+                    screen.frameRequestEvent.Set();
+                    screen.dupFrameCounter = 0;
+                    screen.expectFrame = true;
+                }
             }
         }
-        screen.frameRequestEvent.Set();
 
         // Process SDL events
         SDL_Event evt{};
@@ -1611,8 +1652,9 @@ void App::RunEmulator() {
 
         // Update display
         if (screen.updated || screen.videoSync) {
-            if (screen.videoSync) {
+            if (screen.videoSync && screen.expectFrame) {
                 screen.frameReadyEvent.Wait(true);
+                screen.expectFrame = false;
             }
             screen.updated = false;
             std::unique_lock lock{screen.mtxFramebuffer};
@@ -1631,38 +1673,54 @@ void App::RunEmulator() {
 
         // Calculate performance and update title bar
         auto now = clk::now();
-        if (now - t >= 1s) {
-            const media::Disc &disc = m_context.saturn.CDBlock.GetDisc();
-            const media::SaturnHeader &header = disc.header;
-            std::string productNumber = "";
-            std::string gameTitle{};
-            if (disc.sessions.empty()) {
-                gameTitle = "No disc inserted";
-            } else {
-                if (!header.productNumber.empty()) {
-                    productNumber = fmt::format("[{}] ", header.productNumber);
-                }
-
-                if (header.gameTitle.empty()) {
-                    gameTitle = "Unnamed game";
+        {
+            std::string fullGameTitle;
+            {
+                std::unique_lock lock{m_context.locks.disc};
+                const media::Disc &disc = m_context.saturn.CDBlock.GetDisc();
+                const media::SaturnHeader &header = disc.header;
+                std::string productNumber = "";
+                std::string gameTitle{};
+                if (disc.sessions.empty()) {
+                    gameTitle = "No disc inserted";
                 } else {
-                    gameTitle = header.gameTitle;
+                    if (!header.productNumber.empty()) {
+                        productNumber = fmt::format("[{}] ", header.productNumber);
+                    }
+
+                    if (header.gameTitle.empty()) {
+                        gameTitle = "Unnamed game";
+                    } else {
+                        gameTitle = header.gameTitle;
+                    }
                 }
+                fullGameTitle = fmt::format("{}{}", productNumber, gameTitle);
             }
-            std::string fullGameTitle = fmt::format("{}{}", productNumber, gameTitle);
+            std::string speed = paused ? "paused"
+                                : m_context.emuSpeed.limitSpeed
+                                    ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
+                                                  m_context.emuSpeed.altSpeed ? " (alt)" : "")
+                                    : "unlimited";
 
             std::string title{};
             if (paused) {
-                title = fmt::format("Ymir " Ymir_FULL_VERSION " - {} | VDP2: paused | VDP1: paused | GUI: {:.0f} fps",
-                                    fullGameTitle, io.Framerate);
+                title = fmt::format("Ymir " Ymir_FULL_VERSION
+                                    " - {} | Speed: {} | VDP2: paused | VDP1: paused | GUI: {:.0f} fps",
+                                    fullGameTitle, speed, io.Framerate);
             } else {
-                title = fmt::format("Ymir " Ymir_FULL_VERSION " - {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps",
-                                    fullGameTitle, screen.frames, screen.vdp1Frames, io.Framerate);
+                title = fmt::format("Ymir " Ymir_FULL_VERSION
+                                    " - {} | Speed: {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps",
+                                    fullGameTitle, speed, screen.lastVDP2Frames, screen.lastVDP1Frames, io.Framerate);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
-            screen.frames = 0;
-            screen.vdp1Frames = 0;
-            t = now;
+
+            if (now - t >= 1s) {
+                screen.lastVDP2Frames = screen.VDP2Frames;
+                screen.lastVDP1Frames = screen.VDP1Frames;
+                screen.VDP2Frames = 0;
+                screen.VDP1Frames = 0;
+                t = now;
+            }
         }
 
         const bool prevForceAspectRatio = m_context.settings.video.forceAspectRatio;
@@ -2294,20 +2352,22 @@ void App::RunEmulator() {
                 // TODO: add mouse interactions
             }
 
+            // Draw pause/fast forward/rewind indicators on top-right of viewport
             {
                 static constexpr float kBaseSize = 50.0f;
                 static constexpr float kBasePadding = 30.0f;
                 static constexpr float kBaseRounding = 0;
                 static constexpr float kBaseShadowOffset = 3.0f;
+                static constexpr float kBaseTextShadowOffset = 1.0f;
                 static constexpr sint64 kBlinkInterval = 700;
                 const float size = kBaseSize * m_context.displayScale;
                 const float padding = kBasePadding * m_context.displayScale;
                 const float rounding = kBaseRounding * m_context.displayScale;
                 const float shadowOffset = kBaseShadowOffset * m_context.displayScale;
+                const float textShadowOffset = kBaseTextShadowOffset * m_context.displayScale;
 
                 auto *drawList = ImGui::GetBackgroundDrawList();
 
-                // Draw pause/fast forward/rewind indicators on top-right of viewport
                 const ImVec2 tl{viewport->WorkPos.x + viewport->WorkSize.x - padding - size,
                                 viewport->WorkPos.y + padding};
                 const ImVec2 br{tl.x + size, tl.y + size};
@@ -2335,11 +2395,20 @@ void App::RunEmulator() {
                                             rounding);
                 } else {
                     const bool rev = m_context.rewindBuffer.IsRunning() && m_context.rewinding;
-                    if (!m_audioSystem.IsSync()) {
-                        // Fast-forward/rewind
+                    const float speedFactor = m_context.emuSpeed.GetCurrentSpeedFactor();
+                    const bool slomo = m_context.emuSpeed.limitSpeed && speedFactor < 1.0;
+                    if (!m_context.emuSpeed.limitSpeed || speedFactor != 1.0) {
+                        // Fast forward/rewind -> two triangles: >> or <<
+                        // Slow motion/rewind -> rectangle and triangle: |> or <|
+                        const std::string speed =
+                            m_context.emuSpeed.limitSpeed
+                                ? fmt::format("{:.02f}x{}", speedFactor, m_context.emuSpeed.altSpeed ? "\n(alt)" : "")
+                                : "(unlimited)";
+
                         ImVec2 p1{tl.x, tl.y};
                         ImVec2 p2{tl.x + size * 0.5f, (tl.y + br.y) * 0.5f};
                         ImVec2 p3{tl.x, br.y};
+
                         if (rev) {
                             p1 = {tl.x + size * 0.5f, br.y};
                             p2 = {tl.x, (tl.y + br.y) * 0.5f};
@@ -2350,17 +2419,64 @@ void App::RunEmulator() {
                             p3 = {tl.x, br.y};
                         }
 
-                        drawList->AddTriangleFilled(ImVec2(p1.x + shadowOffset, p1.y + shadowOffset),
-                                                    ImVec2(p2.x + shadowOffset, p2.y + shadowOffset),
-                                                    ImVec2(p3.x + shadowOffset, p3.y + shadowOffset), shadowColor);
-                        drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f + shadowOffset, p1.y + shadowOffset),
-                                                    ImVec2(p2.x + size * 0.5f + shadowOffset, p2.y + shadowOffset),
-                                                    ImVec2(p3.x + size * 0.5f + shadowOffset, p3.y + shadowOffset),
-                                                    shadowColor);
+                        if (slomo && rev) {
+                            drawList->AddRectFilled(ImVec2(tl.x + size * 0.7f + shadowOffset, tl.y + shadowOffset),
+                                                    ImVec2(tl.x + size * 0.9f + shadowOffset, br.y + shadowOffset),
+                                                    shadowColor, rounding);
+                            drawList->AddTriangleFilled(ImVec2(p1.x + shadowOffset, p1.y + shadowOffset),
+                                                        ImVec2(p2.x + shadowOffset, p2.y + shadowOffset),
+                                                        ImVec2(p3.x + shadowOffset, p3.y + shadowOffset), shadowColor);
 
-                        drawList->AddTriangleFilled(p1, p2, p3, color);
-                        drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f, p1.y), ImVec2(p2.x + size * 0.5f, p2.y),
-                                                    ImVec2(p3.x + size * 0.5f, p3.y), color);
+                            drawList->AddRectFilled(ImVec2(tl.x + size * 0.7f, tl.y), ImVec2(tl.x + size * 0.9f, br.y),
+                                                    color, rounding);
+                            drawList->AddTriangleFilled(ImVec2(p1.x, p1.y), ImVec2(p2.x, p2.y), ImVec2(p3.x, p3.y),
+                                                        color);
+                        } else if (slomo) {
+                            drawList->AddRectFilled(ImVec2(tl.x + size * 0.1f + shadowOffset, tl.y + shadowOffset),
+                                                    ImVec2(tl.x + size * 0.3f + shadowOffset, br.y + shadowOffset),
+                                                    shadowColor, rounding);
+                            drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f + shadowOffset, p1.y + shadowOffset),
+                                                        ImVec2(p2.x + size * 0.5f + shadowOffset, p2.y + shadowOffset),
+                                                        ImVec2(p3.x + size * 0.5f + shadowOffset, p3.y + shadowOffset),
+                                                        shadowColor);
+
+                            drawList->AddRectFilled(ImVec2(tl.x + size * 0.1f, tl.y), ImVec2(tl.x + size * 0.3f, br.y),
+                                                    color, rounding);
+                            drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f, p1.y),
+                                                        ImVec2(p2.x + size * 0.5f, p2.y),
+                                                        ImVec2(p3.x + size * 0.5f, p3.y), color);
+                        } else {
+                            drawList->AddTriangleFilled(ImVec2(p1.x + shadowOffset, p1.y + shadowOffset),
+                                                        ImVec2(p2.x + shadowOffset, p2.y + shadowOffset),
+                                                        ImVec2(p3.x + shadowOffset, p3.y + shadowOffset), shadowColor);
+                            drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f + shadowOffset, p1.y + shadowOffset),
+                                                        ImVec2(p2.x + size * 0.5f + shadowOffset, p2.y + shadowOffset),
+                                                        ImVec2(p3.x + size * 0.5f + shadowOffset, p3.y + shadowOffset),
+                                                        shadowColor);
+
+                            drawList->AddTriangleFilled(p1, p2, p3, color);
+                            drawList->AddTriangleFilled(ImVec2(p1.x + size * 0.5f, p1.y),
+                                                        ImVec2(p2.x + size * 0.5f, p2.y),
+                                                        ImVec2(p3.x + size * 0.5f, p3.y), color);
+                        }
+
+                        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
+                        const auto textSize = ImGui::CalcTextSize(speed.c_str());
+                        ImGui::PopFont();
+
+                        const ImVec2 textPadding = style.FramePadding;
+
+                        const ImVec2 rectPos(tl.x + (size - textSize.x - textPadding.x * 2.0f) * 0.5f,
+                                             br.y + textPadding.y);
+                        const ImVec2 textPos(rectPos.x + textPadding.x, rectPos.y + textPadding.y);
+
+                        drawList->AddText(m_context.fonts.sansSerif.regular,
+                                          m_context.fonts.sizes.medium * m_context.displayScale,
+                                          ImVec2(textPos.x + textShadowOffset, textPos.y + textShadowOffset),
+                                          ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.85f)), speed.c_str());
+                        drawList->AddText(m_context.fonts.sansSerif.regular,
+                                          m_context.fonts.sizes.medium * m_context.displayScale, textPos,
+                                          ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.00f)), speed.c_str());
                     } else if (rev) {
                         const ImVec2 p1 = {tl.x + size * 0.75f, br.y};
                         const ImVec2 p2 = {tl.x + size * 0.25f, (tl.y + br.y) * 0.5f};
@@ -2373,6 +2489,72 @@ void App::RunEmulator() {
                         drawList->AddTriangleFilled(p1, p2, p3, color);
                     }
                 }
+            }
+
+            // Draw frame rate counters
+            if (m_context.settings.general.showFrameRateOSD) {
+                std::string speed = paused ? "paused"
+                                    : m_context.emuSpeed.limitSpeed
+                                        ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
+                                                      m_context.emuSpeed.altSpeed ? " (alt)" : "")
+                                        : "unlimited";
+                std::string fpsText{};
+                if (paused) {
+                    fpsText =
+                        fmt::format("VDP2: paused\nVDP1: paused\nGUI: {:.0f} fps\nSpeed: {}", io.Framerate, speed);
+                } else {
+                    fpsText = fmt::format("VDP2: {} fps\nVDP1: {} fps\nGUI: {:.0f} fps\nSpeed: {}",
+                                          screen.lastVDP2Frames, screen.lastVDP1Frames, io.Framerate, speed);
+                }
+
+                auto *drawList = ImGui::GetBackgroundDrawList();
+                bool top, left;
+                switch (m_context.settings.general.frameRateOSDPosition) {
+                case Settings::General::FrameRateOSDPosition::TopLeft:
+                    top = true;
+                    left = true;
+                    break;
+                default: [[fallthrough]];
+                case Settings::General::FrameRateOSDPosition::TopRight:
+                    top = true;
+                    left = false;
+                    break;
+                case Settings::General::FrameRateOSDPosition::BottomLeft:
+                    top = false;
+                    left = true;
+                    break;
+                case Settings::General::FrameRateOSDPosition::BottomRight:
+                    top = false;
+                    left = false;
+                    break;
+                }
+
+                const ImVec2 padding = style.FramePadding;
+                const ImVec2 spacing = style.ItemSpacing;
+
+                const float anchorX =
+                    left ? viewport->WorkPos.x + padding.x : viewport->WorkPos.x + viewport->WorkSize.x - padding.x;
+                const float anchorY =
+                    top ? viewport->WorkPos.y + padding.x : viewport->WorkPos.y + viewport->WorkSize.y - padding.x;
+
+                const float textWrapWidth = viewport->WorkSize.x - padding.x * 4.0f;
+
+                ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.small);
+                const auto textSize = ImGui::CalcTextSize(fpsText.c_str(), nullptr, false, textWrapWidth);
+                ImGui::PopFont();
+
+                const ImVec2 rectPos(left ? anchorX + padding.x : anchorX - padding.x - spacing.x - textSize.x,
+                                     top ? anchorY + padding.x : anchorY - padding.x - spacing.y - textSize.y);
+
+                const ImVec2 textPos(rectPos.x + padding.x, rectPos.y + padding.y);
+
+                drawList->AddRectFilled(
+                    rectPos,
+                    ImVec2(rectPos.x + textSize.x + padding.x * 2.0f, rectPos.y + textSize.y + padding.y * 2.0f),
+                    ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.5f)));
+                drawList->AddText(
+                    m_context.fonts.sansSerif.regular, m_context.fonts.sizes.small * m_context.displayScale, textPos,
+                    ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f)), fpsText.c_str(), nullptr, textWrapWidth);
             }
 
             // Draw messages
@@ -2401,23 +2583,26 @@ void App::RunEmulator() {
                         alpha = 1.0f;
                     }
 
-                    const float textWrapWidth =
-                        viewport->WorkSize.x - style.FramePadding.x * 4.0f - style.ItemSpacing.x * 2.0f;
+                    const ImVec2 padding = style.FramePadding;
+                    const ImVec2 spacing = style.ItemSpacing;
+
+                    const float textWrapWidth = viewport->WorkSize.x - padding.x * 4.0f - spacing.x * 2.0f;
 
                     ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
                     const auto textSize = ImGui::CalcTextSize(message->message.c_str(), nullptr, false, textWrapWidth);
                     ImGui::PopFont();
-                    const ImVec2 textPos(messageX + style.FramePadding.x, messageY + style.FramePadding.y);
+                    const ImVec2 textPos(messageX + padding.x, messageY + padding.y);
 
-                    drawList->AddRectFilled(ImVec2(messageX, messageY),
-                                            ImVec2(messageX + textSize.x + style.FramePadding.x * 2.0f,
-                                                   messageY + textSize.y + style.FramePadding.y * 2.0f),
-                                            ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, alpha * 0.5f)));
-                    drawList->AddText(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large, textPos,
+                    drawList->AddRectFilled(
+                        ImVec2(messageX, messageY),
+                        ImVec2(messageX + textSize.x + padding.x * 2.0f, messageY + textSize.y + padding.y * 2.0f),
+                        ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, alpha * 0.5f)));
+                    drawList->AddText(m_context.fonts.sansSerif.regular,
+                                      m_context.fonts.sizes.large * m_context.displayScale, textPos,
                                       ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, alpha)), message->message.c_str(),
                                       nullptr, textWrapWidth);
 
-                    messageY += textSize.y + style.FramePadding.y * 2.0f;
+                    messageY += textSize.y + padding.y * 2.0f;
                 }
             }
         }

@@ -130,10 +130,15 @@ public:
     std::filesystem::path path;
 
     struct General {
+        enum class FrameRateOSDPosition { TopLeft, TopRight, BottomLeft, BottomRight };
+
         bool preloadDiscImagesToRAM;
 
         bool boostEmuThreadPriority;
         bool boostProcessPriority;
+
+        bool showFrameRateOSD;
+        FrameRateOSDPosition frameRateOSDPosition;
 
         bool enableRewindBuffer;
         // TODO: rewind buffer size
@@ -160,6 +165,9 @@ public:
         input::InputBind openSettings{actions::general::OpenSettings};
         input::InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
         input::InputBind toggleFullScreen{actions::general::ToggleFullScreen};
+        input::InputBind toggleFrameRateOSD{actions::general::ToggleFrameRateOSD};
+        input::InputBind nextFrameRateOSDPos{actions::general::NextFrameRateOSDPos};
+        input::InputBind prevFrameRateOSDPos{actions::general::PrevFrameRateOSDPos};
 
         input::InputBind toggleMute{actions::audio::ToggleMute};
         input::InputBind increaseVolume{actions::audio::IncreaseVolume};
@@ -178,6 +186,8 @@ public:
         input::InputBind toggleAlternateSpeed{actions::emu::ToggleAlternateSpeed};
         input::InputBind increaseSpeed{actions::emu::IncreaseSpeed};
         input::InputBind decreaseSpeed{actions::emu::DecreaseSpeed};
+        input::InputBind increaseSpeedLarge{actions::emu::IncreaseSpeedLarge};
+        input::InputBind decreaseSpeedLarge{actions::emu::DecreaseSpeedLarge};
         input::InputBind resetSpeed{actions::emu::ResetSpeed};
         input::InputBind pauseResume{actions::emu::PauseResume};
         input::InputBind fwdFrameStep{actions::emu::ForwardFrameStep};

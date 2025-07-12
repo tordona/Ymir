@@ -49,6 +49,22 @@ void GeneralSettingsView::Display() {
         "May help reduce stuttering if you're loading images from a slow disk or from the network.",
         m_context.displayScale);
 
+    MakeDirty(ImGui::Checkbox("Show frame rate OSD", &settings.showFrameRateOSD));
+    ImGui::Indent();
+    auto osdOption = [&](const char *name, Settings::General::FrameRateOSDPosition value) {
+        if (MakeDirty(ImGui::RadioButton(name, settings.frameRateOSDPosition == value))) {
+            settings.frameRateOSDPosition = value;
+        }
+    };
+    osdOption("Top left##fps_osd", Settings::General::FrameRateOSDPosition::TopLeft);
+    ImGui::SameLine();
+    osdOption("Top right##fps_osd", Settings::General::FrameRateOSDPosition::TopRight);
+    ImGui::SameLine();
+    osdOption("Bottom left##fps_osd", Settings::General::FrameRateOSDPosition::BottomLeft);
+    ImGui::SameLine();
+    osdOption("Bottom right##fps_osd", Settings::General::FrameRateOSDPosition::BottomRight);
+    ImGui::Unindent();
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);

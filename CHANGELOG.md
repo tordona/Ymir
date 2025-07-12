@@ -4,10 +4,12 @@
 
 ### New features and improvements
 
-- App: Added save states to File menu.
-- App: Added new 3:2 and 16:10 forced aspect ratio options.
-- App: Added simple message overlay system to display some basic notifications. (#288)
 - App: Added display rotation options for TATE mode games. (#256)
+- App: Added frame rate OSD and hotkeys to toggle it and change positions.
+- App: Added new 3:2 and 16:10 forced aspect ratio options.
+- App: Added save states to File menu.
+- App: Added simple message overlay system to display some basic notifications. (#288)
+- App: Display emulation speed in title bar and under speed indicator, and add a new indicator for slow motion. (#16)
 - App: Improve full screen frame pacing even further by spin-waiting for up to 1 ms before the frame presentation target.
 - App: Include timestamp on save states.
 - App: Notify about loading/saving save states or switching save state slots.
@@ -15,12 +17,14 @@
 - Backup Manager: Make all columns sortable.
 - Backup Manager: Show logical block usage (matching BIOS numbers) + header blocks. (#294)
 - Debugger: Added basic VDP1 registers inspector window.
+- Input: Added new keybinds for frame rate limit control: increase/decrease speed, switch between primary/alternate speed, reset speed. (#16)
 - Input: Changed default keybinds for Pause/Resume action from "Pause, Ctrl+P" to "Pause, Spacebar".
 - Input: Removed Return from default binds to Port 1 Start button to avoid conflict with full screen hotkey (Alt+Enter)
-- Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - Settings: Added "Clear all" button to controller configuration window to clear all binds. (#288)
+- Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.
 - System: Map 030'0000-03F'FFFF memory area.
+- Video: Implemented frame rate limiter. (#16)
 
 ### Fixes
 
@@ -31,10 +35,10 @@
 - Media: Skip blank lines in CUE files.
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.
 - SCU: Allow SCU DSP program and data RAM reads or writes while the program is paused (thanks to @celeriyacon).
+- SCU: DSP data RAM reads should return 0xFFFFFFFF while program is running (thanks to @celeriyacon).
 - SCU: HBlank IN DMA transfers should not be gated by timers. Fixes non-scrolling Shinobi-X cityscape background. (#193)
 - SCU: Improve HBlank IN, VBlank IN and VBlank OUT interrupt signal handling.
 - SCU: Interleave SCU DSP DMA transfers with program execution when not writing to Program RAM or accessing the CT used by DMA (thanks to @celeriyacon).
-- SCU: DSP data RAM reads should return 0xFFFFFFFF while program is running (thanks to @celeriyacon).
 - SCU: Run all pending DMA transfers instead of just the highest priority.
 - SCU: Split up MSH2/SSH2 interrupt handling.
 - SCU: Various fixes to SCU DSP DMA transfers to DSP Program RAM (thanks to @celeriyacon).
@@ -49,8 +53,8 @@
 - VDP1: Include source color MSB when rendering polygons in half-luminance mode. Fixes intro FMV background on Crows - The Battle Action. (#107)
 - VDP1: Mask CMDCOLR bits 0..3 in 4bpp banked sprite mode. Fixes palette issues in Steam-Heart's and Dragon Ball Z - Shinbutouden. (#69, #278)
 - VDP1: Properly handle DIE/DIL in single-density interlaced mode. Fixes text drawn twice as tall in Resident Evil options menu. (#180)
-- VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
 - VDP2: Adjust character data offset for 2x2 characters in RGB 8:8:8 color format. Fixes garbled FMV in Crusader - No Remorse. (#108)
+- VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
 - VDP2: Fix single-density interlaced mode.
 - VDP2: Fix sprite layer display when rotation mode is enabled. Fixes sliding 3D graphics on Hang-On GP and Highway 2000. (#167, #208, #277)
 - VDP2: Fix transparent VDP1 color data handling. Fixes missing graphics in Rayman's level select screens and Bubble Bobble's sky in the title screen. (#262)

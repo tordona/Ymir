@@ -10,6 +10,11 @@ namespace general {
     inline constexpr auto ToggleWindowedVideoOutput =
         input::Action::Trigger(0x001001, "General", "Toggle windowed video output");
     inline constexpr auto ToggleFullScreen = input::Action::Trigger(0x001002, "General", "Toggle full screen");
+    inline constexpr auto ToggleFrameRateOSD = input::Action::Trigger(0x001003, "General", "Toggle frame rate OSD");
+    inline constexpr auto NextFrameRateOSDPos =
+        input::Action::Trigger(0x001004, "General", "Next frame rate OSD position");
+    inline constexpr auto PrevFrameRateOSDPos =
+        input::Action::Trigger(0x001005, "General", "Previous frame rate OSD position");
 
 } // namespace general
 
@@ -133,9 +138,15 @@ namespace emu {
     inline constexpr auto TurboSpeedHold = input::Action::Trigger(0xE020F0, "Emulation", "Turbo speed (hold)");
     inline constexpr auto ToggleAlternateSpeed =
         input::Action::Trigger(0xE02001, "Emulation", "Toggle alternate speed");
-    inline constexpr auto IncreaseSpeed = input::Action::RepeatableTrigger(0xE02002, "Emulation", "Increase speed");
-    inline constexpr auto DecreaseSpeed = input::Action::RepeatableTrigger(0xE02003, "Emulation", "Decrease speed");
-    inline constexpr auto ResetSpeed = input::Action::Trigger(0xE02004, "Emulation", "Reset speed");
+    inline constexpr auto IncreaseSpeed =
+        input::Action::RepeatableTrigger(0xE02002, "Emulation", "Increase speed by 5%");
+    inline constexpr auto DecreaseSpeed =
+        input::Action::RepeatableTrigger(0xE02003, "Emulation", "Decrease speed by 5%");
+    inline constexpr auto IncreaseSpeedLarge =
+        input::Action::RepeatableTrigger(0xE02004, "Emulation", "Increase speed by 25%");
+    inline constexpr auto DecreaseSpeedLarge =
+        input::Action::RepeatableTrigger(0xE02005, "Emulation", "Decrease speed by 25%");
+    inline constexpr auto ResetSpeed = input::Action::Trigger(0xE02006, "Emulation", "Reset speed");
 
     inline constexpr auto PauseResume = input::Action::Trigger(0xE02100, "Emulation", "Pause/resume");
     inline constexpr auto ForwardFrameStep =
