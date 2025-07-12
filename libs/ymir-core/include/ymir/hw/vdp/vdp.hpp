@@ -765,7 +765,6 @@ private:
     // Layer state, containing the pixel output for the current scanline.
     struct alignas(4096) LayerState {
         LayerState() {
-            rendered = true;
             Reset();
         }
 
@@ -774,14 +773,9 @@ private:
             pixels.priority.fill({});
             pixels.transparent.fill(false);
             pixels.specialColorCalc.fill(false);
-            enabled = false;
         }
 
         alignas(16) Pixels pixels;
-
-        bool enabled; // Enabled by BGON and other factors
-
-        bool rendered; // Enabled for rendering (externally configured - do not include in save state!)
     };
 
     // Layer state specific to the sprite layer.
@@ -946,7 +940,7 @@ private:
         LYR_LineColor,
     };
 
-    // Common layer states
+    // Layer enabled by BGON and other factors.
     //     RBG0+RBG1   RBG0        no RBGs
     // [0] Sprite      Sprite      Sprite
     // [1] RBG0        RBG0        -
@@ -954,10 +948,33 @@ private:
     // [3] EXBG        NBG1/EXBG   NBG1/EXBG
     // [4] -           NBG2        NBG2
     // [5] -           NBG3        NBG3
-    std::array<LayerState, 6> m_layerStates;
+    std::array<bool, 6> m_layerEnabled;
 
-    // Sprite layer state
-    SpriteLayerState m_spriteLayerState;
+    // Layer enabled for rendering.
+    // Externally configured - do not include in save state!
+    //     RBG0+RBG1   RBG0        no RBGs
+    // [0] Sprite      Sprite      Sprite
+    // [1] RBG0        RBG0        -
+    // [2] RBG1        NBG0        NBG0
+    // [3] EXBG        NBG1/EXBG   NBG1/EXBG
+    // [4] -           NBG2        NBG2
+    // [5] -           NBG3        NBG3
+    std::array<bool, 6> m_layerRendered;
+
+    // Common layer states.
+    // Entry [0] is primary and [1] is alternate field for deinterlacing.
+    //     RBG0+RBG1   RBG0        no RBGs
+    // [0] Sprite      Sprite      Sprite
+    // [1] RBG0        RBG0        -
+    // [2] RBG1        NBG0        NBG0
+    // [3] EXBG        NBG1/EXBG   NBG1/EXBG
+    // [4] -           NBG2        NBG2
+    // [5] -           NBG3        NBG3
+    std::array<std::array<LayerState, 6>, 2> m_layerStates;
+
+    // Sprite layer state.
+    // Entry [0] is primary and [1] is alternate field for deinterlacing.
+    std::array<SpriteLayerState, 2> m_spriteLayerState;
 
     // Layer state for NBGs 0-3
     std::array<NormBGLayerState, 4> m_normBGLayerStates;
@@ -969,18 +986,21 @@ private:
     LineBackLayerState m_lineBackLayerState;
 
     // Window state for NBGs and RBGs.
+    // Entry [0] is primary and [1] is alternate field for deinterlacing.
     // [0] RBG0
     // [1] NBG0/RBG1
     // [2] NBG1/EXBG
     // [3] NBG2
     // [4] NBG3
-    alignas(16) std::array<std::array<bool, kMaxResH>, 5> m_bgWindows;
+    alignas(16) std::array<std::array<std::array<bool, kMaxResH>, 5>, 2> m_bgWindows;
 
     // Window state for rotation parameters.
-    alignas(16) std::array<bool, kMaxResH> m_rotParamsWindow;
+    // Entry [0] is primary and [1] is alternate field for deinterlacing.
+    alignas(16) std::array<std::array<bool, kMaxResH>, 2> m_rotParamsWindow;
 
     // Window state for color calculation.
-    alignas(16) std::array<bool, kMaxResH> m_colorCalcWindow;
+    // Entry [0] is primary and [1] is alternate field for deinterlacing.
+    alignas(16) std::array<std::array<bool, kMaxResH>, 2> m_colorCalcWindow;
 
     // Vertical cell scroll increment.
     // Based on CYCA0/A1/B0/B1 parameters.
@@ -1107,7 +1127,9 @@ private:
     // windowSet contains the windows
     // windowParams contains additional window parameters
     // windowState is the window state output
-    template <bool hasSpriteWindow>
+    //
+    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    template <bool altField, bool hasSpriteWindow>
     void VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                         const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState);
 
@@ -1118,8 +1140,9 @@ private:
     // windowParams contains additional window parameters
     // windowState is the window state output
     //
+    // altField selects the complementary field when rendering deinterlaced double-interlace frames
     // logicOR determines if the windows should be combined with OR logic (true) or AND logic (false)
-    template <bool logicOR, bool hasSpriteWindow>
+    template <bool altField, bool logicOR, bool hasSpriteWindow>
     void VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                              const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState);
 
@@ -1161,10 +1184,11 @@ private:
     // spriteFBOffset is the offset into the buffer of the pixel to read.
     //
     // colorMode is the CRAM color mode.
+    // altField selects the complementary field when rendering deinterlaced double-interlace frames
     // transparentMeshes enables transparent mesh rendering enhancement
     // applyMesh determines if the pixel to be applied is a transparent mesh pixel (true) or a regular sprite layer
     // pixel (false).
-    template <uint32 colorMode, bool transparentMeshes, bool applyMesh>
+    template <uint32 colorMode, bool altField, bool transparentMeshes, bool applyMesh>
     void VDP2DrawSpritePixel(uint32 x, const SpriteParams &params, const SpriteFB &spriteFB, uint32 spriteFBOffset);
 
     // Draws the current VDP2 scanline of the specified normal background layer.
@@ -1184,7 +1208,8 @@ private:
     // colorMode is the CRAM color mode.
     //
     // bgIndex specifies the rotation background index, from 0 to 1.
-    template <uint32 bgIndex>
+    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    template <uint32 bgIndex, bool altField>
     void VDP2DrawRotationBG(uint32 y, uint32 colorMode);
 
     // Composes the current VDP2 scanline out of the rendered lines.
@@ -1192,9 +1217,9 @@ private:
     // y is the scanline to draw
     //
     // deinterlace determines whether to deinterlace video output
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altFieldDst and altFieldDst select the complementary field for reading and writing deinterlaced frames
     // transparentMeshes enables transparent mesh rendering enhancement
-    template <bool deinterlace, bool altField, bool transparentMeshes>
+    template <bool deinterlace, bool altFieldSrc, bool altFieldDst, bool transparentMeshes>
     void VDP2ComposeLine(uint32 y);
 
     // Draws a normal scroll BG scanline.
@@ -1241,7 +1266,9 @@ private:
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode,
+              bool altField>
     void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                   std::span<const bool> windowState);
 
@@ -1255,7 +1282,8 @@ private:
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
-    template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
+    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode, bool altField>
     void VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                   std::span<const bool> windowState);
 
@@ -1263,6 +1291,9 @@ private:
     //
     // x is the horizontal coordinate of the pixel
     // y is the vertical coordinate of the pixel
+    //
+    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    template <bool altField>
     RotParamSelector VDP2SelectRotationParameter(uint32 x, uint32 y);
 
     // Determines if a rotation coefficient entry can be fetched from the specified address.

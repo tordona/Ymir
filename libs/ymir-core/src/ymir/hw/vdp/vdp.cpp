@@ -79,6 +79,8 @@ VDP::VDP(core::Scheduler &scheduler, core::Configuration &config)
 
     UpdateFunctionPointers();
 
+    m_layerRendered.fill(true);
+
     Reset(true);
 }
 
@@ -102,14 +104,19 @@ void VDP::Reset(bool hard) {
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Reset());
+    } else {
+        m_framebuffer.fill(0xFF000000);
     }
 
     m_VDP1RenderContext.Reset();
 
+    m_layerEnabled.fill(false);
     for (auto &state : m_layerStates) {
-        state.Reset();
+        state[0].Reset();
+        state[1].Reset();
     }
-    m_spriteLayerState.Reset();
+    m_spriteLayerState[0].Reset();
+    m_spriteLayerState[1].Reset();
     for (auto &state : m_normBGLayerStates) {
         state.Reset();
     }
@@ -122,6 +129,8 @@ void VDP::Reset(bool hard) {
     BeginVPhaseActiveDisplay();
 
     UpdateResolution<false>();
+
+    VDP2UpdateEnabledBGs();
 
     m_scheduler.ScheduleFromNow(m_phaseUpdateEvent, GetPhaseCycles());
 }
@@ -454,7 +463,7 @@ void VDP::LoadState(const state::VDPState &state) {
 }
 
 void VDP::SetLayerEnabled(Layer layer, bool enabled) {
-    m_layerStates[static_cast<size_t>(layer)].rendered = enabled;
+    m_layerRendered[static_cast<size_t>(layer)] = enabled;
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2UpdateEnabledBGs());
     } else {
@@ -463,7 +472,7 @@ void VDP::SetLayerEnabled(Layer layer, bool enabled) {
 }
 
 bool VDP::IsLayerEnabled(Layer layer) const {
-    return m_layerStates[static_cast<size_t>(layer)].rendered;
+    return m_layerRendered[static_cast<size_t>(layer)];
 }
 
 void VDP::OnPhaseUpdateEvent(core::EventContext &eventContext, void *userContext) {
@@ -2489,14 +2498,14 @@ void VDP::VDP2UpdateEnabledBGs() {
     const VDP2Regs &regs2 = VDP2GetRegs();
 
     // Sprite layer is always enabled, unless forcibly disabled
-    m_layerStates[0].enabled = m_layerStates[0].rendered;
+    m_layerEnabled[0] = m_layerRendered[0];
 
     if (regs2.bgEnabled[4] && regs2.bgEnabled[5]) {
-        m_layerStates[1].enabled = m_layerStates[1].rendered; // RBG0
-        m_layerStates[2].enabled = m_layerStates[2].rendered; // RBG1
-        m_layerStates[3].enabled = false;                     // EXBG
-        m_layerStates[4].enabled = false;                     // not used
-        m_layerStates[5].enabled = false;                     // not used
+        m_layerEnabled[1] = m_layerRendered[1]; // RBG0
+        m_layerEnabled[2] = m_layerRendered[2]; // RBG1
+        m_layerEnabled[3] = false;              // EXBG
+        m_layerEnabled[4] = false;              // not used
+        m_layerEnabled[5] = false;              // not used
     } else {
         // Certain color format settings on NBG0 and NBG1 restrict which BG layers can be enabled
         // - NBG1 is disabled when NBG0 uses 8:8:8 RGB
@@ -2510,11 +2519,11 @@ void VDP::VDP2UpdateEnabledBGs() {
         const bool disableNBG3 = colorFormatNBG0 == ColorFormat::RGB888 ||
                                  colorFormatNBG1 == ColorFormat::Palette2048 || colorFormatNBG1 == ColorFormat::RGB555;
 
-        m_layerStates[1].enabled = m_layerStates[1].rendered && regs2.bgEnabled[4];                 // RBG0
-        m_layerStates[2].enabled = m_layerStates[2].rendered && regs2.bgEnabled[0];                 // NBG0
-        m_layerStates[3].enabled = m_layerStates[3].rendered && regs2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
-        m_layerStates[4].enabled = m_layerStates[4].rendered && regs2.bgEnabled[2] && !disableNBG2; // NBG2
-        m_layerStates[5].enabled = m_layerStates[5].rendered && regs2.bgEnabled[3] && !disableNBG3; // NBG3
+        m_layerEnabled[1] = m_layerRendered[1] && regs2.bgEnabled[4];                 // RBG0
+        m_layerEnabled[2] = m_layerRendered[2] && regs2.bgEnabled[0];                 // NBG0
+        m_layerEnabled[3] = m_layerRendered[3] && regs2.bgEnabled[1] && !disableNBG1; // NBG1/EXBG
+        m_layerEnabled[4] = m_layerRendered[4] && regs2.bgEnabled[2] && !disableNBG2; // NBG2
+        m_layerEnabled[5] = m_layerRendered[5] && regs2.bgEnabled[3] && !disableNBG3; // NBG3
     }
 }
 
@@ -2722,23 +2731,25 @@ FORCE_INLINE void VDP::VDP2CalcWindows(uint32 y) {
     // Calculate window for NBGs and RBGs
     for (int i = 0; i < 5; i++) {
         auto &bgParams = regs.bgParams[i];
-        auto &bgWindow = m_bgWindows[i];
+        auto &bgWindow = m_bgWindows[altField][i];
 
-        VDP2CalcWindow(y, bgParams.windowSet, regs.windowParams, std::span{bgWindow}.first(m_HRes));
+        VDP2CalcWindow<altField>(y, bgParams.windowSet, regs.windowParams, std::span{bgWindow}.first(m_HRes));
     }
 
     // Calculate window for rotation parameters
-    VDP2CalcWindow(y, regs.commonRotParams.windowSet, regs.windowParams, std::span{m_rotParamsWindow}.first(m_HRes));
+    VDP2CalcWindow<altField>(y, regs.commonRotParams.windowSet, regs.windowParams,
+                             std::span{m_rotParamsWindow[altField]}.first(m_HRes));
 
     // Calculate window for sprite layer
-    VDP2CalcWindow(y, regs.spriteParams.windowSet, regs.windowParams,
-                   std::span{m_spriteLayerState.window}.first(m_HRes));
+    VDP2CalcWindow<altField>(y, regs.spriteParams.windowSet, regs.windowParams,
+                             std::span{m_spriteLayerState[altField].window}.first(m_HRes));
 
     // Calculate window for color calculations
-    VDP2CalcWindow(y, regs.colorCalcParams.windowSet, regs.windowParams, std::span{m_colorCalcWindow}.first(m_HRes));
+    VDP2CalcWindow<altField>(y, regs.colorCalcParams.windowSet, regs.windowParams,
+                             std::span{m_colorCalcWindow[altField]}.first(m_HRes));
 }
 
-template <bool hasSpriteWindow>
+template <bool altField, bool hasSpriteWindow>
 FORCE_INLINE void VDP::VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                                       const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState) {
     // If no windows are enabled, consider the pixel outside of windows
@@ -2748,13 +2759,13 @@ FORCE_INLINE void VDP::VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow>
     }
 
     if (windowSet.logic == WindowLogic::And) {
-        VDP2CalcWindowLogic<false>(y, windowSet, windowParams, windowState);
+        VDP2CalcWindowLogic<altField, false>(y, windowSet, windowParams, windowState);
     } else {
-        VDP2CalcWindowLogic<true>(y, windowSet, windowParams, windowState);
+        VDP2CalcWindowLogic<altField, true>(y, windowSet, windowParams, windowState);
     }
 }
 
-template <bool logicOR, bool hasSpriteWindow>
+template <bool altField, bool logicOR, bool hasSpriteWindow>
 FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                                            const std::array<WindowParams, 2> &windowParams,
                                            std::span<bool> windowState) {
@@ -2866,9 +2877,9 @@ FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWi
             const bool inverted = windowSet.inverted[2];
             for (uint32 x = 0; x < m_HRes; x++) {
                 if constexpr (logicOR) {
-                    windowState[x] |= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+                    windowState[x] |= m_spriteLayerState[altField].attrs[x].shadowOrWindow != inverted;
                 } else {
-                    windowState[x] &= m_spriteLayerState.attrs[x].shadowOrWindow != inverted;
+                    windowState[x] &= m_spriteLayerState[altField].attrs[x].shadowOrWindow != inverted;
                 }
             }
         }
@@ -3171,10 +3182,10 @@ void VDP::VDP2DrawLine(uint32 y) {
 
     // Draw background layers
     if (regs2.bgEnabled[5]) {
-        VDP2DrawRotationBG<0>(y, colorMode); // RBG0
-        VDP2DrawRotationBG<1>(y, colorMode); // RBG1
+        VDP2DrawRotationBG<0, false>(y, colorMode); // RBG0
+        VDP2DrawRotationBG<1, false>(y, colorMode); // RBG1
     } else {
-        VDP2DrawRotationBG<0>(y, colorMode); // RBG0
+        VDP2DrawRotationBG<0, false>(y, colorMode); // RBG0
         if (interlaced) {
             VDP2DrawNormalBG<0, deinterlace, false>(y, colorMode); // NBG0
             VDP2DrawNormalBG<1, deinterlace, false>(y, colorMode); // NBG1
@@ -3189,7 +3200,7 @@ void VDP::VDP2DrawLine(uint32 y) {
     }
 
     // Compose image
-    VDP2ComposeLine<deinterlace, false, transparentMeshes>(y);
+    VDP2ComposeLine<deinterlace, false, false, transparentMeshes>(y);
 
     // Draw complementary field if deinterlace is enabled while in interlaced modes
     if constexpr (deinterlace) {
@@ -3207,19 +3218,22 @@ void VDP::VDP2DrawLine(uint32 y) {
             if (doubleDensity) {
                 // Draw background layers
                 if (regs2.bgEnabled[5]) {
-                    VDP2DrawRotationBG<0>(y, colorMode); // RBG0
-                    VDP2DrawRotationBG<1>(y, colorMode); // RBG1
+                    VDP2DrawRotationBG<0, true>(y, colorMode); // RBG0
+                    VDP2DrawRotationBG<1, true>(y, colorMode); // RBG1
                 } else {
-                    VDP2DrawRotationBG<0>(y, colorMode);           // RBG0
+                    VDP2DrawRotationBG<0, true>(y, colorMode);     // RBG0
                     VDP2DrawNormalBG<0, true, true>(y, colorMode); // NBG0
                     VDP2DrawNormalBG<1, true, true>(y, colorMode); // NBG1
                     VDP2DrawNormalBG<2, true, true>(y, colorMode); // NBG2
                     VDP2DrawNormalBG<3, true, true>(y, colorMode); // NBG3
                 }
-            }
 
-            // Compose image
-            VDP2ComposeLine<true, true, transparentMeshes>(y);
+                // Compose image
+                VDP2ComposeLine<true, true, true, transparentMeshes>(y);
+            } else {
+                // Compose image
+                VDP2ComposeLine<true, false, true, transparentMeshes>(y);
+            }
         }
     }
 }
@@ -3263,8 +3277,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     const uint32 maxX = m_HRes >> xShift;
 
     const SpriteParams &params = regs2.spriteParams;
-    auto &layerState = m_layerStates[0];
-    auto &spriteLayerState = m_spriteLayerState;
+    auto &layerState = m_layerStates[altField][0];
+    auto &spriteLayerState = m_spriteLayerState[altField];
 
     for (uint32 x = 0; x < maxX; x++) {
         const uint32 xx = x << xShift;
@@ -3281,13 +3295,13 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
             }
         }();
 
-        VDP2DrawSpritePixel<colorMode, transparentMeshes, false>(xx, params, spriteFB, spriteFBOffset);
+        VDP2DrawSpritePixel<colorMode, altField, transparentMeshes, false>(xx, params, spriteFB, spriteFBOffset);
         if constexpr (transparentMeshes) {
             const uint32 offset =
                 params.mixedFormat ? ((spriteFBOffset * sizeof(uint16)) & 0x3FFFE) : spriteFBOffset & 0x3FFFF;
             if (m_VDP1RenderContext.meshFBValid[altField][fbIndex][offset]) {
                 const auto &tempFB = m_VDP1RenderContext.meshFB[altField][fbIndex];
-                VDP2DrawSpritePixel<colorMode, transparentMeshes, true>(xx, params, tempFB, spriteFBOffset);
+                VDP2DrawSpritePixel<colorMode, altField, transparentMeshes, true>(xx, params, tempFB, spriteFBOffset);
             }
         }
 
@@ -3299,7 +3313,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     }
 }
 
-template <uint32 colorMode, bool transparentMeshes, bool applyMesh>
+template <uint32 colorMode, bool altField, bool transparentMeshes, bool applyMesh>
 FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params, const SpriteFB &spriteFB,
                                            uint32 spriteFBOffset) {
     // This implies that if transparentMeshes is false, applyMesh will be always false
@@ -3312,8 +3326,8 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     // - Opaque pixels drawn on transparent pixels will become translucent and enable the transparentMesh attribute.
     // Transparent mesh pixels are handled separately from the rest of the rendering pipeline.
 
-    auto &layerState = m_layerStates[0];
-    auto &spriteLayerState = m_spriteLayerState;
+    auto &layerState = m_layerStates[altField][0];
+    auto &spriteLayerState = m_spriteLayerState[altField];
     auto &attr = spriteLayerState.attrs[x];
 
     if (spriteLayerState.window[x]) {
@@ -3459,15 +3473,15 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
         return arr;
     }();
 
-    if (!m_layerStates[bgIndex + 2].enabled) {
+    if (!m_layerEnabled[bgIndex + 2]) {
         return;
     }
 
     const VDP2Regs &regs = VDP2GetRegs();
     const BGParams &bgParams = regs.bgParams[bgIndex + 1];
-    LayerState &layerState = m_layerStates[bgIndex + 2];
+    LayerState &layerState = m_layerStates[altField][bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
-    auto windowState = std::span<const bool>{m_bgWindows[bgIndex + 1]}.first(m_HRes);
+    auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex + 1]}.first(m_HRes);
 
     if constexpr (bgIndex < 2) {
         VDP2UpdateLineScreenScroll<!deinterlace || altField>(y, bgParams, bgState);
@@ -3494,7 +3508,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode) {
     }
 }
 
-template <uint32 bgIndex>
+template <uint32 bgIndex, bool altField>
 FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
     static_assert(bgIndex < 2, "Invalid RBG index");
 
@@ -3516,7 +3530,8 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
             const auto chmEnum = static_cast<CharacterMode>(chm);
             const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
-            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<selRotParam, chmEnum, fcc, cfEnum, colorMode>;
+            arr[chm][fcc][cf][clm] =
+                &VDP::VDP2DrawRotationScrollBG<selRotParam, chmEnum, fcc, cfEnum, colorMode, altField>;
         });
 
         return arr;
@@ -3533,20 +3548,20 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode) {
 
             const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<selRotParam, cfEnum, colorMode>;
+            arr[cf][cm] = &VDP::VDP2DrawRotationBitmapBG<selRotParam, cfEnum, colorMode, altField>;
         });
 
         return arr;
     }();
 
-    if (!m_layerStates[bgIndex + 1].enabled) {
+    if (!m_layerEnabled[bgIndex + 1]) {
         return;
     }
 
     const VDP2Regs &regs = VDP2GetRegs();
     const BGParams &bgParams = regs.bgParams[bgIndex];
-    LayerState &layerState = m_layerStates[bgIndex + 1];
-    auto windowState = std::span<const bool>{m_bgWindows[bgIndex]}.first(m_HRes);
+    LayerState &layerState = m_layerStates[altField][bgIndex + 1];
+    auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex]}.first(m_HRes);
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
@@ -4383,12 +4398,12 @@ FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, c
     }
 }
 
-template <bool deinterlace, bool altField, bool transparentMeshes>
+template <bool deinterlace, bool altFieldSrc, bool altFieldDst, bool transparentMeshes>
 FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     const VDP2Regs &regs = VDP2GetRegs();
     const auto &colorCalcParams = regs.colorCalcParams;
 
-    y = VDP2GetY<deinterlace>(y) ^ altField;
+    y = VDP2GetY<deinterlace>(y) ^ altFieldDst;
 
     if (!regs.TVMD.DISP) {
         std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0xFF000000);
@@ -4407,11 +4422,12 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     alignas(16) std::array<std::array<uint8, 3>, kMaxResH> scanline_layerPrios;
     std::fill_n(scanline_layerPrios.begin(), m_HRes, kLayerPriosInit);
 
-    for (int layer = 0; layer < m_layerStates.size(); layer++) {
-        const LayerState &state = m_layerStates[layer];
-        if (!state.enabled) {
+    for (int layer = 0; layer < m_layerStates[altFieldSrc].size(); layer++) {
+        if (!m_layerEnabled[layer]) {
             continue;
         }
+
+        const LayerState &state = m_layerStates[altFieldSrc][layer];
 
         if (AllBool(std::span{state.pixels.transparent}.first(m_HRes))) {
             // All pixels are transparent
@@ -4432,7 +4448,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 continue;
             }
             if (layer == LYR_Sprite) {
-                const auto &attr = m_spriteLayerState.attrs[x];
+                const auto &attr = m_spriteLayerState[altFieldSrc].attrs[x];
                 if (attr.normalShadow) {
                     continue;
                 }
@@ -4448,7 +4464,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 if (priority > layerPrios[i] || (priority == layerPrios[i] && layer < layers[i])) {
                     // Ignore sprite mesh layer -- it is blended separately
                     if constexpr (transparentMeshes) {
-                        if (layer == LYR_Sprite && m_spriteLayerState.attrs[x].transparentMesh) {
+                        if (layer == LYR_Sprite && m_spriteLayerState[altFieldSrc].attrs[x].transparentMesh) {
                             break;
                         }
                     }
@@ -4471,11 +4487,11 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     if constexpr (transparentMeshes) {
         std::fill_n(scanline_meshLayers.begin(), m_HRes, 0xFF);
         for (uint32 x = 0; x < m_HRes; x++) {
-            const uint8 priority = m_layerStates[LYR_Sprite].pixels.priority[x];
+            const uint8 priority = m_layerStates[altFieldSrc][LYR_Sprite].pixels.priority[x];
             std::array<uint8, 3> &layerPrios = scanline_layerPrios[x];
             for (int i = 0; i < 3; i++) {
                 // The sprite layer has the highest priority on ties, therefore the priority check can be simplified
-                if (priority >= layerPrios[i] && m_spriteLayerState.attrs[x].transparentMesh) {
+                if (priority >= layerPrios[i] && m_spriteLayerState[altFieldSrc].attrs[x].transparentMesh) {
                     scanline_meshLayers[x] = i;
                     break;
                 }
@@ -4488,7 +4504,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         if (layer == LYR_Back) {
             return m_lineBackLayerState.backColor;
         } else {
-            return m_layerStates[layer].pixels.color[x];
+            return m_layerStates[altFieldSrc][layer].pixels.color[x];
         }
     };
 
@@ -4505,14 +4521,14 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
                 return false;
             }
 
-            const uint8 pixelPriority = m_layerStates[LYR_Sprite].pixels.priority[x];
+            const uint8 pixelPriority = m_layerStates[altFieldSrc][LYR_Sprite].pixels.priority[x];
 
             using enum SpriteColorCalculationCondition;
             switch (spriteParams.colorCalcCond) {
             case PriorityLessThanOrEqual: return pixelPriority <= spriteParams.colorCalcValue;
             case PriorityEqual: return pixelPriority == spriteParams.colorCalcValue;
             case PriorityGreaterThanOrEqual: return pixelPriority >= spriteParams.colorCalcValue;
-            case MsbEqualsOne: return m_layerStates[LYR_Sprite].pixels.color[x].msb == 1;
+            case MsbEqualsOne: return m_layerStates[altFieldSrc][LYR_Sprite].pixels.color[x].msb == 1;
             default: util::unreachable();
             }
         } else if (layer == LYR_Back) {
@@ -4531,7 +4547,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         if constexpr (transparentMeshes) {
             layer0BlendMeshLayer[x] = scanline_meshLayers[x] == 0;
         }
-        if (m_colorCalcWindow[x]) {
+        if (m_colorCalcWindow[altFieldSrc][x]) {
             layer0ColorCalcEnabled[x] = false;
             continue;
         }
@@ -4543,7 +4559,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         switch (layer) {
         case LYR_Back: [[fallthrough]];
         case LYR_Sprite: layer0ColorCalcEnabled[x] = true; break;
-        default: layer0ColorCalcEnabled[x] = m_layerStates[layer].pixels.specialColorCalc[x]; break;
+        default: layer0ColorCalcEnabled[x] = m_layerStates[altFieldSrc][layer].pixels.specialColorCalc[x]; break;
         }
     }
 
@@ -4609,7 +4625,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
             // Blend layer 2 with sprite mesh layer colors
             if constexpr (transparentMeshes) {
                 Color888AverageMasked(std::span{layer2Pixels}.first(m_HRes), layer2BlendMeshLayer, layer2Pixels,
-                                      m_layerStates[0].pixels.color);
+                                      m_layerStates[altFieldSrc][0].pixels.color);
             }
 
             // TODO: honor color RAM mode + palette/RGB format restrictions
@@ -4630,7 +4646,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
         // Blend layer 1 with sprite mesh layer colors
         if constexpr (transparentMeshes) {
             Color888AverageMasked(std::span{layer1Pixels}.first(m_HRes), layer1BlendMeshLayer, layer1Pixels,
-                                  m_layerStates[0].pixels.color);
+                                  m_layerStates[altFieldSrc][0].pixels.color);
         }
 
         // Blend layer 0 and layer 1
@@ -4648,7 +4664,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
 
                 const LayerIndex layer = scanline_layers[x][colorCalcParams.useSecondScreenRatio];
                 switch (layer) {
-                case LYR_Sprite: scanline_ratio[x] = m_spriteLayerState.attrs[x].colorCalcRatio; break;
+                case LYR_Sprite: scanline_ratio[x] = m_spriteLayerState[altFieldSrc].attrs[x].colorCalcRatio; break;
                 case LYR_Back: scanline_ratio[x] = regs.backScreenParams.colorCalcRatio; break;
                 default: scanline_ratio[x] = regs.bgParams[layer - LYR_RBG0].colorCalcRatio; break;
                 }
@@ -4665,7 +4681,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     // Blend layer 0 with sprite mesh layer colors
     if constexpr (transparentMeshes) {
         Color888AverageMasked(framebufferOutput, layer0BlendMeshLayer, framebufferOutput,
-                              m_layerStates[0].pixels.color);
+                              m_layerStates[altFieldSrc][0].pixels.color);
     }
 
     // Gather shadow data
@@ -4673,15 +4689,16 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y) {
     for (uint32 x = 0; x < m_HRes; x++) {
         const LayerIndex layer = scanline_layers[x][0];
 
-        const bool isNormalShadow = m_spriteLayerState.attrs[x].normalShadow;
-        const bool isMSBShadow = !regs.spriteParams.spriteWindowEnable && m_spriteLayerState.attrs[x].shadowOrWindow;
+        const bool isNormalShadow = m_spriteLayerState[altFieldSrc].attrs[x].normalShadow;
+        const bool isMSBShadow =
+            !regs.spriteParams.spriteWindowEnable && m_spriteLayerState[altFieldSrc].attrs[x].shadowOrWindow;
         if (!isNormalShadow && !isMSBShadow) {
             layer0ShadowEnabled[x] = false;
             continue;
         }
 
         switch (layer) {
-        case LYR_Sprite: layer0ShadowEnabled[x] = m_spriteLayerState.attrs[x].shadowOrWindow; break;
+        case LYR_Sprite: layer0ShadowEnabled[x] = m_spriteLayerState[altFieldSrc].attrs[x].shadowOrWindow; break;
         case LYR_Back: layer0ShadowEnabled[x] = regs.backScreenParams.shadowEnable; break;
         default: layer0ShadowEnabled[x] = regs.bgParams[layer - LYR_RBG0].shadowEnable; break;
         }
@@ -4892,7 +4909,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     }
 }
 
-template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode,
+          bool altField>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                              std::span<const bool> windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
@@ -4924,7 +4942,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             }
         }
 
-        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y) : RotParamA;
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter<altField>(x, y) : RotParamA;
 
         const RotationParams &rotParams = regs.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
@@ -4994,7 +5012,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
     }
 }
 
-template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode>
+template <bool selRotParam, ColorFormat colorFormat, uint32 colorMode, bool altField>
 NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                              std::span<const bool> windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
@@ -5011,7 +5029,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
                 layerState.pixels.SetPixel(xx + 1, pixel);
             }
         }};
-        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y) : RotParamA;
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter<altField>(x, y) : RotParamA;
 
         const RotationParams &rotParams = regs.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
@@ -5049,6 +5067,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
     }
 }
 
+template <bool altField>
 FORCE_INLINE VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, uint32 y) {
     const VDP2Regs &regs = VDP2GetRegs();
 
@@ -5060,7 +5079,7 @@ FORCE_INLINE VDP::RotParamSelector VDP::VDP2SelectRotationParameter(uint32 x, ui
     case RotationParamB: return RotParamB;
     case Coefficient:
         return regs.rotParams[0].coeffTableEnable && m_rotParamStates[0].transparent[x] ? RotParamB : RotParamA;
-    case Window: return m_rotParamsWindow[x] ? RotParamB : RotParamA;
+    case Window: return m_rotParamsWindow[altField][x] ? RotParamB : RotParamA;
     }
     util::unreachable();
 }
