@@ -147,6 +147,7 @@ public:
         util::Observable<double> mainSpeedFactor;
         util::Observable<double> altSpeedFactor;
         util::Observable<bool> useAltSpeed;
+        bool showSpeedIndicatorForAllSpeeds;
 
         bool pauseWhenUnfocused;
     } general;

@@ -606,6 +606,7 @@ void Settings::ResetToDefaults() {
     general.mainSpeedFactor = 1.0;
     general.altSpeedFactor = 0.5;
     general.useAltSpeed = false;
+    general.showSpeedIndicatorForAllSpeeds = false;
     general.pauseWhenUnfocused = false;
 
     system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
@@ -700,6 +701,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "MainSpeedFactor", general.mainSpeedFactor);
         Parse(tblGeneral, "AltSpeedFactor", general.altSpeedFactor);
         Parse(tblGeneral, "UseAltSpeed", general.useAltSpeed);
+        Parse(tblGeneral, "ShowSpeedIndicatorForAllSpeeds", general.showSpeedIndicatorForAllSpeeds);
         Parse(tblGeneral, "PauseWhenUnfocused", general.pauseWhenUnfocused);
 
         // Rounds to the nearest multiple of 5% and clamps to 10%..500% range.
@@ -974,6 +976,7 @@ SettingsSaveResult Settings::Save() {
             {"MainSpeedFactor", general.mainSpeedFactor.Get()},
             {"AltSpeedFactor", general.altSpeedFactor.Get()},
             {"UseAltSpeed", general.useAltSpeed.Get()},
+            {"ShowSpeedIndicatorForAllSpeeds", general.showSpeedIndicatorForAllSpeeds},
             {"PauseWhenUnfocused", general.pauseWhenUnfocused},
 
             {"PathOverrides", toml::table{{

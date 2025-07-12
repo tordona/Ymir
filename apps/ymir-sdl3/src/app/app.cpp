@@ -2397,7 +2397,8 @@ void App::RunEmulator() {
                     const bool rev = m_context.rewindBuffer.IsRunning() && m_context.rewinding;
                     const float speedFactor = m_context.emuSpeed.GetCurrentSpeedFactor();
                     const bool slomo = m_context.emuSpeed.limitSpeed && speedFactor < 1.0;
-                    if (!m_context.emuSpeed.limitSpeed || speedFactor != 1.0) {
+                    if (!m_context.emuSpeed.limitSpeed ||
+                        (speedFactor != 1.0 && m_context.settings.general.showSpeedIndicatorForAllSpeeds)) {
                         // Fast forward/rewind -> two triangles: >> or <<
                         // Slow motion/rewind -> rectangle and triangle: |> or <|
                         const std::string speed =

@@ -7,6 +7,7 @@
 
 #include <misc/cpp/imgui_stdlib.h>
 
+#include <util/math.hpp>
 #include <util/sdl_file_dialog.hpp>
 
 #include <fmt/std.h>
@@ -70,6 +71,65 @@ void GeneralSettingsView::Display() {
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Behavior");
     ImGui::PopFont();
+
+    if (ImGui::BeginTable("emu_speed", 3, ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("Emulation speed");
+            widgets::ExplanationTooltip(
+                "You can adjust and switch between the primary and alternate speeds at any time.\n"
+                "The primary speed is meant to be the default speed for normal usage while the alternate speed is used "
+                "as a slow motion or speed-limited fast-forward option, but feel free to use them as you wish.\n"
+                "The primary and alternate speeds reset/default to 100% and 50% respectively.",
+                m_context.displayScale);
+        }
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            if (MakeDirty(ImGui::RadioButton("Primary##emu_speed", !settings.useAltSpeed))) {
+                settings.useAltSpeed = false;
+            }
+        }
+        if (ImGui::TableNextColumn()) {
+            double speed = settings.mainSpeedFactor.Get() * 100.0;
+            const double kMin = 10.0;
+            const double kMax = 500.0;
+            ImGui::SetNextItemWidth(300.0f * m_context.displayScale);
+            if (MakeDirty(ImGui::SliderScalar("##main_emu_speed", ImGuiDataType_Double, &speed, &kMin, &kMax, "%.0lf%%",
+                                              ImGuiSliderFlags_AlwaysClamp))) {
+                settings.mainSpeedFactor = std::clamp(util::RoundToMultiple(speed * 0.01, 0.1), 0.1, 5.0);
+            }
+        }
+        if (ImGui::TableNextColumn()) {
+            if (MakeDirty(ImGui::Button("Reset##main_emu_speed"))) {
+                settings.mainSpeedFactor = 1.0;
+            }
+        }
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            if (MakeDirty(ImGui::RadioButton("Alternate##emu_speed", settings.useAltSpeed))) {
+                settings.useAltSpeed = true;
+            }
+        }
+        if (ImGui::TableNextColumn()) {
+            double speed = settings.altSpeedFactor.Get() * 100.0;
+            const double kMin = 10.0;
+            const double kMax = 500.0;
+            ImGui::SetNextItemWidth(300.0f * m_context.displayScale);
+            if (MakeDirty(ImGui::SliderScalar("##alternate_emu_speed", ImGuiDataType_Double, &speed, &kMin, &kMax,
+                                              "%.0lf%%", ImGuiSliderFlags_AlwaysClamp))) {
+                settings.altSpeedFactor = std::clamp(util::RoundToMultiple(speed * 0.01, 0.1), 0.1, 5.0);
+            }
+        }
+        if (ImGui::TableNextColumn()) {
+            if (MakeDirty(ImGui::Button("Reset##alt_emu_speed"))) {
+                settings.altSpeedFactor = 0.5;
+            }
+        }
+
+        ImGui::EndTable();
+    }
 
     MakeDirty(ImGui::Checkbox("Pause when unfocused", &settings.pauseWhenUnfocused));
     widgets::ExplanationTooltip(
