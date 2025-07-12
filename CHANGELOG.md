@@ -13,6 +13,7 @@
 - App: Notify about loading/saving save states or switching save state slots.
 - App: Smooth out frame interval adjustments in full screen mode.
 - Debugger: Added basic VDP1 registers inspector window.
+- Input: Changed default keybinds for Pause/Resume action from "Pause, Ctrl+P" to "Pause, Spacebar".
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - Settings: Added "Clear all" button to controller configuration window to clear all binds. (#288)
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.

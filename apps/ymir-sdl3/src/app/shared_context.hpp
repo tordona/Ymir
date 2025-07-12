@@ -26,6 +26,7 @@
 
 #include <RtMidi.h>
 
+#include <array>
 #include <deque>
 #include <filesystem>
 #include <memory>
@@ -56,6 +57,30 @@ struct SharedContext {
     ymir::Saturn saturn;
 
     float displayScale = 1.0f;
+
+    struct EmuSpeed {
+        // Primary and alternate speed factors
+        std::array<double, 2> speedFactors = {1.0, 0.5};
+
+        // Use the primary (false) or alternate (true) speed factor.
+        // Effectively an index into the speedFactors array.
+        bool altSpeed = false;
+
+        // Whether emulation speed is limited.
+        bool limitSpeed = true;
+
+        // Retrieves the currently selected speed factor.
+        // Doesn't take into account the speed limit flag.
+        [[nodiscard]] double GetCurrentSpeedFactor() const {
+            return speedFactors[altSpeed];
+        }
+
+        // Determines if sync to audio should be used given the current speed settings.
+        // Sync to audio is enabled when the speed is limited to 1.0 or less.
+        [[nodiscard]] bool ShouldSyncToAudio() const {
+            return limitSpeed && GetCurrentSpeedFactor() <= 1.0;
+        }
+    } emuSpeed;
 
     input::InputContext inputContext;
 

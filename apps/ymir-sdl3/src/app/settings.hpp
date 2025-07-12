@@ -139,6 +139,10 @@ public:
         // TODO: rewind buffer size
         int rewindCompressionLevel;
 
+        util::Observable<double> mainSpeedFactor;
+        util::Observable<double> altSpeedFactor;
+        util::Observable<bool> useAltSpeed;
+
         bool pauseWhenUnfocused;
     } general;
 
@@ -172,8 +176,9 @@ public:
         input::InputBind turboSpeed{actions::emu::TurboSpeed};
         input::InputBind turboSpeedHold{actions::emu::TurboSpeedHold};
         input::InputBind toggleAlternateSpeed{actions::emu::ToggleAlternateSpeed};
-        input::InputBind speedLimiterIncrease{actions::emu::SpeedLimiterIncrease};
-        input::InputBind speedLimiterDecrease{actions::emu::SpeedLimiterDecrease};
+        input::InputBind increaseSpeed{actions::emu::IncreaseSpeed};
+        input::InputBind decreaseSpeed{actions::emu::DecreaseSpeed};
+        input::InputBind resetSpeed{actions::emu::ResetSpeed};
         input::InputBind pauseResume{actions::emu::PauseResume};
         input::InputBind fwdFrameStep{actions::emu::ForwardFrameStep};
         input::InputBind revFrameStep{actions::emu::ReverseFrameStep};

@@ -440,8 +440,9 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.turboSpeed);
     mapInput(m_actionInputs, hotkeys.turboSpeedHold);
     mapInput(m_actionInputs, hotkeys.toggleAlternateSpeed);
-    mapInput(m_actionInputs, hotkeys.speedLimiterIncrease);
-    mapInput(m_actionInputs, hotkeys.speedLimiterDecrease);
+    mapInput(m_actionInputs, hotkeys.increaseSpeed);
+    mapInput(m_actionInputs, hotkeys.decreaseSpeed);
+    mapInput(m_actionInputs, hotkeys.resetSpeed);
     mapInput(m_actionInputs, hotkeys.pauseResume);
     mapInput(m_actionInputs, hotkeys.fwdFrameStep);
     mapInput(m_actionInputs, hotkeys.revFrameStep);
@@ -568,6 +569,9 @@ void Settings::ResetToDefaults() {
     general.boostProcessPriority = true;
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 12;
+    general.mainSpeedFactor = 1.0;
+    general.altSpeedFactor = 0.5;
+    general.useAltSpeed = false;
     general.pauseWhenUnfocused = false;
 
     system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
@@ -657,7 +661,15 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
         Parse(tblGeneral, "RewindCompressionLevel", general.rewindCompressionLevel);
+        Parse(tblGeneral, "MainSpeedFactor", general.mainSpeedFactor);
+        Parse(tblGeneral, "AltSpeedFactor", general.altSpeedFactor);
+        Parse(tblGeneral, "UseAltSpeed", general.useAltSpeed);
         Parse(tblGeneral, "PauseWhenUnfocused", general.pauseWhenUnfocused);
+
+        // Rounds to the nearest multiple of 10% and clamps to 10%..500% range.
+        auto adjustSpeed = [](double value) { return std::clamp(std::round(value * 10.0) / 10.0, 0.1, 5.0); };
+        general.mainSpeedFactor = adjustSpeed(general.mainSpeedFactor);
+        general.altSpeedFactor = adjustSpeed(general.altSpeedFactor);
 
         if (auto tblPathOverrides = tblGeneral["PathOverrides"]) {
             auto parse = [&](const char *name, ProfilePath pathType) {
@@ -723,8 +735,9 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblHotkeys, "TurboSpeed", hotkeys.turboSpeed);
         Parse(tblHotkeys, "TurboSpeedHold", hotkeys.turboSpeedHold);
         Parse(tblHotkeys, "ToggleAlternateSpeed", hotkeys.toggleAlternateSpeed);
-        Parse(tblHotkeys, "SpeedLimiterIncrease", hotkeys.speedLimiterIncrease);
-        Parse(tblHotkeys, "SpeedLimiterDecrease", hotkeys.speedLimiterDecrease);
+        Parse(tblHotkeys, "IncreaseSpeed", hotkeys.increaseSpeed);
+        Parse(tblHotkeys, "DecreaseSpeed", hotkeys.decreaseSpeed);
+        Parse(tblHotkeys, "ResetSpeed", hotkeys.resetSpeed);
         Parse(tblHotkeys, "PauseResume", hotkeys.pauseResume);
         Parse(tblHotkeys, "ForwardFrameStep", hotkeys.fwdFrameStep);
         Parse(tblHotkeys, "ReverseFrameStep", hotkeys.revFrameStep);
@@ -917,6 +930,9 @@ SettingsSaveResult Settings::Save() {
             {"BoostProcessPriority", general.boostProcessPriority},
             {"EnableRewindBuffer", general.enableRewindBuffer},
             {"RewindCompressionLevel", general.rewindCompressionLevel},
+            {"MainSpeedFactor", general.mainSpeedFactor.Get()},
+            {"AltSpeedFactor", general.altSpeedFactor.Get()},
+            {"UseAltSpeed", general.useAltSpeed.Get()},
             {"PauseWhenUnfocused", general.pauseWhenUnfocused},
 
             {"PathOverrides", toml::table{{
@@ -973,8 +989,9 @@ SettingsSaveResult Settings::Save() {
             {"TurboSpeed", ToTOML(hotkeys.turboSpeed)},
             {"TurboSpeedHold", ToTOML(hotkeys.turboSpeedHold)},
             {"ToggleAlternateSpeed", ToTOML(hotkeys.toggleAlternateSpeed)},
-            {"SpeedLimiterIncrease", ToTOML(hotkeys.speedLimiterIncrease)},
-            {"SpeedLimiterDecrease", ToTOML(hotkeys.speedLimiterDecrease)},
+            {"IncreaseSpeed", ToTOML(hotkeys.increaseSpeed)},
+            {"DecreaseSpeed", ToTOML(hotkeys.decreaseSpeed)},
+            {"ResetSpeed", ToTOML(hotkeys.resetSpeed)},
             {"PauseResume", ToTOML(hotkeys.pauseResume)},
             {"ForwardFrameStep", ToTOML(hotkeys.fwdFrameStep)},
             {"ReverseFrameStep", ToTOML(hotkeys.revFrameStep)},
@@ -1397,8 +1414,9 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     rebind(hotkeys.turboSpeed, {KeyCombo{Mod::None, Key::Tab}});
     rebind(hotkeys.turboSpeedHold, {KeyCombo{Mod::None, Key::GraveAccent}});
     rebind(hotkeys.toggleAlternateSpeed, {KeyCombo{Mod::None, Key::Slash}});
-    rebind(hotkeys.speedLimiterIncrease, {KeyCombo{Mod::None, Key::Period}});
-    rebind(hotkeys.speedLimiterDecrease, {KeyCombo{Mod::None, Key::Comma}});
+    rebind(hotkeys.increaseSpeed, {KeyCombo{Mod::None, Key::Period}});
+    rebind(hotkeys.decreaseSpeed, {KeyCombo{Mod::None, Key::Comma}});
+    rebind(hotkeys.resetSpeed, {KeyCombo{Mod::Control, Key::Slash}});
     rebind(hotkeys.pauseResume, {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::None, Key::Spacebar}});
     rebind(hotkeys.fwdFrameStep, {KeyCombo{Mod::None, Key::RightBracket}});
     rebind(hotkeys.revFrameStep, {KeyCombo{Mod::None, Key::LeftBracket}});

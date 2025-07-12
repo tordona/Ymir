@@ -231,6 +231,7 @@ add_executable(ymir-sdl3
     src/util/file_loader.hpp
     src/util/ipl_rom_loader.cpp
     src/util/ipl_rom_loader.hpp
+    src/util/math.hpp
     src/util/regions.cpp
     src/util/regions.hpp
     src/util/ring_buffer.hpp

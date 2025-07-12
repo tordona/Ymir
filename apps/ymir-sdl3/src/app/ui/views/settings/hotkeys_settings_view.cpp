@@ -65,8 +65,9 @@ void HotkeysSettingsView::Display() {
         drawRow(hotkeys.turboSpeed);
         drawRow(hotkeys.turboSpeedHold);
         drawRow(hotkeys.toggleAlternateSpeed);
-        drawRow(hotkeys.speedLimiterIncrease);
-        drawRow(hotkeys.speedLimiterDecrease);
+        drawRow(hotkeys.increaseSpeed);
+        drawRow(hotkeys.decreaseSpeed);
+        drawRow(hotkeys.resetSpeed);
         drawRow(hotkeys.pauseResume);
         drawRow(hotkeys.fwdFrameStep);
         drawRow(hotkeys.revFrameStep);

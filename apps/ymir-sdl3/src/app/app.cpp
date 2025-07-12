@@ -100,6 +100,7 @@
 #include <serdes/state_cereal.hpp>
 
 #include <util/file_loader.hpp>
+#include <util/math.hpp>
 #include <util/std_lib.hpp>
 
 #include <SDL3/SDL.h>
@@ -168,6 +169,23 @@ int App::Run(const CommandLineOptions &options) {
         m_context.profile.UseProfilePath(options.profilePath);
     } else {
         m_context.profile.UsePortableProfilePath();
+    }
+
+    {
+        auto &generalSettings = m_context.settings.general;
+        auto &emuSpeed = m_context.emuSpeed;
+        generalSettings.mainSpeedFactor.ObserveAndNotify([&](double value) {
+            emuSpeed.speedFactors[0] = value;
+            m_audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
+        });
+        generalSettings.altSpeedFactor.ObserveAndNotify([&](double value) {
+            emuSpeed.speedFactors[1] = value;
+            m_audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
+        });
+        generalSettings.useAltSpeed.ObserveAndNotify([&](bool value) {
+            emuSpeed.altSpeed = value;
+            m_audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
+        });
     }
 
     {
@@ -950,9 +968,55 @@ void App::RunEmulator() {
 
     // Emulation
     {
-        inputContext.SetButtonHandler(
-            actions::emu::TurboSpeed,
-            [&](void *, const input::InputElement &, bool actuated) { m_audioSystem.SetSync(!actuated); });
+        auto &generalSettings = m_context.settings.general;
+
+        auto getEmuSpeed = [&]() -> util::Observable<double> & {
+            return generalSettings.useAltSpeed.Get() ? generalSettings.altSpeedFactor : generalSettings.mainSpeedFactor;
+        };
+
+        auto increaseSpeed = [&](double step) {
+            auto &speed = getEmuSpeed();
+            speed = std::min(util::RoundToMultiple(speed + step, 0.1), 5.0);
+        };
+        auto decreaseSpeed = [&](double step) {
+            auto &speed = getEmuSpeed();
+            speed = std::max(util::RoundToMultiple(speed - step, 0.1), 0.1);
+        };
+
+        inputContext.SetButtonHandler(actions::emu::TurboSpeed,
+                                      [&](void *, const input::InputElement &, bool actuated) {
+                                          m_context.emuSpeed.limitSpeed = !actuated;
+                                          m_audioSystem.SetSync(m_context.emuSpeed.ShouldSyncToAudio());
+                                      });
+        inputContext.SetTriggerHandler(actions::emu::TurboSpeedHold, [&](void *, const input::InputElement &) {
+            m_context.emuSpeed.limitSpeed ^= true;
+            m_audioSystem.SetSync(m_context.emuSpeed.ShouldSyncToAudio());
+        });
+        inputContext.SetTriggerHandler(actions::emu::ToggleAlternateSpeed, [&](void *, const input::InputElement &) {
+            m_context.settings.general.useAltSpeed = !m_context.settings.general.useAltSpeed;
+            m_context.DisplayMessage(fmt::format("Using {} emulation speed: {:.0f}%",
+                                                 (generalSettings.useAltSpeed.Get() ? "alternate" : "primary"),
+                                                 getEmuSpeed().Get() * 100.0));
+        });
+        inputContext.SetTriggerHandler(actions::emu::IncreaseSpeed, [&](void *, const input::InputElement &) {
+            increaseSpeed(0.1);
+            m_context.DisplayMessage(fmt::format("{} emulation speed increased to {:.0f}%",
+                                                 (generalSettings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 getEmuSpeed().Get() * 100.0));
+        });
+        inputContext.SetTriggerHandler(actions::emu::DecreaseSpeed, [&](void *, const input::InputElement &) {
+            decreaseSpeed(0.1);
+            m_context.DisplayMessage(fmt::format("{} emulation speed decreased to {:.0f}%",
+                                                 (generalSettings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 getEmuSpeed().Get() * 100.0));
+        });
+        inputContext.SetTriggerHandler(actions::emu::ResetSpeed, [&](void *, const input::InputElement &) {
+            getEmuSpeed() = generalSettings.useAltSpeed.Get() ? 0.5 : 1.0;
+            m_context.DisplayMessage(fmt::format("{} emulation speed reset to {:.0f}%",
+                                                 (generalSettings.useAltSpeed.Get() ? "Alternate" : "Primary"),
+                                                 getEmuSpeed().Get() * 100.0));
+        });
+
         inputContext.SetTriggerHandler(actions::emu::PauseResume, [&](void *, const input::InputElement &) {
             paused = !paused;
             m_context.EnqueueEvent(events::emu::SetPaused(paused));
@@ -977,10 +1041,6 @@ void App::RunEmulator() {
                                               ToggleRewindBuffer();
                                           }
                                       });
-
-        inputContext.SetTriggerHandler(actions::emu::TurboSpeedHold, [&](void *, const input::InputElement &) {
-            m_audioSystem.SetSync(!m_audioSystem.IsSync());
-        });
     }
 
     // Debugger
