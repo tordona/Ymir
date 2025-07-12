@@ -599,6 +599,7 @@ void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
+    general.showMessages = true;
     general.showFrameRateOSD = false;
     general.frameRateOSDPosition = General::FrameRateOSDPosition::TopRight;
     general.enableRewindBuffer = false;
@@ -694,6 +695,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
+        Parse(tblGeneral, "ShowMessages", general.showMessages);
         Parse(tblGeneral, "ShowFrameRateOSD", general.showFrameRateOSD);
         Parse(tblGeneral, "FrameRateOSDPosition", general.frameRateOSDPosition);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
@@ -969,6 +971,7 @@ SettingsSaveResult Settings::Save() {
             {"PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM},
             {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
             {"BoostProcessPriority", general.boostProcessPriority},
+            {"ShowMessages", general.showMessages},
             {"ShowFrameRateOSD", general.showFrameRateOSD},
             {"FrameRateOSDPosition", ToTOML(general.frameRateOSDPosition)},
             {"EnableRewindBuffer", general.enableRewindBuffer},

@@ -137,6 +137,8 @@ public:
         bool boostEmuThreadPriority;
         bool boostProcessPriority;
 
+        bool showMessages;
+
         bool showFrameRateOSD;
         FrameRateOSDPosition frameRateOSDPosition;
 

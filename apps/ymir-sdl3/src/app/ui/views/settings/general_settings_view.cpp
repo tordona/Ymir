@@ -137,6 +137,11 @@ void GeneralSettingsView::Display() {
         "When disabled, the speed indicator is only displayed while running in turbo speed.",
         m_context.displayScale);
 
+    MakeDirty(ImGui::Checkbox("Show messages", &settings.showMessages));
+    widgets::ExplanationTooltip(
+        "When enabled, notification messages are displayed on the top-left corner of the window.",
+        m_context.displayScale);
+
     MakeDirty(ImGui::Checkbox("Pause when unfocused", &settings.pauseWhenUnfocused));
     widgets::ExplanationTooltip(
         "The emulator will pause when the window loses focus and resume when it regains focus.\n"

@@ -2559,7 +2559,7 @@ void App::RunEmulator() {
             }
 
             // Draw messages
-            {
+            if (m_context.settings.general.showMessages) {
                 auto *drawList = ImGui::GetForegroundDrawList();
                 float messageX = viewport->WorkPos.x + style.FramePadding.x + style.ItemSpacing.x;
                 float messageY = viewport->WorkPos.y + style.FramePadding.y + style.ItemSpacing.y;
