@@ -21,6 +21,7 @@
 #include <ymir/util/backup_datetime.hpp>
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/size_ops.hpp>
+#include <ymir/util/unreachable.hpp>
 
 #include <fmt/std.h>
 
@@ -71,8 +72,64 @@ void BackupMemoryView::Display() {
 
     if (ImGui::BeginChild("##bup_files_table", avail)) {
         // TODO: support drag and drop
-        if (ImGui::BeginTable("bup_files_list", 6, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
+        if (ImGui::BeginTable("bup_files_list", 6,
+                              ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Sortable |
+                                  ImGuiTableFlags_SortMulti | ImGuiTableFlags_SortTristate)) {
             DrawFileTableHeader();
+
+            if (const ImGuiTableSortSpecs *sortSpecs = ImGui::TableGetSortSpecs();
+                sortSpecs->SpecsDirty && files.size() > 1) {
+                for (int specIndex = sortSpecs->SpecsCount - 1; specIndex >= 0; --specIndex) {
+                    const ImGuiTableColumnSortSpecs &sortSpec = sortSpecs->Specs[specIndex];
+                    const auto sortColumns = [&sortSpec](auto sortStart, auto sortEnd) -> void {
+                        switch (sortSpec.ColumnIndex) {
+                        case 0: // File name
+                            std::stable_sort(sortStart, sortEnd,
+                                             [](const bup::BackupFileInfo &lhs, const bup::BackupFileInfo &rhs) {
+                                                 return lhs.header.filename < rhs.header.filename;
+                                             });
+                            break;
+                        case 1: // Comment
+                            std::stable_sort(sortStart, sortEnd,
+                                             [](const bup::BackupFileInfo &lhs, const bup::BackupFileInfo &rhs) {
+                                                 return lhs.header.comment < rhs.header.comment;
+                                             });
+                            break;
+                        case 2: // Language
+                            std::stable_sort(sortStart, sortEnd,
+                                             [](const bup::BackupFileInfo &lhs, const bup::BackupFileInfo &rhs) {
+                                                 return lhs.header.language < rhs.header.language;
+                                             });
+                            break;
+                        case 3: // Size
+                            std::stable_sort(sortStart, sortEnd,
+                                             [](const bup::BackupFileInfo &lhs, const bup::BackupFileInfo &rhs) {
+                                                 return lhs.size < rhs.size;
+                                             });
+                            break;
+                        case 4: // Blocks
+                            std::stable_sort(sortStart, sortEnd,
+                                             [](const bup::BackupFileInfo &lhs, const bup::BackupFileInfo &rhs) {
+                                                 return lhs.numRawBlocks < rhs.numRawBlocks;
+                                             });
+                            break;
+                        case 5: // Date/time
+                            std::stable_sort(sortStart, sortEnd,
+                                             [](const bup::BackupFileInfo &lhs, const bup::BackupFileInfo &rhs) {
+                                                 return lhs.header.date < rhs.header.date;
+                                             });
+                            break;
+                        default: util::unreachable();
+                        }
+                    };
+
+                    switch (sortSpec.SortDirection) {
+                    case ImGuiSortDirection_None: break;
+                    case ImGuiSortDirection_Ascending: sortColumns(files.begin(), files.end()); break;
+                    case ImGuiSortDirection_Descending: sortColumns(files.rbegin(), files.rend()); break;
+                    }
+                }
+            }
 
             if (hasBup) {
                 ImGuiMultiSelectIO *msio =
@@ -99,8 +156,14 @@ void BackupMemoryView::Display() {
         uint32 selCount = m_selected.size();
         uint32 selBlocks = 0;
         uint32 selSize = 0;
-        for (uint32 item : m_selected) {
-            auto &file = files[item];
+        for (const std::string &item : m_selected) {
+            auto it = std::find_if(files.begin(), files.end(),
+                                   [&](const bup::BackupFileInfo &bupFile) { return bupFile.header.filename == item; });
+            if (it == files.end()) {
+                // This shouldn't happen
+                continue;
+            }
+            auto &file = *it;
             selBlocks += file.numBlocks;
             selSize += file.size;
         }
@@ -142,8 +205,14 @@ void BackupMemoryView::Display() {
 
         // Export files from backup memory into a list
         m_filesToExport.clear();
-        for (uint32 item : m_selected) {
-            auto &fileInfo = files[item];
+        for (const std::string &item : m_selected) {
+            auto it = std::find_if(files.begin(), files.end(),
+                                   [&](const bup::BackupFileInfo &bupFile) { return bupFile.header.filename == item; });
+            if (it == files.end()) {
+                // This shouldn't happen
+                continue;
+            }
+            auto &fileInfo = *it;
             auto optFile = m_bup->Export(fileInfo.header.filename);
             if (optFile) {
                 m_filesToExport.push_back(*optFile);
@@ -283,11 +352,15 @@ std::vector<bup::BackupFile> BackupMemoryView::ExportSelected() const {
         std::unique_lock lock{m_context.locks.backupRAM};
         std::vector<bup::BackupFile> files{};
         auto bupFiles = m_bup->List();
-        for (auto item : m_selected) {
-            if (item >= bupFiles.size()) {
+        for (const std::string &item : m_selected) {
+            auto it = std::find_if(bupFiles.begin(), bupFiles.end(),
+                                   [&](const bup::BackupFileInfo &bupFile) { return bupFile.header.filename == item; });
+            if (it == bupFiles.end()) {
+                // This shouldn't happen
                 continue;
             }
-            if (auto file = m_bup->Export(bupFiles[item].header.filename)) {
+            auto &fileInfo = *it;
+            if (auto file = m_bup->Export(fileInfo.header.filename)) {
                 files.push_back(*file);
             }
         }
@@ -328,8 +401,8 @@ void BackupMemoryView::ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<ymir:
         case ImGuiSelectionRequestType_None: break;
         case ImGuiSelectionRequestType_SetAll:
             if (req.Selected) {
-                for (uint32 i = 0; i < files.size(); i++) {
-                    m_selected.insert(i);
+                for (const auto &file : files) {
+                    m_selected.insert(file.header.filename);
                 }
             } else {
                 m_selected.clear();
@@ -337,10 +410,14 @@ void BackupMemoryView::ApplyRequests(ImGuiMultiSelectIO *msio, std::vector<ymir:
             break;
         case ImGuiSelectionRequestType_SetRange:
             for (uint32 i = req.RangeFirstItem; i <= req.RangeLastItem; i++) {
+                if (i >= files.size()) {
+                    break;
+                }
+                const auto &file = files[i];
                 if (req.Selected) {
-                    m_selected.insert(i);
+                    m_selected.insert(file.header.filename);
                 } else {
-                    m_selected.erase(i);
+                    m_selected.erase(file.header.filename);
                 }
             }
             break;
@@ -353,7 +430,8 @@ void BackupMemoryView::DrawFileTableHeader() {
     const float monoCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
-    ImGui::TableSetupColumn("File name", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 12.5f);
+    ImGui::TableSetupColumn("File name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultSort,
+                            monoCharWidth * 12.5f);
     ImGui::TableSetupColumn("Comment", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 11.5f);
     ImGui::TableSetupColumn("Language", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 9);
     ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, monoCharWidth * 6.5f);
@@ -381,7 +459,7 @@ void BackupMemoryView::DrawFileTableRow(const bup::BackupFileInfo &file, uint32 
     if (ImGui::TableNextColumn()) {
         ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
         if (selectable) {
-            bool selected = m_selected.contains(index);
+            bool selected = m_selected.contains(file.header.filename);
             ImGui::SetNextItemSelectionUserData(index);
             ImGui::Selectable(file.header.filename.c_str(), selected,
                               ImGuiSelectableFlags_AllowOverlap | ImGuiSelectableFlags_SpanAllColumns);
@@ -454,8 +532,15 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
             if (ImGui::BeginTable("bup_files_list", 6, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
                 DrawFileTableHeader();
 
-                for (uint32 item : m_selected) {
-                    auto &file = files[item];
+                for (const std::string &item : m_selected) {
+                    auto it = std::find_if(files.begin(), files.end(), [&](const bup::BackupFileInfo &bupFile) {
+                        return bupFile.header.filename == item;
+                    });
+                    if (it == files.end()) {
+                        // This shouldn't happen
+                        continue;
+                    }
+                    auto &file = *it;
                     DrawFileTableRow(file);
                 }
 
@@ -474,8 +559,15 @@ void BackupMemoryView::DisplayConfirmDeleteModal(std::span<bup::BackupFileInfo> 
         ImGui::PopStyleVar();*/
 
         if (ImGui::Button("OK", ImVec2(80 * m_context.displayScale, 0))) {
-            for (uint32 item : m_selected) {
-                auto &file = files[item];
+            for (const std::string &item : m_selected) {
+                auto it = std::find_if(files.begin(), files.end(), [&](const bup::BackupFileInfo &bupFile) {
+                    return bupFile.header.filename == item;
+                });
+                if (it == files.end()) {
+                    // This shouldn't happen
+                    continue;
+                }
+                auto &file = *it;
                 m_context.EnqueueEvent(events::emu::DeleteBackupFile(file.header.filename, m_external));
             }
             m_selected.clear();

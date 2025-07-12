@@ -36,7 +36,7 @@ private:
     std::string m_name;
     bool m_external;
 
-    std::set<uint32> m_selected;
+    std::set<std::string> m_selected;
     ymir::bup::IBackupMemory *m_bup;
 
     // -----------------------------------------------------------------------------------------------------------------

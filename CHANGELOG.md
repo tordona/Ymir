@@ -12,6 +12,7 @@
 - App: Include timestamp on save states.
 - App: Notify about loading/saving save states or switching save state slots.
 - App: Smooth out frame interval adjustments in full screen mode.
+- Backup Manager: Make all columns sortable.
 - Backup Manager: Show logical block usage (matching BIOS numbers) + header blocks. (#294)
 - Debugger: Added basic VDP1 registers inspector window.
 - Input: Changed default keybinds for Pause/Resume action from "Pause, Ctrl+P" to "Pause, Spacebar".
