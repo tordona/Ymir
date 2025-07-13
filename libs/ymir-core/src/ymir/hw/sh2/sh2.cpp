@@ -685,42 +685,42 @@ FLATTEN FORCE_INLINE void SH2::MemWriteLong(uint32 address, uint32 value) {
 }
 
 template <bool enableCache>
-FLATTEN FORCE_INLINE uint16 SH2::PeekInstruction(uint32 address) {
+FLATTEN_EX FORCE_INLINE_EX uint16 SH2::PeekInstruction(uint32 address) {
     return MemRead<uint16, true, true, enableCache>(address);
 }
 
 template <bool enableCache>
-FLATTEN FORCE_INLINE uint8 SH2::MemPeekByte(uint32 address) {
+FLATTEN_EX FORCE_INLINE_EX uint8 SH2::MemPeekByte(uint32 address) {
     return MemRead<uint8, false, true, enableCache>(address);
 }
 
 template <bool enableCache>
-FLATTEN FORCE_INLINE uint16 SH2::MemPeekWord(uint32 address) {
+FLATTEN_EX FORCE_INLINE_EX uint16 SH2::MemPeekWord(uint32 address) {
     return MemRead<uint16, false, true, enableCache>(address);
 }
 
 template <bool enableCache>
-FLATTEN FORCE_INLINE uint32 SH2::MemPeekLong(uint32 address) {
+FLATTEN_EX FORCE_INLINE_EX uint32 SH2::MemPeekLong(uint32 address) {
     return MemRead<uint32, false, true, enableCache>(address);
 }
 
 template <bool enableCache>
-FLATTEN FORCE_INLINE void SH2::MemPokeByte(uint32 address, uint8 value) {
+FLATTEN_EX FORCE_INLINE_EX void SH2::MemPokeByte(uint32 address, uint8 value) {
     MemWrite<uint8, true, false, enableCache>(address, value);
 }
 
 template <bool enableCache>
-FLATTEN FORCE_INLINE void SH2::MemPokeWord(uint32 address, uint16 value) {
+FLATTEN_EX FORCE_INLINE_EX void SH2::MemPokeWord(uint32 address, uint16 value) {
     MemWrite<uint16, true, false, enableCache>(address, value);
 }
 
 template <bool enableCache>
-FLATTEN FORCE_INLINE void SH2::MemPokeLong(uint32 address, uint32 value) {
+FLATTEN_EX FORCE_INLINE_EX void SH2::MemPokeLong(uint32 address, uint32 value) {
     MemWrite<uint32, true, false, enableCache>(address, value);
 }
 
 template <mem_primitive T>
-FLATTEN_EX FORCE_INLINE_EX T SH2::OpenBusSeqRead(uint32 address) {
+/*FLATTEN_EX FORCE_INLINE_EX*/ T SH2::OpenBusSeqRead(uint32 address) {
     if constexpr (std::is_same_v<T, uint8>) {
         return (address & 1u) * ((address >> 1u) & 0x7);
         // return OpenBusSeqRead<uint16>(address) >> (((address & 1) ^ 1) * 8);
@@ -759,7 +759,7 @@ FORCE_INLINE uint64 SH2::AccessCycles(uint32 address) {
 // On-chip peripherals
 
 template <mem_primitive T, bool peek>
-FLATTEN_EX FORCE_INLINE_EX T SH2::OnChipRegRead(uint32 address) {
+/*FLATTEN_EX FORCE_INLINE_EX*/ T SH2::OnChipRegRead(uint32 address) {
     // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
     //   (address & 1) == 1 is only valid for 8-bit accesses
@@ -1003,7 +1003,7 @@ FORCE_INLINE uint32 SH2::OnChipRegReadLong(uint32 address) {
 }
 
 template <mem_primitive T, bool poke, bool debug, bool enableCache>
-FLATTEN_EX FORCE_INLINE_EX void SH2::OnChipRegWrite(uint32 address, T value) {
+/*FLATTEN_EX FORCE_INLINE_EX*/ void SH2::OnChipRegWrite(uint32 address, T value) {
     // Misaligned memory accesses raise an address error, therefore:
     //   (address & 3) == 2 is only valid for 16-bit accesses
     //   (address & 1) == 1 is only valid for 8-bit accesses
