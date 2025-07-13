@@ -1102,8 +1102,7 @@ private:
     // y is the scanline to draw
     // bgParams contains the parameters for the BG to draw.
     // bgState is a reference to the background layer state for the background.
-    // update indicates if the line scroll table address should be updated (used with deinterlacing).
-    void VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState, bool update);
+    void VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState);
 
     // Loads rotation parameter tables and calculates coefficients and increments.
     //

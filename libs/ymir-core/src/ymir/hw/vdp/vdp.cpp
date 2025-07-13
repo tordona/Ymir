@@ -2535,8 +2535,11 @@ void VDP::VDP2UpdateEnabledBGs() {
     }
 }
 
-FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState,
-                                                  bool update) {
+FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgParams, NormBGLayerState &bgState) {
+    if ((y & ((1u << bgParams.lineScrollInterval) - 1)) != 0) {
+        return;
+    }
+
     uint32 address = bgState.lineScrollTableAddress;
     auto read = [&] {
         const uint32 value = VDP2ReadRendererVRAM<uint32>(address);
@@ -2561,9 +2564,7 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
             bgState.scrollIncH = bit::extract<8, 18>(read());
         }
     }
-    if (update && (y & ((1u << bgParams.lineScrollInterval) - 1)) == 0) {
-        bgState.lineScrollTableAddress = address;
-    }
+    bgState.lineScrollTableAddress = address;
 }
 
 FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
@@ -3491,7 +3492,9 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
     auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex + 1]}.first(m_HRes);
 
     if constexpr (bgIndex < 2) {
-        VDP2UpdateLineScreenScroll(y, bgParams, bgState, !deinterlace || altField);
+        if (!deinterlace || !altField) {
+            VDP2UpdateLineScreenScroll(y, bgParams, bgState);
+        }
     }
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);

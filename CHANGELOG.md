@@ -67,6 +67,7 @@
 - VDP2: Latch BG scroll registers earlier (at VBlank OUT) and latch vertical scroll registers (SCY[ID]Nn). Fixes bad vertical offset in Shinobi-X's NBG2 layer. (#193)
 - VDP2: Read first vertical cell scroll entry on bitmap backgrounds. Fixes misplaced lines in Street Fighter - Real Battle on Film FMVs. (#291)
 - VDP2: Update line screen scroll address at Y=0. Fixes line glitches in Rayman's backgrounds and Sonic Jam's Sonic 2 special stage graphics.
+- VDP2: Update line screen scroll offsets only at the specified boundaries. Very slightly improves performance and fixes text slicing issues in Sega Rally Championship's Records and Options screens.
 - VDP2: Update vertical cell scroll every 8 cell dots correctly when the background is zoomed in.
 - ymdasm: Fix reversed SCU DSP DMA immediate/data RAM operand decoding.
 - ymdasm: Mask and translate several SCU DSP immediates.
