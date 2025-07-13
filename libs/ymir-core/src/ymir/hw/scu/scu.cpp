@@ -727,7 +727,12 @@ void SCU::RunDMA() {
                 ch.active = false;
                 ch.currXferCount = 0;
                 if (ch.updateSrcAddr) {
-                    ch.srcAddr = ch.currSrcAddr;
+                    if (ch.srcAddrInc == 0) {
+                        // TODO: not entirely correct
+                        ch.srcAddr += 4;
+                    } else {
+                        ch.srcAddr = ch.currSrcAddr;
+                    }
                 }
                 if (ch.updateDstAddr) {
                     if (ch.indirect) {
