@@ -4806,9 +4806,10 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
             const CoordU32 scrollCoord{scrollX, scrollY};
 
             // Plot pixel
-            layerState.pixels.SetPixel(x, VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-                                              bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH,
-                                              bgParams.pageShiftV, scrollCoord, bgState.charFetcher));
+            const Pixel pixel = VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
+                bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord,
+                bgState.charFetcher);
+            layerState.pixels.SetPixel(x, pixel);
         }
 
         // Increment horizontal coordinate
@@ -4906,8 +4907,9 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
             const CoordU32 scrollCoord{scrollX, scrollY};
 
             // Plot pixel
-            layerState.pixels.SetPixel(
-                x, VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, bgParams.bitmapBaseAddress, scrollCoord));
+            const Pixel pixel =
+                VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, bgParams.bitmapBaseAddress, scrollCoord);
+            layerState.pixels.SetPixel(x, pixel);
         }
 
         // Increment horizontal coordinate
@@ -5063,8 +5065,9 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
             layerState.pixels.transparent[xx] = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
-            layerState.pixels.SetPixel(
-                xx, VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, rotParams.bitmapBaseAddress, scrollCoord));
+            const Pixel pixel =
+                VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, rotParams.bitmapBaseAddress, scrollCoord);
+            layerState.pixels.SetPixel(xx, pixel);
         } else {
             // Out of bounds and no repeat
             layerState.pixels.transparent[xx] = true;
@@ -5564,7 +5567,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
     if (bgParams.priorityMode == PriorityMode::PerCharacter) {
         pixel.priority &= ~1;
         pixel.priority |= (uint8)ch.specPriority;
-    } else if (bgParams.priorityMode == PriorityMode::PerDot) {
+    } else if (bgParams.priorityMode == PriorityMode::PerDot && ch.specPriority) {
         if constexpr (IsPaletteColorFormat(colorFormat)) {
             pixel.priority &= ~1;
             pixel.priority |= static_cast<uint8>(specFuncCode.colorMatches[colorData]);
