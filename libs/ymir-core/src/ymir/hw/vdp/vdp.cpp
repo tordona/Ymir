@@ -3184,6 +3184,7 @@ void VDP::VDP2DrawLine(uint32 y) {
     const uint32 colorMode = regs2.vramControl.colorRAMMode;
     const bool rotate = regs1.fbRotEnable;
     const bool interlaced = regs2.TVMD.IsInterlaced();
+    const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
 
     // Precalculate window state
     VDP2CalcWindows<deinterlace, false>(y);
@@ -3208,6 +3209,21 @@ void VDP::VDP2DrawLine(uint32 y) {
             VDP2DrawNormalBG<2, false>(y, colorMode, false); // NBG2
             VDP2DrawNormalBG<3, false>(y, colorMode, false); // NBG3
         }
+
+        // Update NBG coordinates
+        for (uint32 i = 0; i < 4; ++i) {
+            if (!m_layerEnabled[i + 2]) {
+                continue;
+            }
+            const BGParams &bgParams = regs2.bgParams[i + 1];
+            NormBGLayerState &bgState = m_normBGLayerStates[i];
+            bgState.fracScrollY += bgParams.scrollIncV;
+            // Update the vertical scroll coordinate twice in double-density interlaced mode.
+            // If deinterlacing, the second increment is done after rendering the alternate scanline.
+            if (!deinterlace && doubleDensity) {
+                bgState.fracScrollY += bgParams.scrollIncV;
+            }
+        }
     }
 
     // Compose image
@@ -3217,7 +3233,6 @@ void VDP::VDP2DrawLine(uint32 y) {
     if constexpr (deinterlace) {
         if (interlaced) {
             // The alternate VDP2 line only needs to be redrawn in double-density mode
-            const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
             if (doubleDensity) {
                 // Precalculate window state
                 VDP2CalcWindows<true, true>(y);
@@ -3237,6 +3252,16 @@ void VDP::VDP2DrawLine(uint32 y) {
                     VDP2DrawNormalBG<1, true>(y, colorMode, true); // NBG1
                     VDP2DrawNormalBG<2, true>(y, colorMode, true); // NBG2
                     VDP2DrawNormalBG<3, true>(y, colorMode, true); // NBG3
+
+                    // Update NBG coordinates
+                    for (uint32 i = 0; i < 4; ++i) {
+                        if (!m_layerEnabled[i + 2]) {
+                            continue;
+                        }
+                        const BGParams &bgParams = regs2.bgParams[i + 1];
+                        NormBGLayerState &bgState = m_normBGLayerStates[i];
+                        bgState.fracScrollY += bgParams.scrollIncV;
+                    }
                 }
             }
 
@@ -4752,10 +4777,6 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
     const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV;
-    bgState.fracScrollY += bgParams.scrollIncV;
-    if (!deinterlace && regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
-        bgState.fracScrollY += bgParams.scrollIncV;
-    }
 
     uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
 
@@ -4853,10 +4874,6 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
     const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV;
-    bgState.fracScrollY += bgParams.scrollIncV;
-    if (!deinterlace && regs.TVMD.LSMDn == InterlaceMode::DoubleDensity) {
-        bgState.fracScrollY += bgParams.scrollIncV;
-    }
 
     uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
 
