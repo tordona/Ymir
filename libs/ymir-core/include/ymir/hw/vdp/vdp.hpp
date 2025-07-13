@@ -1149,6 +1149,11 @@ private:
     // regs2 is the set of VDP2 registers
     void VDP2CalcAccessPatterns(VDP2Regs &regs2);
 
+    // Prepares the specified VDP2 scanline for rendering.
+    //
+    // y is the scanline to prepare
+    void VDP2PrepareLine(uint32 y);
+
     // Draws the specified VDP2 scanline.
     //
     // y is the scanline to draw

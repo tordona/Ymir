@@ -859,7 +859,9 @@ void VDP::BeginHPhaseActiveDisplay() {
 
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_state.regs2.VCNT));
         } else {
-            (this->*m_fnVDP2DrawLine)(m_state.regs2.VCNT);
+            const uint32 y = m_state.regs2.VCNT;
+            VDP2PrepareLine(y);
+            (this->*m_fnVDP2DrawLine)(y);
         }
     }
 }
@@ -1065,7 +1067,10 @@ void VDP::VDPRenderThread() {
 
             case EvtType::VDP2BeginFrame: VDP2CalcAccessPatterns(rctx.vdp2.regs); break;
             case EvtType::VDP2UpdateEnabledBGs: VDP2UpdateEnabledBGs(); break;
-            case EvtType::VDP2DrawLine: (this->*m_fnVDP2DrawLine)(event.drawLine.vcnt); break;
+            case EvtType::VDP2DrawLine:
+                VDP2PrepareLine(event.drawLine.vcnt);
+                (this->*m_fnVDP2DrawLine)(event.drawLine.vcnt);
+                break;
             case EvtType::VDP2EndFrame: rctx.renderFinishedSignal.Set(); break;
 
             case EvtType::VDP1VRAMWriteByte: rctx.vdp1.VRAM[event.write.address] = event.write.value; break;
@@ -3131,6 +3136,18 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
     }
 }
 
+FORCE_INLINE void VDP::VDP2PrepareLine(uint32 y) {
+    const VDP2Regs &regs2 = VDP2GetRegs();
+
+    // Load rotation parameters if any of the RBG layers is enabled
+    if (regs2.bgEnabled[4] || regs2.bgEnabled[5]) {
+        VDP2CalcRotationParameterTables(y);
+    }
+
+    // Draw line color and back screen layers
+    VDP2DrawLineColorAndBackScreens(y);
+}
+
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP2DrawLine(uint32 y) {
     devlog::trace<grp::vdp2_render>("Drawing line {}", y);
@@ -3163,14 +3180,6 @@ void VDP::VDP2DrawLine(uint32 y) {
     const uint32 colorMode = regs2.vramControl.colorRAMMode;
     const bool rotate = regs1.fbRotEnable;
     const bool interlaced = regs2.TVMD.IsInterlaced();
-
-    // Load rotation parameters if any of the RBG layers is enabled
-    if (regs2.bgEnabled[4] || regs2.bgEnabled[5]) {
-        VDP2CalcRotationParameterTables(y);
-    }
-
-    // Draw line color and back screen layers
-    VDP2DrawLineColorAndBackScreens(y);
 
     // Precalculate window state
     VDP2CalcWindows<deinterlace, false>(y);
