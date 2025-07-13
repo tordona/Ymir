@@ -1,4 +1,4 @@
-#include "vdp2_layers_enable_view.hpp"
+#include "vdp2_layer_visibility_view.hpp"
 
 #include <app/events/emu_debug_event_factory.hpp>
 
@@ -8,11 +8,11 @@ using namespace ymir;
 
 namespace app::ui {
 
-VDP2LayersEnableView::VDP2LayersEnableView(SharedContext &context, vdp::VDP &vdp)
+VDP2LayerVisibilityView::VDP2LayerVisibilityView(SharedContext &context, vdp::VDP &vdp)
     : m_context(context)
     , m_vdp(vdp) {}
 
-void VDP2LayersEnableView::Display() {
+void VDP2LayerVisibilityView::Display() {
     auto checkbox = [&](const char *name, vdp::Layer layer) {
         bool enabled = m_vdp.IsLayerEnabled(layer);
         if (ImGui::Checkbox(name, &enabled)) {

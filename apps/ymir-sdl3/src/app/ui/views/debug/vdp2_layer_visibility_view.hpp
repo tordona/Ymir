@@ -6,9 +6,9 @@
 
 namespace app::ui {
 
-class VDP2LayersEnableView {
+class VDP2LayerVisibilityView {
 public:
-    VDP2LayersEnableView(SharedContext &context, ymir::vdp::VDP &vdp);
+    VDP2LayerVisibilityView(SharedContext &context, ymir::vdp::VDP &vdp);
 
     void Display();
 

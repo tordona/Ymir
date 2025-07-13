@@ -2184,7 +2184,7 @@ void App::RunEmulator() {
                             }
                         };
 
-                        ImGui::MenuItem("Layers", nullptr, &m_vdpWindowSet.vdp2Layers.Open);
+                        ImGui::MenuItem("Layer visibility", nullptr, &m_vdpWindowSet.vdp2LayerVisibility.Open);
                         ImGui::Indent();
                         layerMenuItem("Sprite", vdp::Layer::Sprite);
                         layerMenuItem("RBG0", vdp::Layer::RBG0);
