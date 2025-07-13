@@ -3197,6 +3197,16 @@ void VDP::VDP2DrawLine(uint32 y) {
         VDP2DrawRotationBG<0>(y, colorMode, false); // RBG0
         VDP2DrawRotationBG<1>(y, colorMode, false); // RBG1
     } else {
+        // Update line screen scroll coordinates for NBG0 and NBG1
+        for (uint32 i = 0; i < 2; ++i) {
+            if (!m_layerEnabled[i + 2]) {
+                continue;
+            }
+            const BGParams &bgParams = regs2.bgParams[i + 1];
+            NormBGLayerState &bgState = m_normBGLayerStates[i];
+            VDP2UpdateLineScreenScroll(y, bgParams, bgState);
+        }
+
         VDP2DrawRotationBG<0>(y, colorMode, false); // RBG0
         if (interlaced) {
             VDP2DrawNormalBG<0, deinterlace>(y, colorMode, false); // NBG0
@@ -3515,12 +3525,6 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
     LayerState &layerState = m_layerStates[altField][bgIndex + 2];
     NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
     auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex + 1]}.first(m_HRes);
-
-    if constexpr (bgIndex < 2) {
-        if (!deinterlace || !altField) {
-            VDP2UpdateLineScreenScroll(y, bgParams, bgState);
-        }
-    }
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
