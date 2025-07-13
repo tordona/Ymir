@@ -13,7 +13,7 @@ protected:
     void DrawContents() override;
 
 private:
-    void DrawParameters();
+    void DrawSMPCParameters();
     void DrawScreen();
     void DrawRealTimeClock();
     void DrawClocks();

@@ -4,6 +4,7 @@
 #include <app/events/gui_event_factory.hpp>
 
 #include <app/ui/widgets/cartridge_widgets.hpp>
+#include <app/ui/widgets/common_widgets.hpp>
 #include <app/ui/widgets/system_widgets.hpp>
 
 #include <SDL3/SDL_clipboard.h>
@@ -31,8 +32,8 @@ void SystemStateWindow::PrepareWindow() {
 void SystemStateWindow::DrawContents() {
     ImGui::BeginGroup();
 
-    ImGui::SeparatorText("Parameters");
-    DrawParameters();
+    ImGui::SeparatorText("SMPC Parameters");
+    DrawSMPCParameters();
 
     ImGui::SeparatorText("State");
     DrawScreen();
@@ -57,7 +58,7 @@ void SystemStateWindow::DrawContents() {
     ImGui::EndGroup();
 }
 
-void SystemStateWindow::DrawParameters() {
+void SystemStateWindow::DrawSMPCParameters() {
     sys::ClockSpeed clockSpeed = m_context.saturn.GetClockSpeed();
 
     if (ImGui::BeginTable("sys_params", 2, ImGuiTableFlags_SizingFixedFit)) {
@@ -65,15 +66,22 @@ void SystemStateWindow::DrawParameters() {
         if (ImGui::TableNextColumn()) {
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("Clock speed");
+            widgets::ExplanationTooltip(
+                "Select the divider for system clock rates.\n"
+                "Automatically adjusted by games.\n"
+                "On a real Saturn, games must use the faster clock setting to use 352 pixels-wide resolution modes.",
+                m_context.displayScale);
         }
         if (ImGui::TableNextColumn()) {
-            if (ImGui::RadioButton("320 pixels", clockSpeed == sys::ClockSpeed::_320)) {
+            if (ImGui::RadioButton("Slow", clockSpeed == sys::ClockSpeed::_320)) {
                 m_context.EnqueueEvent(events::emu::SetClockSpeed(sys::ClockSpeed::_320));
             }
+            widgets::ExplanationTooltip("320 pixels", m_context.displayScale);
             ImGui::SameLine();
-            if (ImGui::RadioButton("352 pixels", clockSpeed == sys::ClockSpeed::_352)) {
+            if (ImGui::RadioButton("Fast", clockSpeed == sys::ClockSpeed::_352)) {
                 m_context.EnqueueEvent(events::emu::SetClockSpeed(sys::ClockSpeed::_352));
             }
+            widgets::ExplanationTooltip("352 pixels", m_context.displayScale);
         }
 
         ImGui::TableNextRow();
