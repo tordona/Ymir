@@ -1265,8 +1265,11 @@ FORCE_INLINE void VDP::VDP1EraseFramebuffer() {
     auto &fb = m_state.spriteFB[fbIndex];
     auto &altFB = m_altSpriteFB[fbIndex];
 
-    // Horizontal scale is doubled in hi-res modes or when targeting rotation background
-    const uint32 scaleH = (regs2.TVMD.HRESOn & 0b010) || regs1.fbRotEnable ? 1 : 0;
+    const bool halfResH =
+        !regs1.hdtvEnable && !regs1.fbRotEnable && regs1.pixel8Bits && (regs2.TVMD.HRESOn & 0b110) == 0b000;
+
+    // Horizontal scale is doubled in hi-res mode, lo-res modes with 8-bit sprite data or when targeting rotation BG
+    const uint32 scaleH = (regs2.TVMD.HRESOn & 0b010) || halfResH || regs1.fbRotEnable ? 1 : 0;
     // Vertical scale is doubled in double-interlace mode
     const uint32 scaleV = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity ? 1 : 0;
 

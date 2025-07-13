@@ -48,6 +48,7 @@
 - SH2: The nIVECF pin of the SSH2 is disconnected, disallowing it from doing external interrupt vector fetches.
 - SMPC: Fix automatic switch to PAL or NTSC to match area code more consistently.
 - System: Tighten synchronization between SCU and SH-2 CPUs. Improves stability on WipEout (USA). (#202)
+- VDP1: Double horizontal erase area when drawing low-resolution sprites with 8-bit data. Fixes right half of sprite graphics not cleaning up in Resident Evil's options menu. (#180)
 - VDP1: Extend line clipping to the left and top edges by one pixel to compensate for some inaccuracies.
 - VDP1: Fix end codes for 64 and 128 color sprites. Fixes white sprite outlines in Scud - The Disposable Assassin and broken sprites in Primal Rage. (#268, #280)
 - VDP1: Include source color MSB when rendering polygons in half-luminance mode. Fixes intro FMV background on Crows - The Battle Action. (#107)
