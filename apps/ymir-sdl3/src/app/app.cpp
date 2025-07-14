@@ -522,16 +522,7 @@ void App::RunEmulator() {
         return;
     }
     ScopeGuard sgDestroyWindow{[&] {
-        if (m_context.settings.gui.rememberWindowGeometry) {
-            int wx, wy, ww, wh;
-            const bool posOK = SDL_GetWindowPosition(screen.window, &wx, &wy);
-            const bool sizeOK = SDL_GetWindowSize(screen.window, &ww, &wh);
-            if (posOK && sizeOK) {
-                std::ofstream out{m_context.profile.GetPath(ProfilePath::PersistentState) / "window.txt"};
-                out << fmt::format("{} {} {} {}", wx, wy, ww, wh);
-            }
-        }
-
+        PersistWindowGeometry();
         SDL_DestroyWindow(screen.window);
     }};
 
@@ -1566,8 +1557,12 @@ void App::RunEmulator() {
                 if (!m_context.settings.video.overrideUIScale) {
                     const float windowScale = SDL_GetWindowDisplayScale(screen.window);
                     RescaleUI(windowScale);
+                    PersistWindowGeometry();
                 }
                 break;
+            case SDL_EVENT_WINDOW_RESIZED: [[fallthrough]];
+            case SDL_EVENT_WINDOW_MOVED: PersistWindowGeometry(); break;
+
             case SDL_EVENT_QUIT: goto end_loop; break;
             case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
                 if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
@@ -2005,6 +2000,8 @@ void App::RunEmulator() {
                                         !videoSettings.displayVideoOutputInWindow)) {
                         fitWindowToScreenNow = true;
                     }
+                    ImGui::MenuItem("Remember window geometry", nullptr,
+                                    &m_context.settings.gui.rememberWindowGeometry);
                     if (fullScreen) {
                         ImGui::BeginDisabled();
                     }
@@ -2898,8 +2895,10 @@ void App::EmulatorThread() {
             case OpenCloseTray:
                 if (m_context.saturn.IsTrayOpen()) {
                     m_context.saturn.CloseTray();
+                    m_context.DisplayMessage("Disc tray closed");
                 } else {
                     m_context.saturn.OpenTray();
+                    m_context.DisplayMessage("Disc tray opened");
                 }
                 break;
             case LoadDisc: //
@@ -2928,6 +2927,7 @@ void App::EmulatorThread() {
                 if (m_context.settings.system.internalBackupRAMPerGame) {
                     m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
                 }
+                m_context.DisplayMessage("Disc ejected");
                 break;
             }
             case RemoveCartridge: //
@@ -3327,6 +3327,18 @@ void App::LoadFonts() {
     m_context.fonts.display = loadFont("ZenDots Regular", "fonts/ZenDots-Regular.ttf");
 
     io.FontDefault = m_context.fonts.sansSerif.regular;
+}
+
+void App::PersistWindowGeometry() {
+    if (m_context.settings.gui.rememberWindowGeometry) {
+        int wx, wy, ww, wh;
+        const bool posOK = SDL_GetWindowPosition(m_context.screen.window, &wx, &wy);
+        const bool sizeOK = SDL_GetWindowSize(m_context.screen.window, &ww, &wh);
+        if (posOK && sizeOK) {
+            std::ofstream out{m_context.profile.GetPath(ProfilePath::PersistentState) / "window.txt"};
+            out << fmt::format("{} {} {} {}", wx, wy, ww, wh);
+        }
+    }
 }
 
 template <int port>

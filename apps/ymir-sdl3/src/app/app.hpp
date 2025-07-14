@@ -67,6 +67,8 @@ private:
     ImGuiStyle &ReloadStyle(float displayScale);
     void LoadFonts();
 
+    void PersistWindowGeometry();
+
     template <int port>
     void ReadPeripheral(ymir::peripheral::PeripheralReport &report);
 
@@ -84,6 +86,7 @@ private:
     void SelectSaveStateSlot(size_t slot);
     void PersistSaveState(size_t slot);
     void WriteSaveStateMeta();
+
     void EnableRewindBuffer(bool enable);
     void ToggleRewindBuffer();
 
