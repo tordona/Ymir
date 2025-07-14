@@ -62,6 +62,9 @@ void TweaksSettingsView::Display() {
         fmt::format_to(inserter, "- {}\n", checkbox("Threaded VDP2 rendering", config.video.threadedVDP.Get()));
         fmt::format_to(
             inserter, "  - {}\n",
+            checkbox("Use dedicated thread for deinterlaced rendering", config.video.threadedDeinterlacer.Get()));
+        fmt::format_to(
+            inserter, "  - {}\n",
             checkbox("Include VDP1 rendering in VDP2 renderer thread", config.video.includeVDP1InRenderThread.Get()));
 
         // -------------------------------------------------------------------------------------------------------------

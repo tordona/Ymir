@@ -74,6 +74,9 @@ struct Configuration {
         /// @brief Runs the VDP2 renderer in a dedicated thread.
         util::Observable<bool> threadedVDP = true;
 
+        /// @brief Runs the VDP2 deinterlacer in a dedicated thread, if the VDP2 renderer is running in a thread.
+        util::Observable<bool> threadedDeinterlacer = true;
+
         /// @brief Render VDP1 in the dedicated VDP2 rendering thread if that is enabled.
         /// Lowers compatibility in exchange for performance.
         /// Some games stop working when this option is enabled.

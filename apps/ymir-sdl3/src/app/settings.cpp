@@ -893,6 +893,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "DoubleClickToFullScreen", video.doubleClickToFullScreen);
 
         Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
+        Parse(tblVideo, "ThreadedDeinterlacer", emuConfig.video.threadedDeinterlacer);
         Parse(tblVideo, "IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread);
         Parse(tblVideo, "OverrideUIScale", video.overrideUIScale);
 
@@ -1190,6 +1191,7 @@ SettingsSaveResult Settings::Save() {
             {"Deinterlace", video.deinterlace.Get()},
             {"TransparentMeshes", video.transparentMeshes.Get()},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
+            {"ThreadedDeinterlacer", emuConfig.video.threadedDeinterlacer.Get()},
             {"IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread.Get()},
         }}},
 

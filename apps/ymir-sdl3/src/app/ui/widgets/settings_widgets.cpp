@@ -88,27 +88,46 @@ namespace settings::video {
             "It is HIGHLY recommended to leave this option enabled as there are no known drawbacks.",
             ctx.displayScale);
 
-        if (!threadedVDP) {
-            ImGui::BeginDisabled();
-        }
         ImGui::Indent();
-        bool includeVDP1InRenderThread = config.includeVDP1InRenderThread;
-        if (ctx.settings.MakeDirty(
-                ImGui::Checkbox("Include VDP1 rendering in VDP2 renderer thread", &includeVDP1InRenderThread))) {
-            ctx.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(includeVDP1InRenderThread));
+        {
+            if (!threadedVDP) {
+                ImGui::BeginDisabled();
+            }
+
+            bool threadedDeinterlacer = config.threadedDeinterlacer;
+            if (ctx.settings.MakeDirty(
+                    ImGui::Checkbox("Use dedicated thread for deinterlaced rendering", &threadedDeinterlacer))) {
+                ctx.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(threadedDeinterlacer));
+            }
+            widgets::ExplanationTooltip(
+                "If threaded VDP2 rendering and the deinterlace enhancement are both enabled, runs the deinterlacer on "
+                "a dedicated thread.\n"
+                "Significantly improves performance of the enhancement on CPUs with enough spare cores.\n"
+                "Requires a quad-core CPU or better for best results.\n"
+                "\n"
+                "It is HIGHLY recommended to leave this option enabled if your CPU meets the requirements.",
+                ctx.displayScale);
+
+            bool includeVDP1InRenderThread = config.includeVDP1InRenderThread;
+            if (ctx.settings.MakeDirty(
+                    ImGui::Checkbox("Include VDP1 rendering in VDP2 renderer thread", &includeVDP1InRenderThread))) {
+                ctx.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(includeVDP1InRenderThread));
+            }
+            widgets::ExplanationTooltip(
+                "If VDP2 rendering is running on a dedicated thread, move the software VDP1 renderer to that thread.\n"
+                "Improves performance by about 10% at the cost of accuracy.\n"
+                "A few select games may freeze or refuse to start when this option is enabled.\n"
+                "When this option or Threaded VDP2 renderer is disabled, VDP1 rendering is done on the emulator "
+                "thread.\n"
+                "\n"
+                "Try enabling this option if you need to squeeze a bit more performance.",
+                ctx.displayScale);
+
+            if (!threadedVDP) {
+                ImGui::EndDisabled();
+            }
         }
-        widgets::ExplanationTooltip(
-            "If VDP2 rendering is running on a dedicated thread, move the software VDP1 renderer to that thread.\n"
-            "Improves performance by about 10% at the cost of accuracy.\n"
-            "A few select games may freeze or refuse to start when this option is enabled.\n"
-            "When this option or Threaded VDP2 renderer is disabled, VDP1 rendering is done on the emulator thread.\n"
-            "\n"
-            "Try enabling this option if you need to squeeze a bit more performance.",
-            ctx.displayScale);
         ImGui::Unindent();
-        if (!threadedVDP) {
-            ImGui::EndDisabled();
-        }
     }
 
 } // namespace settings::video

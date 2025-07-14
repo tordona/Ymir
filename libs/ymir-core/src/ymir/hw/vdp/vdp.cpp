@@ -73,6 +73,7 @@ VDP::VDP(core::Scheduler &scheduler, core::Configuration &config)
 
     config.system.videoStandard.Observe([&](VideoStandard videoStandard) { SetVideoStandard(videoStandard); });
     config.video.threadedVDP.Observe([&](bool value) { EnableThreadedVDP(value); });
+    config.video.threadedDeinterlacer.Observe([&](bool value) { m_threadedDeinterlacer = value; });
     config.video.includeVDP1InRenderThread.Observe([&](bool value) { IncludeVDP1RenderInVDPThread(value); });
 
     m_phaseUpdateEvent = scheduler.RegisterEvent(core::events::VDPPhase, this, OnPhaseUpdateEvent);
@@ -1086,15 +1087,20 @@ void VDP::VDPRenderThread() {
             case EvtType::VDP2DrawLine: //
             {
                 const bool deinterlaceRender = m_deinterlaceRender;
+                const bool threadedDeinterlacer = m_threadedDeinterlacer;
                 const bool interlaced = rctx.vdp2.regs.TVMD.IsInterlaced();
                 VDP2PrepareLine(event.drawLine.vcnt);
-                if (deinterlaceRender && interlaced) {
+                if (deinterlaceRender && interlaced && threadedDeinterlacer) {
                     rctx.deinterlaceY = event.drawLine.vcnt;
                     rctx.deinterlaceRenderBeginSignal.Set();
                 }
                 (this->*m_fnVDP2DrawLine)(event.drawLine.vcnt, false);
                 if (deinterlaceRender && interlaced) {
-                    rctx.deinterlaceRenderEndSignal.Wait(true);
+                    if (threadedDeinterlacer) {
+                        rctx.deinterlaceRenderEndSignal.Wait(true);
+                    } else {
+                        (this->*m_fnVDP2DrawLine)(event.drawLine.vcnt, true);
+                    }
                 }
                 VDP2FinishLine(event.drawLine.vcnt);
                 break;

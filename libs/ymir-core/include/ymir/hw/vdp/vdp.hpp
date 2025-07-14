@@ -598,6 +598,9 @@ private:
     // - data written by the CPU on the VDP1 framebuffer is mirrored to the same position in m_altSpriteFB
     bool m_deinterlaceRender = false;
 
+    // Runs the deinterlacer in a dedicated thread.
+    bool m_threadedDeinterlacer = false;
+
     // Enables rendering of meshes as transparent polygons.
     // When false, mesh polygons are rendered as checkerboard patterns, exactly like a real Saturn.
     // When true, mesh polygons are rendered as 50% transparent. This does not interfere with color calculations or
