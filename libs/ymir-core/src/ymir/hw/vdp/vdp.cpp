@@ -3195,14 +3195,18 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
         for (auto access : regs2.cyclePatterns.timings[bank]) {
             switch (access) {
             case CyclePatterns::VCellScrollNBG0:
-                m_vertCellScrollInc += sizeof(uint32);
-                m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
-                vcellAccessOffset += sizeof(uint32);
+                if (regs2.bgParams[1].verticalCellScrollEnable) {
+                    m_vertCellScrollInc += sizeof(uint32);
+                    m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
+                    vcellAccessOffset += sizeof(uint32);
+                }
                 break;
             case CyclePatterns::VCellScrollNBG1:
-                m_vertCellScrollInc += sizeof(uint32);
-                m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
-                vcellAccessOffset += sizeof(uint32);
+                if (regs2.bgParams[2].verticalCellScrollEnable) {
+                    m_vertCellScrollInc += sizeof(uint32);
+                    m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
+                    vcellAccessOffset += sizeof(uint32);
+                }
                 break;
             default: break;
             }
