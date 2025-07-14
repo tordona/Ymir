@@ -1996,7 +1996,11 @@ void App::RunEmulator() {
 
                     ImGui::Separator();
 
-                    ImGui::MenuItem("Auto-fit window to screen", nullptr, &videoSettings.autoResizeWindow);
+                    if (ImGui::MenuItem("Auto-fit window to screen", nullptr, &videoSettings.autoResizeWindow)) {
+                        if (videoSettings.autoResizeWindow) {
+                            fitWindowToScreenNow = true;
+                        }
+                    }
                     if (ImGui::MenuItem("Fit window to screen", nullptr, nullptr,
                                         !videoSettings.displayVideoOutputInWindow)) {
                         fitWindowToScreenNow = true;
