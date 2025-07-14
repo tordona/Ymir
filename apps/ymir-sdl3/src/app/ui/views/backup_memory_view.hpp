@@ -37,7 +37,8 @@ private:
     bool m_external;
 
     std::set<std::string> m_selected;
-    ymir::bup::IBackupMemory *m_bup;
+    ymir::bup::IBackupMemory *m_bup = nullptr;
+    uint16 m_bupBlockSize = 0;
 
     // -----------------------------------------------------------------------------------------------------------------
     // File table drawing

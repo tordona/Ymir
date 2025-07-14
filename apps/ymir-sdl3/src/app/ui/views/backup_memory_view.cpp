@@ -35,6 +35,18 @@ using namespace ymir;
 
 namespace app::ui {
 
+namespace static_config {
+
+    // true: Export backup files using Ymir's own format.
+    // false: Export backup files using the standard BUP format ("Vmem" magic).
+    static constexpr bool export_ymbup = false;
+
+    // The exported backup file suffix.
+    // Derived from export_ymbup.
+    static constexpr const char *bup_file_suffix = export_ymbup ? "ymbup" : "bup";
+
+} // namespace static_config
+
 static constexpr const char *kConfirmDeletionTitle = "Confirm deletion";
 static constexpr const char *kConfirmFormatTitle = "Confirm format";
 
@@ -47,6 +59,12 @@ void BackupMemoryView::SetBackupMemory(ymir::bup::IBackupMemory *bup) {
     if (m_bup != bup) {
         m_bup = bup;
         m_selected.clear();
+        if (bup != nullptr) {
+            std::unique_lock lock{m_context.locks.backupRAM};
+            m_bupBlockSize = m_bup->GetBlockSize();
+        } else {
+            m_bupBlockSize = 0;
+        }
     }
 }
 
@@ -228,9 +246,10 @@ void BackupMemoryView::Display() {
 
             FileDialogParams params{};
             params.dialogTitle = fmt::format("Export {} from {}", filename, m_name);
-            params.defaultPath = m_context.profile.GetPath(ProfilePath::ExportedBackups) /
-                                 fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.ymbup", filename, bupDate.year,
-                                             bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
+            params.defaultPath =
+                m_context.profile.GetPath(ProfilePath::ExportedBackups) /
+                fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.{}", filename, bupDate.year, bupDate.month, bupDate.day,
+                            bupDate.hour, bupDate.minute, static_config::bup_file_suffix);
             params.filters.push_back({"Backup files (*.bup, *.ymbup)", "bup;ymbup"});
             params.filters.push_back({"All files (*.*)", "*"});
             params.userdata = this;
@@ -1070,12 +1089,13 @@ BackupMemoryView::ImportFileResult BackupMemoryView::ImportFile(std::filesystem:
         //
         // 00..03  char[4]   magic: "Vmem"
         // 04..0F  -         padding/zeros
-        // 10..1B  char[11]  filename
-        // 1C..26  char[10]  comment
+        // 10..1B  char[12]  filename (null-terminated)
+        // 1C..26  char[11]  comment (null-terminated)
         //     27  uint8     language
         // 28..2B  uint32be  date/time (minutes since 01/01/1980)
         // 2C..2F  uint32be  data size (in bytes)
         // 30..31  uint16be  block size (in bytes)
+        // 32..3F  -         padding/zeros
         // 40....  uint8...  data
 
         in.seekg(0x10, std::ios::beg);
@@ -1156,8 +1176,9 @@ void BackupMemoryView::ExportMultiFile(std::filesystem::path dir) {
 
     for (auto &file : m_filesToExport) {
         util::BackupDateTime bupDate{file.header.date};
-        std::string filename = fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.bup", file.header.filename, bupDate.year,
-                                           bupDate.month, bupDate.day, bupDate.hour, bupDate.minute);
+        std::string filename =
+            fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.{}", file.header.filename, bupDate.year, bupDate.month,
+                        bupDate.day, bupDate.hour, bupDate.minute, static_config::export_ymbup);
         ExportFile(dir / filename, file);
     }
     OpenFilesExportSuccessfulModal(m_filesToExport.size());
@@ -1174,44 +1195,107 @@ void BackupMemoryView::FileExportError(const char *errorMessage) {
 }
 
 void BackupMemoryView::ExportFile(std::filesystem::path path, const ymir::bup::BackupFile &bupFile) {
-    // 00..03  char[4]   magic: "YmBP"
-    // 04..0E  char[11]  filename
-    //     0F  uint8     language
-    // 10..19  char[10]  comment
-    // 1A..1D  uint32le  date/time (minutes since 01/01/1980)
-    // 1E..21  uint32le  data size (in bytes)
-    // 22....  uint8...  data
-
     std::ofstream out{path, std::ios::binary};
     std::array<char, 11> buf{};
 
-    // magic
-    static constexpr std::string_view kMagic = "YmBP";
-    out.write(kMagic.data(), kMagic.size());
+    if constexpr (static_config::export_ymbup) {
+        // Ymir backup file format:
+        //
+        // 00..03  char[4]   magic: "YmBP"
+        // 04..0E  char[11]  filename
+        //     0F  uint8     language
+        // 10..19  char[10]  comment
+        // 1A..1D  uint32le  date/time (minutes since 01/01/1980)
+        // 1E..21  uint32le  data size (in bytes)
+        // 22....  uint8...  data
 
-    // filename
-    buf.fill(0);
-    std::copy(bupFile.header.filename.begin(), bupFile.header.filename.end(), buf.begin());
-    out.write(&buf[0], 11);
+        // magic
+        static constexpr std::string_view kMagic = "YmBP";
+        out.write(kMagic.data(), kMagic.size());
 
-    // language
-    out.put(static_cast<char>(bupFile.header.language));
+        // filename
+        buf.fill(0);
+        std::copy(bupFile.header.filename.begin(), bupFile.header.filename.end(), buf.begin());
+        out.write(&buf[0], 11);
 
-    // comment
-    buf.fill(0);
-    std::copy(bupFile.header.comment.begin(), bupFile.header.comment.end(), buf.begin());
-    out.write(&buf[0], 10);
+        // language
+        out.put(static_cast<char>(bupFile.header.language));
 
-    // date/time
-    const uint32 date = bupFile.header.date;
-    out.write((const char *)&date, sizeof(date));
+        // comment
+        buf.fill(0);
+        std::copy(bupFile.header.comment.begin(), bupFile.header.comment.end(), buf.begin());
+        out.write(&buf[0], 10);
 
-    // data size
-    const uint32 size = static_cast<uint32>(bupFile.data.size());
-    out.write((const char *)&size, sizeof(size));
+        // date/time
+        const uint32 date = bupFile.header.date;
+        out.write((const char *)&date, sizeof(date));
 
-    // data
-    out.write((const char *)bupFile.data.data(), bupFile.data.size());
+        // data size
+        const uint32 size = static_cast<uint32>(bupFile.data.size());
+        out.write((const char *)&size, sizeof(size));
+
+        // data
+        out.write((const char *)bupFile.data.data(), bupFile.data.size());
+    } else {
+        // BUP file format:
+        //
+        // 00..03  char[4]   magic: "Vmem"
+        // 04..0F  -         padding/zeros
+        // 10..1B  char[12]  filename (null-terminated)
+        // 1C..26  char[11]  comment (null-terminated)
+        //     27  uint8     language
+        // 28..2B  uint32be  date/time (minutes since 01/01/1980)
+        // 2C..2F  uint32be  data size (in bytes)
+        // 30..31  uint16be  block size (in bytes)
+        // 32..3F  -         padding/zeros
+        // 40....  uint8...  data
+
+        // magic
+        static constexpr std::string_view kMagic = "Vmem";
+        out.write(kMagic.data(), kMagic.size());
+
+        // padding
+        for (uint32 i = 0x04; i <= 0x0F; ++i) {
+            out.put(0);
+        }
+
+        // filename
+        buf.fill(0);
+        std::copy(bupFile.header.filename.begin(), bupFile.header.filename.end(), buf.begin());
+        out.write(&buf[0], 11);
+        out.put(0);
+
+        // comment
+        buf.fill(0);
+        std::copy(bupFile.header.comment.begin(), bupFile.header.comment.end(), buf.begin());
+        out.write(&buf[0], 10);
+        out.put(0);
+
+        // language
+        out.put(static_cast<char>(bupFile.header.language));
+
+        // date/time
+        const uint32 date = bit::big_endian_swap(bupFile.header.date);
+        out.write((const char *)&date, sizeof(date));
+
+        // data size
+        const uint32 size = bit::big_endian_swap(static_cast<uint32>(bupFile.data.size()));
+        out.write((const char *)&size, sizeof(size));
+
+        // block size
+        {
+            const uint32 blockSize = bit::big_endian_swap(static_cast<uint16>(m_bupBlockSize));
+            out.write((const char *)&size, sizeof(size));
+        }
+
+        // padding
+        for (uint32 i = 0x32; i <= 0x3F; ++i) {
+            out.put(0);
+        }
+
+        // data
+        out.write((const char *)bupFile.data.data(), bupFile.data.size());
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
