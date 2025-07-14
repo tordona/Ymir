@@ -49,7 +49,7 @@ struct Configuration {
         /// Most games work fine without this. Enable it to improve accuracy and compatibility with specific games.
         ///
         /// Enabling this option incurs a small performance penalty and purges all SH-2 caches.
-        util::Observable<bool> emulateSH2Cache = false;
+        util::Observable<bool> emulateSH2Cache = true;
     } system;
 
     /// @brief RTC configuration
