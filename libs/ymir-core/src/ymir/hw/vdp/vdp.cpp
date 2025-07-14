@@ -4829,9 +4829,11 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
     uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
 
-    auto readCellScrollY = [&] {
+    auto readCellScrollY = [&](bool increment = true) {
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
-        cellScrollTableAddress += m_vertCellScrollInc;
+        if (increment) {
+            cellScrollTableAddress += m_vertCellScrollInc;
+        }
         return bit::extract<8, 26>(value);
     };
 
@@ -4840,7 +4842,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     uint32 vCellScrollX = fracScrollX >> (8u + 3u);
 
     if (bgParams.verticalCellScrollEnable) {
-        cellScrollY = readCellScrollY();
+        cellScrollY = readCellScrollY(false);
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
@@ -4924,7 +4926,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
     uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
 
-    auto readCellScrollY = [&] {
+    auto readCellScrollY = [&](bool increment = true) {
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
         cellScrollTableAddress += m_vertCellScrollInc;
         return bit::extract<8, 26>(value);
@@ -4935,7 +4937,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     uint32 vCellScrollX = fracScrollX >> (8u + 3u);
 
     if (bgParams.verticalCellScrollEnable) {
-        cellScrollY = readCellScrollY();
+        cellScrollY = readCellScrollY(false);
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
