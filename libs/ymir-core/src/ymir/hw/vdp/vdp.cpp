@@ -4480,7 +4480,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     const VDP2Regs &regs = VDP2GetRegs();
     const auto &colorCalcParams = regs.colorCalcParams;
 
-    y = VDP2GetY<deinterlace>(y) ^ altFieldDst;
+    y = VDP2GetY<deinterlace>(y) ^ static_cast<uint32>(altFieldDst);
 
     if (!regs.TVMD.DISP) {
         std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0xFF000000);
