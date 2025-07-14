@@ -478,6 +478,11 @@ private:
         util::Event preSaveSyncSignal{false};
         util::Event postLoadSyncSignal{false};
 
+        util::Event deinterlaceRenderBeginSignal{false};
+        util::Event deinterlaceRenderEndSignal{false};
+        uint32 deinterlaceY;
+        std::atomic_bool deinterlaceShutdown;
+
         std::array<VDPRenderEvent, 64> pendingEvents;
         size_t pendingEventsCount = 0;
 
@@ -560,6 +565,7 @@ private:
     } m_VDPRenderContext;
 
     std::thread m_VDPRenderThread;
+    std::thread m_VDPDeinterlaceRenderThread;
     bool m_threadedVDPRendering = false;
     bool m_renderVDP1OnVDP2Thread = false;
 
@@ -570,6 +576,7 @@ private:
     void UpdateEffectiveRenderingFlags();
 
     void VDPRenderThread();
+    void VDPDeinterlaceRenderThread();
 
     template <mem_primitive T>
     T VDP1ReadRendererVRAM(uint32 address);
@@ -605,7 +612,7 @@ private:
     alignas(16) std::array<SpriteFB, 2> m_altSpriteFB;
 
     using FnVDP1ProcessCommand = void (VDP::*)();
-    using FnVDP2DrawLine = void (VDP::*)(uint32 y);
+    using FnVDP2DrawLine = void (VDP::*)(uint32 y, bool altField);
 
     FnVDP1ProcessCommand m_fnVDP1ProcessCommand;
     FnVDP2DrawLine m_fnVDP2DrawLine;
@@ -830,7 +837,6 @@ private:
             lineScrollTableAddress = 0;
             vertCellScrollOffset = 0;
             mosaicCounterY = 0;
-            charFetcher.Reset();
         }
 
         // Initial fractional X scroll coordinate.
@@ -861,9 +867,6 @@ private:
         // Reset at the start of every frame and incremented every line.
         // The value is mod mosaicV.
         uint8 mosaicCounterY;
-
-        // The character fetcher state for this background.
-        CharacterFetcherState charFetcher;
     };
 
     // State for Rotation Parameters A and B.
@@ -879,7 +882,6 @@ private:
             transparent.fill(false);
             scrX = scrY = 0;
             KA = 0;
-            charFetcher.Reset();
         }
 
         // Page base addresses for RBG planes A-P using Rotation Parameters A and B.
@@ -906,9 +908,6 @@ private:
 
         // Current base coefficient address, updated every scanline.
         uint32 KA;
-
-        // The character fetcher state for this background.
-        CharacterFetcherState charFetcher;
     };
 
     enum RotParamSelector { RotParamA, RotParamB };
@@ -978,6 +977,10 @@ private:
 
     // Layer state for NBGs 0-3
     std::array<NormBGLayerState, 4> m_normBGLayerStates;
+
+    // Character fetcher states for NBGs 0-3 and rotation parameters A/B.
+    // Entry [0] is primary and [1] is alternate field for deinterlacing.
+    std::array<std::array<CharacterFetcherState, 6>, 2> m_charFetchers;
 
     // States for Rotation Parameters A and B.
     std::array<RotationParamState, 2> m_rotParamStates;
@@ -1096,6 +1099,11 @@ private:
     // Updates the enabled backgrounds.
     void VDP2UpdateEnabledBGs();
 
+    // Updates the line screen scroll parameters for NBG0 and NBG1.
+    //
+    // y is the scanline to draw
+    void VDP2UpdateLineScreenScrollParams(uint32 y);
+
     // Updates the line screen scroll parameters for the given background.
     // Only valid for NBG0 and NBG1.
     //
@@ -1114,7 +1122,7 @@ private:
     // y is the scanline to draw
     //
     // deinterlace determines whether to deinterlace video output
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     template <bool deinterlace, bool altField>
     void VDP2CalcWindows(uint32 y);
 
@@ -1125,7 +1133,7 @@ private:
     // windowParams contains additional window parameters
     // windowState is the window state output
     //
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     template <bool altField, bool hasSpriteWindow>
     void VDP2CalcWindow(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
                         const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState);
@@ -1137,7 +1145,7 @@ private:
     // windowParams contains additional window parameters
     // windowState is the window state output
     //
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     // logicOR determines if the windows should be combined with OR logic (true) or AND logic (false)
     template <bool altField, bool logicOR, bool hasSpriteWindow>
     void VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWindow> &windowSet,
@@ -1153,14 +1161,20 @@ private:
     // y is the scanline to prepare
     void VDP2PrepareLine(uint32 y);
 
+    // Finishes rendering the specified VDP2 scanline, updating internal registers.
+    //
+    // y is the scanline to finish
+    void VDP2FinishLine(uint32 y);
+
     // Draws the specified VDP2 scanline.
     //
     // y is the scanline to draw
+    // altField selects the complementary field when rendering deinterlaced frames
     //
     // deinterlace determines whether to deinterlace video output
     // transparentMeshes enables transparent mesh rendering enhancement
     template <bool deinterlace, bool transparentMeshes>
-    void VDP2DrawLine(uint32 y);
+    void VDP2DrawLine(uint32 y, bool altField);
 
     // Draws the line color and back screens.
     //
@@ -1173,7 +1187,7 @@ private:
     //
     // colorMode is the CRAM color mode.
     // rotate determines if Rotation Parameter A coordinates should be used to draw the sprite layer.
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     // transparentMeshes enables transparent mesh rendering enhancement
     template <uint32 colorMode, bool rotate, bool altField, bool transparentMeshes>
     void VDP2DrawSpriteLayer(uint32 y);
@@ -1186,7 +1200,7 @@ private:
     // spriteFBOffset is the offset into the buffer of the pixel to read.
     //
     // colorMode is the CRAM color mode.
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     // transparentMeshes enables transparent mesh rendering enhancement
     // applyMesh determines if the pixel to be applied is a transparent mesh pixel (true) or a regular sprite layer
     // pixel (false).
@@ -1200,7 +1214,7 @@ private:
     //
     // bgIndex specifies the normal background index, from 0 to 3.
     // deinterlace determines whether to deinterlace video output
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     template <uint32 bgIndex, bool deinterlace>
     void VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altField);
 
@@ -1208,7 +1222,7 @@ private:
     //
     // y is the scanline to draw
     // colorMode is the CRAM color mode.
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     //
     // bgIndex specifies the rotation background index, from 0 to 1.
     template <uint32 bgIndex>
@@ -1231,6 +1245,8 @@ private:
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
     // windowState is a reference to the window state for the layer.
+    // altField selects the complementary field when rendering deinterlaced frames
+    // charState is the corresponding background layer's character fetcher state.
     //
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
@@ -1238,8 +1254,9 @@ private:
     // colorMode is the CRAM color mode.
     // deinterlace determines whether to deinterlace video output
     template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
-    void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
-                                std::span<const bool> windowState);
+    void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
+                                const NormBGLayerState &bgState, CharacterFetcherState &charState,
+                                std::span<const bool> windowState, bool altField);
 
     // Draws a normal bitmap BG scanline.
     //
@@ -1253,8 +1270,8 @@ private:
     // colorMode is the CRAM color mode.
     // deinterlace determines whether to deinterlace video output
     template <ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
-    void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState, NormBGLayerState &bgState,
-                                std::span<const bool> windowState);
+    void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
+                                const NormBGLayerState &bgState, std::span<const bool> windowState);
 
     // Draws a rotation scroll BG scanline.
     //
@@ -1262,7 +1279,8 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // windowState is a reference to the window state for the layer.
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
+    // charState is the corresponding background layer's character fetcher state.
     //
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
@@ -1271,7 +1289,7 @@ private:
     // colorMode is the CRAM color mode.
     template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                  std::span<const bool> windowState, bool altField);
+                                  CharacterFetcherState &charState, std::span<const bool> windowState, bool altField);
 
     // Draws a rotation bitmap BG scanline.
     //
@@ -1279,7 +1297,7 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // windowState is a reference to the window state for the layer.
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     //
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // colorFormat is the color format for bitmap data.
@@ -1292,7 +1310,7 @@ private:
     //
     // x is the horizontal coordinate of the pixel
     // y is the vertical coordinate of the pixel
-    // altField selects the complementary field when rendering deinterlaced double-interlace frames
+    // altField selects the complementary field when rendering deinterlaced frames
     RotParamSelector VDP2SelectRotationParameter(uint32 x, uint32 y, bool altField);
 
     // Determines if a rotation coefficient entry can be fetched from the specified address.

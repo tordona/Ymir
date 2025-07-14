@@ -24,6 +24,7 @@
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.
 - System: Map 030'0000-03F'FFFF memory area.
+- VDP2: Add dedicated thread for deinterlaced rendering if VDP2 threading is enabled. Significantly lessens performance impact when using the deinterlace option on quad-core CPUs or better.
 - Video: Implemented frame rate limiter. (#16)
 
 ### Fixes

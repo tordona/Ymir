@@ -55,8 +55,11 @@ namespace settings::video {
             settings.deinterlace = deinterlace;
         }
         widgets::ExplanationTooltip(
-            "When enabled, high-resolution modes will be rendered in progressive mode instead of interlaced.\n"
-            "Significantly impacts performance in those modes when enabled.",
+            "When enabled, interlaced high-resolution modes will be rendered in progressive mode.\n"
+            "Noticeably impacts performance in those modes when enabled.\n"
+            "It is highly recommended to enable the Threaded VDP2 renderer option alongside this to lessen the "
+            "performace impact.\n"
+            "A quad-core CPU or better is recommended to use this option.",
             ctx.displayScale);
     }
 
