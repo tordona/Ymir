@@ -440,59 +440,77 @@ void App::RunEmulator() {
     ScopeGuard sgDestroyWindowProps{[&] { SDL_DestroyProperties(windowProps); }};
 
     {
-        // Compute initial window size
-        // TODO: load from persistent state
+        bool initGeometry = true;
+        int windowX, windowY;
+        int windowWidth, windowHeight;
 
-        // This is equivalent to ImGui::GetFrameHeight() without requiring a window
-        const float menuBarHeight = (16.0f + style.FramePadding.y * 2.0f) * m_context.displayScale;
-
-        const auto &videoSettings = m_context.settings.video;
-        const bool forceAspectRatio = videoSettings.forceAspectRatio;
-        const double forcedAspect = videoSettings.forcedAspect;
-        const bool horzDisplay = videoSettings.rotation == Settings::Video::DisplayRotation::Normal ||
-                                 videoSettings.rotation == Settings::Video::DisplayRotation::_180;
-
-        // Find reasonable default scale based on the primary display resolution
-        SDL_Rect displayRect{};
-        auto displayID = SDL_GetPrimaryDisplay();
-        if (!SDL_GetDisplayBounds(displayID, &displayRect)) {
-            devlog::error<grp::base>("Could not get primary display resolution: {}", SDL_GetError());
-
-            // This will set the window scale to 1.0 without assuming any resolution
-            displayRect.w = 0;
-            displayRect.h = 0;
+        // Try loading persistent window geometry if available
+        if (m_context.settings.gui.rememberWindowGeometry) {
+            std::ifstream in{m_context.profile.GetPath(ProfilePath::PersistentState) / "window.txt"};
+            in >> windowX >> windowY >> windowWidth >> windowHeight;
+            if (in) {
+                initGeometry = false;
+            }
         }
 
-        devlog::info<grp::base>("Primary display resolution: {}x{}", displayRect.w, displayRect.h);
+        // Compute initial window size if not loaded from persistent state
+        if (initGeometry) {
+            // This is equivalent to ImGui::GetFrameHeight() without requiring a window
+            const float menuBarHeight = (16.0f + style.FramePadding.y * 2.0f) * m_context.displayScale;
 
-        const double screenW = horzDisplay ? screen.width : screen.height;
-        const double screenH = horzDisplay ? screen.height : screen.width;
+            const auto &videoSettings = m_context.settings.video;
+            const bool forceAspectRatio = videoSettings.forceAspectRatio;
+            const double forcedAspect = videoSettings.forcedAspect;
+            const bool horzDisplay = videoSettings.rotation == Settings::Video::DisplayRotation::Normal ||
+                                     videoSettings.rotation == Settings::Video::DisplayRotation::_180;
 
-        // Take 85% of the available display area
-        const double maxScaleX = (double)displayRect.w / screenW * 0.85;
-        const double maxScaleY = (double)displayRect.h / screenH * 0.85;
-        double scale = std::min(maxScaleX, maxScaleY);
-        if (videoSettings.forceIntegerScaling) {
-            scale = std::floor(scale);
+            // Find reasonable default scale based on the primary display resolution
+            SDL_Rect displayRect{};
+            auto displayID = SDL_GetPrimaryDisplay();
+            if (!SDL_GetDisplayBounds(displayID, &displayRect)) {
+                devlog::error<grp::base>("Could not get primary display resolution: {}", SDL_GetError());
+
+                // This will set the window scale to 1.0 without assuming any resolution
+                displayRect.w = 0;
+                displayRect.h = 0;
+            }
+
+            devlog::info<grp::base>("Primary display resolution: {}x{}", displayRect.w, displayRect.h);
+
+            const double screenW = horzDisplay ? screen.width : screen.height;
+            const double screenH = horzDisplay ? screen.height : screen.width;
+
+            // Take 85% of the available display area
+            const double maxScaleX = (double)displayRect.w / screenW * 0.85;
+            const double maxScaleY = (double)displayRect.h / screenH * 0.85;
+            double scale = std::min(maxScaleX, maxScaleY);
+            if (videoSettings.forceIntegerScaling) {
+                scale = std::floor(scale);
+            }
+
+            double baseWidth = forceAspectRatio ? std::ceil(screen.height * screen.scaleY * forcedAspect)
+                                                : screen.width * screen.scaleX;
+            double baseHeight = screen.height * screen.scaleY;
+            if (!horzDisplay) {
+                std::swap(baseWidth, baseHeight);
+            }
+            const int scaledWidth = baseWidth * scale;
+            const int scaledHeight = baseHeight * scale;
+
+            windowX = SDL_WINDOWPOS_CENTERED;
+            windowY = SDL_WINDOWPOS_CENTERED;
+            windowWidth = scaledWidth;
+            windowHeight = scaledHeight + menuBarHeight;
         }
-
-        double baseWidth =
-            forceAspectRatio ? std::ceil(screen.height * screen.scaleY * forcedAspect) : screen.width * screen.scaleX;
-        double baseHeight = screen.height * screen.scaleY;
-        if (!horzDisplay) {
-            std::swap(baseWidth, baseHeight);
-        }
-        const int scaledWidth = baseWidth * scale;
-        const int scaledHeight = baseHeight * scale;
 
         // Assume the following calls succeed
         SDL_SetStringProperty(windowProps, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Ymir " Ymir_FULL_VERSION);
         SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
         SDL_SetBooleanProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
-        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, scaledWidth);
-        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, scaledHeight + menuBarHeight);
-        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, SDL_WINDOWPOS_CENTERED);
-        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, SDL_WINDOWPOS_CENTERED);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, windowWidth);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, windowHeight);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_X_NUMBER, windowX);
+        SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_Y_NUMBER, windowY);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
         SDL_SetNumberProperty(windowProps, SDL_PROP_WINDOW_CREATE_FULLSCREEN_BOOLEAN,
                               m_context.settings.video.fullScreen);
@@ -503,7 +521,19 @@ void App::RunEmulator() {
         devlog::error<grp::base>("Unable to create window: {}", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyWindow{[&] { SDL_DestroyWindow(screen.window); }};
+    ScopeGuard sgDestroyWindow{[&] {
+        if (m_context.settings.gui.rememberWindowGeometry) {
+            int wx, wy, ww, wh;
+            const bool posOK = SDL_GetWindowPosition(screen.window, &wx, &wy);
+            const bool sizeOK = SDL_GetWindowSize(screen.window, &ww, &wh);
+            if (posOK && sizeOK) {
+                std::ofstream out{m_context.profile.GetPath(ProfilePath::PersistentState) / "window.txt"};
+                out << fmt::format("{} {} {} {}", wx, wy, ww, wh);
+            }
+        }
+
+        SDL_DestroyWindow(screen.window);
+    }};
 
     // ---------------------------------
     // Create renderer
@@ -821,21 +851,19 @@ void App::RunEmulator() {
             m_context.settings.MakeDirty();
         });
         inputContext.SetTriggerHandler(actions::general::ToggleFrameRateOSD, [&](void *, const input::InputElement &) {
-            m_context.settings.general.showFrameRateOSD = !m_context.settings.general.showFrameRateOSD;
+            m_context.settings.gui.showFrameRateOSD = !m_context.settings.gui.showFrameRateOSD;
             m_context.settings.MakeDirty();
         });
         inputContext.SetTriggerHandler(actions::general::NextFrameRateOSDPos, [&](void *, const input::InputElement &) {
-            const uint32 pos = static_cast<uint32>(m_context.settings.general.frameRateOSDPosition);
+            const uint32 pos = static_cast<uint32>(m_context.settings.gui.frameRateOSDPosition);
             const uint32 nextPos = pos >= 3 ? 0 : pos + 1;
-            m_context.settings.general.frameRateOSDPosition =
-                static_cast<Settings::General::FrameRateOSDPosition>(nextPos);
+            m_context.settings.gui.frameRateOSDPosition = static_cast<Settings::GUI::FrameRateOSDPosition>(nextPos);
             m_context.settings.MakeDirty();
         });
         inputContext.SetTriggerHandler(actions::general::PrevFrameRateOSDPos, [&](void *, const input::InputElement &) {
-            const uint32 pos = static_cast<uint32>(m_context.settings.general.frameRateOSDPosition);
+            const uint32 pos = static_cast<uint32>(m_context.settings.gui.frameRateOSDPosition);
             const uint32 prevPos = pos == 0 ? 3 : pos - 1;
-            m_context.settings.general.frameRateOSDPosition =
-                static_cast<Settings::General::FrameRateOSDPosition>(prevPos);
+            m_context.settings.gui.frameRateOSDPosition = static_cast<Settings::GUI::FrameRateOSDPosition>(prevPos);
             m_context.settings.MakeDirty();
         });
     }
@@ -1299,6 +1327,8 @@ void App::RunEmulator() {
 
     while (true) {
         bool fitWindowToScreenNow = false;
+        bool forceScreenScale = false;
+        int forcedScreenScale = 1;
 
         // Use video sync if in full screen mode and not paused or fast-forwarding
         const bool fullScreen = m_context.settings.video.fullScreen;
@@ -1971,6 +2001,37 @@ void App::RunEmulator() {
                                         !videoSettings.displayVideoOutputInWindow)) {
                         fitWindowToScreenNow = true;
                     }
+                    if (fullScreen) {
+                        ImGui::BeginDisabled();
+                    }
+                    ImGui::TextUnformatted("Set view scale to");
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("1x")) {
+                        forceScreenScale = true;
+                        forcedScreenScale = 1;
+                        fitWindowToScreenNow = true;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("2x")) {
+                        forceScreenScale = true;
+                        forcedScreenScale = 2;
+                        fitWindowToScreenNow = true;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("3x")) {
+                        forceScreenScale = true;
+                        forcedScreenScale = 3;
+                        fitWindowToScreenNow = true;
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("4x")) {
+                        forceScreenScale = true;
+                        forcedScreenScale = 4;
+                        fitWindowToScreenNow = true;
+                    }
+                    if (fullScreen) {
+                        ImGui::EndDisabled();
+                    }
 
                     ImGui::Separator();
 
@@ -2096,6 +2157,9 @@ void App::RunEmulator() {
                     ImGui::Separator();
                     if (ImGui::MenuItem("General")) {
                         m_settingsWindow.OpenTab(ui::SettingsTab::General);
+                    }
+                    if (ImGui::MenuItem("GUI")) {
+                        m_settingsWindow.OpenTab(ui::SettingsTab::GUI);
                     }
                     if (ImGui::MenuItem("Hotkeys")) {
                         m_settingsWindow.OpenTab(ui::SettingsTab::Hotkeys);
@@ -2398,7 +2462,7 @@ void App::RunEmulator() {
                     const float speedFactor = m_context.emuSpeed.GetCurrentSpeedFactor();
                     const bool slomo = m_context.emuSpeed.limitSpeed && speedFactor < 1.0;
                     if (!m_context.emuSpeed.limitSpeed ||
-                        (speedFactor != 1.0 && m_context.settings.general.showSpeedIndicatorForAllSpeeds)) {
+                        (speedFactor != 1.0 && m_context.settings.gui.showSpeedIndicatorForAllSpeeds)) {
                         // Fast forward/rewind -> two triangles: >> or <<
                         // Slow motion/rewind -> rectangle and triangle: |> or <|
                         const std::string speed =
@@ -2493,7 +2557,7 @@ void App::RunEmulator() {
             }
 
             // Draw frame rate counters
-            if (m_context.settings.general.showFrameRateOSD) {
+            if (m_context.settings.gui.showFrameRateOSD) {
                 std::string speed = paused ? "paused"
                                     : m_context.emuSpeed.limitSpeed
                                         ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
@@ -2510,21 +2574,21 @@ void App::RunEmulator() {
 
                 auto *drawList = ImGui::GetBackgroundDrawList();
                 bool top, left;
-                switch (m_context.settings.general.frameRateOSDPosition) {
-                case Settings::General::FrameRateOSDPosition::TopLeft:
+                switch (m_context.settings.gui.frameRateOSDPosition) {
+                case Settings::GUI::FrameRateOSDPosition::TopLeft:
                     top = true;
                     left = true;
                     break;
                 default: [[fallthrough]];
-                case Settings::General::FrameRateOSDPosition::TopRight:
+                case Settings::GUI::FrameRateOSDPosition::TopRight:
                     top = true;
                     left = false;
                     break;
-                case Settings::General::FrameRateOSDPosition::BottomLeft:
+                case Settings::GUI::FrameRateOSDPosition::BottomLeft:
                     top = false;
                     left = true;
                     break;
-                case Settings::General::FrameRateOSDPosition::BottomRight:
+                case Settings::GUI::FrameRateOSDPosition::BottomRight:
                     top = false;
                     left = false;
                     break;
@@ -2559,7 +2623,7 @@ void App::RunEmulator() {
             }
 
             // Draw messages
-            if (m_context.settings.general.showMessages) {
+            if (m_context.settings.gui.showMessages) {
                 auto *drawList = ImGui::GetForegroundDrawList();
                 float messageX = viewport->WorkPos.x + style.FramePadding.x + style.ItemSpacing.x;
                 float messageY = viewport->WorkPos.y + style.FramePadding.y + style.ItemSpacing.y;
@@ -2649,53 +2713,60 @@ void App::RunEmulator() {
 
             wh -= menuBarHeight;
 
-            double scaleFactor = 1.0;
-
-            // Compute maximum scale to fit the display given the constraints above
             double baseWidth = forceAspectRatio ? std::ceil(screen.height * screen.scaleY * forcedAspect)
                                                 : screen.width * screen.scaleX;
             double baseHeight = screen.height * screen.scaleY;
             if (!horzDisplay) {
                 std::swap(baseWidth, baseHeight);
             }
-            const double scaleX = (double)ww / baseWidth;
-            const double scaleY = (double)wh / baseHeight;
-            double scale = std::max(1.0, std::min(scaleX, scaleY));
 
-            // Preserve the previous scale if the aspect ratio changed or the force option was just enabled/disabled
-            // when fitting the window to the screen
-            if (fitWindowToScreen) {
-                int screenWidth = screen.width;
-                int screenHeight = screen.height;
-                int screenScaleX = screen.scaleX;
-                int screenScaleY = screen.scaleY;
-                if (screen.resolutionChanged) {
-                    // Handle double resolution scaling
-                    const bool currDoubleRes = screen.prevWidth >= 640 || screen.prevHeight >= 400;
-                    const bool nextDoubleRes = screen.width >= 640 || screen.height >= 400;
-                    if (currDoubleRes != nextDoubleRes) {
-                        scaleFactor = nextDoubleRes ? 0.5 : 2.0;
+            double scale;
+            if (forceScreenScale) {
+                const bool doubleRes = screen.width >= 640 || screen.height >= 400;
+                scale = doubleRes ? forcedScreenScale : forcedScreenScale * 2;
+            } else {
+                // Compute maximum scale to fit the display given the constraints above
+                double scaleFactor = 1.0;
+
+                const double scaleX = (double)ww / baseWidth;
+                const double scaleY = (double)wh / baseHeight;
+                scale = std::max(1.0, std::min(scaleX, scaleY));
+
+                // Preserve the previous scale if the aspect ratio changed or the force option was just enabled/disabled
+                // when fitting the window to the screen
+                if (fitWindowToScreen) {
+                    int screenWidth = screen.width;
+                    int screenHeight = screen.height;
+                    int screenScaleX = screen.scaleX;
+                    int screenScaleY = screen.scaleY;
+                    if (screen.resolutionChanged) {
+                        // Handle double resolution scaling
+                        const bool currDoubleRes = screen.prevWidth >= 640 || screen.prevHeight >= 400;
+                        const bool nextDoubleRes = screen.width >= 640 || screen.height >= 400;
+                        if (currDoubleRes != nextDoubleRes) {
+                            scaleFactor = nextDoubleRes ? 0.5 : 2.0;
+                        }
+                        screenWidth = screen.prevWidth;
+                        screenHeight = screen.prevHeight;
+                        screenScaleX = screen.prevScaleX;
+                        screenScaleY = screen.prevScaleY;
                     }
-                    screenWidth = screen.prevWidth;
-                    screenHeight = screen.prevHeight;
-                    screenScaleX = screen.prevScaleX;
-                    screenScaleY = screen.prevScaleY;
-                }
-                if (screenSizeChanged) {
-                    double baseWidth = forceAspectRatio ? std::ceil(screenHeight * screenScaleY * prevForcedAspect)
-                                                        : screenWidth * screenScaleX;
-                    double baseHeight = screenHeight * screenScaleY;
-                    if (!horzDisplay) {
-                        std::swap(baseWidth, baseHeight);
+                    if (screenSizeChanged) {
+                        double baseWidth = forceAspectRatio ? std::ceil(screenHeight * screenScaleY * prevForcedAspect)
+                                                            : screenWidth * screenScaleX;
+                        double baseHeight = screenHeight * screenScaleY;
+                        if (!horzDisplay) {
+                            std::swap(baseWidth, baseHeight);
+                        }
+                        const double scaleX = (double)ww / baseWidth;
+                        const double scaleY = (double)wh / baseHeight;
+                        scale = std::max(1.0, std::min(scaleX, scaleY));
                     }
-                    const double scaleX = (double)ww / baseWidth;
-                    const double scaleY = (double)wh / baseHeight;
-                    scale = std::max(1.0, std::min(scaleX, scaleY));
                 }
-            }
-            scale *= scaleFactor;
-            if (videoSettings.forceIntegerScaling) {
-                scale = floor(scale);
+                scale *= scaleFactor;
+                if (videoSettings.forceIntegerScaling) {
+                    scale = floor(scale);
+                }
             }
             int scaledWidth = baseWidth * scale;
             int scaledHeight = baseHeight * scale;

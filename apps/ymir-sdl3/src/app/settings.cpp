@@ -140,17 +140,17 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, core::config::
     }
 }
 
-FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::General::FrameRateOSDPosition &value) {
-    value = Settings::General::FrameRateOSDPosition::TopRight;
+FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, Settings::GUI::FrameRateOSDPosition &value) {
+    value = Settings::GUI::FrameRateOSDPosition::TopRight;
     if (auto opt = node.value<std::string>()) {
         if (*opt == "TopLeft"s) {
-            value = Settings::General::FrameRateOSDPosition::TopLeft;
+            value = Settings::GUI::FrameRateOSDPosition::TopLeft;
         } else if (*opt == "TopRight"s) {
-            value = Settings::General::FrameRateOSDPosition::TopRight;
+            value = Settings::GUI::FrameRateOSDPosition::TopRight;
         } else if (*opt == "BottomLeft"s) {
-            value = Settings::General::FrameRateOSDPosition::BottomLeft;
+            value = Settings::GUI::FrameRateOSDPosition::BottomLeft;
         } else if (*opt == "BottomRight"s) {
-            value = Settings::General::FrameRateOSDPosition::BottomRight;
+            value = Settings::GUI::FrameRateOSDPosition::BottomRight;
         }
     }
 }
@@ -293,13 +293,13 @@ FORCE_INLINE static const char *ToTOML(const core::config::audio::SampleInterpol
     }
 }
 
-FORCE_INLINE static const char *ToTOML(const Settings::General::FrameRateOSDPosition value) {
+FORCE_INLINE static const char *ToTOML(const Settings::GUI::FrameRateOSDPosition value) {
     switch (value) {
-    case Settings::General::FrameRateOSDPosition::TopLeft: return "TopLeft";
+    case Settings::GUI::FrameRateOSDPosition::TopLeft: return "TopLeft";
     default: [[fallthrough]];
-    case Settings::General::FrameRateOSDPosition::TopRight: return "TopRight";
-    case Settings::General::FrameRateOSDPosition::BottomLeft: return "BottomLeft";
-    case Settings::General::FrameRateOSDPosition::BottomRight: return "BottomRight";
+    case Settings::GUI::FrameRateOSDPosition::TopRight: return "TopRight";
+    case Settings::GUI::FrameRateOSDPosition::BottomLeft: return "BottomLeft";
+    case Settings::GUI::FrameRateOSDPosition::BottomRight: return "BottomRight";
     }
 }
 
@@ -599,16 +599,18 @@ void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
-    general.showMessages = true;
-    general.showFrameRateOSD = false;
-    general.frameRateOSDPosition = General::FrameRateOSDPosition::TopRight;
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 12;
     general.mainSpeedFactor = 1.0;
     general.altSpeedFactor = 0.5;
     general.useAltSpeed = false;
-    general.showSpeedIndicatorForAllSpeeds = false;
     general.pauseWhenUnfocused = false;
+
+    gui.rememberWindowGeometry = true;
+    gui.showMessages = true;
+    gui.showFrameRateOSD = false;
+    gui.frameRateOSDPosition = GUI::FrameRateOSDPosition::TopRight;
+    gui.showSpeedIndicatorForAllSpeeds = false;
 
     system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
     system.internalBackupRAMPerGame = false;
@@ -695,15 +697,11 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
-        Parse(tblGeneral, "ShowMessages", general.showMessages);
-        Parse(tblGeneral, "ShowFrameRateOSD", general.showFrameRateOSD);
-        Parse(tblGeneral, "FrameRateOSDPosition", general.frameRateOSDPosition);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
         Parse(tblGeneral, "RewindCompressionLevel", general.rewindCompressionLevel);
         Parse(tblGeneral, "MainSpeedFactor", general.mainSpeedFactor);
         Parse(tblGeneral, "AltSpeedFactor", general.altSpeedFactor);
         Parse(tblGeneral, "UseAltSpeed", general.useAltSpeed);
-        Parse(tblGeneral, "ShowSpeedIndicatorForAllSpeeds", general.showSpeedIndicatorForAllSpeeds);
         Parse(tblGeneral, "PauseWhenUnfocused", general.pauseWhenUnfocused);
 
         // Rounds to the nearest multiple of 5% and clamps to 10%..500% range.
@@ -726,6 +724,14 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
             parse("SaveStates", ProfilePath::SaveStates);
             parse("Dumps", ProfilePath::Dumps);
         }
+    }
+
+    if (auto tblGUI = data["GUI"]) {
+        Parse(tblGUI, "RememberWindowGeometry", gui.rememberWindowGeometry);
+        Parse(tblGUI, "ShowMessages", gui.showMessages);
+        Parse(tblGUI, "ShowFrameRateOSD", gui.showFrameRateOSD);
+        Parse(tblGUI, "FrameRateOSDPosition", gui.frameRateOSDPosition);
+        Parse(tblGUI, "ShowSpeedIndicatorForAllSpeeds", gui.showSpeedIndicatorForAllSpeeds);
     }
 
     if (auto tblSystem = data["System"]) {
@@ -972,15 +978,11 @@ SettingsSaveResult Settings::Save() {
             {"PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM},
             {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
             {"BoostProcessPriority", general.boostProcessPriority},
-            {"ShowMessages", general.showMessages},
-            {"ShowFrameRateOSD", general.showFrameRateOSD},
-            {"FrameRateOSDPosition", ToTOML(general.frameRateOSDPosition)},
             {"EnableRewindBuffer", general.enableRewindBuffer},
             {"RewindCompressionLevel", general.rewindCompressionLevel},
             {"MainSpeedFactor", general.mainSpeedFactor.Get()},
             {"AltSpeedFactor", general.altSpeedFactor.Get()},
             {"UseAltSpeed", general.useAltSpeed.Get()},
-            {"ShowSpeedIndicatorForAllSpeeds", general.showSpeedIndicatorForAllSpeeds},
             {"PauseWhenUnfocused", general.pauseWhenUnfocused},
 
             {"PathOverrides", toml::table{{
@@ -992,6 +994,14 @@ SettingsSaveResult Settings::Save() {
                 {"SaveStates", m_context.profile.GetPathOverride(ProfilePath::SaveStates).native()},
                 {"Dumps", m_context.profile.GetPathOverride(ProfilePath::Dumps).native()},
             }}},
+        }}},
+
+        {"GUI", toml::table{{
+            {"RememberWindowGeometry", gui.rememberWindowGeometry},
+            {"ShowMessages", gui.showMessages},
+            {"ShowFrameRateOSD", gui.showFrameRateOSD},
+            {"FrameRateOSDPosition", ToTOML(gui.frameRateOSDPosition)},
+            {"ShowSpeedIndicatorForAllSpeeds", gui.showSpeedIndicatorForAllSpeeds},
         }}},
 
         {"System", toml::table{{

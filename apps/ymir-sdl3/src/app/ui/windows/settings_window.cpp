@@ -7,6 +7,7 @@ namespace app::ui {
 SettingsWindow::SettingsWindow(SharedContext &context)
     : WindowBase(context)
     , m_generalSettingsView(context)
+    , m_guiSettingsView(context)
     , m_hotkeysSettingsView(context)
     , m_systemSettingsView(context)
     , m_iplSettingsView(context)
@@ -47,6 +48,10 @@ void SettingsWindow::DrawContents() {
     if (ImGui::BeginTabBar("settings_tabs")) {
         if (ImGui::BeginTabItem("General", nullptr, tabFlag(SettingsTab::General))) {
             m_generalSettingsView.Display();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("GUI", nullptr, tabFlag(SettingsTab::GUI))) {
+            m_guiSettingsView.Display();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Hotkeys", nullptr, tabFlag(SettingsTab::Hotkeys))) {

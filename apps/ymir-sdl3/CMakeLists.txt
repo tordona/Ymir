@@ -130,6 +130,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/settings/control_pad_binds_view.hpp
     src/app/ui/views/settings/general_settings_view.cpp
     src/app/ui/views/settings/general_settings_view.hpp
+    src/app/ui/views/settings/gui_settings_view.cpp
+    src/app/ui/views/settings/gui_settings_view.hpp
     src/app/ui/views/settings/hotkeys_settings_view.cpp
     src/app/ui/views/settings/hotkeys_settings_view.hpp
     src/app/ui/views/settings/input_settings_view.cpp

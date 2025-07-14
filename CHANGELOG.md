@@ -7,6 +7,8 @@
 - App: Added display rotation options for TATE mode games. (#256)
 - App: Added frame rate OSD and hotkeys to toggle it and change positions.
 - App: Added new 3:2 and 16:10 forced aspect ratio options.
+- App: Added option to remember window position and size. (#4)
+- App: Added menu actions to resize window to specific scales.
 - App: Added save states to File menu.
 - App: Added simple message overlay system to display some basic notifications. (#288)
 - App: Display emulation speed in title bar and under speed indicator, and add a new indicator for slow motion. (#16)

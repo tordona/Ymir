@@ -8,12 +8,13 @@
 #include <app/ui/views/settings/cartridge_settings_view.hpp>
 #include <app/ui/views/settings/cdblock_settings_view.hpp>
 #include <app/ui/views/settings/general_settings_view.hpp>
+#include <app/ui/views/settings/gui_settings_view.hpp>
 #include <app/ui/views/settings/hotkeys_settings_view.hpp>
 #include <app/ui/views/settings/input_settings_view.hpp>
 #include <app/ui/views/settings/ipl_settings_view.hpp>
 #include <app/ui/views/settings/system_settings_view.hpp>
-#include <app/ui/views/settings/video_settings_view.hpp>
 #include <app/ui/views/settings/tweaks_settings_view.hpp>
+#include <app/ui/views/settings/video_settings_view.hpp>
 
 namespace app::ui {
 
@@ -31,6 +32,7 @@ private:
     SettingsTab m_selectedTab = SettingsTab::None;
 
     GeneralSettingsView m_generalSettingsView;
+    GUISettingsView m_guiSettingsView;
     HotkeysSettingsView m_hotkeysSettingsView;
     SystemSettingsView m_systemSettingsView;
     IPLSettingsView m_iplSettingsView;

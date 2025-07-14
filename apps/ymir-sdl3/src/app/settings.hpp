@@ -130,17 +130,10 @@ public:
     std::filesystem::path path;
 
     struct General {
-        enum class FrameRateOSDPosition { TopLeft, TopRight, BottomLeft, BottomRight };
-
         bool preloadDiscImagesToRAM;
 
         bool boostEmuThreadPriority;
         bool boostProcessPriority;
-
-        bool showMessages;
-
-        bool showFrameRateOSD;
-        FrameRateOSDPosition frameRateOSDPosition;
 
         bool enableRewindBuffer;
         // TODO: rewind buffer size
@@ -149,10 +142,19 @@ public:
         util::Observable<double> mainSpeedFactor;
         util::Observable<double> altSpeedFactor;
         util::Observable<bool> useAltSpeed;
-        bool showSpeedIndicatorForAllSpeeds;
 
         bool pauseWhenUnfocused;
     } general;
+
+    struct GUI {
+        enum class FrameRateOSDPosition { TopLeft, TopRight, BottomLeft, BottomRight };
+
+        bool rememberWindowGeometry;
+        bool showMessages;
+        bool showFrameRateOSD;
+        FrameRateOSDPosition frameRateOSDPosition;
+        bool showSpeedIndicatorForAllSpeeds;
+    } gui;
 
     struct System {
         std::filesystem::path internalBackupRAMImagePath;
