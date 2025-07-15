@@ -38,7 +38,6 @@ private:
 
     std::set<std::string> m_selected;
     ymir::bup::IBackupMemory *m_bup = nullptr;
-    uint16 m_bupBlockSize = 0;
 
     // -----------------------------------------------------------------------------------------------------------------
     // File table drawing
@@ -117,6 +116,11 @@ private:
     // -----------------------------------------------------------------------------------------------------------------
     // File export action
 
+    struct ExportedFile {
+        ymir::bup::BackupFile file;
+        ymir::bup::BackupFileInfo info;
+    };
+
     static void ProcessSingleFileExport(void *userdata, std::filesystem::path file, int filter);
     static void ProcessMultiFileExport(void *userdata, std::filesystem::path dir, int filter);
     static void ProcessCancelFileExport(void *userdata, int filter);
@@ -127,9 +131,9 @@ private:
     void CancelFileExport();
     void FileExportError(const char *errorMessage);
 
-    void ExportFile(std::filesystem::path path, const ymir::bup::BackupFile &bupFile);
+    void ExportFile(std::filesystem::path path, const ExportedFile &exportedFile);
 
-    std::vector<ymir::bup::BackupFile> m_filesToExport;
+    std::vector<ExportedFile> m_filesToExport;
 
     // -----------------------------------------------------------------------------------------------------------------
     // Load image action

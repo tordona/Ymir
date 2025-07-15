@@ -59,12 +59,6 @@ void BackupMemoryView::SetBackupMemory(ymir::bup::IBackupMemory *bup) {
     if (m_bup != bup) {
         m_bup = bup;
         m_selected.clear();
-        if (bup != nullptr) {
-            std::unique_lock lock{m_context.locks.backupRAM};
-            m_bupBlockSize = m_bup->GetBlockSize();
-        } else {
-            m_bupBlockSize = 0;
-        }
     }
 }
 
@@ -233,7 +227,7 @@ void BackupMemoryView::Display() {
             auto &fileInfo = *it;
             auto optFile = m_bup->Export(fileInfo.header.filename);
             if (optFile) {
-                m_filesToExport.push_back(*optFile);
+                m_filesToExport.push_back({*optFile, fileInfo});
             }
         }
 
@@ -241,8 +235,8 @@ void BackupMemoryView::Display() {
         if (m_filesToExport.size() == 1) {
             // Single file -> allow user to pick location and file name
 
-            auto &filename = m_filesToExport[0].header.filename;
-            util::BackupDateTime bupDate{m_filesToExport[0].header.date};
+            auto &filename = m_filesToExport[0].file.header.filename;
+            util::BackupDateTime bupDate{m_filesToExport[0].file.header.date};
 
             FileDialogParams params{};
             params.dialogTitle = fmt::format("Export {} from {}", filename, m_name);
@@ -1086,16 +1080,24 @@ BackupMemoryView::ImportFileResult BackupMemoryView::ImportFile(std::filesystem:
         CHECK_INPUT_ERROR;
     } else if (std::string_view(buf.data(), 4) == kVmemMagic) {
         // BUP file format:
+        // (adapted from https://github.com/slinga-homebrew/Save-Game-Extractor/blob/master/bup_header.h)
         //
         // 00..03  char[4]   magic: "Vmem"
-        // 04..0F  -         padding/zeros
+        // 04..07  uint32be  save ID
+        //     08  uint8     number of times BUP_Dir function is called
+        //     09  uint8     number of times BUP_Read function is called
+        //     0A  uint8     number of times BUP_Write function is called
+        //     0B  uint8     number of times BUP_Verify function is called
+        // 0C..0F  -         padding/zeros
         // 10..1B  char[12]  filename (null-terminated)
         // 1C..26  char[11]  comment (null-terminated)
         //     27  uint8     language
         // 28..2B  uint32be  date/time (minutes since 01/01/1980)
         // 2C..2F  uint32be  data size (in bytes)
         // 30..31  uint16be  block size (in bytes)
-        // 32..3F  -         padding/zeros
+        // 32..33  -         padding/zeros
+        // 34..37  uint32be  date/time (minutes since 01/01/1980); used by external tools
+        // 38..3F  -         padding/zeros
         // 40....  uint8...  data
 
         in.seekg(0x10, std::ios::beg);
@@ -1174,12 +1176,12 @@ void BackupMemoryView::ExportSingleFile(std::filesystem::path file) {
 void BackupMemoryView::ExportMultiFile(std::filesystem::path dir) {
     std::filesystem::create_directories(dir);
 
-    for (auto &file : m_filesToExport) {
-        util::BackupDateTime bupDate{file.header.date};
+    for (auto &exportedFile : m_filesToExport) {
+        util::BackupDateTime bupDate{exportedFile.file.header.date};
         std::string filename =
-            fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.{}", file.header.filename, bupDate.year, bupDate.month,
-                        bupDate.day, bupDate.hour, bupDate.minute, static_config::export_ymbup);
-        ExportFile(dir / filename, file);
+            fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.{}", exportedFile.file.header.filename, bupDate.year,
+                        bupDate.month, bupDate.day, bupDate.hour, bupDate.minute, static_config::export_ymbup);
+        ExportFile(dir / filename, exportedFile);
     }
     OpenFilesExportSuccessfulModal(m_filesToExport.size());
     m_filesToExport.clear();
@@ -1194,7 +1196,7 @@ void BackupMemoryView::FileExportError(const char *errorMessage) {
     m_filesToExport.clear();
 }
 
-void BackupMemoryView::ExportFile(std::filesystem::path path, const ymir::bup::BackupFile &bupFile) {
+void BackupMemoryView::ExportFile(std::filesystem::path path, const ExportedFile &exportedFile) {
     std::ofstream out{path, std::ios::binary};
     std::array<char, 11> buf{};
 
@@ -1215,86 +1217,102 @@ void BackupMemoryView::ExportFile(std::filesystem::path path, const ymir::bup::B
 
         // filename
         buf.fill(0);
-        std::copy(bupFile.header.filename.begin(), bupFile.header.filename.end(), buf.begin());
+        std::copy(exportedFile.file.header.filename.begin(), exportedFile.file.header.filename.end(), buf.begin());
         out.write(&buf[0], 11);
 
         // language
-        out.put(static_cast<char>(bupFile.header.language));
+        out.put(static_cast<char>(exportedFile.file.header.language));
 
         // comment
         buf.fill(0);
-        std::copy(bupFile.header.comment.begin(), bupFile.header.comment.end(), buf.begin());
+        std::copy(exportedFile.file.header.comment.begin(), exportedFile.file.header.comment.end(), buf.begin());
         out.write(&buf[0], 10);
 
         // date/time
-        const uint32 date = bupFile.header.date;
+        const uint32 date = exportedFile.file.header.date;
         out.write((const char *)&date, sizeof(date));
 
         // data size
-        const uint32 size = static_cast<uint32>(bupFile.data.size());
+        const uint32 size = static_cast<uint32>(exportedFile.file.data.size());
         out.write((const char *)&size, sizeof(size));
 
         // data
-        out.write((const char *)bupFile.data.data(), bupFile.data.size());
+        out.write((const char *)exportedFile.file.data.data(), exportedFile.file.data.size());
     } else {
         // BUP file format:
+        // (adapted from https://github.com/slinga-homebrew/Save-Game-Extractor/blob/master/bup_header.h)
         //
         // 00..03  char[4]   magic: "Vmem"
-        // 04..0F  -         padding/zeros
+        // 04..07  uint32be  save ID
+        //     08  uint8     number of times BUP_Dir function is called
+        //     09  uint8     number of times BUP_Read function is called
+        //     0A  uint8     number of times BUP_Write function is called
+        //     0B  uint8     number of times BUP_Verify function is called
+        // 0C..0F  -         padding/zeros
         // 10..1B  char[12]  filename (null-terminated)
         // 1C..26  char[11]  comment (null-terminated)
         //     27  uint8     language
         // 28..2B  uint32be  date/time (minutes since 01/01/1980)
         // 2C..2F  uint32be  data size (in bytes)
         // 30..31  uint16be  block size (in bytes)
-        // 32..3F  -         padding/zeros
+        // 32..33  -         padding/zeros
+        // 34..37  uint32be  date/time (minutes since 01/01/1980); used by external tools
+        // 38..3F  -         padding/zeros
         // 40....  uint8...  data
 
         // magic
         static constexpr std::string_view kMagic = "Vmem";
         out.write(kMagic.data(), kMagic.size());
 
-        // padding
+        // save ID (=0), function call counts (=0,0,0,0), padding
         for (uint32 i = 0x04; i <= 0x0F; ++i) {
             out.put(0);
         }
 
         // filename
         buf.fill(0);
-        std::copy(bupFile.header.filename.begin(), bupFile.header.filename.end(), buf.begin());
+        std::copy(exportedFile.file.header.filename.begin(), exportedFile.file.header.filename.end(), buf.begin());
         out.write(&buf[0], 11);
         out.put(0);
 
         // comment
         buf.fill(0);
-        std::copy(bupFile.header.comment.begin(), bupFile.header.comment.end(), buf.begin());
+        std::copy(exportedFile.file.header.comment.begin(), exportedFile.file.header.comment.end(), buf.begin());
         out.write(&buf[0], 10);
         out.put(0);
 
         // language
-        out.put(static_cast<char>(bupFile.header.language));
+        out.put(static_cast<char>(exportedFile.file.header.language));
 
         // date/time
-        const uint32 date = bit::big_endian_swap(bupFile.header.date);
+        const uint32 date = bit::big_endian_swap(exportedFile.file.header.date);
         out.write((const char *)&date, sizeof(date));
 
         // data size
-        const uint32 size = bit::big_endian_swap(static_cast<uint32>(bupFile.data.size()));
+        const uint32 size = bit::big_endian_swap(static_cast<uint32>(exportedFile.file.data.size()));
         out.write((const char *)&size, sizeof(size));
 
         // block size
         {
-            const uint16 blockSize = bit::big_endian_swap(static_cast<uint16>(m_bupBlockSize));
+            const uint16 blockSize = bit::big_endian_swap<uint16>(exportedFile.info.numRawBlocks);
             out.write((const char *)&blockSize, sizeof(blockSize));
         }
 
         // padding
-        for (uint32 i = 0x32; i <= 0x3F; ++i) {
+        for (uint32 i = 0x32; i <= 0x33; ++i) {
+            out.put(0);
+        }
+
+        // date/time (again)
+        out.write((const char *)&date, sizeof(date));
+
+        // padding
+        for (uint32 i = 0x38; i <= 0x3F; ++i) {
             out.put(0);
         }
 
         // data
-        out.write((const char *)bupFile.data.data(), bupFile.data.size());
+        out.write((const char *)exportedFile.file.data.data(), exportedFile.file.data.size());
     }
 }
 
