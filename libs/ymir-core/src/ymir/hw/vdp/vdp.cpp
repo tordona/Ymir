@@ -126,7 +126,7 @@ void VDP::Reset(bool hard) {
     for (auto &state : m_normBGLayerStates) {
         state.Reset();
     }
-    for (auto &state : m_charFetchers) {
+    for (auto &state : m_vramFetchers) {
         state[0].Reset();
         state[1].Reset();
     }
@@ -415,6 +415,28 @@ void VDP::SaveState(state::VDPState &state) const {
 
     state.renderer.lineBackLayerState.lineColor = m_lineBackLayerState.lineColor.u32;
     state.renderer.lineBackLayerState.backColor = m_lineBackLayerState.backColor.u32;
+
+    auto copyChar = [&](state::VDPState::VDPRendererState::Character &dst, const Character &src) {
+        dst.charNum = src.charNum;
+        dst.palNum = src.palNum;
+        dst.specColorCalc = src.specColorCalc;
+        dst.specPriority = src.specPriority;
+        dst.flipH = src.flipH;
+        dst.flipV = src.flipV;
+    };
+
+    for (size_t i = 0; i < 2; i++) {
+        for (size_t j = 0; j < 6; j++) {
+            copyChar(state.renderer.vramFetchers[i][j].currChar, m_vramFetchers[i][j].currChar);
+            copyChar(state.renderer.vramFetchers[i][j].nextChar, m_vramFetchers[i][j].nextChar);
+            state.renderer.vramFetchers[i][j].lastCharIndex = m_vramFetchers[i][j].lastCharIndex;
+            state.renderer.vramFetchers[i][j].currBitmapData = m_vramFetchers[i][j].currBitmapData;
+            state.renderer.vramFetchers[i][j].nextBitmapData = m_vramFetchers[i][j].nextBitmapData;
+            state.renderer.vramFetchers[i][j].bitmapDataAddress = m_vramFetchers[i][j].bitmapDataAddress;
+            state.renderer.vramFetchers[i][j].lastVCellScroll = m_vramFetchers[i][j].lastVCellScroll;
+        }
+    }
+
     state.renderer.vertCellScrollInc = m_vertCellScrollInc;
 
     state.renderer.displayFB = m_VDPRenderContext.displayFB;
@@ -473,6 +495,29 @@ void VDP::LoadState(const state::VDPState &state) {
 
     m_lineBackLayerState.lineColor.u32 = state.renderer.lineBackLayerState.lineColor;
     m_lineBackLayerState.backColor.u32 = state.renderer.lineBackLayerState.backColor;
+
+    auto copyChar = [&](Character &dst, const state::VDPState::VDPRendererState::Character &src) {
+        dst.charNum = src.charNum;
+        dst.palNum = src.palNum;
+        dst.specColorCalc = src.specColorCalc;
+        dst.specPriority = src.specPriority;
+        dst.flipH = src.flipH;
+        dst.flipV = src.flipV;
+    };
+
+    for (size_t i = 0; i < 2; i++) {
+        for (size_t j = 0; j < 6; j++) {
+            copyChar(m_vramFetchers[i][j].currChar, state.renderer.vramFetchers[i][j].currChar);
+            copyChar(m_vramFetchers[i][j].nextChar, state.renderer.vramFetchers[i][j].nextChar);
+            m_vramFetchers[i][j].lastCharIndex = state.renderer.vramFetchers[i][j].lastCharIndex;
+            m_vramFetchers[i][j].currBitmapData = state.renderer.vramFetchers[i][j].currBitmapData;
+            m_vramFetchers[i][j].nextBitmapData = state.renderer.vramFetchers[i][j].nextBitmapData;
+            m_vramFetchers[i][j].bitmapDataAddress = state.renderer.vramFetchers[i][j].bitmapDataAddress;
+            m_vramFetchers[i][j].lastVCellScroll = state.renderer.vramFetchers[i][j].lastVCellScroll;
+        }
+    }
+
+    m_vertCellScrollInc = state.renderer.vertCellScrollInc;
 
     m_VDPRenderContext.displayFB = state.renderer.displayFB;
     m_VDPRenderContext.vdp1Done = state.renderer.vdp1Done;
@@ -1272,6 +1317,10 @@ FORCE_INLINE T VDP::VDP2ReadRendererCRAM(uint32 address) {
     } else {
         return VDP2ReadCRAM<T, false>(address);
     }
+}
+
+FORCE_INLINE std::array<uint8, kVDP2VRAMSize> &VDP::VDP2GetRendererVRAM() {
+    return m_threadedVDPRendering ? m_VDPRenderContext.vdp2.VRAM : m_state.VRAM2;
 }
 
 FORCE_INLINE Color888 VDP::VDP2ReadRendererColor5to8(uint32 address) const {
@@ -2989,11 +3038,16 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
     // all graphics on those backgrounds one tile to the right.
     const bool hires = (regs2.TVMD.HRESOn & 6) != 0;
 
+    // Clear bitmap delay flags
+    for (uint32 bgIndex = 0; bgIndex < 4; ++bgIndex) {
+        regs2.bgParams[bgIndex + 1].bitmapDelay.fill(false);
+    }
+
     // Build access pattern masks for NBG0-3 PNs and CPs.
     // Bits 0-7 correspond to T0-T7.
     std::array<uint8, 4> pn = {0, 0, 0, 0}; // pattern name access masks
     std::array<uint8, 4> cp = {0, 0, 0, 0}; // character pattern access masks
-    for (const auto &bank : regs2.cyclePatterns.timings) {
+    for (uint8 bankIndex = 0; const auto &bank : regs2.cyclePatterns.timings) {
         for (uint8 i = 0; auto timing : bank) {
             switch (timing) {
             case CyclePatterns::PatNameNBG0: [[fallthrough]];
@@ -3001,8 +3055,8 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
             case CyclePatterns::PatNameNBG2: [[fallthrough]];
             case CyclePatterns::PatNameNBG3: //
             {
-                const uint8 index = static_cast<uint8>(timing) - static_cast<uint8>(CyclePatterns::PatNameNBG0);
-                pn[index] |= 1u << i;
+                const uint8 bgIndex = static_cast<uint8>(timing) - static_cast<uint8>(CyclePatterns::PatNameNBG0);
+                pn[bgIndex] |= 1u << i;
                 break;
             }
 
@@ -3011,8 +3065,14 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
             case CyclePatterns::CharPatNBG2: [[fallthrough]];
             case CyclePatterns::CharPatNBG3: //
             {
-                const uint8 index = static_cast<uint8>(timing) - static_cast<uint8>(CyclePatterns::CharPatNBG0);
-                cp[index] |= 1u << i;
+                const uint8 bgIndex = static_cast<uint8>(timing) - static_cast<uint8>(CyclePatterns::CharPatNBG0);
+                cp[bgIndex] |= 1u << i;
+
+                // TODO: find the correct rules for bitmap accesses
+                // This seems to work for pal256 1x hi-res mode; basically assumes T0-T1=bad T2-T3=good
+                /*if (regs2.bgParams[bgIndex + 1].bitmap) {
+                    regs2.bgParams[bgIndex + 1].bitmapDelay[bankIndex] = i < 2;
+                }*/
                 break;
             }
 
@@ -3026,6 +3086,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
 
             ++i;
         }
+        ++bankIndex;
     }
 
     // Apply delays to the NBGs
@@ -3189,12 +3250,14 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
         for (uint32 i = 0; i < 5; i++) {
             regs2.bgParams[i].charPatAccess[1] = regs2.bgParams[i].charPatAccess[0];
             regs2.bgParams[i].patNameAccess[1] = regs2.bgParams[i].patNameAccess[0];
+            regs2.bgParams[i].bitmapDelay[1] = regs2.bgParams[i].bitmapDelay[0];
         }
     }
     if (!regs2.vramControl.partitionVRAMB) {
         for (uint32 i = 0; i < 5; i++) {
             regs2.bgParams[i].charPatAccess[3] = regs2.bgParams[i].charPatAccess[2];
             regs2.bgParams[i].patNameAccess[3] = regs2.bgParams[i].patNameAccess[2];
+            regs2.bgParams[i].bitmapDelay[3] = regs2.bgParams[i].bitmapDelay[2];
         }
     }
 
@@ -3543,7 +3606,7 @@ template <uint32 bgIndex, bool deinterlace>
 FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altField) {
     static_assert(bgIndex < 4, "Invalid NBG index");
 
-    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &, CharacterFetcher &,
+    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &, VRAMFetcher &,
                                  std::span<const bool>, bool);
 
     // Lookup table of scroll BG drawing functions
@@ -3592,12 +3655,12 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
     const BGParams &bgParams = regs.bgParams[bgIndex + 1];
     LayerState &layerState = m_layerStates[altField][bgIndex + 2];
     const NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
-    CharacterFetcher &charFetcher = m_charFetchers[altField][bgIndex];
+    VRAMFetcher &vramFetcher = m_vramFetchers[altField][bgIndex];
     auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex + 1]}.first(m_HRes);
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState, charFetcher, windowState, altField);
+        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState, vramFetcher, windowState, altField);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
@@ -3605,7 +3668,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState, charFetcher, windowState,
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState, vramFetcher, windowState,
                                                        altField);
     }
 }
@@ -3617,7 +3680,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode, bool altFi
     static constexpr bool selRotParam = bgIndex == 0;
 
     using FnDrawScroll =
-        void (VDP::*)(uint32 y, const BGParams &, LayerState &, CharacterFetcher &, std::span<const bool>, bool);
+        void (VDP::*)(uint32 y, const BGParams &, LayerState &, VRAMFetcher &, std::span<const bool>, bool);
     using FnDrawBitmap = void (VDP::*)(uint32 y, const BGParams &, LayerState &, std::span<const bool>, bool);
 
     // Lookup table of scroll BG drawing functions
@@ -3664,7 +3727,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode, bool altFi
     const VDP2Regs &regs = VDP2GetRegs();
     const BGParams &bgParams = regs.bgParams[bgIndex];
     LayerState &layerState = m_layerStates[altField][bgIndex + 1];
-    CharacterFetcher &charFetcher = m_charFetchers[altField][bgIndex + 4];
+    VRAMFetcher &vramFetcher = m_vramFetchers[altField][bgIndex + 4];
     auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex]}.first(m_HRes);
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
@@ -3677,7 +3740,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode, bool altFi
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, charFetcher, windowState, altField);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, vramFetcher, windowState, altField);
     }
 }
 
@@ -4843,7 +4906,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
 template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode,
           bool useVCellScroll, bool deinterlace>
 NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
+                                           const NormBGLayerState &bgState, VRAMFetcher &vramFetcher,
                                            std::span<const bool> windowState, bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
 
@@ -4856,15 +4919,15 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
     auto readCellScrollY = [&](bool checkRepeat = false) {
         if (checkRepeat && bgState.vertCellScrollRepeat && bgState.vertCellScrollDelay) {
-            return charFetcher.lastVCellScroll;
+            return vramFetcher.lastVCellScroll;
         }
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
         if (!checkRepeat || !bgState.vertCellScrollRepeat) {
             cellScrollTableAddress += m_vertCellScrollInc;
         }
-        const uint32 prevValue = charFetcher.lastVCellScroll;
-        charFetcher.lastVCellScroll = bit::extract<8, 26>(value);
-        return bgState.vertCellScrollDelay ? prevValue : charFetcher.lastVCellScroll;
+        const uint32 prevValue = vramFetcher.lastVCellScroll;
+        vramFetcher.lastVCellScroll = bit::extract<8, 26>(value);
+        return bgState.vertCellScrollDelay ? prevValue : vramFetcher.lastVCellScroll;
     };
 
     uint32 mosaicCounterX = 0;
@@ -4913,7 +4976,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
             // Plot pixel
             const Pixel pixel = VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord,
-                charFetcher);
+                vramFetcher);
             layerState.pixels.SetPixel(x, pixel);
         }
 
@@ -4940,7 +5003,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
         // Fetch pixel
         VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-            bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord, charFetcher);
+            bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord, vramFetcher);
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH * 8;
@@ -4949,7 +5012,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
 template <ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll, bool deinterlace>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
+                                           const NormBGLayerState &bgState, VRAMFetcher &vramFetcher,
                                            std::span<const bool> windowState, bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
 
@@ -4962,15 +5025,15 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
     auto readCellScrollY = [&](bool checkRepeat = false) {
         if (checkRepeat && bgState.vertCellScrollRepeat && bgState.vertCellScrollDelay) {
-            return charFetcher.lastVCellScroll;
+            return vramFetcher.lastVCellScroll;
         }
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
         if (!checkRepeat || !bgState.vertCellScrollRepeat) {
             cellScrollTableAddress += m_vertCellScrollInc;
         }
-        const uint32 prevValue = charFetcher.lastVCellScroll;
-        charFetcher.lastVCellScroll = bit::extract<8, 26>(value);
-        return bgState.vertCellScrollDelay ? prevValue : charFetcher.lastVCellScroll;
+        const uint32 prevValue = vramFetcher.lastVCellScroll;
+        vramFetcher.lastVCellScroll = bit::extract<8, 26>(value);
+        return bgState.vertCellScrollDelay ? prevValue : vramFetcher.lastVCellScroll;
     };
 
     uint32 mosaicCounterX = 0;
@@ -5017,8 +5080,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
             const CoordU32 scrollCoord{scrollX, scrollY};
 
             // Plot pixel
-            const Pixel pixel =
-                VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, bgParams.bitmapBaseAddress, scrollCoord);
+            const Pixel pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, bgParams.bitmapBaseAddress,
+                                                                             scrollCoord, vramFetcher);
             layerState.pixels.SetPixel(x, pixel);
         }
 
@@ -5029,7 +5092,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                             CharacterFetcher &charFetcher, std::span<const bool> windowState,
+                                             VRAMFetcher &vramFetcher, std::span<const bool> windowState,
                                              bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
 
@@ -5098,7 +5161,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             // Plot pixel
             const Pixel pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH, rotParams.pageShiftV, scrollCoord,
-                m_charFetchers[altField][rotParamSelector]);
+                m_vramFetchers[altField][rotParamSelector]);
             layerState.pixels.SetPixel(xx, pixel);
             if (doubleResH) {
                 layerState.pixels.SetPixel(xx + 1, pixel);
@@ -5176,8 +5239,8 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
             layerState.pixels.transparent[xx] = true;
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
-            const Pixel pixel =
-                VDP2FetchBitmapPixel<colorFormat, colorMode>(bgParams, rotParams.bitmapBaseAddress, scrollCoord);
+            const Pixel pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(
+                bgParams, rotParams.bitmapBaseAddress, scrollCoord, m_vramFetchers[altField][rotParamSelector + 4]);
             layerState.pixels.SetPixel(xx, pixel);
         } else {
             // Out of bounds and no repeat
@@ -5314,7 +5377,7 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
                                                     uint32 pageShiftH, uint32 pageShiftV, CoordU32 scrollCoord,
-                                                    CharacterFetcher &charFetcher) {
+                                                    VRAMFetcher &vramFetcher) {
     //      Map (NBGs)              Map (RBGs)
     // +---------+---------+   +----+----+----+----+
     // |         |         |   | A  | B  | C  | D  |
@@ -5475,8 +5538,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     const CoordU32 dotCoord{dotX, dotY};
 
     // Fetch character if needed
-    if (charFetcher.lastCharIndex != charIndex) {
-        charFetcher.lastCharIndex = charIndex;
+    if (vramFetcher.lastCharIndex != charIndex) {
+        vramFetcher.lastCharIndex = charIndex;
         const uint32 pageAddress = pageBaseAddress + pageOffset;
         static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
         const Character ch =
@@ -5485,12 +5548,12 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
                 : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
 
         // Send character to pipeline
-        charFetcher.currChar = bgParams.charPatDelay ? charFetcher.nextChar : ch;
-        charFetcher.nextChar = ch;
+        vramFetcher.currChar = bgParams.charPatDelay ? vramFetcher.nextChar : ch;
+        vramFetcher.nextChar = ch;
     }
 
     // Fetch pixel using character data
-    return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, charFetcher.currChar, dotCoord, cellIndex);
+    return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, vramFetcher.currChar, dotCoord, cellIndex);
 }
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress,
@@ -5689,8 +5752,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchCharacterPixel(const BGParams &bgParams, C
 }
 
 template <ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint32 bitmapBaseAddress,
-                                                  CoordU32 dotCoord) {
+FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint32 bitmapBaseAddress, CoordU32 dotCoord,
+                                                  VRAMFetcher &vramFetcher) {
     static_assert(static_cast<uint32>(colorFormat) <= 4, "Invalid xxCHCN value");
 
     const VDP2Regs &regs = VDP2GetRegs();
@@ -5722,9 +5785,29 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
         util::unreachable();
     };
 
+    auto fetchBitmapData = [&](uint32 address) {
+        const uint32 bank = (address >> 17u) & 3u;
+        const bool delayed = bgParams.bitmapDelay[bank];
+
+        if (vramFetcher.UpdateBitmapDataAddress(address)) {
+            if (delayed) {
+                vramFetcher.currBitmapData = vramFetcher.nextBitmapData;
+            }
+
+            // TODO: handle VRSIZE.VRAMSZ
+            auto &vram = VDP2GetRendererVRAM();
+            std::copy_n(&vram[address & 0x7FFF8], 8, vramFetcher.nextBitmapData.begin());
+
+            if (!delayed) {
+                vramFetcher.currBitmapData = vramFetcher.nextBitmapData;
+            }
+        }
+    };
+
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
-        const uint8 dotData = (VDP2ReadRendererVRAM<uint8>(dotAddress) >> ((~dotX & 1) * 4)) & 0xF;
+        fetchBitmapData(dotAddress);
+        const uint8 dotData = (vramFetcher.currBitmapData[dotAddress & 7] >> ((~dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
@@ -5732,7 +5815,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
 
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
-        const uint8 dotData = VDP2ReadRendererVRAM<uint8>(dotAddress);
+        fetchBitmapData(dotAddress);
+        const uint8 dotData = vramFetcher.currBitmapData[dotAddress & 7];
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
@@ -5740,7 +5824,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
 
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
+        fetchBitmapData(dotAddress);
+        const uint16 dotData = util::ReadBE<uint16>(&vramFetcher.currBitmapData[dotAddress & 6]);
         const uint32 colorIndex = dotData & 0x7FF;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && (dotData & 0x7FF) == 0;
@@ -5748,14 +5833,16 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
 
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
-        const uint16 dotData = VDP2ReadRendererVRAM<uint16>(dotAddress);
+        fetchBitmapData(dotAddress);
+        const uint16 dotData = util::ReadBE<uint16>(&vramFetcher.currBitmapData[dotAddress & 6]);
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);
 
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
-        const uint32 dotData = VDP2ReadRendererVRAM<uint32>(dotAddress);
+        fetchBitmapData(dotAddress);
+        const uint32 dotData = util::ReadBE<uint32>(&vramFetcher.currBitmapData[dotAddress & 4]);
         pixel.color = Color888{.u32 = dotData};
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);

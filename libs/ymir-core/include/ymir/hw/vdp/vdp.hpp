@@ -587,6 +587,8 @@ private:
     template <mem_primitive T>
     T VDP2ReadRendererVRAM(uint32 address);
 
+    std::array<uint8, kVDP2VRAMSize> &VDP2GetRendererVRAM();
+
     template <mem_primitive T>
     T VDP2ReadRendererCRAM(uint32 address);
 
@@ -813,9 +815,9 @@ private:
         alignas(16) std::array<bool, kMaxResH> window;
     };
 
-    // Pipelined character fetcher
-    struct CharacterFetcher {
-        CharacterFetcher() {
+    // Pipelined VRAM fetcher
+    struct VRAMFetcher {
+        VRAMFetcher() {
             Reset();
         }
 
@@ -824,13 +826,32 @@ private:
             nextChar = {};
             lastCharIndex = 0xFFFFFFFF;
 
-            lastVCellScroll = 0;
+            currBitmapData.fill(0);
+            nextBitmapData.fill(0);
+
+            lastVCellScroll = 0xFFFFFFFF;
         }
 
+        bool UpdateBitmapDataAddress(uint32 address) {
+            address &= ~7;
+            if (address != bitmapDataAddress) {
+                bitmapDataAddress = address;
+                return true;
+            }
+            return false;
+        }
+
+        // Character patterns (for scroll BGs)
         Character currChar;
         Character nextChar;
         uint32 lastCharIndex;
 
+        // Bitmap data (for bitmap BGs)
+        alignas(uint64) std::array<uint8, 8> currBitmapData;
+        alignas(uint64) std::array<uint8, 8> nextBitmapData;
+        uint32 bitmapDataAddress;
+
+        // Vertical cell scroll data
         uint32 lastVCellScroll;
     };
 
@@ -998,18 +1019,18 @@ private:
     // Entry [0] is primary and [1] is alternate field for deinterlacing.
     std::array<SpriteLayerState, 2> m_spriteLayerState;
 
-    // Layer state for NBGs 0-3
+    // Layer state for NBGs 0-3.
     std::array<NormBGLayerState, 4> m_normBGLayerStates;
-
-    // Character fetcher states for NBGs 0-3 and rotation parameters A/B.
-    // Entry [0] is primary and [1] is alternate field for deinterlacing.
-    std::array<std::array<CharacterFetcher, 6>, 2> m_charFetchers;
 
     // States for Rotation Parameters A and B.
     std::array<RotationParamState, 2> m_rotParamStates;
 
     // State for the line color and back screens.
     LineBackLayerState m_lineBackLayerState;
+
+    // VRAM fetcher states for NBGs 0-3 and rotation parameters A/B.
+    // Entry [0] is primary and [1] is alternate field for deinterlacing.
+    std::array<std::array<VRAMFetcher, 6>, 2> m_vramFetchers;
 
     // Window state for NBGs and RBGs.
     // Entry [0] is primary and [1] is alternate field for deinterlacing.
@@ -1267,7 +1288,7 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
-    // charFetcher is the corresponding background layer's character fetcher.
+    // vramFetcher is the corresponding background layer's VRAM fetcher.
     // windowState is a reference to the window state for the layer.
     // altField selects the complementary field when rendering deinterlaced frames
     //
@@ -1280,7 +1301,7 @@ private:
     template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll,
               bool deinterlace>
     void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
+                                const NormBGLayerState &bgState, VRAMFetcher &vramFetcher,
                                 std::span<const bool> windowState, bool altField);
 
     // Draws a normal bitmap BG scanline.
@@ -1289,7 +1310,7 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
-    // charFetcher is the corresponding background layer's character fetcher.
+    // vramFetcher is the corresponding background layer's VRAM fetcher.
     // windowState is a reference to the window state for the layer.
     // altField selects the complementary field when rendering deinterlaced frames
     //
@@ -1299,7 +1320,7 @@ private:
     // deinterlace determines whether to deinterlace video output
     template <ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll, bool deinterlace>
     void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
+                                const NormBGLayerState &bgState, VRAMFetcher &vramFetcher,
                                 std::span<const bool> windowState, bool altField);
 
     // Draws a rotation scroll BG scanline.
@@ -1309,7 +1330,7 @@ private:
     // layerState is a reference to the common layer state for the background.
     // windowState is a reference to the window state for the layer.
     // altField selects the complementary field when rendering deinterlaced frames
-    // charFetcher is the corresponding background layer's character fetcher.
+    // vramFetcher is the corresponding background layer's VRAM fetcher.
     //
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
@@ -1317,8 +1338,8 @@ private:
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
     template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-    void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                  CharacterFetcher &charFetcher, std::span<const bool> windowState, bool altField);
+    void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, VRAMFetcher &vramFetcher,
+                                  std::span<const bool> windowState, bool altField);
 
     // Draws a rotation bitmap BG scanline.
     //
@@ -1363,7 +1384,7 @@ private:
     // pageBaseAddresses is a reference to the table containing the planes' pages' base addresses.
     // pageShiftH and pageShiftV are address shifts derived from PLSZ to determine the plane and page indices.
     // scrollCoord has the coordinates of the scroll screen.
-    // charFetcher is the corresponding background layer's character fetcher.
+    // vramFetcher is the corresponding background layer's VRAM fetcher.
     //
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
@@ -1371,7 +1392,7 @@ private:
     // colorMode is the CRAM color mode.
     template <bool rot, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     Pixel VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses, uint32 pageShiftH,
-                                 uint32 pageShiftV, CoordU32 scrollCoord, CharacterFetcher &charFetcher);
+                                 uint32 pageShiftV, CoordU32 scrollCoord, VRAMFetcher &vramFetcher);
 
     // Fetches a two-word character from VRAM.
     //
@@ -1419,12 +1440,14 @@ private:
     //
     // bgParams contains the parameters for the BG to draw.
     // dotCoord specify the coordinates of the pixel within the bitmap.
+    // vramFetcher is the corresponding background layer's VRAM fetcher.
     //
     // colorFormat is the color format for pixel data.
     // bitmapBaseAddress is the base address of bitmap data.
     // colorMode is the CRAM color mode.
     template <ColorFormat colorFormat, uint32 colorMode>
-    Pixel VDP2FetchBitmapPixel(const BGParams &bgParams, uint32 bitmapBaseAddress, CoordU32 dotCoord);
+    Pixel VDP2FetchBitmapPixel(const BGParams &bgParams, uint32 bitmapBaseAddress, CoordU32 dotCoord,
+                               VRAMFetcher &vramFetcher);
 
     // Fetches a color from CRAM using the current color mode specified by vramControl.colorRAMMode.
     //

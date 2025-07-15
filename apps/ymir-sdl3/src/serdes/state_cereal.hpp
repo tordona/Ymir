@@ -322,6 +322,9 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState &s, const uint32 version) {
+    // v7:
+    // - New fields
+    //   - vramFetchers = (default values)
     // v5:
     // - New fields
     //   - erase = false
@@ -335,6 +338,11 @@ void serialize(Archive &ar, VDPState::VDPRendererState &s, const uint32 version)
     }
     ar(s.rotParamStates);
     ar(s.lineBackLayerState);
+    for (auto &fieldFetchers : s.vramFetchers) {
+        for (auto &fetcher : fieldFetchers) {
+            serialize(ar, fetcher, version);
+        }
+    }
     if (version >= 4) {
         ar(s.vertCellScrollInc);
     } else {
@@ -468,6 +476,35 @@ template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState::LineBackLayerState &s) {
     ar(s.lineColor);
     ar(s.backColor);
+}
+
+template <class Archive>
+void serialize(Archive &ar, VDPState::VDPRendererState::Character &s) {
+    // v7:
+    // - Struct created
+    ar(s.charNum, s.palNum);
+    ar(s.specColorCalc, s.specPriority);
+    ar(s.flipH, s.flipV);
+}
+
+template <class Archive>
+void serialize(Archive &ar, VDPState::VDPRendererState::VRAMFetcherState &s, const uint32 version) {
+    // v7:
+    // - Struct created
+
+    if (version >= 7) {
+        ar(s.currChar, s.nextChar, s.lastCharIndex);
+        ar(s.currBitmapData, s.nextBitmapData, s.bitmapDataAddress);
+        ar(s.lastVCellScroll);
+    } else {
+        s.currChar = {};
+        s.nextChar = {};
+        s.lastCharIndex = 0xFFFFFFFF;
+        s.currBitmapData.fill(0);
+        s.nextBitmapData.fill(0);
+        s.bitmapDataAddress = 0xFFFFFFFF;
+        s.lastVCellScroll = 0;
+    }
 }
 
 template <class Archive>

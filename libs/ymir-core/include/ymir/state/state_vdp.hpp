@@ -226,10 +226,30 @@ struct VDPState {
             uint32 backColor;
         };
 
+        struct Character {
+            uint16 charNum;
+            uint8 palNum;
+            bool specColorCalc;
+            bool specPriority;
+            bool flipH;
+            bool flipV;
+        };
+
+        struct VRAMFetcherState {
+            Character currChar;
+            Character nextChar;
+            uint32 lastCharIndex;
+            alignas(uint64) std::array<uint8, 8> currBitmapData;
+            alignas(uint64) std::array<uint8, 8> nextBitmapData;
+            uint32 bitmapDataAddress;
+            uint32 lastVCellScroll;
+        };
+
         VDP1RenderState vdp1State;
         std::array<NormBGLayerState, 4> normBGLayerStates;
         std::array<RotationParamState, 2> rotParamStates;
         LineBackLayerState lineBackLayerState;
+        std::array<std::array<VRAMFetcherState, 6>, 2> vramFetchers;
         uint32 vertCellScrollInc;
 
         uint8 displayFB;

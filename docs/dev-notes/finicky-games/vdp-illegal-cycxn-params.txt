@@ -92,10 +92,12 @@ Due to this, the total number is cycles is also limited to the number of timing 
 RGB 8:8:8 with 1/4x reduction are impossible on any mode as the total number of cycles (1*8*4=32) exceeds the available
 timing slots (8 for lo-res, 4 for hi-res).
 
-(TODO: bitmap access restrictions)
-  (spread across multiple VRAM banks)
-  (obeys each bank's settings)
-  (timing restrictions unknown)
+Bitmap data reads also follow timing restrictions on CP cycles. Bitmaps do not need PN cycles. Since bitmaps may span
+multiple VRAM banks, the access restrictions apply to access for each VRAM bank separately. Setting up invalid timings
+in one bank and correct timings in another will cause the bitmap BG to be sliced and shifted in parts.
+Bitmap data is read in chunks of 8 bytes.
+
+(TODO: bitmap access restrictions table; currently unknown)
 
 Vertical cell scroll reads are also subject to timing restrictions. VC reads should occur on slots T0, T1 or T2. Any
 other slot results in delayed reads. For NBG0 specifically, if the VC read happens on T2 or later, the first vertical

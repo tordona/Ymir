@@ -19,6 +19,10 @@ void VDP2VRAMDelayView::Display() {
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
+    const float spaceWidth = ImGui::CalcTextSize(" ").x;
+
+    static constexpr ImVec4 kColorGood{1.00f, 0.41f, 0.25f, 1.00f};
+    static constexpr ImVec4 kColorBad{0.25f, 1.00f, 0.41f, 1.00f};
 
     auto checkbox = [](const char *label, bool value, bool sameLine = false) {
         if (sameLine) {
@@ -224,9 +228,6 @@ void VDP2VRAMDelayView::Display() {
             }
         }
 
-        static constexpr ImVec4 kColorYes{1.00f, 0.41f, 0.25f, 1.00f};
-        static constexpr ImVec4 kColorNo{0.25f, 1.00f, 0.41f, 1.00f};
-
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::TextUnformatted("CP delayed?");
@@ -234,11 +235,50 @@ void VDP2VRAMDelayView::Display() {
         for (uint32 i = 0; i < 4; i++) {
             if (ImGui::TableNextColumn()) {
                 if (regs2.bgEnabled[i]) {
-                    // TODO: bitmap delays (may span multiple VRAM banks)
-                    if (!regs2.bgParams[i + 1].bitmap && regs2.bgParams[i + 1].charPatDelay) {
-                        ImGui::TextColored(kColorYes, "yes");
+                    const auto &bgParams = regs2.bgParams[i + 1];
+                    if (!bgParams.bitmap && bgParams.charPatDelay) {
+                        ImGui::TextColored(kColorGood, "yes");
+                    } else if (bgParams.bitmap) {
+                        std::vector<const char *> delayedBanks{};
+
+                        if (regs2.vramControl.partitionVRAMA) {
+                            if (bgParams.bitmapDelay[0] && bgParams.bitmapDelay[1]) {
+                                delayedBanks.push_back("A0/1");
+                            } else if (bgParams.bitmapDelay[0]) {
+                                delayedBanks.push_back("A0");
+                            } else if (bgParams.bitmapDelay[1]) {
+                                delayedBanks.push_back("A1");
+                            }
+                        } else if (bgParams.bitmapDelay[0]) {
+                            delayedBanks.push_back("A");
+                        }
+                        if (regs2.vramControl.partitionVRAMB) {
+                            if (bgParams.bitmapDelay[2] && bgParams.bitmapDelay[3]) {
+                                delayedBanks.push_back("B0/1");
+                            } else if (bgParams.bitmapDelay[2]) {
+                                delayedBanks.push_back("B0");
+                            } else if (bgParams.bitmapDelay[3]) {
+                                delayedBanks.push_back("B1");
+                            }
+                        } else if (bgParams.bitmapDelay[2]) {
+                            delayedBanks.push_back("B");
+                        }
+
+                        if (delayedBanks.empty()) {
+                            ImGui::TextColored(kColorBad, "no");
+                        } else {
+                            bool first = true;
+                            for (const char *bank : delayedBanks) {
+                                if (first) {
+                                    first = false;
+                                } else {
+                                    ImGui::SameLine(0.0f, spaceWidth);
+                                }
+                                ImGui::TextColored(kColorGood, "%s", bank);
+                            }
+                        }
                     } else {
-                        ImGui::TextColored(kColorNo, "no");
+                        ImGui::TextColored(kColorBad, "no");
                     }
                 }
             }
@@ -253,9 +293,9 @@ void VDP2VRAMDelayView::Display() {
                 if (regs2.bgEnabled[i]) {
                     if (regs2.bgParams[i + 1].verticalCellScrollEnable) {
                         if (nbgLayerStates[i].vertCellScrollDelay) {
-                            ImGui::TextColored(kColorYes, "yes");
+                            ImGui::TextColored(kColorGood, "yes");
                         } else {
-                            ImGui::TextColored(kColorNo, "no");
+                            ImGui::TextColored(kColorBad, "no");
                         }
                     } else {
                         ImGui::TextUnformatted("-");
@@ -272,9 +312,9 @@ void VDP2VRAMDelayView::Display() {
             if (regs2.bgEnabled[0]) {
                 if (regs2.bgParams[1].verticalCellScrollEnable) {
                     if (nbgLayerStates[0].vertCellScrollRepeat) {
-                        ImGui::TextColored(kColorYes, "yes");
+                        ImGui::TextColored(kColorGood, "yes");
                     } else {
-                        ImGui::TextColored(kColorNo, "no");
+                        ImGui::TextColored(kColorBad, "no");
                     }
                 } else {
                     ImGui::TextUnformatted("-");
