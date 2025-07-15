@@ -826,8 +826,7 @@ private:
             nextChar = {};
             lastCharIndex = 0xFFFFFFFF;
 
-            currBitmapData.fill(0);
-            nextBitmapData.fill(0);
+            bitmapData.fill(0);
 
             lastVCellScroll = 0xFFFFFFFF;
         }
@@ -847,8 +846,7 @@ private:
         uint32 lastCharIndex;
 
         // Bitmap data (for bitmap BGs)
-        alignas(uint64) std::array<uint8, 8> currBitmapData;
-        alignas(uint64) std::array<uint8, 8> nextBitmapData;
+        alignas(uint64) std::array<uint8, 8> bitmapData;
         uint32 bitmapDataAddress;
 
         // Vertical cell scroll data

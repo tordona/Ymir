@@ -494,14 +494,13 @@ void serialize(Archive &ar, VDPState::VDPRendererState::VRAMFetcherState &s, con
 
     if (version >= 7) {
         ar(s.currChar, s.nextChar, s.lastCharIndex);
-        ar(s.currBitmapData, s.nextBitmapData, s.bitmapDataAddress);
+        ar(s.bitmapData, s.bitmapDataAddress);
         ar(s.lastVCellScroll);
     } else {
         s.currChar = {};
         s.nextChar = {};
         s.lastCharIndex = 0xFFFFFFFF;
-        s.currBitmapData.fill(0);
-        s.nextBitmapData.fill(0);
+        s.bitmapData.fill(0);
         s.bitmapDataAddress = 0xFFFFFFFF;
         s.lastVCellScroll = 0;
     }

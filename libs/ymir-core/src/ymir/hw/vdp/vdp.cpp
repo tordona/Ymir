@@ -430,8 +430,7 @@ void VDP::SaveState(state::VDPState &state) const {
             copyChar(state.renderer.vramFetchers[i][j].currChar, m_vramFetchers[i][j].currChar);
             copyChar(state.renderer.vramFetchers[i][j].nextChar, m_vramFetchers[i][j].nextChar);
             state.renderer.vramFetchers[i][j].lastCharIndex = m_vramFetchers[i][j].lastCharIndex;
-            state.renderer.vramFetchers[i][j].currBitmapData = m_vramFetchers[i][j].currBitmapData;
-            state.renderer.vramFetchers[i][j].nextBitmapData = m_vramFetchers[i][j].nextBitmapData;
+            state.renderer.vramFetchers[i][j].bitmapData = m_vramFetchers[i][j].bitmapData;
             state.renderer.vramFetchers[i][j].bitmapDataAddress = m_vramFetchers[i][j].bitmapDataAddress;
             state.renderer.vramFetchers[i][j].lastVCellScroll = m_vramFetchers[i][j].lastVCellScroll;
         }
@@ -510,8 +509,7 @@ void VDP::LoadState(const state::VDPState &state) {
             copyChar(m_vramFetchers[i][j].currChar, state.renderer.vramFetchers[i][j].currChar);
             copyChar(m_vramFetchers[i][j].nextChar, state.renderer.vramFetchers[i][j].nextChar);
             m_vramFetchers[i][j].lastCharIndex = state.renderer.vramFetchers[i][j].lastCharIndex;
-            m_vramFetchers[i][j].currBitmapData = state.renderer.vramFetchers[i][j].currBitmapData;
-            m_vramFetchers[i][j].nextBitmapData = state.renderer.vramFetchers[i][j].nextBitmapData;
+            m_vramFetchers[i][j].bitmapData = state.renderer.vramFetchers[i][j].bitmapData;
             m_vramFetchers[i][j].bitmapDataAddress = state.renderer.vramFetchers[i][j].bitmapDataAddress;
             m_vramFetchers[i][j].lastVCellScroll = state.renderer.vramFetchers[i][j].lastVCellScroll;
         }
@@ -3047,6 +3045,10 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
     // Bits 0-7 correspond to T0-T7.
     std::array<uint8, 4> pn = {0, 0, 0, 0}; // pattern name access masks
     std::array<uint8, 4> cp = {0, 0, 0, 0}; // character pattern access masks
+
+    // Whether there have been character pattern accesses for bitmap BGs on each VRAM bank
+    std::array<std::array<bool, 4>, 4> bmCP{};
+
     for (uint8 bankIndex = 0; const auto &bank : regs2.cyclePatterns.timings) {
         for (uint8 i = 0; auto timing : bank) {
             switch (timing) {
@@ -3069,10 +3071,33 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
                 cp[bgIndex] |= 1u << i;
 
                 // TODO: find the correct rules for bitmap accesses
-                // This seems to work for pal256 1x hi-res mode; basically assumes T0-T1=bad T2-T3=good
-                /*if (regs2.bgParams[bgIndex + 1].bitmap) {
-                    regs2.bgParams[bgIndex + 1].bitmapDelay[bankIndex] = i < 2;
-                }*/
+                //
+                // Test cases
+                //
+                // Res  ZM  Color   CP mapping  Delay?  Game screen
+                // hi   1x  pal256  CP T0-T1     no     Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
+                // hi   1x  pal256  CP T2-T3     yes    Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
+                // hi   1x  pal256  CP T0-T1     no     Duke Nukem 3D, Netlink pages
+                // hi   1x  pal256  CP T0-T3     no     Sonic Jam, art gallery
+                // hi   1x  rgb555  CP T0-T3     no     Steam Heart's, title screen
+                // lo   1x  pal16   CP T0-T3     no     Groove on Fight, scrolling background in Options screen
+                // lo   1x  pal256  CP T0-T1     no     Mr. Bones, in-game graphics
+                // lo   1x  pal256  CP T0-T1     no     DoDonPachi, title screen background
+                // lo   1x  pal256  CP T0-T1     no     Jung Rhythm, title screen
+                // lo   1x  pal256  CP T0-T1     no     The Need for Speed, menus
+                // lo   1x  pal256  CP T2-T3     no     The Legend of Oasis, in-game HUD
+                // lo   1x  rgb555  CP T0-T3     no     Jung Rhythm, title screen
+                // lo   1x  rgb888  CP T0-T7     no     Street Fighter Zero 3, Capcom logo FMV
+                //
+                // So far none of the lo-res games have bitmap delays.
+                // The only case of delay seems to imply that the bitmap data is only delayed if read too late.
+                // It might be the case that setting up T5-T8 on lo-res causes a delay too.
+                if (regs2.bgParams[bgIndex + 1].bitmap) {
+                    if (hires && i >= 2 && !bmCP[bgIndex][bankIndex]) {
+                        regs2.bgParams[bgIndex + 1].bitmapDelay[bankIndex] = true;
+                    }
+                    bmCP[bgIndex][bankIndex] = true;
+                }
                 break;
             }
 
@@ -5791,23 +5816,19 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
 
         if (vramFetcher.UpdateBitmapDataAddress(address)) {
             if (delayed) {
-                vramFetcher.currBitmapData = vramFetcher.nextBitmapData;
+                address += 8; // TODO: not quite correct, but it should work in most cases
             }
 
             // TODO: handle VRSIZE.VRAMSZ
             auto &vram = VDP2GetRendererVRAM();
-            std::copy_n(&vram[address & 0x7FFF8], 8, vramFetcher.nextBitmapData.begin());
-
-            if (!delayed) {
-                vramFetcher.currBitmapData = vramFetcher.nextBitmapData;
-            }
+            std::copy_n(&vram[address & 0x7FFF8], 8, vramFetcher.bitmapData.begin());
         }
     };
 
     if constexpr (colorFormat == ColorFormat::Palette16) {
         const uint32 dotAddress = bitmapBaseAddress + (dotOffset >> 1u);
         fetchBitmapData(dotAddress);
-        const uint8 dotData = (vramFetcher.currBitmapData[dotAddress & 7] >> ((~dotX & 1) * 4)) & 0xF;
+        const uint8 dotData = (vramFetcher.bitmapData[dotAddress & 7] >> ((~dotX & 1) * 4)) & 0xF;
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
@@ -5816,7 +5837,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
     } else if constexpr (colorFormat == ColorFormat::Palette256) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset;
         fetchBitmapData(dotAddress);
-        const uint8 dotData = vramFetcher.currBitmapData[dotAddress & 7];
+        const uint8 dotData = vramFetcher.bitmapData[dotAddress & 7];
         const uint32 colorIndex = palNum | dotData;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && dotData == 0;
@@ -5825,7 +5846,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
     } else if constexpr (colorFormat == ColorFormat::Palette2048) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         fetchBitmapData(dotAddress);
-        const uint16 dotData = util::ReadBE<uint16>(&vramFetcher.currBitmapData[dotAddress & 6]);
+        const uint16 dotData = util::ReadBE<uint16>(&vramFetcher.bitmapData[dotAddress & 6]);
         const uint32 colorIndex = dotData & 0x7FF;
         pixel.color = VDP2FetchCRAMColor<colorMode>(bgParams.cramOffset, colorIndex);
         pixel.transparent = bgParams.enableTransparency && (dotData & 0x7FF) == 0;
@@ -5834,7 +5855,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
     } else if constexpr (colorFormat == ColorFormat::RGB555) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint16);
         fetchBitmapData(dotAddress);
-        const uint16 dotData = util::ReadBE<uint16>(&vramFetcher.currBitmapData[dotAddress & 6]);
+        const uint16 dotData = util::ReadBE<uint16>(&vramFetcher.bitmapData[dotAddress & 6]);
         pixel.color = ConvertRGB555to888(Color555{.u16 = dotData});
         pixel.transparent = bgParams.enableTransparency && bit::extract<15>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);
@@ -5842,7 +5863,7 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
     } else if constexpr (colorFormat == ColorFormat::RGB888) {
         const uint32 dotAddress = bitmapBaseAddress + dotOffset * sizeof(uint32);
         fetchBitmapData(dotAddress);
-        const uint32 dotData = util::ReadBE<uint32>(&vramFetcher.currBitmapData[dotAddress & 4]);
+        const uint32 dotData = util::ReadBE<uint32>(&vramFetcher.bitmapData[dotAddress & 4]);
         pixel.color = Color888{.u32 = dotData};
         pixel.transparent = bgParams.enableTransparency && bit::extract<31>(dotData) == 0;
         pixel.specialColorCalc = getSpecialColorCalcFlag(0b111, true);

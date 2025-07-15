@@ -15,8 +15,8 @@ Rayman
   Sets up illegal vertical cell scroll fetch timing for NBG1, causing it to be delayed.
 
 Capcom Generation - Dai-5-shuu Kakutouka-tachi 
-  Sets up illegal character pattern read cycles for NBG0 bitmap data in VRAM bank A in the image gallery, causing the
-  top 256 lines of the images to be shifted right. The game compensates for that in the data sent to VRAM.
+  Sets up illegal character pattern read cycles for NBG0 bitmap data in VRAM bank B in the image gallery, causing the
+  bottom portion of the image (starting at Y=256) to be shifted left. The game compensates for that in VRAM.
 
 
 =======
