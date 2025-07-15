@@ -1669,7 +1669,7 @@ void App::RunEmulator() {
             }
 
             case EvtType::StateLoaded:
-                m_context.DisplayMessage(fmt::format("State {} loaded", std::get<uint32>(evt.value)));
+                m_context.DisplayMessage(fmt::format("State {} loaded", std::get<uint32>(evt.value) + 1));
                 break;
             case EvtType::StateSaved: PersistSaveState(std::get<uint32>(evt.value)); break;
             }
@@ -3606,7 +3606,7 @@ void App::SaveSaveStateSlot(size_t slot) {
 
 void App::SelectSaveStateSlot(size_t slot) {
     m_context.currSaveStateSlot = std::min(slot, m_context.saveStates.size() - 1);
-    m_context.DisplayMessage(fmt::format("Save state slot {} selected", m_context.currSaveStateSlot));
+    m_context.DisplayMessage(fmt::format("Save state slot {} selected", m_context.currSaveStateSlot + 1));
 }
 
 void App::PersistSaveState(size_t slot) {
@@ -3631,7 +3631,7 @@ void App::PersistSaveState(size_t slot) {
 
         WriteSaveStateMeta();
 
-        m_context.DisplayMessage(fmt::format("State {} saved", slot));
+        m_context.DisplayMessage(fmt::format("State {} saved", slot + 1));
     }
 }
 

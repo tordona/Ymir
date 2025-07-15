@@ -1284,8 +1284,8 @@ void BackupMemoryView::ExportFile(std::filesystem::path path, const ymir::bup::B
 
         // block size
         {
-            const uint32 blockSize = bit::big_endian_swap(static_cast<uint16>(m_bupBlockSize));
-            out.write((const char *)&size, sizeof(size));
+            const uint16 blockSize = bit::big_endian_swap(static_cast<uint16>(m_bupBlockSize));
+            out.write((const char *)&blockSize, sizeof(blockSize));
         }
 
         // padding
