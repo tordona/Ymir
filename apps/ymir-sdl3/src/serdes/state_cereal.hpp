@@ -419,7 +419,11 @@ void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, con
     //   - normBGLayerStates[1].scrollAmountV = (regs2.SCYIN1 << 8u) | (regs2.SCYDN1 >> 8u);
     //   - normBGLayerStates[2].scrollAmountV = (regs2.SCYIN2 << 8u);
     //   - normBGLayerStates[3].scrollAmountV = (regs2.SCYIN3 << 8u);
+    //   - vertCellScrollDelay = false
+    //   - vertCellScrollRepeat = false
     // v4:
+    // - New fields
+    //   - vertCellScrollOffset = 0
     // - Changed fields
     //   - fracScrollX and fracScrollY no longer include the values of SC[XY][ID]N#. Therefore, they need to be
     //     compensated for as follows:
@@ -432,8 +436,6 @@ void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, con
     //       normBGLayerStates[1].fracScrollY -= (regs2.SCYIN1 << 8u) | (regs2.SCYDN1 >> 8u);
     //       normBGLayerStates[2].fracScrollY -= (regs2.SCYIN2 << 8u);
     //       normBGLayerStates[3].fracScrollY -= (regs2.SCYIN3 << 8u);
-    // - New fields
-    //   - vertCellScrollOffset = 0
 
     // NOTE: fracScrollX/Y and scrollAmountV compensation happens in the VDPState serializer
     ar(s.fracScrollX, s.fracScrollY, s.scrollIncH);
@@ -445,6 +447,12 @@ void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, con
         ar(s.vertCellScrollOffset);
     } else {
         s.vertCellScrollOffset = 0;
+    }
+    if (version >= 7) {
+        ar(s.vertCellScrollDelay, s.vertCellScrollRepeat);
+    } else {
+        s.vertCellScrollDelay = false;
+        s.vertCellScrollRepeat = false;
     }
     ar(s.mosaicCounterY);
 }

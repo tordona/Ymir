@@ -9,4 +9,96 @@ Vampire Hunter - Darkstalkers' Revenge
 Vampire Savior - The Lord of Vampire
   Sets up two consecutive accesses for NBG0 vertical cell scroll table during intro videos:
     CYCB1 = FFFFCCFF
-  This causes the vertical cell scroll fetch for NBG0 to happen twice; the first value is discarded.
+  This causes every vertical cell scroll fetch for NBG0 to happen twice; the first value is discarded.
+
+Rayman
+  Sets up illegal vertical cell scroll fetch timing for NBG1, causing it to be delayed.
+
+
+=======
+Context
+=======
+
+VRAM access cycles are configured in CYCxn registers (xn=A0/A1/B0/B1) for timings T0-T7 to one of these options:
+  0 = [PN0] Pattern name read for NBG0
+  1 = [PN1] Pattern name read for NBG1
+  2 = [PN2] Pattern name read for NBG2
+  3 = [PN3] Pattern name read for NBG3
+  4 = [CP0] Character pattern read for NBG0
+  5 = [CP1] Character pattern read for NBG1
+  6 = [CP2] Character pattern read for NBG2
+  7 = [CP3] Character pattern read for NBG3
+  8 = (reserved)
+  9 = (reserved)
+  A = (reserved)
+  B = (reserved)
+  C = [VC0] Vertical cell scroll table read for NBG0
+  D = [VC1] Vertical cell scroll table read for NBG1
+  E = [SH2] CPU (SH-2) access
+  F = No access (although apparently this also allows SH-2 reads)
+
+All 8 timing slots are available on low resolution modes (TVMD.HRESO2-0 320 or 352 modes).
+Timings are restricted to T0-T3 on high resolution modes (TVMD.HRESO2-0 640 or 704 modes).
+
+VRAM banks A and B can be individually partitioned into two (A0/A1 and B0/B1). If not partitioned, the timing parameters
+for A0 or B0 are used for the respective banks -- A1/B1 are ignored.
+
+Cycle access patterns must observe some restrictions to ensure the data is made available at the right time for drawing.
+Failing to do so usually causes data to be delayed by one cycle, resulting in shifted graphics.
+
+For NBG character pattern accesses, the valid timings depend on the timing assigned to the NBG's pattern name access and
+varies according to the resolution and character pattern size:
+  
+  Low resolution modes with 1x1 or 2x2 character patterns
+  PN slot  Valid timings
+     T0    T0 T1 T2 -- T4 T5 T6 T7
+     T1    T0 T1 T2 T3 -- T5 T6 T7
+     T2    T0 T1 T2 T3 -- -- T6 T7
+     T3    T0 T1 T2 T3 -- -- -- T7
+     T4    T0 T1 T2 T3 -- -- -- --
+     T5    -- T1 T2 T3 -- -- -- --
+     T6    -- -- T2 T3 -- -- -- --
+     T7    -- -- -- T3 -- -- -- --
+  
+  High resolution modes with 1x1 character patterns
+  PN slot  Valid timings
+     T0    T0 T1 T2 --
+     T1    -- T1 T2 T3
+     T2    T0 -- T2 T3
+     T3    T0 T1 -- T3
+  
+  High resolution modes with 2x2 character patterns
+  PN slot  Valid timings
+     T0    T0 T1 T2 --
+     T1    -- T1 T2 T3
+     T2    -- -- T2 T3
+     T3    -- -- -- T3
+
+Character pattern reads may need more than one CP cycle to fully read the requested data. The base number of access
+cycles required is one, and it is increased (multiplied) by the following factors:
+
+  ZMCTL 1/2x reduction -> 2x cycles
+  ZMCTL 1/4x reduction -> 4x cycles  (takes priority over 1/2x reduction)
+
+  256-color palette  -> 2x cycles
+  2048-color palette -> 4x cycles
+  RGB 5:5:5          -> 4x cycles
+  RGB 8:8:8          -> 8x cycles
+
+Both the ZMCTL and the color mode factors are applied simultaneously. For example, for a 2048-color palette with 1/2x
+reduction the total number of cycles is 1*4*2 = 8 cycles.
+The CP cycles must be spread across different timing slots, otherwise the character pattern data fails to read properly.
+Due to this, the total number is cycles is also limited to the number of timing slots available, so combinations like
+RGB 8:8:8 with 1/4x reduction are impossible on any mode as the total number of cycles (1*8*4=32) exceeds the available
+timing slots (8 for lo-res, 4 for hi-res).
+
+(TODO: bitmap access restrictions)
+  (spread across multiple VRAM banks)
+  (obeys each bank's settings)
+  (timing restrictions unknown)
+
+Vertical cell scroll reads are also subject to timing restrictions. VC reads should occur on slots T0, T1 or T2. Any
+other slot results in delayed reads. For NBG0 specifically, if the VC read happens on T2 or later, the first vertical
+cell scroll used on the display is repeated twice for tile columns 0 and 1. If VC0 is assigned to T2, the first entry of
+the current line's table is displayed twice. If VC0 is assigned to T3 or later, the last entry of the previous line's
+table is displayed twice. Subsequent reads occur normally. This duplication does not happen on NBG1.

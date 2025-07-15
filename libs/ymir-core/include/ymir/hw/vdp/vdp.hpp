@@ -813,9 +813,9 @@ private:
         alignas(16) std::array<bool, kMaxResH> window;
     };
 
-    // Character fetcher state
-    struct CharacterFetcherState {
-        CharacterFetcherState() {
+    // Pipelined character fetcher
+    struct CharacterFetcher {
+        CharacterFetcher() {
             Reset();
         }
 
@@ -823,11 +823,15 @@ private:
             currChar = {};
             nextChar = {};
             lastCharIndex = 0xFFFFFFFF;
+
+            lastVCellScroll = 0;
         }
 
         Character currChar;
         Character nextChar;
         uint32 lastCharIndex;
+
+        uint32 lastVCellScroll;
     };
 
     // NBG layer state, including coordinate counters, increments and addresses.
@@ -842,6 +846,8 @@ private:
             scrollIncH = 0x100;
             lineScrollTableAddress = 0;
             vertCellScrollOffset = 0;
+            vertCellScrollDelay = 0;
+            vertCellScrollRepeat = 0;
             mosaicCounterY = 0;
         }
 
@@ -866,8 +872,19 @@ private:
         uint32 lineScrollTableAddress;
 
         // Vertical cell scroll offset.
+        // Only valid for NBG0 and NBG1.
         // Based on CYCA0/A1/B0/B1 parameters.
         uint32 vertCellScrollOffset;
+
+        // Is the vertical cell scroll read delayed by one cycle?
+        // Only valid for NBG0 and NBG1.
+        // Based on CYCA0/A1/B0/B1 parameters.
+        bool vertCellScrollDelay;
+
+        // Is the first vertical cell scroll entry repeated?
+        // Only valid for NBG0.
+        // Based on CYCA0/A1/B0/B1 parameters.
+        bool vertCellScrollRepeat;
 
         // Vertical mosaic counter.
         // Reset at the start of every frame and incremented every line.
@@ -986,7 +1003,7 @@ private:
 
     // Character fetcher states for NBGs 0-3 and rotation parameters A/B.
     // Entry [0] is primary and [1] is alternate field for deinterlacing.
-    std::array<std::array<CharacterFetcherState, 6>, 2> m_charFetchers;
+    std::array<std::array<CharacterFetcher, 6>, 2> m_charFetchers;
 
     // States for Rotation Parameters A and B.
     std::array<RotationParamState, 2> m_rotParamStates;
@@ -1250,18 +1267,20 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
+    // charFetcher is the corresponding background layer's character fetcher.
     // windowState is a reference to the window state for the layer.
     // altField selects the complementary field when rendering deinterlaced frames
-    // charState is the corresponding background layer's character fetcher state.
     //
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
+    // useVCellScroll determines whether to use the vertical cell scroll effect
     // deinterlace determines whether to deinterlace video output
-    template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
+    template <CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll,
+              bool deinterlace>
     void VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                const NormBGLayerState &bgState, CharacterFetcherState &charState,
+                                const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
                                 std::span<const bool> windowState, bool altField);
 
     // Draws a normal bitmap BG scanline.
@@ -1270,14 +1289,17 @@ private:
     // bgParams contains the parameters for the BG to draw.
     // layerState is a reference to the common layer state for the background.
     // bgState is a reference to the background layer state for the background.
+    // charFetcher is the corresponding background layer's character fetcher.
     // windowState is a reference to the window state for the layer.
     //
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
+    // useVCellScroll determines whether to use the vertical cell scroll effect
     // deinterlace determines whether to deinterlace video output
-    template <ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
+    template <ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll, bool deinterlace>
     void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                const NormBGLayerState &bgState, std::span<const bool> windowState);
+                                const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
+                                std::span<const bool> windowState);
 
     // Draws a rotation scroll BG scanline.
     //
@@ -1286,7 +1308,7 @@ private:
     // layerState is a reference to the common layer state for the background.
     // windowState is a reference to the window state for the layer.
     // altField selects the complementary field when rendering deinterlaced frames
-    // charState is the corresponding background layer's character fetcher state.
+    // charFetcher is the corresponding background layer's character fetcher.
     //
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
@@ -1295,7 +1317,7 @@ private:
     // colorMode is the CRAM color mode.
     template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                  CharacterFetcherState &charState, std::span<const bool> windowState, bool altField);
+                                  CharacterFetcher &charFetcher, std::span<const bool> windowState, bool altField);
 
     // Draws a rotation bitmap BG scanline.
     //
@@ -1340,7 +1362,7 @@ private:
     // pageBaseAddresses is a reference to the table containing the planes' pages' base addresses.
     // pageShiftH and pageShiftV are address shifts derived from PLSZ to determine the plane and page indices.
     // scrollCoord has the coordinates of the scroll screen.
-    // charState is the corresponding background layer's character fetcher state.
+    // charFetcher is the corresponding background layer's character fetcher.
     //
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
@@ -1348,7 +1370,7 @@ private:
     // colorMode is the CRAM color mode.
     template <bool rot, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
     Pixel VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses, uint32 pageShiftH,
-                                 uint32 pageShiftV, CoordU32 scrollCoord, CharacterFetcherState &charState);
+                                 uint32 pageShiftV, CoordU32 scrollCoord, CharacterFetcher &charFetcher);
 
     // Fetches a two-word character from VRAM.
     //
@@ -1452,6 +1474,8 @@ public:
 
         [[nodiscard]] const VDP1Regs &GetVDP1Regs() const;
         [[nodiscard]] const VDP2Regs &GetVDP2Regs() const;
+
+        [[nodiscard]] const std::array<NormBGLayerState, 4> &GetNBGLayerStates() const;
 
     private:
         VDP &m_vdp;

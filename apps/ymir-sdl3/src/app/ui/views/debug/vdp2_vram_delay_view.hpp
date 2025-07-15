@@ -6,9 +6,9 @@
 
 namespace app::ui {
 
-class VDP2NBGCharPatDelayView {
+class VDP2VRAMDelayView {
 public:
-    VDP2NBGCharPatDelayView(SharedContext &context, ymir::vdp::VDP &vdp);
+    VDP2VRAMDelayView(SharedContext &context, ymir::vdp::VDP &vdp);
 
     void Display();
 

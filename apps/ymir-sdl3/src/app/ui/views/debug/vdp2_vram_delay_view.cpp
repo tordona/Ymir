@@ -1,4 +1,4 @@
-#include "vdp2_nbg_cp_delay_view.hpp"
+#include "vdp2_vram_delay_view.hpp"
 
 #include <imgui.h>
 
@@ -6,13 +6,14 @@ using namespace ymir;
 
 namespace app::ui {
 
-VDP2NBGCharPatDelayView::VDP2NBGCharPatDelayView(SharedContext &context, vdp::VDP &vdp)
+VDP2VRAMDelayView::VDP2VRAMDelayView(SharedContext &context, vdp::VDP &vdp)
     : m_context(context)
     , m_vdp(vdp) {}
 
-void VDP2NBGCharPatDelayView::Display() {
+void VDP2VRAMDelayView::Display() {
     auto &probe = m_vdp.GetProbe();
-    auto &regs2 = probe.GetVDP2Regs();
+    const auto &regs2 = probe.GetVDP2Regs();
+    const auto &nbgLayerStates = probe.GetNBGLayerStates();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
@@ -156,16 +157,6 @@ void VDP2NBGCharPatDelayView::Display() {
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("Enabled");
-        }
-        for (uint32 i = 0; i < 6; i++) {
-            if (ImGui::TableNextColumn()) {
-                ImGui::TextUnformatted(regs2.bgEnabled[i] ? "yes" : "no");
-            }
-        }
-
-        ImGui::TableNextRow();
-        if (ImGui::TableNextColumn()) {
             ImGui::TextUnformatted("Type");
         }
         for (uint32 i = 0; i < 4; i++) {
@@ -233,20 +224,60 @@ void VDP2NBGCharPatDelayView::Display() {
             }
         }
 
+        static constexpr ImVec4 kColorYes{1.00f, 0.41f, 0.25f, 1.00f};
+        static constexpr ImVec4 kColorNo{0.25f, 1.00f, 0.41f, 1.00f};
+
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
-            ImGui::TextUnformatted("Delayed?");
+            ImGui::TextUnformatted("CP delayed?");
         }
         for (uint32 i = 0; i < 4; i++) {
             if (ImGui::TableNextColumn()) {
                 if (regs2.bgEnabled[i]) {
+                    // TODO: bitmap delays (may span multiple VRAM banks)
                     if (!regs2.bgParams[i + 1].bitmap && regs2.bgParams[i + 1].charPatDelay) {
-                        static constexpr ImVec4 kColor{1.00f, 0.41f, 0.25f, 1.00f};
-                        ImGui::TextColored(kColor, "yes");
+                        ImGui::TextColored(kColorYes, "yes");
                     } else {
-                        static constexpr ImVec4 kColor{0.25f, 1.00f, 0.41f, 1.00f};
-                        ImGui::TextColored(kColor, "no");
+                        ImGui::TextColored(kColorNo, "no");
                     }
+                }
+            }
+        }
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("VC delayed?");
+        }
+        for (uint32 i = 0; i < 2; i++) {
+            if (ImGui::TableNextColumn()) {
+                if (regs2.bgEnabled[i]) {
+                    if (regs2.bgParams[i + 1].verticalCellScrollEnable) {
+                        if (nbgLayerStates[i].vertCellScrollDelay) {
+                            ImGui::TextColored(kColorYes, "yes");
+                        } else {
+                            ImGui::TextColored(kColorNo, "no");
+                        }
+                    } else {
+                        ImGui::TextUnformatted("-");
+                    }
+                }
+            }
+        }
+
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("VC repeated?");
+        }
+        if (ImGui::TableNextColumn()) {
+            if (regs2.bgEnabled[0]) {
+                if (regs2.bgParams[1].verticalCellScrollEnable) {
+                    if (nbgLayerStates[0].vertCellScrollRepeat) {
+                        ImGui::TextColored(kColorYes, "yes");
+                    } else {
+                        ImGui::TextColored(kColorNo, "no");
+                    }
+                } else {
+                    ImGui::TextUnformatted("-");
                 }
             }
         }

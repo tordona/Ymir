@@ -210,6 +210,8 @@ struct VDPState {
             uint32 scrollIncH;
             uint32 lineScrollTableAddress;
             uint32 vertCellScrollOffset;
+            bool vertCellScrollDelay;
+            bool vertCellScrollRepeat;
             uint8 mosaicCounterY;
         };
 

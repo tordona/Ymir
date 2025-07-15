@@ -402,6 +402,7 @@ void VDP::SaveState(state::VDPState &state) const {
         state.renderer.normBGLayerStates[i].scrollIncH = m_normBGLayerStates[i].scrollIncH;
         state.renderer.normBGLayerStates[i].lineScrollTableAddress = m_normBGLayerStates[i].lineScrollTableAddress;
         state.renderer.normBGLayerStates[i].vertCellScrollOffset = m_normBGLayerStates[i].vertCellScrollOffset;
+        state.renderer.normBGLayerStates[i].vertCellScrollDelay = m_normBGLayerStates[i].vertCellScrollDelay;
         state.renderer.normBGLayerStates[i].mosaicCounterY = m_normBGLayerStates[i].mosaicCounterY;
     }
 
@@ -459,6 +460,7 @@ void VDP::LoadState(const state::VDPState &state) {
         m_normBGLayerStates[i].scrollIncH = state.renderer.normBGLayerStates[i].scrollIncH;
         m_normBGLayerStates[i].lineScrollTableAddress = state.renderer.normBGLayerStates[i].lineScrollTableAddress;
         m_normBGLayerStates[i].vertCellScrollOffset = state.renderer.normBGLayerStates[i].vertCellScrollOffset;
+        m_normBGLayerStates[i].vertCellScrollDelay = state.renderer.normBGLayerStates[i].vertCellScrollDelay;
         m_normBGLayerStates[i].mosaicCounterY = state.renderer.normBGLayerStates[i].mosaicCounterY;
     }
 
@@ -3200,18 +3202,25 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
     //
     // Some games set up "illegal" access patterns which we have to honor. This is an approximation of the real
     // thing, since this VDP emulator does not actually perform the accesses described by the CYCxn registers.
+    //
+    // Vertical cell scroll reads are subject to a one-cycle delay if they happen on the following timing slots:
+    //   NBG0: T3-T7
+    //   NBG1: T4-T7
 
     m_vertCellScrollInc = 0;
     uint32 vcellAccessOffset = 0;
 
     // Update cycle accesses
     for (uint32 bank = 0; bank < 4; ++bank) {
-        for (auto access : regs2.cyclePatterns.timings[bank]) {
+        for (uint32 slotIndex = 0; slotIndex < 8; ++slotIndex) {
+            const auto access = regs2.cyclePatterns.timings[bank][slotIndex];
             switch (access) {
             case CyclePatterns::VCellScrollNBG0:
                 if (regs2.bgParams[1].verticalCellScrollEnable) {
                     m_vertCellScrollInc += sizeof(uint32);
                     m_normBGLayerStates[0].vertCellScrollOffset = vcellAccessOffset;
+                    m_normBGLayerStates[0].vertCellScrollDelay = slotIndex >= 3;
+                    m_normBGLayerStates[0].vertCellScrollRepeat = slotIndex >= 2;
                     vcellAccessOffset += sizeof(uint32);
                 }
                 break;
@@ -3219,6 +3228,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
                 if (regs2.bgParams[2].verticalCellScrollEnable) {
                     m_vertCellScrollInc += sizeof(uint32);
                     m_normBGLayerStates[1].vertCellScrollOffset = vcellAccessOffset;
+                    m_normBGLayerStates[1].vertCellScrollDelay = slotIndex >= 3;
                     vcellAccessOffset += sizeof(uint32);
                 }
                 break;
@@ -3534,9 +3544,9 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
     static_assert(bgIndex < 4, "Invalid NBG index");
 
     using FnDrawScroll = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &,
-                                       CharacterFetcherState &, std::span<const bool>, bool);
-    using FnDrawBitmap =
-        void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &, std::span<const bool>);
+                                       CharacterFetcher &, std::span<const bool>, bool);
+    using FnDrawBitmap = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &,
+                                       CharacterFetcher &, std::span<const bool>);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
@@ -3552,7 +3562,8 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
             const auto chmEnum = static_cast<CharacterMode>(chm);
             const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
-            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawNormalScrollBG<chmEnum, fcc, cfEnum, colorMode, deinterlace>;
+            arr[chm][fcc][cf][clm] =
+                &VDP::VDP2DrawNormalScrollBG<chmEnum, fcc, cfEnum, colorMode, bgIndex <= 1, deinterlace>;
         });
 
         return arr;
@@ -3569,7 +3580,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
 
             const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = cm <= 2 ? cm : 2;
-            arr[cf][cm] = &VDP::VDP2DrawNormalBitmapBG<cfEnum, colorMode, deinterlace>;
+            arr[cf][cm] = &VDP::VDP2DrawNormalBitmapBG<cfEnum, colorMode, bgIndex <= 1, deinterlace>;
         });
 
         return arr;
@@ -3583,12 +3594,12 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
     const BGParams &bgParams = regs.bgParams[bgIndex + 1];
     LayerState &layerState = m_layerStates[altField][bgIndex + 2];
     const NormBGLayerState &bgState = m_normBGLayerStates[bgIndex];
-    CharacterFetcherState &charState = m_charFetchers[altField][bgIndex];
+    CharacterFetcher &charFetcher = m_charFetchers[altField][bgIndex];
     auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex + 1]}.first(m_HRes);
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState, windowState);
+        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState, charFetcher, windowState);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
@@ -3596,7 +3607,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState, charState, windowState,
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, bgState, charFetcher, windowState,
                                                        altField);
     }
 }
@@ -3608,7 +3619,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode, bool altFi
     static constexpr bool selRotParam = bgIndex == 0;
 
     using FnDrawScroll =
-        void (VDP::*)(uint32 y, const BGParams &, LayerState &, CharacterFetcherState &, std::span<const bool>, bool);
+        void (VDP::*)(uint32 y, const BGParams &, LayerState &, CharacterFetcher &, std::span<const bool>, bool);
     using FnDrawBitmap = void (VDP::*)(uint32 y, const BGParams &, LayerState &, std::span<const bool>, bool);
 
     // Lookup table of scroll BG drawing functions
@@ -3655,7 +3666,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode, bool altFi
     const VDP2Regs &regs = VDP2GetRegs();
     const BGParams &bgParams = regs.bgParams[bgIndex];
     LayerState &layerState = m_layerStates[altField][bgIndex + 1];
-    CharacterFetcherState &charState = m_charFetchers[altField][bgIndex + 4];
+    CharacterFetcher &charFetcher = m_charFetchers[altField][bgIndex + 4];
     auto windowState = std::span<const bool>{m_bgWindows[altField][bgIndex]}.first(m_HRes);
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
@@ -3668,7 +3679,7 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode, bool altFi
         const uint32 chm = static_cast<uint32>(twc   ? CharacterMode::TwoWord
                                                : exc ? CharacterMode::OneWordExtended
                                                      : CharacterMode::OneWordStandard);
-        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, charState, windowState, altField);
+        (this->*fnDrawScroll[chm][fcc][cf][colorMode])(y, bgParams, layerState, charFetcher, windowState, altField);
     }
 }
 
@@ -4831,9 +4842,10 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     }
 }
 
-template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
+template <VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode,
+          bool useVCellScroll, bool deinterlace>
 NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           const NormBGLayerState &bgState, CharacterFetcherState &charState,
+                                           const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
                                            std::span<const bool> windowState, bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
 
@@ -4842,21 +4854,27 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV + (altLine ? bgParams.scrollIncV : 0);
 
     uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
+    const bool verticalCellScrollEnable = useVCellScroll && bgParams.verticalCellScrollEnable;
 
-    auto readCellScrollY = [&](bool increment = true) {
+    auto readCellScrollY = [&](bool checkRepeat = false) {
+        if (checkRepeat && bgState.vertCellScrollRepeat && bgState.vertCellScrollDelay) {
+            return charFetcher.lastVCellScroll;
+        }
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
-        if (increment) {
+        if (!checkRepeat || !bgState.vertCellScrollRepeat) {
             cellScrollTableAddress += m_vertCellScrollInc;
         }
-        return bit::extract<8, 26>(value);
+        const uint32 prevValue = charFetcher.lastVCellScroll;
+        charFetcher.lastVCellScroll = bit::extract<8, 26>(value);
+        return bgState.vertCellScrollDelay ? prevValue : charFetcher.lastVCellScroll;
     };
 
-    uint8 mosaicCounterX = 0;
+    uint32 mosaicCounterX = 0;
     uint32 cellScrollY = 0;
     uint32 vCellScrollX = fracScrollX >> (8u + 3u);
 
-    if (bgParams.verticalCellScrollEnable) {
-        cellScrollY = readCellScrollY(false);
+    if (verticalCellScrollEnable) {
+        cellScrollY = readCellScrollY(true);
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
@@ -4877,7 +4895,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
                 fracScrollX += bgState.scrollIncH;
                 continue;
             }
-        } else if (bgParams.verticalCellScrollEnable) {
+        } else if (verticalCellScrollEnable) {
             // Update vertical cell scroll amount
             if ((fracScrollX >> (8u + 3u)) != vCellScrollX) {
                 vCellScrollX = fracScrollX >> (8u + 3u);
@@ -4896,7 +4914,8 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
             // Plot pixel
             const Pixel pixel = VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-                bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord, charState);
+                bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord,
+                charFetcher);
             layerState.pixels.SetPixel(x, pixel);
         }
 
@@ -4908,7 +4927,7 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
     {
         // Apply horizontal mosaic or vertical cell-scrolling
         // Mosaic takes priority
-        if (!bgParams.mosaicEnable && bgParams.verticalCellScrollEnable) {
+        if (!bgParams.mosaicEnable && verticalCellScrollEnable) {
             // Update vertical cell scroll amount
             if ((fracScrollX >> (8u + 3u)) != vCellScrollX) {
                 vCellScrollX = fracScrollX >> (8u + 3u);
@@ -4923,35 +4942,44 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 
         // Fetch pixel
         VDP2FetchScrollBGPixel<false, charMode, fourCellChar, colorFormat, colorMode>(
-            bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord, charState);
+            bgParams, bgParams.pageBaseAddresses, bgParams.pageShiftH, bgParams.pageShiftV, scrollCoord, charFetcher);
 
         // Increment horizontal coordinate
         fracScrollX += bgState.scrollIncH * 8;
     }
 }
 
-template <ColorFormat colorFormat, uint32 colorMode, bool deinterlace>
+template <ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll, bool deinterlace>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                           const NormBGLayerState &bgState, std::span<const bool> windowState) {
+                                           const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
+                                           std::span<const bool> windowState) {
     const VDP2Regs &regs = VDP2GetRegs();
 
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
     const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV;
 
     uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
+    const bool verticalCellScrollEnable = useVCellScroll && bgParams.verticalCellScrollEnable;
 
-    auto readCellScrollY = [&](bool increment = true) {
+    auto readCellScrollY = [&](bool checkRepeat = false) {
+        if (checkRepeat && bgState.vertCellScrollRepeat && bgState.vertCellScrollDelay) {
+            return charFetcher.lastVCellScroll;
+        }
         const uint32 value = VDP2ReadRendererVRAM<uint32>(cellScrollTableAddress);
-        cellScrollTableAddress += m_vertCellScrollInc;
-        return bit::extract<8, 26>(value);
+        if (!checkRepeat || !bgState.vertCellScrollRepeat) {
+            cellScrollTableAddress += m_vertCellScrollInc;
+        }
+        const uint32 prevValue = charFetcher.lastVCellScroll;
+        charFetcher.lastVCellScroll = bit::extract<8, 26>(value);
+        return bgState.vertCellScrollDelay ? prevValue : charFetcher.lastVCellScroll;
     };
 
     uint32 mosaicCounterX = 0;
     uint32 cellScrollY = 0;
     uint32 vCellScrollX = fracScrollX >> (8u + 3u);
 
-    if (bgParams.verticalCellScrollEnable) {
-        cellScrollY = readCellScrollY(false);
+    if (verticalCellScrollEnable) {
+        cellScrollY = readCellScrollY(true);
     }
 
     for (uint32 x = 0; x < m_HRes; x++) {
@@ -4972,7 +5000,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
                 fracScrollX += bgState.scrollIncH;
                 continue;
             }
-        } else if (bgParams.verticalCellScrollEnable) {
+        } else if (verticalCellScrollEnable) {
             // Update vertical cell scroll amount
             if ((fracScrollX >> (8u + 3u)) != vCellScrollX) {
                 vCellScrollX = fracScrollX >> (8u + 3u);
@@ -5002,7 +5030,7 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
 
 template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
-                                             CharacterFetcherState &charState, std::span<const bool> windowState,
+                                             CharacterFetcher &charFetcher, std::span<const bool> windowState,
                                              bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
 
@@ -5287,7 +5315,7 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
 FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
                                                     uint32 pageShiftH, uint32 pageShiftV, CoordU32 scrollCoord,
-                                                    CharacterFetcherState &charState) {
+                                                    CharacterFetcher &charFetcher) {
     //      Map (NBGs)              Map (RBGs)
     // +---------+---------+   +----+----+----+----+
     // |         |         |   | A  | B  | C  | D  |
@@ -5448,8 +5476,8 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
     const CoordU32 dotCoord{dotX, dotY};
 
     // Fetch character if needed
-    if (charState.lastCharIndex != charIndex) {
-        charState.lastCharIndex = charIndex;
+    if (charFetcher.lastCharIndex != charIndex) {
+        charFetcher.lastCharIndex = charIndex;
         const uint32 pageAddress = pageBaseAddress + pageOffset;
         static constexpr bool largePalette = colorFormat != ColorFormat::Palette16;
         const Character ch =
@@ -5458,12 +5486,12 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, st
                 : VDP2FetchOneWordCharacter<fourCellChar, largePalette, extChar>(bgParams, pageAddress, charIndex);
 
         // Send character to pipeline
-        charState.currChar = bgParams.charPatDelay ? charState.nextChar : ch;
-        charState.nextChar = ch;
+        charFetcher.currChar = bgParams.charPatDelay ? charFetcher.nextChar : ch;
+        charFetcher.nextChar = ch;
     }
 
     // Fetch pixel using character data
-    return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, charState.currChar, dotCoord, cellIndex);
+    return VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, charFetcher.currChar, dotCoord, cellIndex);
 }
 
 FORCE_INLINE VDP::Character VDP::VDP2FetchTwoWordCharacter(const BGParams &bgParams, uint32 pageBaseAddress,
@@ -5967,6 +5995,10 @@ const VDP1Regs &VDP::Probe::GetVDP1Regs() const {
 
 const VDP2Regs &VDP::Probe::GetVDP2Regs() const {
     return m_vdp.m_state.regs2;
+}
+
+const std::array<VDP::NormBGLayerState, 4> &VDP::Probe::GetNBGLayerStates() const {
+    return m_vdp.m_normBGLayerStates;
 }
 
 } // namespace ymir::vdp

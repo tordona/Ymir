@@ -115,8 +115,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/debug/vdp1_registers_view.hpp
     src/app/ui/views/debug/vdp2_layer_visibility_view.cpp
     src/app/ui/views/debug/vdp2_layer_visibility_view.hpp
-    src/app/ui/views/debug/vdp2_nbg_cp_delay_view.cpp
-    src/app/ui/views/debug/vdp2_nbg_cp_delay_view.hpp
+    src/app/ui/views/debug/vdp2_vram_delay_view.cpp
+    src/app/ui/views/debug/vdp2_vram_delay_view.hpp
 
     src/app/ui/views/settings/analog_pad_binds_view.cpp
     src/app/ui/views/settings/analog_pad_binds_view.hpp
@@ -223,8 +223,8 @@ add_executable(ymir-sdl3
     src/app/ui/windows/debug/vdp1_registers_window.hpp
     src/app/ui/windows/debug/vdp2_layer_visibility_window.cpp
     src/app/ui/windows/debug/vdp2_layer_visibility_window.hpp
-    src/app/ui/windows/debug/vdp2_nbg_cp_delay_window.cpp
-    src/app/ui/windows/debug/vdp2_nbg_cp_delay_window.hpp
+    src/app/ui/windows/debug/vdp2_vram_delay_window.cpp
+    src/app/ui/windows/debug/vdp2_vram_delay_window.hpp
 
     src/serdes/cereal_archive_vector.hpp
     src/serdes/state_cereal.hpp

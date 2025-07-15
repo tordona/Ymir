@@ -2260,7 +2260,7 @@ void App::RunEmulator() {
                         ImGui::Unindent();
 
                         ImGui::MenuItem("VDP1 registers", nullptr, &m_vdpWindowSet.vdp1Regs.Open);
-                        ImGui::MenuItem("NBG character pattern delay", nullptr, &m_vdpWindowSet.vdp2NBGCPDelay.Open);
+                        ImGui::MenuItem("VDP2 VRAM access delay", nullptr, &m_vdpWindowSet.vdp2VRAMDelay.Open);
 
                         ImGui::EndMenu();
                     }
