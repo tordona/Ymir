@@ -15,6 +15,8 @@ struct VDPState {
     alignas(16) std::array<std::array<uint8, vdp::kVDP1FramebufferRAMSize>, 2> spriteFB;
     uint8 displayFB;
 
+    uint64 VDP1TimingPenalty;
+
     struct VDP1RegsState {
         uint16 TVMR;
         uint16 FBCR;

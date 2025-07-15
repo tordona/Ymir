@@ -56,6 +56,7 @@
 - VDP1: Double horizontal erase area when drawing low-resolution sprites with 8-bit data. Fixes right half of sprite graphics not cleaning up in Resident Evil's options menu. (#180)
 - VDP1: Extend line clipping to the left and top edges by one pixel to compensate for some inaccuracies.
 - VDP1: Fix end codes for 64 and 128 color sprites. Fixes white sprite outlines in Scud - The Disposable Assassin and broken sprites in Primal Rage. (#268, #280)
+- VDP1: Hack in VDP1 command processing delay on VRAM writes. Fixes glitched sprites on Mega Man X3. (#244)
 - VDP1: Include source color MSB when rendering polygons in half-luminance mode. Fixes intro FMV background on Crows - The Battle Action. (#107)
 - VDP1: Mask CMDCOLR bits 0..3 in 4bpp banked sprite mode. Fixes palette issues in Steam-Heart's and Dragon Ball Z - Shinbutouden. (#69, #278)
 - VDP1: Properly handle DIE/DIL in single-density interlaced mode. Fixes text drawn twice as tall in Resident Evil options menu. (#180)

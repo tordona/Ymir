@@ -277,11 +277,19 @@ void serialize(Archive &ar, SMPCState::INTBACK &s) {
 
 template <class Archive>
 void serialize(Archive &ar, VDPState &s, const uint32 version) {
+    // v7:
+    // - New fields
+    //   - VDP1TimingPenalty = 0
     // v6:
     // - Removed fields
     //   - uint16 VCounter -> moved to regs2.VCNT
 
     ar(s.VRAM1, s.VRAM2, s.CRAM, s.spriteFB, s.displayFB);
+    if (version >= 7) {
+        ar(s.VDP1TimingPenalty);
+    } else {
+        s.VDP1TimingPenalty = 0;
+    }
     ar(s.regs1, s.regs2);
     ar(s.HPhase, s.VPhase);
     if (version < 6) {

@@ -158,6 +158,9 @@ private:
     template <bool poke>
     void VDP1WriteReg(uint32 address, uint16 value);
 
+    // Hacky VDP1 command execution timing penalty accrued from external writes to VRAM
+    uint64 m_VDP1TimingPenalty;
+
     // -------------------------------------------------------------------------
     // VDP2 memory/register access
 

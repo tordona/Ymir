@@ -106,6 +106,8 @@ void VDP::Reset(bool hard) {
         m_CRAMCache.fill({});
     }
 
+    m_VDP1TimingPenalty = 0;
+
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Reset());
     } else {
@@ -325,14 +327,20 @@ template <bool debug>
 void VDP::Advance(uint64 cycles) {
     if (!m_effectiveRenderVDP1InVDP2Thread) {
         if (m_VDP1RenderContext.rendering) {
+            if (cycles <= m_VDP1TimingPenalty) {
+                m_VDP1TimingPenalty -= cycles;
+                return;
+            }
+
             // HACK: slow down VDP1 commands to avoid freezes on Virtua Racing and Dragon Ball Z
             // TODO: use this counter in the threaded renderer
             // TODO: proper cycle counting
-            static constexpr uint64 kCyclesPerCommand = 180;
+            static constexpr uint64 kCyclesPerCommand = 500; // FIXME: pulled out of thin air
 
-            m_VDP1RenderContext.cycleCount += cycles;
+            m_VDP1RenderContext.cycleCount += cycles - m_VDP1TimingPenalty;
             const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
             m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
+            m_VDP1TimingPenalty = 0;
 
             for (uint64 i = 0; i < steps; i++) {
                 (this->*m_fnVDP1ProcessCommand)();
@@ -549,6 +557,10 @@ FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
     if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
     }
+    // HACK: Add a timing penalty to VDP1 command execution on every VRAM write
+    if (m_VDP1RenderContext.rendering) {
+        m_VDP1TimingPenalty += 22; // FIXME: pulled out of thin air
+    }
 }
 
 template <mem_primitive T>
@@ -611,6 +623,7 @@ FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     case 0x0C: // ENDR
         // TODO: schedule drawing termination after 30 cycles
         m_VDP1RenderContext.rendering = false;
+        m_VDP1TimingPenalty = 0;
         break;
     }
 }
@@ -1400,6 +1413,7 @@ void VDP::VDP1BeginFrame() {
 void VDP::VDP1EndFrame() {
     devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}", VDP1GetDisplayFBIndex() ^ 1);
     m_VDP1RenderContext.rendering = false;
+    m_VDP1TimingPenalty = 0;
 
     if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.vdp1Done = true;
