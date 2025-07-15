@@ -174,6 +174,17 @@ void VDP2VRAMDelayView::Display() {
                 }
             }
         }
+        for (uint32 i = 0; i < 2; i++) {
+            if (ImGui::TableNextColumn()) {
+                if (regs2.bgEnabled[i + 4]) {
+                    if (regs2.bgParams[i].bitmap) {
+                        ImGui::TextUnformatted("Bitmap");
+                    } else {
+                        ImGui::TextUnformatted("Scroll");
+                    }
+                }
+            }
+        }
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -189,6 +200,13 @@ void VDP2VRAMDelayView::Display() {
                     } else {
                         ImGui::TextUnformatted("1x");
                     }
+                }
+            }
+        }
+        for (uint32 i = 0; i < 2; i++) {
+            if (ImGui::TableNextColumn()) {
+                if (regs2.bgEnabled[i + 4]) {
+                    ImGui::TextUnformatted("n/a");
                 }
             }
         }
@@ -209,6 +227,18 @@ void VDP2VRAMDelayView::Display() {
                 }
             }
         }
+        for (uint32 i = 0; i < 2; i++) {
+            if (ImGui::TableNextColumn()) {
+                if (regs2.bgEnabled[i + 4]) {
+                    if (regs2.bgParams[i].bitmap) {
+                        ImGui::TextUnformatted("-");
+                    } else {
+                        const uint8 size = 1u << regs2.bgParams[i].cellSizeShift;
+                        ImGui::Text("%ux%u", size, size);
+                    }
+                }
+            }
+        }
 
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
@@ -218,6 +248,19 @@ void VDP2VRAMDelayView::Display() {
             if (ImGui::TableNextColumn()) {
                 if (regs2.bgEnabled[i]) {
                     switch (regs2.bgParams[i + 1].colorFormat) {
+                    case vdp::ColorFormat::Palette16: ImGui::TextUnformatted("Pal 16"); break;
+                    case vdp::ColorFormat::Palette256: ImGui::TextUnformatted("Pal 256"); break;
+                    case vdp::ColorFormat::Palette2048: ImGui::TextUnformatted("Pal 2048"); break;
+                    case vdp::ColorFormat::RGB555: ImGui::TextUnformatted("RGB 5:5:5"); break;
+                    case vdp::ColorFormat::RGB888: ImGui::TextUnformatted("RGB 8:8:8"); break;
+                    }
+                }
+            }
+        }
+        for (uint32 i = 0; i < 2; i++) {
+            if (ImGui::TableNextColumn()) {
+                if (regs2.bgEnabled[i + 4]) {
+                    switch (regs2.bgParams[i].colorFormat) {
                     case vdp::ColorFormat::Palette16: ImGui::TextUnformatted("Pal 16"); break;
                     case vdp::ColorFormat::Palette256: ImGui::TextUnformatted("Pal 256"); break;
                     case vdp::ColorFormat::Palette2048: ImGui::TextUnformatted("Pal 2048"); break;
