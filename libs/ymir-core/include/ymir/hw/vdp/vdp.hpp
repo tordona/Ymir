@@ -1291,6 +1291,7 @@ private:
     // bgState is a reference to the background layer state for the background.
     // charFetcher is the corresponding background layer's character fetcher.
     // windowState is a reference to the window state for the layer.
+    // altField selects the complementary field when rendering deinterlaced frames
     //
     // colorFormat is the color format for bitmap data.
     // colorMode is the CRAM color mode.
@@ -1299,7 +1300,7 @@ private:
     template <ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll, bool deinterlace>
     void VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                 const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
-                                std::span<const bool> windowState);
+                                std::span<const bool> windowState, bool altField);
 
     // Draws a rotation scroll BG scanline.
     //

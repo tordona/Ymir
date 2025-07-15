@@ -3543,15 +3543,13 @@ template <uint32 bgIndex, bool deinterlace>
 FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altField) {
     static_assert(bgIndex < 4, "Invalid NBG index");
 
-    using FnDrawScroll = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &,
-                                       CharacterFetcher &, std::span<const bool>, bool);
-    using FnDrawBitmap = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &,
-                                       CharacterFetcher &, std::span<const bool>);
+    using FnDraw = void (VDP::*)(uint32 y, const BGParams &, LayerState &, const NormBGLayerState &, CharacterFetcher &,
+                                 std::span<const bool>, bool);
 
     // Lookup table of scroll BG drawing functions
     // Indexing: [charMode][fourCellChar][colorFormat][colorMode]
     static constexpr auto fnDrawScroll = [] {
-        std::array<std::array<std::array<std::array<FnDrawScroll, 4>, 8>, 2>, 3> arr{};
+        std::array<std::array<std::array<std::array<FnDraw, 4>, 8>, 2>, 3> arr{};
 
         util::constexpr_for<3 * 2 * 8 * 4>([&](auto index) {
             const uint32 fcc = bit::extract<0>(index());
@@ -3572,7 +3570,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
     // Lookup table of bitmap BG drawing functions
     // Indexing: [colorFormat]
     static constexpr auto fnDrawBitmap = [] {
-        std::array<std::array<FnDrawBitmap, 4>, 8> arr{};
+        std::array<std::array<FnDraw, 4>, 8> arr{};
 
         util::constexpr_for<8 * 4>([&](auto index) {
             const uint32 cf = bit::extract<0, 2>(index());
@@ -3599,7 +3597,7 @@ FORCE_INLINE void VDP::VDP2DrawNormalBG(uint32 y, uint32 colorMode, bool altFiel
 
     const uint32 cf = static_cast<uint32>(bgParams.colorFormat);
     if (bgParams.bitmap) {
-        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState, charFetcher, windowState);
+        (this->*fnDrawBitmap[cf][colorMode])(y, bgParams, layerState, bgState, charFetcher, windowState, altField);
     } else {
         const bool twc = bgParams.twoWordChar;
         const bool fcc = bgParams.cellSizeShift;
@@ -4952,11 +4950,12 @@ NO_INLINE void VDP::VDP2DrawNormalScrollBG(uint32 y, const BGParams &bgParams, L
 template <ColorFormat colorFormat, uint32 colorMode, bool useVCellScroll, bool deinterlace>
 NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                            const NormBGLayerState &bgState, CharacterFetcher &charFetcher,
-                                           std::span<const bool> windowState) {
+                                           std::span<const bool> windowState, bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
 
+    const bool altLine = deinterlace && altField && regs.TVMD.LSMDn == InterlaceMode::DoubleDensity;
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
-    const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV;
+    const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV + (altLine ? bgParams.scrollIncV : 0);
 
     uint32 cellScrollTableAddress = regs.verticalCellScrollTableAddress + bgState.vertCellScrollOffset;
     const bool verticalCellScrollEnable = useVCellScroll && bgParams.verticalCellScrollEnable;
