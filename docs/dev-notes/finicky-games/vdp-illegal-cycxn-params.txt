@@ -14,6 +14,10 @@ Vampire Savior - The Lord of Vampire
 Rayman
   Sets up illegal vertical cell scroll fetch timing for NBG1, causing it to be delayed.
 
+Capcom Generation - Dai-5-shuu Kakutouka-tachi 
+  Sets up illegal character pattern read cycles for NBG0 bitmap data in VRAM bank A in the image gallery, causing the
+  top 256 lines of the images to be shifted right. The game compensates for that in the data sent to VRAM.
+
 
 =======
 Context
@@ -46,8 +50,31 @@ for A0 or B0 are used for the respective banks -- A1/B1 are ignored.
 Cycle access patterns must observe some restrictions to ensure the data is made available at the right time for drawing.
 Failing to do so usually causes data to be delayed by one cycle, resulting in shifted graphics.
 
-For NBG character pattern accesses, the valid timings depend on the timing assigned to the NBG's pattern name access and
-varies according to the resolution and character pattern size:
+
+Pattern name accesses
+---------------------
+
+For NBG pattern name accesses, certain VRAM bank selections are mutually exclusive and the number of cycles depends on
+the NBG's reduction setting specified in ZMCTL.
+
+VRAM banks A0 and B0 are mutually exclusive as well as A1 and B1. That is, you can only assign pattern name cycles for
+one NBG to either A0 or B0 and to either A1 or B1. If the bank is not partitioned, A0/B0 is the only valid option for
+the respective pair. Examples of legal assignments include A0 only, A0 and B1, A1 and B0, and B1 only. Illegal examples
+are A0 and B0 or A1 and B1.
+
+There must be exactly one, two or four cycles assigned across the two selected banks. The number of cycles is determined
+by the reduction setting in ZMCTL:
+  
+  1x   -> 1 cycle
+  1/2x -> 2 cycles
+  1/4x -> 4 cycles
+
+
+Character pattern accesses for scroll BGs
+-----------------------------------------
+
+For NBG character pattern accesses, the valid options depend on the timing assigned to the NBG's pattern name access and
+vary according to the resolution and character pattern size:
   
   Low resolution modes with 1x1 or 2x2 character patterns
   PN slot  Valid timings
@@ -74,6 +101,11 @@ varies according to the resolution and character pattern size:
      T2    -- -- T2 T3
      T3    -- -- -- T3
 
+If the NBG requires multiple pattern name access timing slots, the CP access is restricted by all matching entries in
+the tables above. (TODO: confirm this; doesn't it make more sense to restrict by the last PN access instead?)
+
+In high resolution modes the CP access must happen at the same time as or after the PN access, otherwise it is delayed.
+
 Character pattern reads may need more than one CP cycle to fully read the requested data. The base number of access
 cycles required is one, and it is increased (multiplied) by the following factors:
 
@@ -85,22 +117,44 @@ cycles required is one, and it is increased (multiplied) by the following factor
   RGB 5:5:5          -> 4x cycles
   RGB 8:8:8          -> 8x cycles
 
-Both the ZMCTL and the color mode factors are applied simultaneously. For example, for a 2048-color palette with 1/2x
-reduction the total number of cycles is 1*4*2 = 8 cycles.
+Both the ZMCTL and the color mode factors are applied simultaneously. For example, the total number of CP access cycles
+needed for an NBG using 1/2x reduction and a 2048-color palette is 1*2*4 = 8 cycles.
+
 The CP cycles must be spread across different timing slots, otherwise the character pattern data fails to read properly.
 Due to this, the total number is cycles is also limited to the number of timing slots available, so combinations like
 RGB 8:8:8 with 1/4x reduction are impossible on any mode as the total number of cycles (1*8*4=32) exceeds the available
 timing slots (8 for lo-res, 4 for hi-res).
 
-Bitmap data reads also follow timing restrictions on CP cycles. Bitmaps do not need PN cycles. Since bitmaps may span
-multiple VRAM banks, the access restrictions apply to access for each VRAM bank separately. Setting up invalid timings
-in one bank and correct timings in another will cause the bitmap BG to be sliced and shifted in parts.
+There must be exactly that many access cycles assigned to different timing slots on the same VRAM bank to correctly read
+character patterns. It is possible to assign CP accesses to multiple banks. In this case, the required number of access
+cycles must be assigned to each bank.
+
+
+Character pattern accesses for bitmap BGs
+-----------------------------------------
+
+Bitmap data reads also follow timing restrictions on CP cycles, although they don't need PN cycles. Since bitmaps may
+span multiple VRAM banks, the access restrictions apply to each VRAM bank separately. Setting up invalid timings in one
+bank and correct timings in another will cause the bitmap BG to be sliced and shifted where the picture switches banks.
+
 Bitmap data is read in chunks of 8 bytes.
 
 (TODO: bitmap access restrictions table; currently unknown)
+
+
+Vertical cell scroll accesses
+-----------------------------
 
 Vertical cell scroll reads are also subject to timing restrictions. VC reads should occur on slots T0, T1 or T2. Any
 other slot results in delayed reads. For NBG0 specifically, if the VC read happens on T2 or later, the first vertical
 cell scroll used on the display is repeated twice for tile columns 0 and 1. If VC0 is assigned to T2, the first entry of
 the current line's table is displayed twice. If VC0 is assigned to T3 or later, the last entry of the previous line's
 table is displayed twice. Subsequent reads occur normally. This duplication does not happen on NBG1.
+
+If both NBG0 and NBG1 vertical cell scroll accesses are used, they must both be assigned to the same VRAM bank and the
+NBG0 access must occur before the NBG1 access.
+
+Only one cycle is needed for each vertical cell scroll read. If multiple cycles are assigned, the VDP2 will perform
+multiple reads and discard all but the latest value. Vertical cell scroll reads are only performed if the effect is
+enabled on the NBG -- if you assign a read cycle for both NBG0 and NBG1 but only enable the effect on NBG1, the access
+cycle for NBG0 is ignored.
