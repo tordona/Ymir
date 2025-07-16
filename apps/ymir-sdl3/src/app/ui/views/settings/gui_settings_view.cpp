@@ -2,6 +2,8 @@
 
 #include <app/ui/widgets/common_widgets.hpp>
 
+#include <ymir/sys/clocks.hpp>
+
 namespace app::ui {
 
 GUISettingsView::GUISettingsView(SharedContext &context)
@@ -32,7 +34,26 @@ void GUISettingsView::Display() {
         "When enabled, notification messages are displayed on the top-left corner of the window.",
         m_context.displayScale);
 
-    MakeDirty(ImGui::Checkbox("Show frame rate OSD", &settings.showFrameRateOSD));
+    const bool isPAL =
+        m_context.saturn.configuration.system.videoStandard.Get() == ymir::core::config::sys::VideoStandard::PAL;
+
+    MakeDirty(ImGui::Checkbox("Show frame rate", &settings.showFrameRateOSD));
+    widgets::ExplanationTooltip(
+        fmt::format(
+            "Displays a small overlay with the VDP2, VDP1 and GUI frame rates, and the target emulation speed.\n"
+            "\n"
+            "- VDP2 frame rate indicates the emulator's overall speed. If it is below 60 or 50 fps (for NTSC or PAL "
+            "respectively) while emulating at 100% speed, your system isn't keeping up. (The current video standard "
+            "setting is {0}, so the target frame rate is {1:.0f}.)\n"
+            "- VDP1 frame rate may vary depending on the game - a half or a third of the VDP2 frame rate are common "
+            "ratios. It may be zero or even go higher than {1:.0f} fps.\n"
+            "- GUI frame rate indicates how fast the user interface is refreshing. It should match your monitor's "
+            "refresh rate, except in full screen mode where GUI updates are paced to ensure a smooth experience on "
+            "capable machines with variable refresh rate displays.\n"
+            "- Speed indicates the (adjustable) target emulation speed. 100% is realtime speed.",
+            (isPAL ? "PAL" : "NTSC"), (isPAL ? ymir::sys::kPALFrameRate : ymir::sys::kNTSCFrameRate))
+            .c_str(),
+        m_context.displayScale);
     ImGui::Indent();
     auto frameRateOSDOption = [&](const char *name, Settings::GUI::FrameRateOSDPosition value) {
         if (MakeDirty(ImGui::RadioButton(name, settings.frameRateOSDPosition == value))) {
@@ -51,7 +72,8 @@ void GUISettingsView::Display() {
     MakeDirty(ImGui::Checkbox("Show speed indicators for modified speeds", &settings.showSpeedIndicatorForAllSpeeds));
     widgets::ExplanationTooltip(
         "When enabled, the speed indicator will be displayed for any emulation speed other than 100%.\n"
-        "When disabled, the speed indicator is only displayed while running in turbo speed.",
+        "When disabled, the speed indicator is only displayed while running in turbo speed.\n"
+        "The speed indicator is always shown while paused or rewinding.",
         m_context.displayScale);
 }
 

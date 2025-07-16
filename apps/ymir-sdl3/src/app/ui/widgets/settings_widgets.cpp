@@ -57,8 +57,8 @@ namespace settings::video {
         widgets::ExplanationTooltip(
             "When enabled, interlaced high-resolution modes will be rendered in progressive mode.\n"
             "Noticeably impacts performance in those modes when enabled.\n"
-            "It is highly recommended to enable the Threaded VDP2 renderer option alongside this to lessen the "
-            "performace impact.\n"
+            "It is highly recommended to enable the \"Threaded VDP2 renderer\" and \"Use dedicated thread for "
+            "deinterlaced rendering\" options alongside this to lessen the performance impact.\n"
             "A quad-core CPU or better is recommended to use this option.",
             ctx.displayScale);
     }
@@ -180,6 +180,9 @@ namespace settings::audio {
                     "Increasing this setting causes the SCSP to be emulated in smaller timeslices (up to 32 times as "
                     "often as sample-level processing), significantly lowering performance in exchange for a higher "
                     "level of accuracy that doesn't benefit the vast majority of commercial games.\n"
+                    "\n"
+                    "Very few games require this setting to be tweaked. It is recommended to leave it at 0 in most "
+                    "cases.\n"
                     "\n"
                     "This option might be of interest to homebrew developers who need extra accuracy in some way.",
                     ctx.displayScale);

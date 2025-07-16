@@ -367,18 +367,12 @@ void App::RunEmulator() {
 
     m_context.saturn.configuration.system.videoStandard.ObserveAndNotify(
         [&](core::config::sys::VideoStandard standard) {
-            static constexpr double kNTSCFrameInterval = sys::kNTSCClocksPerFrame / sys::kNTSCClock;
-            static constexpr double kPALFrameInterval = sys::kPALClocksPerFrame / sys::kPALClock;
-
-            // static constexpr double kNTSCFrameRate = 1.0 / kNTSCFrameInterval;
-            // static constexpr double kPALFrameRate = 1.0 / kPALFrameInterval;
-
             if (standard == core::config::sys::VideoStandard::PAL) {
                 screen.frameInterval =
-                    std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(kPALFrameInterval));
+                    std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(sys::kPALFrameInterval));
             } else {
                 screen.frameInterval =
-                    std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(kNTSCFrameInterval));
+                    std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(sys::kNTSCFrameInterval));
             }
         });
 
