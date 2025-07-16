@@ -37,6 +37,7 @@
 - Input: Fix inability to bind keyboard combos.
 - Input: Modifier keys can now be used correctly as controller input binds and will no longer interfere with other controller inputs. (#282)
 - Media: Skip blank lines in CUE files.
+- Save states: Read/write missing SCSP field to save state object. Fixes occasional application crashes when using the rewind buffer in conjunction with save states.
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.
 - SCU: Allow SCU DSP program and data RAM reads or writes while the program is paused (thanks to @celeriyacon).
 - SCU: DSP data RAM reads should return 0xFFFFFFFF while program is running (thanks to @celeriyacon).

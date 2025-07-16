@@ -371,6 +371,8 @@ void SCSP::SaveState(state::SCSPState &state) const {
 
     state.lfsr = m_lfsr;
 
+    state.currSlot = m_currSlot;
+
     state.out = m_out;
 
     std::copy(m_midiInputBuffer.begin(), m_midiInputBuffer.end(), state.midiInputBuffer.begin());
@@ -476,6 +478,8 @@ void SCSP::LoadState(const state::SCSPState &state) {
     m_sampleCounter = state.sampleCounter;
 
     m_lfsr = state.lfsr;
+
+    m_currSlot = state.currSlot;
 
     m_out = state.out;
 
