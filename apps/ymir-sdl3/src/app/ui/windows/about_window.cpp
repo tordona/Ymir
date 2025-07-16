@@ -388,25 +388,25 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ImGui::PopFont();
 
         ackWithAuthor("Saturn MiSTer", "Sergiy Dvodnenko (srg320)", "https://github.com/MiSTer-devel/Saturn_MiSTer");
-        
+
         ackWithAuthor("Mednafen", "various contributors", "https://mednafen.github.io/");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(libretro git mirror)##mednafen", "https://github.com/libretro-mirrors/mednafen-git");
-        
+
         ackWithAuthor("Yaba Sanshiro 2", "devmiyax", "https://github.com/devmiyax/yabause");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##yaba_sanshiro_2", "https://www.uoyabause.org/");
-        
+
         ackWithAuthor("Yabause", "Guillaume Duhamel and contributors", "https://github.com/Yabause/yabause");
-        
+
         ackWithAuthor("Mesen2", "Sour and contributors", "https://github.com/SourMesen/Mesen2");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##mesen", "https://www.mesen.ca/");
-        
+
         ackWithAuthor("openMSX", "openMSX developers", "https://github.com/openMSX/openMSX");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##openmsx", "https://openmsx.org/");
-        
+
         ackWithAuthor("DuckStation", "Stenzek and contributors", "https://github.com/stenzek/duckstation");
         ImGui::SameLine();
         ImGui::TextLinkOpenURL("(site)##duckstation", "https://www.duckstation.org/");
@@ -436,6 +436,12 @@ void AboutWindow::DrawAcknowledgementsTab() {
         ImGui::TextUnformatted(" and users ");
         ImGui::SameLine(0, 0);
         ImGui::TextLinkOpenURL("reporting issues and feature requests", "https://github.com/StrikerX3/Ymir/issues");
+        ImGui::SameLine(0, 0);
+        ImGui::TextUnformatted(".");
+
+        ImGui::TextUnformatted("To the friends in the ");
+        ImGui::SameLine(0, 0);
+        ImGui::TextLinkOpenURL("official Ymir Discord server", "https://discord.gg/NN3A7n5dzn");
         ImGui::SameLine(0, 0);
         ImGui::TextUnformatted(".");
 
