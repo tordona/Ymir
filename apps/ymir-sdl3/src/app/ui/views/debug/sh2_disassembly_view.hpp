@@ -83,7 +83,7 @@ private:
         bool displayOpcodeBytes = true;
         bool displayOpcodeAscii = false;
 
-        bool altLineColors = false;
+        bool altLineColors = true;
         bool altLineAddresses = false;
 
         bool colorizeMnemonicsByType = true;
