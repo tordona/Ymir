@@ -206,9 +206,38 @@ void SH2DisassemblyView::Display() {
                 ImGui::Dummy(ImVec2(0, 0));
             };
 
-            auto drawMnemonic = [&](std::string_view mnemonic) {
+            auto drawNopMnemonic = [&](std::string_view mnemonic) {
                 ImGui::SameLine(0, 0);
-                ImGui::TextColored(m_colors.disasm.mnemonic, "%s", mnemonic.data());
+                ImGui::TextColored(m_colors.disasm.nopMnemonic, "%s", mnemonic.data());
+            };
+
+            auto getMnemonicColor = [&](ImVec4 color) {
+                return m_settings.colorizeMnemonicsByType ? color : m_colors.disasm.mnemonic;
+            };
+
+            auto drawLoadStoreMnemonic = [&](std::string_view mnemonic) {
+                ImGui::SameLine(0, 0);
+                ImGui::TextColored(getMnemonicColor(m_colors.disasm.loadStoreMnemonic), "%s", mnemonic.data());
+            };
+
+            auto drawALUMnemonic = [&](std::string_view mnemonic) {
+                ImGui::SameLine(0, 0);
+                ImGui::TextColored(getMnemonicColor(m_colors.disasm.aluMnemonic), "%s", mnemonic.data());
+            };
+
+            auto drawBranchMnemonic = [&](std::string_view mnemonic) {
+                ImGui::SameLine(0, 0);
+                ImGui::TextColored(getMnemonicColor(m_colors.disasm.branchMnemonic), "%s", mnemonic.data());
+            };
+
+            auto drawControlMnemonic = [&](std::string_view mnemonic) {
+                ImGui::SameLine(0, 0);
+                ImGui::TextColored(getMnemonicColor(m_colors.disasm.controlMnemonic), "%s", mnemonic.data());
+            };
+
+            auto drawMiscMnemonic = [&](std::string_view mnemonic) {
+                ImGui::SameLine(0, 0);
+                ImGui::TextColored(getMnemonicColor(m_colors.disasm.miscMnemonic), "%s", mnemonic.data());
             };
 
             auto drawIllegalMnemonic = [&] {
@@ -252,90 +281,90 @@ void SH2DisassemblyView::Display() {
                 }
 
                 switch (disasm.mnemonic) {
-                case sh2::Mnemonic::NOP: drawMnemonic("nop"); break;
-                case sh2::Mnemonic::SLEEP: drawMnemonic("sleep"); break;
-                case sh2::Mnemonic::MOV: drawMnemonic("mov"); break;
-                case sh2::Mnemonic::MOVA: drawMnemonic("mova"); break;
-                case sh2::Mnemonic::MOVT: drawMnemonic("movt"); break;
-                case sh2::Mnemonic::CLRT: drawMnemonic("clrt"); break;
-                case sh2::Mnemonic::SETT: drawMnemonic("sett"); break;
-                case sh2::Mnemonic::EXTU: drawMnemonic("extu"); break;
-                case sh2::Mnemonic::EXTS: drawMnemonic("exts"); break;
-                case sh2::Mnemonic::SWAP: drawMnemonic("swap"); break;
-                case sh2::Mnemonic::XTRCT: drawMnemonic("xtrct"); break;
-                case sh2::Mnemonic::LDC: drawMnemonic("ldc"); break;
-                case sh2::Mnemonic::LDS: drawMnemonic("lds"); break;
-                case sh2::Mnemonic::STC: drawMnemonic("stc"); break;
-                case sh2::Mnemonic::STS: drawMnemonic("sts"); break;
-                case sh2::Mnemonic::ADD: drawMnemonic("add"); break;
-                case sh2::Mnemonic::ADDC: drawMnemonic("addc"); break;
-                case sh2::Mnemonic::ADDV: drawMnemonic("addv"); break;
-                case sh2::Mnemonic::AND: drawMnemonic("and"); break;
-                case sh2::Mnemonic::NEG: drawMnemonic("neg"); break;
-                case sh2::Mnemonic::NEGC: drawMnemonic("negc"); break;
-                case sh2::Mnemonic::NOT: drawMnemonic("not"); break;
-                case sh2::Mnemonic::OR: drawMnemonic("or"); break;
-                case sh2::Mnemonic::ROTCL: drawMnemonic("rotcl"); break;
-                case sh2::Mnemonic::ROTCR: drawMnemonic("rotcr"); break;
-                case sh2::Mnemonic::ROTL: drawMnemonic("rotl"); break;
-                case sh2::Mnemonic::ROTR: drawMnemonic("rotr"); break;
-                case sh2::Mnemonic::SHAL: drawMnemonic("shal"); break;
-                case sh2::Mnemonic::SHAR: drawMnemonic("shar"); break;
-                case sh2::Mnemonic::SHLL: drawMnemonic("shll"); break;
-                case sh2::Mnemonic::SHLL2: drawMnemonic("shll2"); break;
-                case sh2::Mnemonic::SHLL8: drawMnemonic("shll8"); break;
-                case sh2::Mnemonic::SHLL16: drawMnemonic("shll16"); break;
-                case sh2::Mnemonic::SHLR: drawMnemonic("shlr"); break;
-                case sh2::Mnemonic::SHLR2: drawMnemonic("shlr2"); break;
-                case sh2::Mnemonic::SHLR8: drawMnemonic("shlr8"); break;
-                case sh2::Mnemonic::SHLR16: drawMnemonic("shlr16"); break;
-                case sh2::Mnemonic::SUB: drawMnemonic("sub"); break;
-                case sh2::Mnemonic::SUBC: drawMnemonic("subc"); break;
-                case sh2::Mnemonic::SUBV: drawMnemonic("subv"); break;
-                case sh2::Mnemonic::XOR: drawMnemonic("xor"); break;
-                case sh2::Mnemonic::DT: drawMnemonic("dt"); break;
-                case sh2::Mnemonic::CLRMAC: drawMnemonic("clrmac"); break;
-                case sh2::Mnemonic::MAC: drawMnemonic("mac"); break;
-                case sh2::Mnemonic::MUL: drawMnemonic("mul"); break;
-                case sh2::Mnemonic::MULS: drawMnemonic("muls"); break;
-                case sh2::Mnemonic::MULU: drawMnemonic("mulu"); break;
-                case sh2::Mnemonic::DMULS: drawMnemonic("dmuls"); break;
-                case sh2::Mnemonic::DMULU: drawMnemonic("dmulu"); break;
-                case sh2::Mnemonic::DIV0S: drawMnemonic("div0s"); break;
-                case sh2::Mnemonic::DIV0U: drawMnemonic("div0u"); break;
-                case sh2::Mnemonic::DIV1: drawMnemonic("div1"); break;
+                case sh2::Mnemonic::NOP: drawNopMnemonic("nop"); break;
+                case sh2::Mnemonic::SLEEP: drawMiscMnemonic("sleep"); break;
+                case sh2::Mnemonic::MOV: drawLoadStoreMnemonic("mov"); break;
+                case sh2::Mnemonic::MOVA: drawLoadStoreMnemonic("mova"); break;
+                case sh2::Mnemonic::MOVT: drawLoadStoreMnemonic("movt"); break;
+                case sh2::Mnemonic::CLRT: drawControlMnemonic("clrt"); break;
+                case sh2::Mnemonic::SETT: drawControlMnemonic("sett"); break;
+                case sh2::Mnemonic::EXTU: drawALUMnemonic("extu"); break;
+                case sh2::Mnemonic::EXTS: drawALUMnemonic("exts"); break;
+                case sh2::Mnemonic::SWAP: drawALUMnemonic("swap"); break;
+                case sh2::Mnemonic::XTRCT: drawALUMnemonic("xtrct"); break;
+                case sh2::Mnemonic::LDC: drawControlMnemonic("ldc"); break;
+                case sh2::Mnemonic::LDS: drawControlMnemonic("lds"); break;
+                case sh2::Mnemonic::STC: drawControlMnemonic("stc"); break;
+                case sh2::Mnemonic::STS: drawControlMnemonic("sts"); break;
+                case sh2::Mnemonic::ADD: drawALUMnemonic("add"); break;
+                case sh2::Mnemonic::ADDC: drawALUMnemonic("addc"); break;
+                case sh2::Mnemonic::ADDV: drawALUMnemonic("addv"); break;
+                case sh2::Mnemonic::AND: drawALUMnemonic("and"); break;
+                case sh2::Mnemonic::NEG: drawALUMnemonic("neg"); break;
+                case sh2::Mnemonic::NEGC: drawALUMnemonic("negc"); break;
+                case sh2::Mnemonic::NOT: drawALUMnemonic("not"); break;
+                case sh2::Mnemonic::OR: drawALUMnemonic("or"); break;
+                case sh2::Mnemonic::ROTCL: drawALUMnemonic("rotcl"); break;
+                case sh2::Mnemonic::ROTCR: drawALUMnemonic("rotcr"); break;
+                case sh2::Mnemonic::ROTL: drawALUMnemonic("rotl"); break;
+                case sh2::Mnemonic::ROTR: drawALUMnemonic("rotr"); break;
+                case sh2::Mnemonic::SHAL: drawALUMnemonic("shal"); break;
+                case sh2::Mnemonic::SHAR: drawALUMnemonic("shar"); break;
+                case sh2::Mnemonic::SHLL: drawALUMnemonic("shll"); break;
+                case sh2::Mnemonic::SHLL2: drawALUMnemonic("shll2"); break;
+                case sh2::Mnemonic::SHLL8: drawALUMnemonic("shll8"); break;
+                case sh2::Mnemonic::SHLL16: drawALUMnemonic("shll16"); break;
+                case sh2::Mnemonic::SHLR: drawALUMnemonic("shlr"); break;
+                case sh2::Mnemonic::SHLR2: drawALUMnemonic("shlr2"); break;
+                case sh2::Mnemonic::SHLR8: drawALUMnemonic("shlr8"); break;
+                case sh2::Mnemonic::SHLR16: drawALUMnemonic("shlr16"); break;
+                case sh2::Mnemonic::SUB: drawALUMnemonic("sub"); break;
+                case sh2::Mnemonic::SUBC: drawALUMnemonic("subc"); break;
+                case sh2::Mnemonic::SUBV: drawALUMnemonic("subv"); break;
+                case sh2::Mnemonic::XOR: drawALUMnemonic("xor"); break;
+                case sh2::Mnemonic::DT: drawALUMnemonic("dt"); break;
+                case sh2::Mnemonic::CLRMAC: drawALUMnemonic("clrmac"); break;
+                case sh2::Mnemonic::MAC: drawALUMnemonic("mac"); break;
+                case sh2::Mnemonic::MUL: drawALUMnemonic("mul"); break;
+                case sh2::Mnemonic::MULS: drawALUMnemonic("muls"); break;
+                case sh2::Mnemonic::MULU: drawALUMnemonic("mulu"); break;
+                case sh2::Mnemonic::DMULS: drawALUMnemonic("dmuls"); break;
+                case sh2::Mnemonic::DMULU: drawALUMnemonic("dmulu"); break;
+                case sh2::Mnemonic::DIV0S: drawALUMnemonic("div0s"); break;
+                case sh2::Mnemonic::DIV0U: drawALUMnemonic("div0u"); break;
+                case sh2::Mnemonic::DIV1: drawALUMnemonic("div1"); break;
                 case sh2::Mnemonic::CMP_EQ:
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("eq", getOp1() == getOp2());
                     break;
                 case sh2::Mnemonic::CMP_GE:
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("ge", static_cast<sint32>(getOp1()) >= static_cast<sint32>(getOp2()));
                     break;
                 case sh2::Mnemonic::CMP_GT:
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("gt", static_cast<sint32>(getOp1()) > static_cast<sint32>(getOp2()));
                     break;
                 case sh2::Mnemonic::CMP_HI:
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("hi", getOp1() > getOp2());
                     break;
                 case sh2::Mnemonic::CMP_HS:
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("hs", getOp1() >= getOp2());
                     break;
                 case sh2::Mnemonic::CMP_PL:
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("pl", static_cast<sint32>(getOp1()) > 0);
                     break;
                 case sh2::Mnemonic::CMP_PZ:
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("pz", static_cast<sint32>(getOp1()) >= 0);
                     break;
@@ -346,42 +375,42 @@ void SH2DisassemblyView::Display() {
                     const uint8 hl = tmp >> 16u;
                     const uint8 lh = tmp >> 8u;
                     const uint8 ll = tmp >> 0u;
-                    drawMnemonic("cmp");
+                    drawALUMnemonic("cmp");
                     drawSeparator("/");
                     drawCond("str", !(hh && hl && lh && ll));
                     break;
                 }
-                case sh2::Mnemonic::TAS: drawMnemonic("tas"); break;
-                case sh2::Mnemonic::TST: drawMnemonic("tst"); break;
+                case sh2::Mnemonic::TAS: drawLoadStoreMnemonic("tas"); break;
+                case sh2::Mnemonic::TST: drawALUMnemonic("tst"); break;
                 case sh2::Mnemonic::BF:
-                    drawMnemonic("b");
+                    drawBranchMnemonic("b");
                     drawCond("f", !probe.SR().T);
                     break;
                 case sh2::Mnemonic::BFS:
-                    drawMnemonic("b");
+                    drawBranchMnemonic("b");
                     drawCond("f", !probe.SR().T);
                     drawSeparator("/");
-                    drawMnemonic("s");
+                    drawBranchMnemonic("s");
                     break;
                 case sh2::Mnemonic::BT:
-                    drawMnemonic("b");
+                    drawBranchMnemonic("b");
                     drawCond("t", probe.SR().T);
                     break;
                 case sh2::Mnemonic::BTS:
-                    drawMnemonic("b");
+                    drawBranchMnemonic("b");
                     drawCond("t", probe.SR().T);
                     drawSeparator("/");
-                    drawMnemonic("s");
+                    drawBranchMnemonic("s");
                     break;
-                case sh2::Mnemonic::BRA: drawMnemonic("bra"); break;
-                case sh2::Mnemonic::BRAF: drawMnemonic("braf"); break;
-                case sh2::Mnemonic::BSR: drawMnemonic("bsr"); break;
-                case sh2::Mnemonic::BSRF: drawMnemonic("bsrf"); break;
-                case sh2::Mnemonic::JMP: drawMnemonic("jmp"); break;
-                case sh2::Mnemonic::JSR: drawMnemonic("jsr"); break;
-                case sh2::Mnemonic::TRAPA: drawMnemonic("trapa"); break;
-                case sh2::Mnemonic::RTE: drawMnemonic("rte"); break;
-                case sh2::Mnemonic::RTS: drawMnemonic("rts"); break;
+                case sh2::Mnemonic::BRA: drawBranchMnemonic("bra"); break;
+                case sh2::Mnemonic::BRAF: drawBranchMnemonic("braf"); break;
+                case sh2::Mnemonic::BSR: drawBranchMnemonic("bsr"); break;
+                case sh2::Mnemonic::BSRF: drawBranchMnemonic("bsrf"); break;
+                case sh2::Mnemonic::JMP: drawBranchMnemonic("jmp"); break;
+                case sh2::Mnemonic::JSR: drawBranchMnemonic("jsr"); break;
+                case sh2::Mnemonic::TRAPA: drawBranchMnemonic("trapa"); break;
+                case sh2::Mnemonic::RTE: drawBranchMnemonic("rte"); break;
+                case sh2::Mnemonic::RTS: drawBranchMnemonic("rts"); break;
                 case sh2::Mnemonic::Illegal: drawIllegalMnemonic(); break;
                 default: drawUnknownMnemonic(); break;
                 }

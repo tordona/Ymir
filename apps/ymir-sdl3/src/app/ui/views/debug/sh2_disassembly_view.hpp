@@ -26,10 +26,16 @@ private:
             ImVec4 bytes{C(237, 236, 216)};   // ........ 4132 ..
             ImVec4 ascii = bytes;             // ........ .... A2
 
-            ImVec4 delaySlot{C(96, 112, 156)};        // _ (delay slot prefix)
-            ImVec4 mnemonic{C(173, 216, 247)};        // mov nop rts ...
-            ImVec4 illegalMnemonic{C(247, 191, 173)}; // (illegal)
-            ImVec4 sizeSuffix{C(128, 145, 194)};      // b w l
+            ImVec4 delaySlot{C(96, 112, 156)};          // _ (delay slot prefix)
+            ImVec4 mnemonic{C(173, 216, 247)};          // mov rts xor jsr ...
+            ImVec4 nopMnemonic{C(121, 159, 186)};       // nop
+            ImVec4 loadStoreMnemonic{C(173, 216, 247)}; // mov
+            ImVec4 aluMnemonic{C(151, 222, 215)};       // add sub and xor neg ...
+            ImVec4 branchMnemonic{C(219, 206, 151)};    // bt bf b jsr jmp trapa rte rts ...
+            ImVec4 controlMnemonic{C(185, 219, 147)};   // sett clrt ldc lds stc sts ...
+            ImVec4 miscMnemonic{C(235, 157, 201)};      // sleep
+            ImVec4 illegalMnemonic{C(247, 191, 173)};   // (illegal)
+            ImVec4 sizeSuffix{C(128, 145, 194)};        // b w l
 
             ImVec4 condPass{C(143, 240, 132)}; // t f (bt/bf) eq ne pz pl ... (cmp/<cond>) (pass)
             ImVec4 condFail{C(222, 140, 135)}; // t f (bt/bf) eq ne pz pl ... (cmp/<cond>) (fail)
@@ -79,6 +85,8 @@ private:
 
         bool altLineColors = false;
         bool altLineAddresses = false;
+
+        bool colorizeMnemonicsByType = true;
     } m_settings;
 };
 
