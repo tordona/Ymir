@@ -97,7 +97,7 @@ void SH2DisassemblyView::Display() {
                 } else if (probe.IsWatchpointSet(address)) {
                     color = m_colors.disasm.wtptBgColor;
                 }*/
-                else if (m_settings.altLineColors && m_settings.altLineAddresses ? (address & 2) : (i & 1)) {
+                else if (m_settings.altLineColors && (m_settings.altLineAddresses ? (address & 2) : (i & 1))) {
                     color = m_colors.disasm.altLineBgColor;
                 }
                 if (color.w == 0.0f) {
