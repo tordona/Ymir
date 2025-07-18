@@ -36,6 +36,7 @@
 - Debugger: Indirect SCU DMA transfers were being traced with the updated indirect table address.
 - Input: Fix inability to bind keyboard combos.
 - Input: Modifier keys can now be used correctly as controller input binds and will no longer interfere with other controller inputs. (#282)
+- Media: Allow loading CUE files with PREGAP and INDEX 00 on the same TRACK.
 - Media: Skip blank lines in CUE files.
 - Save states: Read/write missing SCSP field to save state object. Fixes occasional application crashes when using the rewind buffer in conjunction with save states.
 - SCSP: Use EG level instead of total level in MSLC reads. Fixes missing/truncated SFX on various games, including Sonic R, Akumajou Dracula X and Daytona USA CCE.

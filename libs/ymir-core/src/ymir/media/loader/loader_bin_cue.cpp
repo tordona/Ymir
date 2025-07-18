@@ -306,11 +306,11 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
             if (indexNum == 0) {
                 if (hasPregap) {
                     // fmt::println("BIN/CUE: Found INDEX 00 and PREGAP in the same TRACK (line {})", lineNum);
-                    return false;
+                    // return false;
+                } else {
+                    hasPregap = true;
+                    hasIndex0 = true;
                 }
-
-                hasPregap = true;
-                hasIndex0 = true;
             } else if (indexNum == 1) {
                 // Close previous track
                 if (prevTrackIndex != ~0) {
