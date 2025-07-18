@@ -338,13 +338,24 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
                     std::vector<uint8> sector{};
                     sector.resize(track.sectorSize);
                     bool isPregapSilent = true;
-                    for (uintmax_t frame = 0; frame < pregapLength; ++frame) {
+                    /*for (uintmax_t frame = 0; frame < pregapLength; ++frame) {
                         binaryReader->Read(binFileOffset + frame * track.sectorSize, track.sectorSize, sector);
-                        if (std::any_of(sector.begin(), sector.end(), [](uint8 v) { return v != 0; })) {
+                        // Some dumps contain an extra data sector at the start of the first audio track.
+                        // If found, skip it
+                        size_t pregapCheckOffset = 0;
+                        static constexpr uint8 kSyncHeader[] = {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                                                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00};
+
+                        if (std::equal(sector.begin(), sector.begin() + std::size(kSyncHeader),
+                                       std::begin(kSyncHeader))) {
+                            pregapCheckOffset += 2352;
+                        }
+                        if (std::any_of(sector.begin() + pregapCheckOffset, sector.end(),
+                                        [](uint8 v) { return v != 0; })) {
                             isPregapSilent = false;
                             break;
                         }
-                    }
+                    }*/
                     if (isPregapSilent) {
                         const uintmax_t delta = pregapEnd - pregapStart;
                         // fmt::println("BIN/CUE: Track {} has silent pregap of {} frames; skipping", currTrackIndex,
