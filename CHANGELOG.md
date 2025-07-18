@@ -81,7 +81,7 @@
 - VDP2: Update vertical cell scroll every 8 cell dots correctly when the background is zoomed in.
 - ymdasm: Fix reversed SCU DSP DMA immediate/data RAM operand decoding.
 - ymdasm: Mask and translate several SCU DSP immediates.
- 
+
 
 ## Version 0.1.5
 
