@@ -18,7 +18,7 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "StrikerX3\0"
-            VALUE "FileDescription", "A Sega Saturn Emulator\0"
+            VALUE "FileDescription", "Ymir - A Sega Saturn Emulator\0"
             VALUE "FileVersion", Ymir_VERSION "\0"
             VALUE "InternalName", "Ymir\0"
             VALUE "LegalCopyright", "Copyright (C) 2024-2025 Ymir contributors\0"
