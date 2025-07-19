@@ -888,8 +888,11 @@ void SCU::RunDMA() {
                 if (ch.updateDstAddr) {
                     if (ch.indirect) {
                         ch.dstAddr = ch.currIndirectSrc;
+                    } else if (dstBus == BusID::BBus) {
+                        // Not even this is straightforward, believe it or not
+                        ch.dstAddr = ((ch.currDstAddr & ~3u) | (currDstOffset & 3u)) + (currDstOffset & ~3u);
                     } else {
-                        ch.dstAddr = ch.currDstAddr;
+                        ch.dstAddr = (ch.currDstAddr & ~3u) + currDstOffset;
                     }
                 }
                 TriggerDMAEnd(level);
