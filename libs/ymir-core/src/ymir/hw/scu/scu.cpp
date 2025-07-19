@@ -586,34 +586,6 @@ FORCE_INLINE void SCU::UpdateMasterInterruptLevel() {
     }
 }
 
-void SCU::SetupDMATransferIncrements(DMAChannel &ch) {
-    // Source address increment:
-    // - either 0 or 4 bytes when in CS2 area
-    // - always 4 bytes elsewhere
-    const bool srcCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currSrcAddr);
-    const bool srcWRAM = ch.currSrcAddr >= 0x600'0000;
-    if (srcCS2 || srcWRAM) {
-        ch.currSrcAddrInc = ch.srcAddrInc;
-    } else {
-        ch.currSrcAddrInc = 4u;
-    }
-
-    // Destination address increment:
-    // - 0, 2, 4, 8, 16, 32, 64 or 128 bytes when in B-Bus
-    // - 0 or 4 bytes when in CS2
-    // - always 4 bytes elsewhere
-    const bool dstBBus = util::AddressInRange<0x5A0'0000, 0x5FF'FFFF>(ch.currDstAddr);
-    const bool dstCS2 = util::AddressInRange<0x580'0000, 0x58F'FFFF>(ch.currDstAddr);
-    const bool dstWRAM = ch.currDstAddr >= 0x600'0000;
-    if (dstBBus || dstWRAM) {
-        ch.currDstAddrInc = ch.dstAddrInc;
-    } else if (dstCS2) {
-        ch.currDstAddrInc = ch.dstAddrInc ? 4u : 0u;
-    } else {
-        ch.currDstAddrInc = 4u;
-    }
-}
-
 void SCU::DMAReadIndirectTransfer(uint8 level) {
     auto &ch = m_dmaChannels[level];
     const uint32 currIndirectSrc = ch.currIndirectSrc;
@@ -624,7 +596,8 @@ void SCU::DMAReadIndirectTransfer(uint8 level) {
     ch.endIndirect = bit::test<31>(ch.currSrcAddr);
     ch.currSrcAddr &= 0x7FF'FFFF;
     ch.currDstAddr &= 0x7FF'FFFF;
-    SetupDMATransferIncrements(ch);
+    ch.currSrcAddrInc = ch.srcAddrInc;
+    ch.currDstAddrInc = ch.dstAddrInc;
 
     devlog::trace<grp::dma>(
         "SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X}){}",
@@ -933,8 +906,8 @@ void SCU::RecalcDMAChannel() {
                 ch.currSrcAddr = ch.srcAddr & 0x7FF'FFFF;
                 ch.currDstAddr = ch.dstAddr & 0x7FF'FFFF;
                 ch.currXferCount = adjustZeroSizeXferCount(ch.xferCount);
+                ch.currSrcAddrInc = ch.srcAddrInc;
                 ch.currDstAddrInc = ch.dstAddrInc;
-                SetupDMATransferIncrements(ch);
 
                 devlog::trace<grp::dma>(
                     "SCU DMA{}: Starting direct transfer of {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X})",
