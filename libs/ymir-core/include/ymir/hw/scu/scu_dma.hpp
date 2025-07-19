@@ -75,7 +75,7 @@ struct DMAChannel {
     bool start;            // Start transfer on next cycle
     uint32 currSrcAddr;    // Current read address
     uint32 currDstAddr;    // Current write address
-    uint32 currXferCount;  // Current transfer count (stops when == xferCount)
+    uint32 currXferCount;  // Current transfer count (stops when == 0)
     uint32 currSrcAddrInc; // Current read address increment
     uint32 currDstAddrInc; // Current write address increment
 

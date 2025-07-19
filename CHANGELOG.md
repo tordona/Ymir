@@ -47,6 +47,7 @@
 - SCU: Improve HBlank IN, VBlank IN and VBlank OUT interrupt signal handling.
 - SCU: Increment DMA source address by 4 after performing DMA transfers with no increment. Fixes background priority issues in Street Fighter - Real Battle on Film. (#168)
 - SCU: Interleave SCU DSP DMA transfers with program execution when not writing to Program RAM or accessing the CT used by DMA (thanks to @celeriyacon).
+- SCU: Rework SCU DMA transfers. Fixes displaced tile data in Steam-Heart's. (#278)
 - SCU: Run all pending DMA transfers instead of just the highest priority.
 - SCU: Split up MSH2/SSH2 interrupt handling.
 - SCU: Various fixes to SCU DSP DMA transfers to DSP Program RAM (thanks to @celeriyacon).

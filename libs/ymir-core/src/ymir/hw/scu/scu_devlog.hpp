@@ -31,6 +31,7 @@ struct intr : public base {
 };
 
 struct dma : public base {
+    //static constexpr devlog::Level level = devlog::level::trace;
     static constexpr std::string_view name = "SCU-DMA";
 };
 
