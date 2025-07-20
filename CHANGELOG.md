@@ -87,6 +87,7 @@
 - VDP2: Update line screen scroll address at Y=0. Fixes line glitches in Rayman's backgrounds and Sonic Jam's Sonic 2 special stage graphics.
 - VDP2: Update line screen scroll offsets only at the specified boundaries. Very slightly improves performance and fixes text slicing issues in Sega Rally Championship's Records and Options screens.
 - VDP2: Update vertical cell scroll every 8 cell dots correctly when the background is zoomed in.
+- VDP2: Update vertical scroll registers (SCY[ID]Nn) when written. Fixes background distortion effect of Shuma Gorath's Chaos Dimension super move in Marvel Super Heroes vs. Street Fighter. (#72)
 - VDP: Fix handling of VDP1 threading flag when VDP2 threading is disabled.
 - ymdasm: Fix reversed SCU DSP DMA immediate/data RAM operand decoding.
 - ymdasm: Mask and translate several SCU DSP immediates.

@@ -779,6 +779,29 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
             VDP2UpdateEnabledBGs();
         }
         break;
+
+    case 0x074: [[fallthrough]]; // SCYIN0
+    case 0x076:                  // SCYDN0
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[0].scrollAmountV = m_state.regs2.bgParams[1].scrollAmountV;
+        }
+        break;
+    case 0x084: [[fallthrough]]; // SCYIN1
+    case 0x086:                  // SCYDN1
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[1].scrollAmountV = m_state.regs2.bgParams[2].scrollAmountV;
+        }
+        break;
+    case 0x092: // SCYN2
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[2].scrollAmountV = m_state.regs2.bgParams[3].scrollAmountV;
+        }
+        break;
+    case 0x096: // SCYN3
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[3].scrollAmountV = m_state.regs2.bgParams[4].scrollAmountV;
+        }
+        break;
     }
 }
 
@@ -1229,6 +1252,22 @@ void VDP::VDPRenderThread() {
                     }
                 } else {
                     rctx.vdp2.regs.Write(event.write.address, event.write.value);
+                    switch (event.write.address) {
+                    case 0x074: [[fallthrough]]; // SCYIN0
+                    case 0x076:                  // SCYDN0
+                        m_normBGLayerStates[0].scrollAmountV = rctx.vdp2.regs.bgParams[1].scrollAmountV;
+                        break;
+                    case 0x084: [[fallthrough]]; // SCYIN1
+                    case 0x086:                  // SCYDN1
+                        m_normBGLayerStates[1].scrollAmountV = rctx.vdp2.regs.bgParams[2].scrollAmountV;
+                        break;
+                    case 0x092: // SCYN2
+                        m_normBGLayerStates[2].scrollAmountV = rctx.vdp2.regs.bgParams[3].scrollAmountV;
+                        break;
+                    case 0x096: // SCYN3
+                        m_normBGLayerStates[3].scrollAmountV = rctx.vdp2.regs.bgParams[4].scrollAmountV;
+                        break;
+                    }
                 }
                 break;
 
