@@ -4598,7 +4598,11 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     y = VDP2GetY<deinterlace>(y) ^ static_cast<uint32>(altFieldDst);
 
     if (!regs.TVMD.DISP) {
-        std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, 0xFF000000);
+        uint32 color = 0xFF000000;
+        if (regs.TVMD.BDCLMD) {
+            color |= m_lineBackLayerState.backColor.u32;
+        }
+        std::fill_n(&m_framebuffer[y * m_HRes], m_HRes, color);
         return;
     }
 
