@@ -577,15 +577,18 @@ void VDP::EnableThreadedVDP(bool enable) {
         VDPRenderEvent dummy{};
         while (m_VDPRenderContext.eventQueue.try_dequeue(dummy)) {
         }
+        UpdateEffectiveRenderingFlags();
     }
 }
 
 void VDP::IncludeVDP1RenderInVDPThread(bool enable) {
+    m_renderVDP1OnVDP2Thread = enable;
     if (m_threadedVDPRendering) {
-        m_renderVDP1OnVDP2Thread = enable;
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::UpdateEffectiveRenderingFlags());
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1StateSync());
         m_VDPRenderContext.postLoadSyncSignal.Wait(true);
+    } else {
+        UpdateEffectiveRenderingFlags();
     }
 }
 
