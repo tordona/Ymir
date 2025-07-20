@@ -253,6 +253,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     DIVU.Reset();
     FRT.Reset();
     INTC.Reset();
+    m_intrPending = false;
 
     m_delaySlotTarget = 0;
     m_delaySlot = false;
@@ -423,6 +424,8 @@ void SH2::LoadState(const state::SH2State &state) {
     INTC.LoadState(state.intc);
     m_cache.LoadState(state.cache);
     SBYCR.u8 = state.SBYCR;
+
+    m_intrPending = !m_delaySlot && INTC.pending.level > SR.ILevel;
 }
 
 // -----------------------------------------------------------------------------
@@ -1636,6 +1639,7 @@ void SH2::RecalcInterrupts() {
 
     INTC.pending.level = 0;
     INTC.pending.source = InterruptSource::None;
+    m_intrPending = false;
 
     // HACK: should be edge-detected
     if (INTC.NMI) {
@@ -1652,6 +1656,7 @@ void SH2::RecalcInterrupts() {
     // IRLs
     if (INTC.GetLevel(InterruptSource::IRL) > 0) {
         RaiseInterrupt(InterruptSource::IRL);
+        // fallthrough; IRL may have lower priority than other interrupts
     }
 
     // Division overflow
@@ -1721,6 +1726,7 @@ void SH2::RecalcInterrupts() {
 FORCE_INLINE void SH2::SetupDelaySlot(uint32 targetAddress) {
     m_delaySlot = true;
     m_delaySlotTarget = targetAddress;
+    m_intrPending = false;
 }
 
 template <bool delaySlot>
@@ -1728,6 +1734,7 @@ FORCE_INLINE void SH2::AdvancePC() {
     if constexpr (delaySlot) {
         PC = m_delaySlotTarget;
         m_delaySlot = false;
+        m_intrPending = INTC.pending.level > SR.ILevel;
     } else {
         PC += 2;
     }
@@ -1749,9 +1756,10 @@ FORCE_INLINE uint64 SH2::EnterException(uint8 vectorNumber) {
 
 // -----------------------------------------------------------------------------
 // Instruction interpreters
+
 template <bool debug, bool enableCache>
 FORCE_INLINE uint64 SH2::InterpretNext() {
-    if (CheckInterrupts()) [[unlikely]] {
+    if (m_intrPending) [[unlikely]] {
         // Service interrupt
         const uint8 vecNum = INTC.GetVector(INTC.pending.source);
         TraceInterrupt<debug>(m_tracer, vecNum, INTC.pending.level, INTC.pending.source, PC);
@@ -1759,6 +1767,7 @@ FORCE_INLINE uint64 SH2::InterpretNext() {
                                  INTC.pending.level, vecNum, PC);
         const uint64 cycles = EnterException<debug, enableCache>(vecNum);
         SR.ILevel = std::min<uint8>(INTC.pending.level, 0xF);
+        m_intrPending = false;
 
         // Acknowledge interrupt
         switch (INTC.pending.source) {
@@ -2545,6 +2554,7 @@ FORCE_INLINE uint64 SH2::LDCGBR(const DecodedArgs &args) {
 template <bool delaySlot>
 FORCE_INLINE uint64 SH2::LDCSR(const DecodedArgs &args) {
     SR.u32 = R[args.rm] & 0x000003F3;
+    m_intrPending = !delaySlot && INTC.pending.level > SR.ILevel;
     AdvancePC<delaySlot>();
     return 1;
 }
@@ -2644,6 +2654,7 @@ template <bool debug, bool enableCache, bool delaySlot>
 FORCE_INLINE uint64 SH2::LDCMSR(const DecodedArgs &args) {
     const uint32 address = R[args.rm];
     SR.u32 = MemReadLong<enableCache>(address) & 0x000003F3;
+    m_intrPending = !delaySlot && INTC.pending.level > SR.ILevel;
     R[args.rm] += 4;
     AdvancePC<delaySlot>();
     return AccessCycles<enableCache>(address) + 2;

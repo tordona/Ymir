@@ -26,6 +26,7 @@
 - Settings: Added "Clear all" button to controller configuration window to clear all binds. (#288)
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.
+- SH2: Improve overall emulation performance by simplifying interrupt checks.
 - System: Map 030'0000-03F'FFFF memory area.
 - VDP2: Add dedicated thread for deinterlaced rendering if VDP2 threading is enabled. Significantly lessens performance impact of the deinterlace enhancement on quad-core CPUs or better.
 - Video: Implemented frame rate limiter. (#16)

@@ -380,9 +380,9 @@ public:
         }
 
         // Check if the CPU should service an interrupt.
-        // Takes into account the current SR.ILevel.
+        // Takes into account the current SR.ILevel and delay slot state.
         FORCE_INLINE bool CheckInterrupts() const {
-            return m_sh2.CheckInterrupts();
+            return m_sh2.m_intrPending;
         }
 
     private:
@@ -621,6 +621,7 @@ private:
         }
         INTC.pending.level = level;
         INTC.pending.source = source;
+        m_intrPending = !m_delaySlot && INTC.pending.level > SR.ILevel;
     }
 
     // Lowers the interrupt signal of the specified source.
@@ -637,10 +638,11 @@ private:
     // Recalculates the highest priority interrupt to be serviced.
     void RecalcInterrupts();
 
-    // Checks if the CPU should service an interrupt.
-    FORCE_INLINE bool CheckInterrupts() const {
-        return !m_delaySlot && INTC.pending.level > SR.ILevel;
-    }
+    // Whether an interrupt should be serviced on the next instruction:
+    //   !m_delaySlot && INTC.pending.level > SR.ILevel
+    // This value is updated when any of these variables is changed, which happens less often than once per instruction.
+    // There's no need to store this in the save state struct since its value can be derived as above.
+    bool m_intrPending;
 
     // -------------------------------------------------------------------------
     // Cache
