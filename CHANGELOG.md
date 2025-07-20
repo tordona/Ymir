@@ -1,5 +1,13 @@
 # Ymir changelog
 
+## Version 0.1.7
+
+### New features and improvements
+
+### Fixes
+
+
+
 ## Version 0.1.6
 
 ### New features and improvements
