@@ -236,7 +236,9 @@ void Saturn::AutodetectRegion(media::AreaCode areaCodes) {
     case 0xD: SetVideoStandard(core::config::sys::VideoStandard::PAL); break;
     }
 
-    Reset(true);
+    if (currAreaCode != selectedAreaCode) {
+        Reset(true);
+    }
 }
 
 void Saturn::EnableDebugTracing(bool enable) {
