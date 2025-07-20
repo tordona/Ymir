@@ -69,6 +69,7 @@
 - VDP1: Mask CMDCOLR bits 0..3 in 4bpp banked sprite mode. Fixes palette issues in Steam-Heart's and Dragon Ball Z - Shinbutouden. (#69, #278)
 - VDP1: Properly handle DIE/DIL in single-density interlaced mode. Fixes text drawn twice as tall in Resident Evil options menu. (#180)
 - VDP2: Adjust character data offset for 2x2 characters in RGB 8:8:8 color format. Fixes garbled FMV in Crusader - No Remorse. (#108)
+- VDP2: Apply character pattern delay based on first pattern name access, not all of them. Fixes shifted UI elements in Battle Arena Toshinden Remix. (#306)
 - VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
 - VDP2: Don't update line/back screen color, line screen scroll or rotation parameters when the display is disabled. Fixes blank screen during Sega Rally Championship boot up.
 - VDP2: Fix per-dot special priority function. Fixes BG priority issues in Waku Waku Puyo Puyo Dungeon.

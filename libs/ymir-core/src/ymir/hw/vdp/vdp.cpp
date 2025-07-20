@@ -3124,8 +3124,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
         const uint8 bgCP = cp[i];
         const uint8 bgPN = pn[i];
 
-        // Skip bitmap NBGs
-        // TODO: handle bitmaps too; should handle each bank individually
+        // Skip bitmap NBGs as they're handled above
         if (bgParams.bitmap) {
             continue;
         }
@@ -3169,8 +3168,8 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
             };
 
             for (uint8 pnIndex = 0; pnIndex < 8; ++pnIndex) {
-                if ((bgPN & (1u << pnIndex)) != 0 && ((bgCP & kPatterns[pnIndex]) == 0)) {
-                    bgParams.charPatDelay = true;
+                if ((bgPN & (1u << pnIndex)) != 0) {
+                    bgParams.charPatDelay = (bgCP & kPatterns[pnIndex]) == 0;
                     break;
                 }
             }
@@ -5934,7 +5933,7 @@ FLATTEN FORCE_INLINE SpriteData VDP::VDP2FetchSpriteData(const SpriteFB &fb, uin
 //
 // colorDataBits specifies the bit width of the color data.
 template <uint32 colorDataBits>
-static SpriteData::Special GetSpecialPattern(uint16 rawData) {
+FORCE_INLINE static SpriteData::Special GetSpecialPattern(uint16 rawData) {
     // Normal shadow pattern (LSB = 0, rest of the color data bits = 1)
     static constexpr uint16 kNormalShadowValue = (1u << (colorDataBits + 1u)) - 2u;
 

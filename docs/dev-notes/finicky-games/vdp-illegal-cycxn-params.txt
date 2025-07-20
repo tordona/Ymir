@@ -18,6 +18,8 @@ Capcom Generation - Dai-5-shuu Kakutouka-tachi
   Sets up illegal character pattern read cycles for NBG0 bitmap data in VRAM bank B in the image gallery, causing the
   bottom portion of the image (starting at Y=256) to be shifted left. The game compensates for that in VRAM.
 
+Battle Arena Toshinden Remix
+  Sets up multiple PN accesses for NBG2 in-game to display UI elements.
 
 =======
 Context
@@ -101,8 +103,8 @@ vary according to the resolution and character pattern size:
      T2    -- -- T2 T3
      T3    -- -- -- T3
 
-If the NBG requires multiple pattern name access timing slots, the CP access is restricted by all matching entries in
-the tables above. (TODO: confirm this; doesn't it make more sense to restrict by the last PN access instead?)
+If the NBG requires multiple pattern name access timing slots, the CP access is restricted by the first valid PN access.
+(TODO: check 1/2x and 1/4x reductions.)
 
 In high resolution modes the CP access must happen at the same time as or after the PN access, otherwise it is delayed.
 
