@@ -3329,6 +3329,11 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
 FORCE_INLINE void VDP::VDP2PrepareLine(uint32 y) {
     const VDP2Regs &regs2 = VDP2GetRegs();
 
+    // Don't process anything if the display is disabled
+    if (!regs2.TVMD.DISP) {
+        return;
+    }
+
     // Load rotation parameters if any of the RBG layers is enabled
     if (regs2.bgEnabled[4] || regs2.bgEnabled[5]) {
         VDP2CalcRotationParameterTables(y);

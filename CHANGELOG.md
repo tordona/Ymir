@@ -69,6 +69,7 @@
 - VDP1: Properly handle DIE/DIL in single-density interlaced mode. Fixes text drawn twice as tall in Resident Evil options menu. (#180)
 - VDP2: Adjust character data offset for 2x2 characters in RGB 8:8:8 color format. Fixes garbled FMV in Crusader - No Remorse. (#108)
 - VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
+- VDP2: Don't update line/back screen color, line screen scroll or rotation parameters when the display is disabled. Fixes blank screen during Sega Rally Championship boot up.
 - VDP2: Fix per-dot special priority function. Fixes BG priority issues in Waku Waku Puyo Puyo Dungeon.
 - VDP2: Fix single-density interlaced mode.
 - VDP2: Fix sprite layer display when rotation mode is enabled. Fixes sliding 3D graphics on Hang-On GP and Highway 2000. (#167, #208, #277)
