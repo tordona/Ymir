@@ -325,6 +325,14 @@ void Slot::LoadState(const state::SCSPSlotState &state) {
     case state::SCSPSlotState::EGState::Release: egState = EGState::Release; break;
     }
 
+    switch (state.egState) {
+    default: [[fallthrough]];
+    case state::SCSPSlotState::EGState::Attack: currEGRate = attackRate; break;
+    case state::SCSPSlotState::EGState::Decay1: currEGRate = decay1Rate; break;
+    case state::SCSPSlotState::EGState::Decay2: currEGRate = decay2Rate; break;
+    case state::SCSPSlotState::EGState::Release: currEGRate = releaseRate; break;
+    }
+
     egLevel = state.egLevel & 0x3FF;
     currEGLevel = state.currEGLevel & 0x3FF;
     egAttackBug = state.egAttackBug;

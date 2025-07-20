@@ -23,6 +23,7 @@
 - Input: Added new keybinds for frame rate limit control: increase/decrease speed, switch between primary/alternate speed, reset speed. (#16)
 - Input: Changed default keybinds for Pause/Resume action from "Pause, Ctrl+P" to "Pause, Spacebar".
 - Input: Removed Return from default binds to Port 1 Start button to avoid conflict with full screen hotkey (Alt+Enter).
+- SCSP: Various micro optimizations.
 - Settings: Added "Clear all" button to controller configuration window to clear all binds. (#288)
 - Settings: Automatically create/suggest a backup RAM file if no path is specified when inserting the cartridge.
 - SH2: Improve cache emulation performance by avoiding byte-swapping cache lines.

@@ -27,6 +27,7 @@ struct alignas(128) Slot {
                 active = true;
 
                 egState = EGState::Attack;
+                currEGRate = attackRate;
 
                 if (keyRateScaling == 0xF) {
                     egAttackBug = false;
@@ -50,6 +51,7 @@ struct alignas(128) Slot {
                 output = 0;
             } else {
                 egState = EGState::Release;
+                currEGRate = releaseRate;
             }
         }
         return trigger;
@@ -229,12 +231,21 @@ struct alignas(128) Slot {
             attackRate = bit::extract<0, 4>(value);
             egHold = bit::test<5>(value);
             CheckAttackBug();
+            if (egState == EGState::Release) {
+                currEGRate = attackRate;
+            }
         }
 
         util::SplitWriteWord<lowerByte, upperByte, 6, 10>(decay1Rate, value);
+        if (egState == EGState::Release) {
+            currEGRate = decay1Rate;
+        }
 
         if constexpr (upperByte) {
             decay2Rate = bit::extract<11, 15>(value);
+            if (egState == EGState::Release) {
+                currEGRate = decay2Rate;
+            }
         }
     }
 
@@ -259,6 +270,9 @@ struct alignas(128) Slot {
     FORCE_INLINE void WriteReg0A(uint16 value) {
         if constexpr (lowerByte) {
             releaseRate = bit::extract<0, 4>(value);
+            if (egState == EGState::Release) {
+                currEGRate = releaseRate;
+            }
         }
 
         util::SplitWriteWord<lowerByte, upperByte, 5, 9>(decayLevel, value);
@@ -617,6 +631,7 @@ struct alignas(128) Slot {
     // Ranges from 0x3FF (minimum) to 0x000 (maximum) - 10 bits.
     uint16 egLevel;
 
+    uint8 currEGRate;
     uint16 currEGLevel;
 
     bool egAttackBug; // Is the EG stuck in attack phase?
@@ -641,29 +656,10 @@ struct alignas(128) Slot {
 
     sint32 finalLevel;
 
-    FORCE_INLINE uint32 CalcEffectiveRate(uint8 rate) const {
-        uint32 effectiveRate = rate;
-        if (keyRateScaling < 0xF) {
-            const sint32 krs = std::clamp(keyRateScaling + static_cast<sint32>(octave ^ 8) - 8, 0x0, 0xF);
-            effectiveRate += krs;
-        }
-        return std::min<uint32>(effectiveRate << 1, 0x3F);
-    }
-
     FORCE_INLINE void CheckAttackBug() {
         const sint8 oct = static_cast<sint8>(octave ^ 8) - 8;
         const uint8 krs = std::clamp<uint8>(keyRateScaling + oct, 0x0, 0xF);
         egAttackBug = (attackRate + krs) >= 0x20;
-    }
-
-    FORCE_INLINE uint8 GetCurrentEGRate() const {
-        switch (egState) {
-        case EGState::Attack: return attackRate;
-        case EGState::Decay1: return decay1Rate;
-        case EGState::Decay2: return decay2Rate;
-        case EGState::Release: return releaseRate;
-        default: return releaseRate; // should not happen
-        }
     }
 
     FORCE_INLINE uint16 GetEGLevel() const {
@@ -671,10 +667,9 @@ struct alignas(128) Slot {
     }
 
     FORCE_INLINE void IncrementLFO() {
-        lfoCycles++;
-        if (lfoCycles >= lfoStepInterval) {
+        if (++lfoCycles >= lfoStepInterval) {
             lfoCycles = 0;
-            lfoStep++;
+            ++lfoStep;
         }
         if (lfoReset) {
             lfoStep = 0;
@@ -741,22 +736,40 @@ struct alignas(128) Slot {
     }
 
     FORCE_INLINE void IncrementEG(uint64 sampleCounter) {
-        static constexpr uint32 kCounterShiftTable[] = {11, 11, 11, 11, // 0-3    (0x00-0x03)
-                                                        10, 10, 10, 10, // 4-7    (0x04-0x07)
-                                                        9,  9,  9,  9,  // 8-11   (0x08-0x0B)
-                                                        8,  8,  8,  8,  // 12-15  (0x0C-0x0F)
-                                                        7,  7,  7,  7,  // 16-19  (0x10-0x13)
-                                                        6,  6,  6,  6,  // 20-23  (0x14-0x17)
-                                                        5,  5,  5,  5,  // 24-27  (0x18-0x1B)
-                                                        4,  4,  4,  4,  // 28-31  (0x1C-0x1F)
-                                                        3,  3,  3,  3,  // 32-35  (0x20-0x23)
-                                                        2,  2,  2,  2,  // 36-39  (0x24-0x27)
-                                                        1,  1,  1,  1,  // 40-43  (0x28-0x2B)
-                                                        0,  0,  0,  0,  // 44-47  (0x2C-0x2F)
-                                                        0,  0,  0,  0,  // 48-51  (0x30-0x33)
-                                                        0,  0,  0,  0,  // 52-55  (0x34-0x37)
-                                                        0,  0,  0,  0,  // 56-59  (0x38-0x3B)
-                                                        0,  0,  0,  0}; // 60-63  (0x3C-0x3F)
+        static constexpr uint32 kCounterShiftTable[] = {12, 12, 12, 12, // 0-3    (0x00-0x03)
+                                                        11, 11, 11, 11, // 4-7    (0x04-0x07)
+                                                        10, 10, 10, 10, // 8-11   (0x08-0x0B)
+                                                        9,  9,  9,  9,  // 12-15  (0x0C-0x0F)
+                                                        8,  8,  8,  8,  // 16-19  (0x10-0x13)
+                                                        7,  7,  7,  7,  // 20-23  (0x14-0x17)
+                                                        6,  6,  6,  6,  // 24-27  (0x18-0x1B)
+                                                        5,  5,  5,  5,  // 28-31  (0x1C-0x1F)
+                                                        4,  4,  4,  4,  // 32-35  (0x20-0x23)
+                                                        3,  3,  3,  3,  // 36-39  (0x24-0x27)
+                                                        2,  2,  2,  2,  // 40-43  (0x28-0x2B)
+                                                        1,  1,  1,  1,  // 44-47  (0x2C-0x2F)
+                                                        1,  1,  1,  1,  // 48-51  (0x30-0x33)
+                                                        1,  1,  1,  1,  // 52-55  (0x34-0x37)
+                                                        1,  1,  1,  1,  // 56-59  (0x38-0x3B)
+                                                        1,  1,  1,  1}; // 60-63  (0x3C-0x3F)
+
+        // (1 << shift) - 1
+        static constexpr uint32 kCounterMaskTable[] = {0xFFF, 0xFFF, 0xFFF, 0xFFF,  // 0-3    (0x00-0x03)
+                                                       0x7FF, 0x7FF, 0x7FF, 0x7FF,  // 4-7    (0x04-0x07)
+                                                       0x3FF, 0x3FF, 0x3FF, 0x3FF,  // 8-11   (0x08-0x0B)
+                                                       0x1FF, 0x1FF, 0x1FF, 0x1FF,  // 12-15  (0x0C-0x0F)
+                                                       0x0FF, 0x0FF, 0x0FF, 0x0FF,  // 16-19  (0x10-0x13)
+                                                       0x07F, 0x07F, 0x07F, 0x07F,  // 20-23  (0x14-0x17)
+                                                       0x03F, 0x03F, 0x03F, 0x03F,  // 24-27  (0x18-0x1B)
+                                                       0x01F, 0x01F, 0x01F, 0x01F,  // 28-31  (0x1C-0x1F)
+                                                       0x00F, 0x00F, 0x00F, 0x00F,  // 32-35  (0x20-0x23)
+                                                       0x007, 0x007, 0x007, 0x007,  // 36-39  (0x24-0x27)
+                                                       0x003, 0x003, 0x003, 0x003,  // 40-43  (0x28-0x2B)
+                                                       0x001, 0x001, 0x001, 0x001,  // 44-47  (0x2C-0x2F)
+                                                       0x001, 0x001, 0x001, 0x001,  // 48-51  (0x30-0x33)
+                                                       0x001, 0x001, 0x001, 0x001,  // 52-55  (0x34-0x37)
+                                                       0x001, 0x001, 0x001, 0x001,  // 56-59  (0x38-0x3B)
+                                                       0x001, 0x001, 0x001, 0x001}; // 60-63  (0x3C-0x3F)
 
         static constexpr uint32 kIncrementTable[][8] = {
             {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0}, // 0-1    (0x00-0x01)
@@ -793,12 +806,31 @@ struct alignas(128) Slot {
             {8, 8, 8, 8, 8, 8, 8, 8}, {8, 8, 8, 8, 8, 8, 8, 8}, // 62-63  (0x3E-0x3F)
         };
 
-        const uint8 currRate = GetCurrentEGRate();
-        const uint32 rate = CalcEffectiveRate(currRate);
+        static constexpr auto kEffectiveRateTable = [] {
+            std::array<std::array<std::array<uint32, 0x10>, 0x10>, 0x20> arr{};
+            for (uint8 keyRateScaling = 0x0; keyRateScaling <= 0xF; ++keyRateScaling) {
+                for (uint8 octave = 0x0; octave <= 0xF; ++octave) {
+                    for (uint8 rate = 0x00; rate <= 0x1F; ++rate) {
+                        uint32 effectiveRate = rate;
+                        if (keyRateScaling < 0xF) {
+                            const sint32 krs =
+                                std::clamp(keyRateScaling + static_cast<sint32>(octave ^ 8) - 8, 0x0, 0xF);
+                            effectiveRate += krs;
+                        }
+                        arr[rate][octave][keyRateScaling] = std::min<uint32>(effectiveRate << 1, 0x3F);
+                    }
+                }
+            }
+            return arr;
+        }();
+
+        const uint8 currRate = currEGRate;
+        const uint32 rate = kEffectiveRateTable[currRate][octave][keyRateScaling];
         const uint32 shift = kCounterShiftTable[rate];
-        const uint32 egCycle = sampleCounter >> 1;
-        uint32 inc{};
-        if ((sampleCounter & 1) == 1 || (egCycle & ((1 << shift) - 1)) != 0) {
+        const uint32 mask = kCounterMaskTable[rate];
+        const uint32 egCycle = sampleCounter;
+        uint32 inc;
+        if ((egCycle & mask) != 0) {
             inc = 0;
         } else {
             inc = kIncrementTable[rate][(egCycle >> shift) & 7];
@@ -820,11 +852,13 @@ struct alignas(128) Slot {
             }
             if (loopStartLink ? crossedLoopStart : currLevel == 0) {
                 egState = EGState::Decay1;
+                currEGRate = decay1Rate;
             }
             break;
         case EGState::Decay1:
             if ((egLevel >> 5u) == decayLevel) {
                 egState = EGState::Decay2;
+                currEGRate = decay2Rate;
             }
             [[fallthrough]];
         case EGState::Decay2: [[fallthrough]];

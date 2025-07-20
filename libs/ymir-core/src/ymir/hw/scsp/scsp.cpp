@@ -1009,10 +1009,11 @@ FORCE_INLINE void SCSP::SlotProcessStep2_4(Slot &slot) {
 
 FORCE_INLINE void SCSP::SlotProcessStep3_2(Slot &slot) {
     if (slot.soundSource == Slot::SoundSource::SoundRAM && slot.active) {
-        slot.modulation = 0;
         if (slot.modLevel >= 5) {
             const sint32 zd = (slot.modXSample + slot.modYSample) & 0x3FFFFE;
             slot.modulation = bit::sign_extend<16>((zd << 5) >> (16 - slot.modLevel));
+        } else {
+            slot.modulation = 0;
         }
 
         const uint16 currSmp = slot.reverse ? ~slot.currSample : slot.currSample;
