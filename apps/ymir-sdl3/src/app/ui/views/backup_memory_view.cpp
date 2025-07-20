@@ -1180,7 +1180,7 @@ void BackupMemoryView::ExportMultiFile(std::filesystem::path dir) {
         util::BackupDateTime bupDate{exportedFile.file.header.date};
         std::string filename =
             fmt::format("{}_{:04d}{:02d}{:02d}_{:02d}{:02d}.{}", exportedFile.file.header.filename, bupDate.year,
-                        bupDate.month, bupDate.day, bupDate.hour, bupDate.minute, static_config::export_ymbup);
+                        bupDate.month, bupDate.day, bupDate.hour, bupDate.minute, static_config::bup_file_suffix);
         ExportFile(dir / filename, exportedFile);
     }
     OpenFilesExportSuccessfulModal(m_filesToExport.size());
