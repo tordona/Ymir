@@ -62,6 +62,7 @@ void Slot::Reset() {
     active = false;
 
     egState = EGState::Release;
+    currEGRate = releaseRate;
 
     egLevel = 0x3FF;
 
