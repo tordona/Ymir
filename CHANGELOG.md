@@ -58,7 +58,7 @@
 - SH2: Fix cache LRU AND update mask. Fixes FMV glitches on Capcom games, WipEout and Mr. Bones when SH-2 cache emulation is enabled. (#202, #247, #270)
 - SH2: TAS.B read should bypass cache.
 - SH2: The nIVECF pin of the SSH2 is disconnected, disallowing it from doing external interrupt vector fetches.
-- SMPC: Delay all commands for slightly longer to allow Quake (EU) to boot.
+- SMPC: Delay all commands for slightly longer to allow Quake (EU) to boot with normal CD read speed (2x).
 - SMPC: Fix automatic switch to PAL or NTSC to match area code more consistently.
 - System: Only hard reset if SMPC area code actually changed.
 - System: Tighten synchronization between SCU and SH-2 CPUs. Improves stability on WipEout (USA). (#202)
@@ -74,7 +74,7 @@
 - VDP2: Apply per-dot special color calculations to bitmap BGs. Fixes translucent UI in The Story of Thor. (#152)
 - VDP2: Don't update line/back screen color, line screen scroll or rotation parameters when the display is disabled. Fixes blank screen during Sega Rally Championship boot up.
 - VDP2: Fix per-dot special priority function. Fixes BG priority issues in Waku Waku Puyo Puyo Dungeon.
-- VDP2: Fix single-density interlaced mode.
+- VDP2: Fix single-density interlaced mode not actually interlacing the image.
 - VDP2: Fix sprite layer display when rotation mode is enabled. Fixes sliding 3D graphics on Hang-On GP and Highway 2000. (#167, #208, #277)
 - VDP2: Fix transparent VDP1 color data handling. Fixes missing graphics in Rayman's level select screens and Bubble Bobble's sky in the title screen. (#262)
 - VDP2: Fix window short-circuiting logic. Fixes missing ground in Final Fight Revenge and incorrect UI elements in Sakura Taisen. (#104, #253)
