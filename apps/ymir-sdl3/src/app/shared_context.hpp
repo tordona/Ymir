@@ -116,8 +116,14 @@ struct SharedContext {
         std::chrono::steady_clock::time_point nextFrameTarget{};    // target time for next frame
         std::chrono::steady_clock::time_point nextEmuFrameTarget{}; // target time for next frame in emu thread
         std::chrono::steady_clock::duration frameInterval{};        // interval between frames
-        uint64 dupFrames = 0; // number of frames to duplicate in fullscreen mode to maintain high GUI frame rate
-        uint64 dupFrameCounter = 0;
+
+        // Duplicate frames in fullscreen mode to maintain high GUI frame rate when running at low speeds
+        uint64 dupGUIFrames = 0;
+        uint64 dupGUIFrameCounter = 0;
+
+        // Skip frames in fullscreen mode to stay below display refresh rate when running at high speeds
+        uint64 skipEmuFrames = 0;
+        uint64 skipEmuFrameCounter = 0;
 
         uint64 VDP2Frames = 0;
         uint64 VDP1Frames = 0;
