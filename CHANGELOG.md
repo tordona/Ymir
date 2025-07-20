@@ -1,14 +1,5 @@
 # Ymir changelog
 
-## Version 0.1.6+1
-
-### New features and improvements
-
-### Fixes
-
-- App: Disable emulator-GUI thread syncing when not in full screen mode. Fixes emulator slowing down when running at 100% speed on displays with refresh rate lower than 60 Hz.
-
-
 ## Version 0.1.6
 
 ### New features and improvements
@@ -20,7 +11,9 @@
 - App: Added option to remember window position and size. (#4)
 - App: Added save states to File menu.
 - App: Added simple message overlay system to display some basic notifications. (#288)
+- App: Disable emulator-GUI thread syncing when not in full screen mode. Fixes emulator slowing down when running at 100% speed on displays with refresh rate lower than 60 Hz.
 - App: Display emulation speed in title bar and under speed indicator, and add a new indicator for slow motion. (#16)
+- App: Fix frame pacing and speed limiter on 50 and 60 Hz displays.
 - App: Improve full screen frame pacing even further by spin-waiting for up to 1 ms before the frame presentation target.
 - App: Include timestamp on save states.
 - App: Notify about loading/saving save states or switching save state slots.
