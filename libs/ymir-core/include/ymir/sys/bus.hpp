@@ -47,7 +47,8 @@ class Bus {
     static constexpr uint32 kAddressBits = 27; // TODO: turn this into a class template parameter
     static constexpr uint32 kAddressMask = (1u << kAddressBits) - 1;
     static constexpr uint32 kPageGranularityBits = 16;
-    static constexpr uint32 kPageMask = (1u << kPageGranularityBits) - 1;
+    static constexpr uint32 kPageSize = 1u << kPageGranularityBits;
+    static constexpr uint32 kPageMask = kPageSize - 1;
     static constexpr uint32 kPageCount = (1u << (kAddressBits - kPageGranularityBits));
 
 public:
@@ -131,7 +132,7 @@ public:
         }
     }
 
-    /// @brief Convenience method that maps an array of size N (which must be a power of two) to the specified range.
+    /// @brief Convenience method that maps an array to the specified range.
     ///
     /// Both normal and side-effect-free handlers are mapped.
     ///
@@ -139,36 +140,23 @@ public:
     /// If the array is larger than the range, only the range `array[0]..array[end-start-1]` is mapped.
     /// If the array is smaller than the range, the entire array is mirrored as many times as needed to fit the range.
     ///
-    /// @tparam N
+    /// @tparam N the size of the array. Must be a power of two and at least as large as the bus's page size
     /// @param[in] start the lower bound of the address range to map the handlers into
     /// @param[in] end the upper bound of the address range to map the handlers into
     /// @param array a reference to the array to be mapped
     /// @param writable indicates if the array is meant to be writable or read-only
     template <size_t N>
-        requires(bit::is_power_of_two(N))
+        requires(bit::is_power_of_two(N) && N >= kPageSize)
     void MapArray(uint32 start, uint32 end, std::array<uint8, N> &array, bool writable) {
         static constexpr uint32 kMask = N - 1;
 
-        static constexpr auto cast = [](void *ctx) { return static_cast<uint8 *>(ctx); };
-
-        MapBoth(
-            start, end, array.data(), //
-            [](uint32 addr, void *ctx) -> uint8 { return cast(ctx)[addr & kMask]; },
-            [](uint32 addr, void *ctx) -> uint16 { return util::ReadBE<uint16>(&cast(ctx)[addr & kMask]); },
-            [](uint32 addr, void *ctx) -> uint32 { return util::ReadBE<uint32>(&cast(ctx)[addr & kMask]); });
-
-        if (writable) {
-            MapBoth(
-                start, end, array.data(), //
-                [](uint32 addr, uint8 value, void *ctx) { cast(ctx)[addr & kMask] = value; },
-                [](uint32 addr, uint16 value, void *ctx) { util::WriteBE<uint16>(&cast(ctx)[addr & kMask], value); },
-                [](uint32 addr, uint32 value, void *ctx) { util::WriteBE<uint32>(&cast(ctx)[addr & kMask], value); });
-        } else {
-            MapBoth(
-                start, end, array.data(),      //
-                [](uint32, uint8, void *) {},  //
-                [](uint32, uint16, void *) {}, //
-                [](uint32, uint32, void *) {});
+        const uint32 startIndex = start >> kPageGranularityBits;
+        const uint32 endIndex = end >> kPageGranularityBits;
+        uint32 offset = 0;
+        for (uint32 i = startIndex; i <= endIndex; i++) {
+            m_pages[i].array = &array[offset & kMask];
+            m_pages[i].arrayWritable = writable;
+            offset += kPageSize;
         }
     }
 
@@ -185,6 +173,9 @@ public:
 
         const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
 
+        if (entry.array) {
+            return util::ReadBE<T>(&entry.array[address & kPageMask]);
+        }
         if constexpr (std::is_same_v<T, uint8>) {
             return entry.read8(address, entry.ctx);
         } else if constexpr (std::is_same_v<T, uint16>) {
@@ -207,6 +198,12 @@ public:
 
         const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
 
+        if (entry.array) {
+            if (entry.arrayWritable) {
+                util::WriteBE<T>(&entry.array[address & kPageMask], value);
+            }
+            return;
+        }
         if constexpr (std::is_same_v<T, uint8>) {
             entry.write8(address, value, entry.ctx);
         } else if constexpr (std::is_same_v<T, uint16>) {
@@ -229,6 +226,9 @@ public:
 
         const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
 
+        if (entry.array) {
+            return util::ReadBE<T>(&entry.array[address & kPageMask]);
+        }
         if constexpr (std::is_same_v<T, uint8>) {
             return entry.peek8(address, entry.ctx);
         } else if constexpr (std::is_same_v<T, uint16>) {
@@ -251,6 +251,12 @@ public:
 
         const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
 
+        if (entry.array) {
+            if (entry.arrayWritable) {
+                util::WriteBE<T>(&entry.array[address & kPageMask], value);
+            }
+            return;
+        }
         if constexpr (std::is_same_v<T, uint8>) {
             entry.poke8(address, value, entry.ctx);
         } else if constexpr (std::is_same_v<T, uint16>) {
@@ -265,6 +271,13 @@ public:
 
 private:
     struct alignas(64) MemoryPage {
+        // Fast path for simple arrays
+
+        uint8 *array = nullptr;
+        bool arrayWritable = false;
+
+        // Slow path for MMIO and other regions
+
         void *ctx = nullptr;
 
         FnRead8 read8 = [](uint32, void *) -> uint8 { return 0; };
@@ -292,6 +305,9 @@ private:
         const uint32 startIndex = start >> kPageGranularityBits;
         const uint32 endIndex = end >> kPageGranularityBits;
         for (uint32 i = startIndex; i <= endIndex; i++) {
+            m_pages[i].array = nullptr;
+            m_pages[i].arrayWritable = false;
+
             m_pages[i].ctx = context;
             if constexpr (normal) {
                 (AssignHandler<false>(m_pages[i], std::forward<THandlers>(handlers)), ...);
