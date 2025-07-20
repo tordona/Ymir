@@ -1,5 +1,14 @@
 # Ymir changelog
 
+## Version 0.1.6+1
+
+### New features and improvements
+
+### Fixes
+
+- App: Disable emulator-GUI thread syncing when not in full screen mode. Fixes emulator slowing down when running at 100% speed on displays with refresh rate lower than 60 Hz.
+
+
 ## Version 0.1.6
 
 ### New features and improvements
