@@ -82,6 +82,7 @@
 - VDP2: Handle bad window parameters set by Snatcher on the "Act 1" title screen (and probably many other places). (#259)
 - VDP2: Honor TVMD.BDCLMD when the display is disabled. Fixes screen transitions in Sega Rally Championship.
 - VDP2: Ignore vertical cell scroll read cycles for NBGs that have the effect disabled. Fixes wavy background effect on stage 2 of Magical Night Dreams - Cotton 2. (#255)
+- VDP2: Implemented rules for bitmap VRAM access delay. Fixes sliced images in Capcom Generation - Dai-5-shuu Kakutouka-tachi art gallery. (#254)
 - VDP2: Latch BG scroll registers earlier (at VBlank OUT) and latch vertical scroll registers (SCY[ID]Nn). Fixes bad vertical offset in Shinobi-X's NBG2 layer. (#193)
 - VDP2: Read first vertical cell scroll entry on bitmap backgrounds. Fixes misplaced lines in Street Fighter - Real Battle on Film FMVs. (#291)
 - VDP2: The first vertical cell scroll entry read does not update the address. Fixes background offset on the first Rayman boss stage.
