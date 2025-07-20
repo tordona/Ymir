@@ -58,6 +58,7 @@
 - SH2: Fix cache LRU AND update mask. Fixes FMV glitches on Capcom games, WipEout and Mr. Bones when SH-2 cache emulation is enabled. (#202, #247, #270)
 - SH2: TAS.B read should bypass cache.
 - SH2: The nIVECF pin of the SSH2 is disconnected, disallowing it from doing external interrupt vector fetches.
+- SMPC: Delay all commands for slightly longer to allow Quake (EU) to boot.
 - SMPC: Fix automatic switch to PAL or NTSC to match area code more consistently.
 - System: Only hard reset if SMPC area code actually changed.
 - System: Tighten synchronization between SCU and SH-2 CPUs. Improves stability on WipEout (USA). (#202)
