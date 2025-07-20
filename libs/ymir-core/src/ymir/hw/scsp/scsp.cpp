@@ -102,21 +102,7 @@ void SCSP::MapMemory(sys::Bus &bus) {
     static constexpr auto cast = [](void *ctx) -> SCSP & { return *static_cast<SCSP *>(ctx); };
 
     // WRAM
-    bus.MapBoth(
-        0x5A0'0000, 0x5A7'FFFF, this,
-        [](uint32 address, void *ctx) -> uint8 { return cast(ctx).ReadWRAM<uint8>(address); },
-        [](uint32 address, void *ctx) -> uint16 { return cast(ctx).ReadWRAM<uint16>(address); },
-        [](uint32 address, void *ctx) -> uint32 {
-            uint32 value = cast(ctx).ReadWRAM<uint16>(address + 0) << 16u;
-            value |= cast(ctx).ReadWRAM<uint16>(address + 2) << 0u;
-            return value;
-        },
-        [](uint32 address, uint8 value, void *ctx) { cast(ctx).WriteWRAM<uint8>(address, value); },
-        [](uint32 address, uint16 value, void *ctx) { cast(ctx).WriteWRAM<uint16>(address, value); },
-        [](uint32 address, uint32 value, void *ctx) {
-            cast(ctx).WriteWRAM<uint16>(address + 0, value >> 16u);
-            cast(ctx).WriteWRAM<uint16>(address + 2, value >> 0u);
-        });
+    bus.MapArray(0x5A0'0000, 0x5A7'FFFF, m_WRAM, true);
 
     // Unused hole
     bus.MapBoth(
