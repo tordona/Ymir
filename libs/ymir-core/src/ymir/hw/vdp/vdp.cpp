@@ -3330,7 +3330,7 @@ FORCE_INLINE void VDP::VDP2PrepareLine(uint32 y) {
     const VDP2Regs &regs2 = VDP2GetRegs();
 
     // Don't process anything if the display is disabled
-    if (!regs2.TVMD.DISP) {
+    if (!regs2.TVMD.DISP) [[unlikely]] {
         return;
     }
 
