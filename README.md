@@ -1,6 +1,6 @@
 # Ymir
 
-[![Release](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml) <a href="https://discord.gg/NN3A7n5dzn">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a> <a href="https://patreon.com/StrikerX3">![Patreon Shield](https://img.shields.io/badge/Patreon-F96854?style=flat&logo=patreon&logoColor=white)</a>
+[![Main release](https://github.com/StrikerX3/Ymir/actions/workflows/main-release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/release.yaml) [![Nightly release](https://github.com/StrikerX3/Ymir/actions/workflows/nightly-release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/nightly-release.yaml) <a href="https://discord.gg/NN3A7n5dzn">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a> <a href="https://patreon.com/StrikerX3">![Patreon Shield](https://img.shields.io/badge/Patreon-F96854?style=flat&logo=patreon&logoColor=white)</a>
 
 A work-in-progress Sega Saturn emulator.
 
