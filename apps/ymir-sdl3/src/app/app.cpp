@@ -3047,7 +3047,7 @@ void App::OpenWelcomeModal(bool scanIPLROMs) {
         ImGui::PushFont(m_context.fonts.display, m_context.fonts.sizes.display);
         ImGui::TextUnformatted("Ymir");
         ImGui::PopFont();
-        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
         ImGui::TextUnformatted("Welcome to Ymir!");
         ImGui::PopFont();
         ImGui::NewLine();
