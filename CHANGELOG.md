@@ -7,6 +7,7 @@
 - App: Added a button to copy the version string from the About window.
 - App: Auto-center About window whenever it is opened.
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
+- Input: Implemented Arcade Racer peripheral. (#29)
 
 ### Fixes
 

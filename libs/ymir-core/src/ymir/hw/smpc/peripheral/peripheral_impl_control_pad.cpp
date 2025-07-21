@@ -10,7 +10,7 @@ ControlPad::ControlPad(CBPeripheralReport callback)
 void ControlPad::Read(std::span<uint8> out) {
     assert(out.size() == 2);
 
-    // [0] 7-0 = left, right, down, up, start, A, C, B
+    // [0] 7-0 = right, left, down, up, start, A, C, B
     // [1] 7-3 = R, X, Y, Z, L; 2-0 = fixed 0b111
     const uint16 btnValue = static_cast<uint16>(m_report.buttons);
     out[0] = bit::extract<8, 15>(btnValue);

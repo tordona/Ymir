@@ -20,6 +20,12 @@ struct AnalogPadReport {
     uint8 r;        ///< Right analog trigger value (`0x00`=fully released, `0xFF`=fully pressed).
 };
 
+/// @brief ArcadeRacer report data.
+struct ArcadeRacerReport {
+    Button buttons; ///< Button states (1=released, 0=pressed).
+    uint8 wheel;    ///< Analog wheel value (`0x00`=left, `0x7F`=center/neutral, `0xFF`=right).
+};
+
 /// @brief A report to be filled when a peripheral is read.
 struct PeripheralReport {
     /// @brief The peripheral type being read.
@@ -36,6 +42,11 @@ struct PeripheralReport {
         ///
         /// Valid when `type` is `PeripheralType::AnalogPad`.
         AnalogPadReport analogPad;
+
+        /// @brief Arcade Racer report data.
+        ///
+        /// Valid when `type` is `PeripheralType::ArcadeRacer`.
+        ArcadeRacerReport arcadeRacer;
     } report;
 };
 

@@ -3,6 +3,7 @@
 #include <app/ui/window_base.hpp>
 
 #include <app/ui/views/settings/analog_pad_binds_view.hpp>
+#include <app/ui/views/settings/arcade_racer_binds_view.hpp>
 #include <app/ui/views/settings/control_pad_binds_view.hpp>
 
 namespace app::ui {
@@ -23,6 +24,7 @@ private:
 
     ControlPadBindsView m_controlPadView;
     AnalogPadBindsView m_analogPadView;
+    ArcadeRacerBindsView m_arcadeRacerView;
 };
 
 } // namespace app::ui

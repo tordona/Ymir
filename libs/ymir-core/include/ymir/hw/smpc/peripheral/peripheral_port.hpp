@@ -2,6 +2,7 @@
 
 #include "peripheral_base.hpp"
 #include "peripheral_impl_analog_pad.hpp"
+#include "peripheral_impl_arcade_racer.hpp"
 #include "peripheral_impl_control_pad.hpp"
 #include "peripheral_impl_null.hpp"
 
@@ -41,6 +42,10 @@ public:
 
     AnalogPad *ConnectAnalogPad() {
         return ConnectPeripheral<AnalogPad>(m_cbPeripheralReport);
+    }
+
+    ArcadeRacerPeripheral *ConnectArcadeRacer() {
+        return ConnectPeripheral<ArcadeRacerPeripheral>(m_cbPeripheralReport);
     }
 
     void DisconnectPeripherals() {

@@ -1242,6 +1242,58 @@ void App::RunEmulator() {
         registerModeSwitch(actions::analog_pad::SwitchMode);
     }
 
+    // Arcade Racer controller
+    {
+        using Button = peripheral::Button;
+
+        auto registerButton = [&](input::Action action, Button button) {
+            inputContext.SetButtonHandler(action, [=](void *context, const input::InputElement &, bool actuated) {
+                auto &input = *reinterpret_cast<SharedContext::ArcadeRacerInput *>(context);
+                if (actuated) {
+                    input.buttons &= ~button;
+                } else {
+                    input.buttons |= button;
+                }
+            });
+        };
+
+        auto registerDigitalWheel = [&](input::Action action, bool which /*false=L, true=R*/) {
+            inputContext.SetButtonHandler(
+                action, [=](void *context, const input::InputElement &element, bool actuated) {
+                    auto &input = *reinterpret_cast<SharedContext::ArcadeRacerInput *>(context);
+                    auto &map = input.analogWheelInputs;
+                    if (actuated) {
+                        map[element] = which ? 1.0f : -1.0f;
+                    } else {
+                        map[element] = 0.0f;
+                    }
+                    input.UpdateAnalogWheel();
+                });
+        };
+
+        auto registerAnalogWheel = [&](input::Action action) {
+            inputContext.SetAxis1DHandler(action, [](void *context, const input::InputElement &element, float value) {
+                auto &input = *reinterpret_cast<SharedContext::ArcadeRacerInput *>(context);
+                auto &map = input.analogWheelInputs;
+                map[element] = value;
+                input.UpdateAnalogWheel();
+            });
+        };
+
+        registerButton(actions::arcade_racer::A, Button::A);
+        registerButton(actions::arcade_racer::B, Button::B);
+        registerButton(actions::arcade_racer::C, Button::C);
+        registerButton(actions::arcade_racer::X, Button::X);
+        registerButton(actions::arcade_racer::Y, Button::Y);
+        registerButton(actions::arcade_racer::Z, Button::Z);
+        registerButton(actions::arcade_racer::Start, Button::Start);
+        registerButton(actions::arcade_racer::Up, Button::Up);
+        registerButton(actions::arcade_racer::Down, Button::Down);
+        registerDigitalWheel(actions::arcade_racer::WheelLeft, false);
+        registerDigitalWheel(actions::arcade_racer::WheelRight, true);
+        registerAnalogWheel(actions::arcade_racer::AnalogWheel);
+    }
+
     RebindInputs();
 
     // ---------------------------------
@@ -3380,6 +3432,14 @@ void App::ReadPeripheral(ymir::peripheral::PeripheralReport &report) {
         analogReport.y = std::clamp(inputs.y * 128.0f + 128.0f, 0.0f, 255.0f);
         analogReport.l = inputs.l * 255.0f;
         analogReport.r = inputs.r * 255.0f;
+        break;
+    }
+    case ymir::peripheral::PeripheralType::ArcadeRacer: //
+    {
+        auto &analogReport = report.report.arcadeRacer;
+        const auto &inputs = m_context.arcadeRacerInputs[port - 1];
+        analogReport.buttons = inputs.buttons;
+        analogReport.wheel = std::clamp(inputs.wheel * 128.0f + 128.0f, 0.0f, 255.0f);
         break;
     }
     default: break;

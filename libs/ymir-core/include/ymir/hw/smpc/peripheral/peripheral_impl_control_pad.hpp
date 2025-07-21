@@ -4,7 +4,7 @@
 
 namespace ymir::peripheral {
 
-/// @brief Implements the Saturn Control Pad (ID 0x0) with:
+/// @brief Implements the Saturn Control Pad (ID 0x0/2 bytes) with:
 /// - 6 digital buttons: ABC XYZ
 /// - 2 shoulder buttons: L R
 /// - Directional pad

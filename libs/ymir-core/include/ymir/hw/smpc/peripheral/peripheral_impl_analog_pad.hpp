@@ -4,7 +4,7 @@
 
 namespace ymir::peripheral {
 
-/// @brief Implements the 3D Control Pad (ID 0x0 in digital mode, 0x1 in analog mode) with:
+/// @brief Implements the 3D Control Pad (ID 0x0/2 bytes in digital mode, 0x1/6 bytes in analog mode) with:
 /// - 6 digital buttons: ABC XYZ
 /// - 2 analog triggers: L R
 /// - Directional pad

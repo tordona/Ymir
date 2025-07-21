@@ -125,6 +125,8 @@ FORCE_INLINE static void Parse(toml::node_view<toml::node> &node, peripheral::Pe
             value = peripheral::PeripheralType::ControlPad;
         } else if (*opt == "AnalogPad"s) {
             value = peripheral::PeripheralType::AnalogPad;
+        } else if (*opt == "ArcadeRacer"s) {
+            value = peripheral::PeripheralType::ArcadeRacer;
         }
     }
 }
@@ -282,6 +284,7 @@ FORCE_INLINE static const char *ToTOML(const peripheral::PeripheralType value) {
     case peripheral::PeripheralType::None: return "None";
     case peripheral::PeripheralType::ControlPad: return "ControlPad";
     case peripheral::PeripheralType::AnalogPad: return "AnalogPad";
+    case peripheral::PeripheralType::ArcadeRacer: return "ArcadeRacer";
     }
 }
 
@@ -448,6 +451,9 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     m_port1AnalogPadInputs.context = &m_context.analogPadInputs[0];
     m_port2AnalogPadInputs.context = &m_context.analogPadInputs[1];
 
+    m_port1ArcadeRacerInputs.context = &m_context.arcadeRacerInputs[0];
+    m_port2ArcadeRacerInputs.context = &m_context.arcadeRacerInputs[1];
+
     mapInput(m_actionInputs, hotkeys.openSettings);
     mapInput(m_actionInputs, hotkeys.toggleWindowedVideoOutput);
     mapInput(m_actionInputs, hotkeys.toggleFullScreen);
@@ -592,6 +598,34 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.analogR);
     mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.switchMode);
 
+    // Arcade Racer on port 1
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.a);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.b);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.c);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.x);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.y);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.z);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.start);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.up);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.down);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.wheelLeft);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.wheelRight);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.wheel);
+
+    // Arcade Racer on port 2
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.a);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.b);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.c);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.x);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.y);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.z);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.start);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.up);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.down);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.wheelLeft);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.wheelRight);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.wheel);
+
     ResetToDefaults();
 }
 
@@ -631,6 +665,9 @@ void Settings::ResetToDefaults() {
 
         (void)ResetBinds(input.port1.analogPadBinds, true);
         (void)ResetBinds(input.port2.analogPadBinds, true);
+
+        (void)ResetBinds(input.port1.arcadeRacerBinds, true);
+        (void)ResetBinds(input.port2.arcadeRacerBinds, true);
     }
 
     input.gamepad.lsDeadzone = 0.15f;
@@ -841,41 +878,55 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
                 Parse(tblPort, "PeripheralType", portSettings.type);
 
                 const char *controlPadName = configVersion == 1 ? "StandardPadBinds" : "ControlPadBinds";
-                if (auto tblControlPadBinds = tblPort[controlPadName]) {
-                    Parse(tblControlPadBinds, "A", portSettings.controlPadBinds.a);
-                    Parse(tblControlPadBinds, "B", portSettings.controlPadBinds.b);
-                    Parse(tblControlPadBinds, "C", portSettings.controlPadBinds.c);
-                    Parse(tblControlPadBinds, "X", portSettings.controlPadBinds.x);
-                    Parse(tblControlPadBinds, "Y", portSettings.controlPadBinds.y);
-                    Parse(tblControlPadBinds, "Z", portSettings.controlPadBinds.z);
-                    Parse(tblControlPadBinds, "L", portSettings.controlPadBinds.l);
-                    Parse(tblControlPadBinds, "R", portSettings.controlPadBinds.r);
-                    Parse(tblControlPadBinds, "Start", portSettings.controlPadBinds.start);
-                    Parse(tblControlPadBinds, "Up", portSettings.controlPadBinds.up);
-                    Parse(tblControlPadBinds, "Down", portSettings.controlPadBinds.down);
-                    Parse(tblControlPadBinds, "Left", portSettings.controlPadBinds.left);
-                    Parse(tblControlPadBinds, "Right", portSettings.controlPadBinds.right);
-                    Parse(tblControlPadBinds, "DPad", portSettings.controlPadBinds.dpad);
+                if (auto tblBinds = tblPort[controlPadName]) {
+                    Parse(tblBinds, "A", portSettings.controlPadBinds.a);
+                    Parse(tblBinds, "B", portSettings.controlPadBinds.b);
+                    Parse(tblBinds, "C", portSettings.controlPadBinds.c);
+                    Parse(tblBinds, "X", portSettings.controlPadBinds.x);
+                    Parse(tblBinds, "Y", portSettings.controlPadBinds.y);
+                    Parse(tblBinds, "Z", portSettings.controlPadBinds.z);
+                    Parse(tblBinds, "L", portSettings.controlPadBinds.l);
+                    Parse(tblBinds, "R", portSettings.controlPadBinds.r);
+                    Parse(tblBinds, "Start", portSettings.controlPadBinds.start);
+                    Parse(tblBinds, "Up", portSettings.controlPadBinds.up);
+                    Parse(tblBinds, "Down", portSettings.controlPadBinds.down);
+                    Parse(tblBinds, "Left", portSettings.controlPadBinds.left);
+                    Parse(tblBinds, "Right", portSettings.controlPadBinds.right);
+                    Parse(tblBinds, "DPad", portSettings.controlPadBinds.dpad);
                 }
-                if (auto tblAnalogPadBinds = tblPort["AnalogPadBinds"]) {
-                    Parse(tblAnalogPadBinds, "A", portSettings.analogPadBinds.a);
-                    Parse(tblAnalogPadBinds, "B", portSettings.analogPadBinds.b);
-                    Parse(tblAnalogPadBinds, "C", portSettings.analogPadBinds.c);
-                    Parse(tblAnalogPadBinds, "X", portSettings.analogPadBinds.x);
-                    Parse(tblAnalogPadBinds, "Y", portSettings.analogPadBinds.y);
-                    Parse(tblAnalogPadBinds, "Z", portSettings.analogPadBinds.z);
-                    Parse(tblAnalogPadBinds, "L", portSettings.analogPadBinds.l);
-                    Parse(tblAnalogPadBinds, "R", portSettings.analogPadBinds.r);
-                    Parse(tblAnalogPadBinds, "Start", portSettings.analogPadBinds.start);
-                    Parse(tblAnalogPadBinds, "Up", portSettings.analogPadBinds.up);
-                    Parse(tblAnalogPadBinds, "Down", portSettings.analogPadBinds.down);
-                    Parse(tblAnalogPadBinds, "Left", portSettings.analogPadBinds.left);
-                    Parse(tblAnalogPadBinds, "Right", portSettings.analogPadBinds.right);
-                    Parse(tblAnalogPadBinds, "DPad", portSettings.analogPadBinds.dpad);
-                    Parse(tblAnalogPadBinds, "AnalogStick", portSettings.analogPadBinds.analogStick);
-                    Parse(tblAnalogPadBinds, "AnalogL", portSettings.analogPadBinds.analogL);
-                    Parse(tblAnalogPadBinds, "AnalogR", portSettings.analogPadBinds.analogR);
-                    Parse(tblAnalogPadBinds, "SwitchMode", portSettings.analogPadBinds.switchMode);
+                if (auto tblBinds = tblPort["AnalogPadBinds"]) {
+                    Parse(tblBinds, "A", portSettings.analogPadBinds.a);
+                    Parse(tblBinds, "B", portSettings.analogPadBinds.b);
+                    Parse(tblBinds, "C", portSettings.analogPadBinds.c);
+                    Parse(tblBinds, "X", portSettings.analogPadBinds.x);
+                    Parse(tblBinds, "Y", portSettings.analogPadBinds.y);
+                    Parse(tblBinds, "Z", portSettings.analogPadBinds.z);
+                    Parse(tblBinds, "L", portSettings.analogPadBinds.l);
+                    Parse(tblBinds, "R", portSettings.analogPadBinds.r);
+                    Parse(tblBinds, "Start", portSettings.analogPadBinds.start);
+                    Parse(tblBinds, "Up", portSettings.analogPadBinds.up);
+                    Parse(tblBinds, "Down", portSettings.analogPadBinds.down);
+                    Parse(tblBinds, "Left", portSettings.analogPadBinds.left);
+                    Parse(tblBinds, "Right", portSettings.analogPadBinds.right);
+                    Parse(tblBinds, "DPad", portSettings.analogPadBinds.dpad);
+                    Parse(tblBinds, "AnalogStick", portSettings.analogPadBinds.analogStick);
+                    Parse(tblBinds, "AnalogL", portSettings.analogPadBinds.analogL);
+                    Parse(tblBinds, "AnalogR", portSettings.analogPadBinds.analogR);
+                    Parse(tblBinds, "SwitchMode", portSettings.analogPadBinds.switchMode);
+                }
+                if (auto tblBinds = tblPort["ArcadeRacerBinds"]) {
+                    Parse(tblBinds, "A", portSettings.arcadeRacerBinds.a);
+                    Parse(tblBinds, "B", portSettings.arcadeRacerBinds.b);
+                    Parse(tblBinds, "C", portSettings.arcadeRacerBinds.c);
+                    Parse(tblBinds, "X", portSettings.arcadeRacerBinds.x);
+                    Parse(tblBinds, "Y", portSettings.arcadeRacerBinds.y);
+                    Parse(tblBinds, "Z", portSettings.arcadeRacerBinds.z);
+                    Parse(tblBinds, "Start", portSettings.arcadeRacerBinds.start);
+                    Parse(tblBinds, "Up", portSettings.arcadeRacerBinds.up);
+                    Parse(tblBinds, "Down", portSettings.arcadeRacerBinds.down);
+                    Parse(tblBinds, "WheelLeft", portSettings.arcadeRacerBinds.wheelLeft);
+                    Parse(tblBinds, "WheelRight", portSettings.arcadeRacerBinds.wheelRight);
+                    Parse(tblBinds, "AnalogWheel", portSettings.arcadeRacerBinds.wheel);
                 }
             }
         };
@@ -1142,6 +1193,20 @@ SettingsSaveResult Settings::Save() {
                     {"AnalogR", ToTOML(input.port1.analogPadBinds.analogR)},
                     {"SwitchMode", ToTOML(input.port1.analogPadBinds.switchMode)},
                 }}},
+                {"ArcadeRacerBinds", toml::table{{
+                    {"A", ToTOML(input.port1.arcadeRacerBinds.a)},
+                    {"B", ToTOML(input.port1.arcadeRacerBinds.b)},
+                    {"C", ToTOML(input.port1.arcadeRacerBinds.c)},
+                    {"X", ToTOML(input.port1.arcadeRacerBinds.x)},
+                    {"Y", ToTOML(input.port1.arcadeRacerBinds.y)},
+                    {"Z", ToTOML(input.port1.arcadeRacerBinds.z)},
+                    {"Start", ToTOML(input.port1.arcadeRacerBinds.start)},
+                    {"Up", ToTOML(input.port1.arcadeRacerBinds.up)},
+                    {"Down", ToTOML(input.port1.arcadeRacerBinds.down)},
+                    {"WheelLeft", ToTOML(input.port1.arcadeRacerBinds.wheelLeft)},
+                    {"WheelRight", ToTOML(input.port1.arcadeRacerBinds.wheelRight)},
+                    {"Wheel", ToTOML(input.port1.arcadeRacerBinds.wheel)},
+                }}},
             }}},
             {"Port2", toml::table{{
                 {"PeripheralType", ToTOML(input.port2.type)},
@@ -1180,6 +1245,20 @@ SettingsSaveResult Settings::Save() {
                     {"AnalogL", ToTOML(input.port2.analogPadBinds.analogL)},
                     {"AnalogR", ToTOML(input.port2.analogPadBinds.analogR)},
                     {"SwitchMode", ToTOML(input.port2.analogPadBinds.switchMode)},
+                }}},
+                {"ArcadeRacerBinds", toml::table{{
+                    {"A", ToTOML(input.port2.arcadeRacerBinds.a)},
+                    {"B", ToTOML(input.port2.arcadeRacerBinds.b)},
+                    {"C", ToTOML(input.port2.arcadeRacerBinds.c)},
+                    {"X", ToTOML(input.port2.arcadeRacerBinds.x)},
+                    {"Y", ToTOML(input.port2.arcadeRacerBinds.y)},
+                    {"Z", ToTOML(input.port2.arcadeRacerBinds.z)},
+                    {"Start", ToTOML(input.port2.arcadeRacerBinds.start)},
+                    {"Up", ToTOML(input.port2.arcadeRacerBinds.up)},
+                    {"Down", ToTOML(input.port2.arcadeRacerBinds.down)},
+                    {"WheelLeft", ToTOML(input.port2.arcadeRacerBinds.wheelLeft)},
+                    {"WheelRight", ToTOML(input.port2.arcadeRacerBinds.wheelRight)},
+                    {"Wheel", ToTOML(input.port2.arcadeRacerBinds.wheel)},
                 }}},
             }}},
             {"GamepadLSDeadzone", input.gamepad.lsDeadzone.Get()},
@@ -1314,12 +1393,14 @@ void Settings::RebindInputs() {
     case peripheral::PeripheralType::None: break;
     case peripheral::PeripheralType::ControlPad: bindAll(m_port1ControlPadInputs); break;
     case peripheral::PeripheralType::AnalogPad: bindAll(m_port1AnalogPadInputs); break;
+    case peripheral::PeripheralType::ArcadeRacer: bindAll(m_port1ArcadeRacerInputs); break;
     }
 
     switch (m_context.settings.input.port2.type) {
     case peripheral::PeripheralType::None: break;
     case peripheral::PeripheralType::ControlPad: bindAll(m_port2ControlPadInputs); break;
     case peripheral::PeripheralType::AnalogPad: bindAll(m_port2AnalogPadInputs); break;
+    case peripheral::PeripheralType::ArcadeRacer: bindAll(m_port2ArcadeRacerInputs); break;
     }
 
     SyncInputSettings();
@@ -1349,6 +1430,12 @@ std::optional<input::MappedAction> Settings::UnbindInput(const input::InputEleme
         return std::nullopt;
     } else if (existingAction->context == &m_context.analogPadInputs[1] &&
                m_context.settings.input.port2.type != peripheral::PeripheralType::AnalogPad) {
+        return std::nullopt;
+    } else if (existingAction->context == &m_context.arcadeRacerInputs[0] &&
+               m_context.settings.input.port1.type != peripheral::PeripheralType::ArcadeRacer) {
+        return std::nullopt;
+    } else if (existingAction->context == &m_context.arcadeRacerInputs[1] &&
+               m_context.settings.input.port2.type != peripheral::PeripheralType::ArcadeRacer) {
         return std::nullopt;
     }
 
@@ -1401,12 +1488,14 @@ void Settings::SyncInputSettings() {
     case peripheral::PeripheralType::None: break;
     case peripheral::PeripheralType::ControlPad: sync(m_port1ControlPadInputs); break;
     case peripheral::PeripheralType::AnalogPad: sync(m_port1AnalogPadInputs); break;
+    case peripheral::PeripheralType::ArcadeRacer: sync(m_port1ArcadeRacerInputs); break;
     }
 
     switch (m_context.settings.input.port2.type) {
     case peripheral::PeripheralType::None: break;
     case peripheral::PeripheralType::ControlPad: sync(m_port2ControlPadInputs); break;
     case peripheral::PeripheralType::AnalogPad: sync(m_port2AnalogPadInputs); break;
+    case peripheral::PeripheralType::ArcadeRacer: sync(m_port2ArcadeRacerInputs); break;
     }
 }
 
@@ -1417,123 +1506,83 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     using Key = KeyboardKey;
     using GPBtn = GamepadButton;
 
-    std::unordered_set<MappedAction> previousActions{};
-    std::unordered_set<MappedAction> replacedActions{};
+    RebindContext rebindCtx{*this};
 
-    // TODO: deduplicate code
-    auto rebind = [&](InputBind &bind, const std::array<InputElement, kNumBindsPerInput> &defaults) {
-        // Unbind the old inputs and remember which actions were bound to them to exclude from the set of replaced
-        // actions
-        for (auto &input : bind.elements) {
-            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
-                previousActions.insert(*replaced);
-            }
-        }
+    rebindCtx.Rebind(hotkeys.openSettings, {KeyCombo{Mod::None, Key::F10}});
+    rebindCtx.Rebind(hotkeys.toggleWindowedVideoOutput, {KeyCombo{Mod::None, Key::F9}});
+    rebindCtx.Rebind(hotkeys.toggleFullScreen, {KeyCombo{Mod::Alt, Key::Return}});
+    rebindCtx.Rebind(hotkeys.toggleFrameRateOSD, {KeyCombo{Mod::Shift, Key::F1}});
+    rebindCtx.Rebind(hotkeys.nextFrameRateOSDPos, {KeyCombo{Mod::Control, Key::F1}});
+    rebindCtx.Rebind(hotkeys.prevFrameRateOSDPos, {KeyCombo{Mod::Control | Mod::Shift, Key::F1}});
 
-        // Replace the binds
-        bind.elements = defaults;
+    rebindCtx.Rebind(hotkeys.toggleMute, {KeyCombo{Mod::Control, Key::M}});
+    rebindCtx.Rebind(hotkeys.increaseVolume, {KeyCombo{Mod::Control, Key::EqualsPlus}});
+    rebindCtx.Rebind(hotkeys.decreaseVolume, {KeyCombo{Mod::Control, Key::MinusUnderscore}});
 
-        // Unbind the new inputs and add the replaced actions to the set if not previously bound to one of the actions
-        // we're replacing
-        for (auto &input : defaults) {
-            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
-                if (!previousActions.contains(*replaced)) {
-                    replacedActions.insert(*replaced);
+    rebindCtx.Rebind(hotkeys.loadDisc, {KeyCombo{Mod::Control, Key::O}});
+    rebindCtx.Rebind(hotkeys.ejectDisc, {KeyCombo{Mod::Control, Key::W}});
+    rebindCtx.Rebind(hotkeys.openCloseTray, {KeyCombo{Mod::Control, Key::T}});
 
-                    // Also remove the bind from the settings
-                    auto &map = GetInputMapForContext(replaced->context);
-                    if (map.map.contains(replaced->action)) {
-                        for (auto *replacedBind : map.map.at(replaced->action)) {
-                            assert(replacedBind != nullptr);
-                            for (auto &element : replacedBind->elements) {
-                                for (auto &defaultElem : defaults) {
-                                    if (element == defaultElem) {
-                                        element = {};
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    };
+    rebindCtx.Rebind(hotkeys.hardReset, {KeyCombo{Mod::Control, Key::R}});
+    rebindCtx.Rebind(hotkeys.softReset, {KeyCombo{Mod::Control | Mod::Shift, Key::R}});
+    rebindCtx.Rebind(hotkeys.resetButton, {KeyCombo{Mod::Shift, Key::R}});
 
-    rebind(hotkeys.openSettings, {KeyCombo{Mod::None, Key::F10}});
-    rebind(hotkeys.toggleWindowedVideoOutput, {KeyCombo{Mod::None, Key::F9}});
-    rebind(hotkeys.toggleFullScreen, {KeyCombo{Mod::Alt, Key::Return}});
-    rebind(hotkeys.toggleFrameRateOSD, {KeyCombo{Mod::Shift, Key::F1}});
-    rebind(hotkeys.nextFrameRateOSDPos, {KeyCombo{Mod::Control, Key::F1}});
-    rebind(hotkeys.prevFrameRateOSDPos, {KeyCombo{Mod::Control | Mod::Shift, Key::F1}});
+    rebindCtx.Rebind(hotkeys.turboSpeed, {KeyCombo{Mod::None, Key::Tab}});
+    rebindCtx.Rebind(hotkeys.turboSpeedHold, {KeyCombo{Mod::None, Key::GraveAccent}});
+    rebindCtx.Rebind(hotkeys.toggleAlternateSpeed, {KeyCombo{Mod::None, Key::Slash}});
+    rebindCtx.Rebind(hotkeys.increaseSpeed, {KeyCombo{Mod::None, Key::Period}});
+    rebindCtx.Rebind(hotkeys.decreaseSpeed, {KeyCombo{Mod::None, Key::Comma}});
+    rebindCtx.Rebind(hotkeys.increaseSpeedLarge, {KeyCombo{Mod::Shift, Key::Period}});
+    rebindCtx.Rebind(hotkeys.decreaseSpeedLarge, {KeyCombo{Mod::Shift, Key::Comma}});
+    rebindCtx.Rebind(hotkeys.resetSpeed, {KeyCombo{Mod::Control, Key::Slash}});
+    rebindCtx.Rebind(hotkeys.pauseResume, {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::None, Key::Spacebar}});
+    rebindCtx.Rebind(hotkeys.fwdFrameStep, {KeyCombo{Mod::None, Key::RightBracket}});
+    rebindCtx.Rebind(hotkeys.revFrameStep, {KeyCombo{Mod::None, Key::LeftBracket}});
+    rebindCtx.Rebind(hotkeys.rewind, {KeyCombo{Mod::None, Key::Backspace}});
+    rebindCtx.Rebind(hotkeys.toggleRewindBuffer, {KeyCombo{Mod::None, Key::F8}});
 
-    rebind(hotkeys.toggleMute, {KeyCombo{Mod::Control, Key::M}});
-    rebind(hotkeys.increaseVolume, {KeyCombo{Mod::Control, Key::EqualsPlus}});
-    rebind(hotkeys.decreaseVolume, {KeyCombo{Mod::Control, Key::MinusUnderscore}});
+    rebindCtx.Rebind(hotkeys.toggleDebugTrace, {KeyCombo{Mod::None, Key::F11}});
+    rebindCtx.Rebind(hotkeys.dumpMemory, {KeyCombo{Mod::Control, Key::F11}});
 
-    rebind(hotkeys.loadDisc, {KeyCombo{Mod::Control, Key::O}});
-    rebind(hotkeys.ejectDisc, {KeyCombo{Mod::Control, Key::W}});
-    rebind(hotkeys.openCloseTray, {KeyCombo{Mod::Control, Key::T}});
+    rebindCtx.Rebind(hotkeys.saveStates.quickLoad, {KeyCombo{Mod::None, Key::F3}});
+    rebindCtx.Rebind(hotkeys.saveStates.quickSave, {KeyCombo{Mod::None, Key::F2}});
 
-    rebind(hotkeys.hardReset, {KeyCombo{Mod::Control, Key::R}});
-    rebind(hotkeys.softReset, {KeyCombo{Mod::Control | Mod::Shift, Key::R}});
-    rebind(hotkeys.resetButton, {KeyCombo{Mod::Shift, Key::R}});
+    rebindCtx.Rebind(hotkeys.saveStates.select1, {KeyCombo{Mod::None, Key::Alpha1}});
+    rebindCtx.Rebind(hotkeys.saveStates.select2, {KeyCombo{Mod::None, Key::Alpha2}});
+    rebindCtx.Rebind(hotkeys.saveStates.select3, {KeyCombo{Mod::None, Key::Alpha3}});
+    rebindCtx.Rebind(hotkeys.saveStates.select4, {KeyCombo{Mod::None, Key::Alpha4}});
+    rebindCtx.Rebind(hotkeys.saveStates.select5, {KeyCombo{Mod::None, Key::Alpha5}});
+    rebindCtx.Rebind(hotkeys.saveStates.select6, {KeyCombo{Mod::None, Key::Alpha6}});
+    rebindCtx.Rebind(hotkeys.saveStates.select7, {KeyCombo{Mod::None, Key::Alpha7}});
+    rebindCtx.Rebind(hotkeys.saveStates.select8, {KeyCombo{Mod::None, Key::Alpha8}});
+    rebindCtx.Rebind(hotkeys.saveStates.select9, {KeyCombo{Mod::None, Key::Alpha9}});
+    rebindCtx.Rebind(hotkeys.saveStates.select10, {KeyCombo{Mod::None, Key::Alpha0}});
 
-    rebind(hotkeys.turboSpeed, {KeyCombo{Mod::None, Key::Tab}});
-    rebind(hotkeys.turboSpeedHold, {KeyCombo{Mod::None, Key::GraveAccent}});
-    rebind(hotkeys.toggleAlternateSpeed, {KeyCombo{Mod::None, Key::Slash}});
-    rebind(hotkeys.increaseSpeed, {KeyCombo{Mod::None, Key::Period}});
-    rebind(hotkeys.decreaseSpeed, {KeyCombo{Mod::None, Key::Comma}});
-    rebind(hotkeys.increaseSpeedLarge, {KeyCombo{Mod::Shift, Key::Period}});
-    rebind(hotkeys.decreaseSpeedLarge, {KeyCombo{Mod::Shift, Key::Comma}});
-    rebind(hotkeys.resetSpeed, {KeyCombo{Mod::Control, Key::Slash}});
-    rebind(hotkeys.pauseResume, {KeyCombo{Mod::None, Key::Pause}, KeyCombo{Mod::None, Key::Spacebar}});
-    rebind(hotkeys.fwdFrameStep, {KeyCombo{Mod::None, Key::RightBracket}});
-    rebind(hotkeys.revFrameStep, {KeyCombo{Mod::None, Key::LeftBracket}});
-    rebind(hotkeys.rewind, {KeyCombo{Mod::None, Key::Backspace}});
-    rebind(hotkeys.toggleRewindBuffer, {KeyCombo{Mod::None, Key::F8}});
+    rebindCtx.Rebind(hotkeys.saveStates.load1, {KeyCombo{Mod::Control, Key::Alpha1}});
+    rebindCtx.Rebind(hotkeys.saveStates.load2, {KeyCombo{Mod::Control, Key::Alpha2}});
+    rebindCtx.Rebind(hotkeys.saveStates.load3, {KeyCombo{Mod::Control, Key::Alpha3}});
+    rebindCtx.Rebind(hotkeys.saveStates.load4, {KeyCombo{Mod::Control, Key::Alpha4}});
+    rebindCtx.Rebind(hotkeys.saveStates.load5, {KeyCombo{Mod::Control, Key::Alpha5}});
+    rebindCtx.Rebind(hotkeys.saveStates.load6, {KeyCombo{Mod::Control, Key::Alpha6}});
+    rebindCtx.Rebind(hotkeys.saveStates.load7, {KeyCombo{Mod::Control, Key::Alpha7}});
+    rebindCtx.Rebind(hotkeys.saveStates.load8, {KeyCombo{Mod::Control, Key::Alpha8}});
+    rebindCtx.Rebind(hotkeys.saveStates.load9, {KeyCombo{Mod::Control, Key::Alpha9}});
+    rebindCtx.Rebind(hotkeys.saveStates.load10, {KeyCombo{Mod::Control, Key::Alpha0}});
 
-    rebind(hotkeys.toggleDebugTrace, {KeyCombo{Mod::None, Key::F11}});
-    rebind(hotkeys.dumpMemory, {KeyCombo{Mod::Control, Key::F11}});
-
-    rebind(hotkeys.saveStates.quickLoad, {KeyCombo{Mod::None, Key::F3}});
-    rebind(hotkeys.saveStates.quickSave, {KeyCombo{Mod::None, Key::F2}});
-
-    rebind(hotkeys.saveStates.select1, {KeyCombo{Mod::None, Key::Alpha1}});
-    rebind(hotkeys.saveStates.select2, {KeyCombo{Mod::None, Key::Alpha2}});
-    rebind(hotkeys.saveStates.select3, {KeyCombo{Mod::None, Key::Alpha3}});
-    rebind(hotkeys.saveStates.select4, {KeyCombo{Mod::None, Key::Alpha4}});
-    rebind(hotkeys.saveStates.select5, {KeyCombo{Mod::None, Key::Alpha5}});
-    rebind(hotkeys.saveStates.select6, {KeyCombo{Mod::None, Key::Alpha6}});
-    rebind(hotkeys.saveStates.select7, {KeyCombo{Mod::None, Key::Alpha7}});
-    rebind(hotkeys.saveStates.select8, {KeyCombo{Mod::None, Key::Alpha8}});
-    rebind(hotkeys.saveStates.select9, {KeyCombo{Mod::None, Key::Alpha9}});
-    rebind(hotkeys.saveStates.select10, {KeyCombo{Mod::None, Key::Alpha0}});
-
-    rebind(hotkeys.saveStates.load1, {KeyCombo{Mod::Control, Key::Alpha1}});
-    rebind(hotkeys.saveStates.load2, {KeyCombo{Mod::Control, Key::Alpha2}});
-    rebind(hotkeys.saveStates.load3, {KeyCombo{Mod::Control, Key::Alpha3}});
-    rebind(hotkeys.saveStates.load4, {KeyCombo{Mod::Control, Key::Alpha4}});
-    rebind(hotkeys.saveStates.load5, {KeyCombo{Mod::Control, Key::Alpha5}});
-    rebind(hotkeys.saveStates.load6, {KeyCombo{Mod::Control, Key::Alpha6}});
-    rebind(hotkeys.saveStates.load7, {KeyCombo{Mod::Control, Key::Alpha7}});
-    rebind(hotkeys.saveStates.load8, {KeyCombo{Mod::Control, Key::Alpha8}});
-    rebind(hotkeys.saveStates.load9, {KeyCombo{Mod::Control, Key::Alpha9}});
-    rebind(hotkeys.saveStates.load10, {KeyCombo{Mod::Control, Key::Alpha0}});
-
-    rebind(hotkeys.saveStates.save1, {KeyCombo{Mod::Shift, Key::Alpha1}});
-    rebind(hotkeys.saveStates.save2, {KeyCombo{Mod::Shift, Key::Alpha2}});
-    rebind(hotkeys.saveStates.save3, {KeyCombo{Mod::Shift, Key::Alpha3}});
-    rebind(hotkeys.saveStates.save4, {KeyCombo{Mod::Shift, Key::Alpha4}});
-    rebind(hotkeys.saveStates.save5, {KeyCombo{Mod::Shift, Key::Alpha5}});
-    rebind(hotkeys.saveStates.save6, {KeyCombo{Mod::Shift, Key::Alpha6}});
-    rebind(hotkeys.saveStates.save7, {KeyCombo{Mod::Shift, Key::Alpha7}});
-    rebind(hotkeys.saveStates.save8, {KeyCombo{Mod::Shift, Key::Alpha8}});
-    rebind(hotkeys.saveStates.save9, {KeyCombo{Mod::Shift, Key::Alpha9}});
-    rebind(hotkeys.saveStates.save10, {KeyCombo{Mod::Shift, Key::Alpha0}});
+    rebindCtx.Rebind(hotkeys.saveStates.save1, {KeyCombo{Mod::Shift, Key::Alpha1}});
+    rebindCtx.Rebind(hotkeys.saveStates.save2, {KeyCombo{Mod::Shift, Key::Alpha2}});
+    rebindCtx.Rebind(hotkeys.saveStates.save3, {KeyCombo{Mod::Shift, Key::Alpha3}});
+    rebindCtx.Rebind(hotkeys.saveStates.save4, {KeyCombo{Mod::Shift, Key::Alpha4}});
+    rebindCtx.Rebind(hotkeys.saveStates.save5, {KeyCombo{Mod::Shift, Key::Alpha5}});
+    rebindCtx.Rebind(hotkeys.saveStates.save6, {KeyCombo{Mod::Shift, Key::Alpha6}});
+    rebindCtx.Rebind(hotkeys.saveStates.save7, {KeyCombo{Mod::Shift, Key::Alpha7}});
+    rebindCtx.Rebind(hotkeys.saveStates.save8, {KeyCombo{Mod::Shift, Key::Alpha8}});
+    rebindCtx.Rebind(hotkeys.saveStates.save9, {KeyCombo{Mod::Shift, Key::Alpha9}});
+    rebindCtx.Rebind(hotkeys.saveStates.save10, {KeyCombo{Mod::Shift, Key::Alpha0}});
 
     RebindInputs();
 
-    return replacedActions;
+    return rebindCtx.GetReplacedActions();
 }
 
 std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ControlPadBinds &binds, bool useDefaults) {
@@ -1543,102 +1592,60 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Contro
     using GPBtn = GamepadButton;
     using GPAxis2 = GamepadAxis2D;
 
-    std::unordered_set<MappedAction> previousActions{};
-    std::unordered_set<MappedAction> replacedActions{};
+    RebindContext rebindCtx{*this};
 
-    // TODO: deduplicate code
-    auto rebind = [&](InputBind &bind, const std::array<InputElement, kNumBindsPerInput> &defaults) {
-        // Unbind the old inputs and remember which actions were bound to them to exclude from the set of replaced
-        // actions
-        for (auto &input : bind.elements) {
-            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
-                previousActions.insert(*replaced);
-            }
-        }
-
-        // Replace the binds
-        bind.elements = defaults;
-
-        // Unbind the new inputs and add the replaced actions to the set if not previously bound to one of the actions
-        // we're replacing
-        for (auto &input : defaults) {
-            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
-                if (!previousActions.contains(*replaced)) {
-                    replacedActions.insert(*replaced);
-
-                    // Also remove the bind from the settings
-                    auto &map = GetInputMapForContext(replaced->context);
-                    if (map.map.contains(replaced->action)) {
-                        for (auto *replacedBind : map.map.at(replaced->action)) {
-                            assert(replacedBind != nullptr);
-                            for (auto &element : replacedBind->elements) {
-                                for (auto &defaultElem : defaults) {
-                                    if (element == defaultElem) {
-                                        element = {};
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    if (useDefaults) {
-        if (&binds == &input.port1.controlPadBinds) {
-            // Default port 1 Control Pad controller inputs
-            rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
-            rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
-            rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
-            rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
-            rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
-            rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
-            rebind(binds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
-            rebind(binds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
-            rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
-            rebind(binds.up, {{{Key::W}}});
-            rebind(binds.down, {{{Key::S}}});
-            rebind(binds.left, {{{Key::A}}});
-            rebind(binds.right, {{{Key::D}}});
-            rebind(binds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
-        } else if (&binds == &input.port2.controlPadBinds) {
-            // Default port 2 Control Pad controller inputs
-            rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
-            rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
-            rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
-            rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
-            rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
-            rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
-            rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}});
-            rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}});
-            rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
-            rebind(binds.up, {{{Key::Up}, {Key::Home}}});
-            rebind(binds.down, {{{Key::Down}, {Key::End}}});
-            rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
-            rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
-            rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
-        }
-    } else {
-        rebind(binds.a, {});
-        rebind(binds.b, {});
-        rebind(binds.c, {});
-        rebind(binds.x, {});
-        rebind(binds.y, {});
-        rebind(binds.z, {});
-        rebind(binds.l, {});
-        rebind(binds.r, {});
-        rebind(binds.start, {});
-        rebind(binds.up, {});
-        rebind(binds.down, {});
-        rebind(binds.left, {});
-        rebind(binds.right, {});
-        rebind(binds.dpad, {});
+    if (!useDefaults) {
+        rebindCtx.Rebind(binds.a, {});
+        rebindCtx.Rebind(binds.b, {});
+        rebindCtx.Rebind(binds.c, {});
+        rebindCtx.Rebind(binds.x, {});
+        rebindCtx.Rebind(binds.y, {});
+        rebindCtx.Rebind(binds.z, {});
+        rebindCtx.Rebind(binds.l, {});
+        rebindCtx.Rebind(binds.r, {});
+        rebindCtx.Rebind(binds.start, {});
+        rebindCtx.Rebind(binds.up, {});
+        rebindCtx.Rebind(binds.down, {});
+        rebindCtx.Rebind(binds.left, {});
+        rebindCtx.Rebind(binds.right, {});
+        rebindCtx.Rebind(binds.dpad, {});
+    } else if (&binds == &input.port1.controlPadBinds) {
+        // Default port 1 Control Pad controller inputs
+        rebindCtx.Rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
+        rebindCtx.Rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
+        rebindCtx.Rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
+        rebindCtx.Rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
+        rebindCtx.Rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.l, {{{Key::Q}, {0, GPBtn::LeftTrigger}}});
+        rebindCtx.Rebind(binds.r, {{{Key::E}, {0, GPBtn::RightTrigger}}});
+        rebindCtx.Rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
+        rebindCtx.Rebind(binds.up, {{{Key::W}}});
+        rebindCtx.Rebind(binds.down, {{{Key::S}}});
+        rebindCtx.Rebind(binds.left, {{{Key::A}}});
+        rebindCtx.Rebind(binds.right, {{{Key::D}}});
+        rebindCtx.Rebind(binds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
+    } else if (&binds == &input.port2.controlPadBinds) {
+        // Default port 2 Control Pad controller inputs
+        rebindCtx.Rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
+        rebindCtx.Rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
+        rebindCtx.Rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
+        rebindCtx.Rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
+        rebindCtx.Rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}, {1, GPBtn::LeftTrigger}}});
+        rebindCtx.Rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}, {1, GPBtn::RightTrigger}}});
+        rebindCtx.Rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
+        rebindCtx.Rebind(binds.up, {{{Key::Up}, {Key::Home}}});
+        rebindCtx.Rebind(binds.down, {{{Key::Down}, {Key::End}}});
+        rebindCtx.Rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
+        rebindCtx.Rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
+        rebindCtx.Rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
     }
 
     RebindInputs();
 
-    return replacedActions;
+    return rebindCtx.GetReplacedActions();
 }
 
 std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::AnalogPadBinds &binds, bool useDefaults) {
@@ -1649,114 +1656,134 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Analog
     using GPAxis1 = GamepadAxis1D;
     using GPAxis2 = GamepadAxis2D;
 
-    std::unordered_set<MappedAction> previousActions{};
-    std::unordered_set<MappedAction> replacedActions{};
+    RebindContext rebindCtx{*this};
 
-    // TODO: deduplicate code
-    auto rebind = [&](InputBind &bind, const std::array<InputElement, kNumBindsPerInput> &defaults) {
-        // Unbind the old inputs and remember which actions were bound to them to exclude from the set of replaced
-        // actions
-        for (auto &input : bind.elements) {
-            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
-                previousActions.insert(*replaced);
-            }
-        }
-
-        // Replace the binds
-        bind.elements = defaults;
-
-        // Unbind the new inputs and add the replaced actions to the set if not previously bound to one of the actions
-        // we're replacing
-        for (auto &input : defaults) {
-            if (auto replaced = m_context.inputContext.UnmapInput(input)) {
-                if (!previousActions.contains(*replaced)) {
-                    replacedActions.insert(*replaced);
-
-                    // Also remove the bind from the settings
-                    auto &map = GetInputMapForContext(replaced->context);
-                    if (map.map.contains(replaced->action)) {
-                        for (auto *replacedBind : map.map.at(replaced->action)) {
-                            assert(replacedBind != nullptr);
-                            for (auto &element : replacedBind->elements) {
-                                for (auto &defaultElem : defaults) {
-                                    if (element == defaultElem) {
-                                        element = {};
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    if (useDefaults) {
-        if (&binds == &input.port1.analogPadBinds) {
-            // Default port 1 Control Pad controller inputs
-            rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
-            rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
-            rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
-            rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
-            rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
-            rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
-            rebind(binds.l, {{{Key::Q}}});
-            rebind(binds.r, {{{Key::E}}});
-            rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
-            rebind(binds.up, {{{Key::W}}});
-            rebind(binds.down, {{{Key::S}}});
-            rebind(binds.left, {{{Key::A}}});
-            rebind(binds.right, {{{Key::D}}});
-            rebind(binds.dpad, {{{0, GPAxis2::DPad}}});
-            rebind(binds.analogStick, {{{0, GPAxis2::LeftStick}}});
-            rebind(binds.analogL, {{{0, GPAxis1::LeftTrigger}}});
-            rebind(binds.analogR, {{{0, GPAxis1::RightTrigger}}});
-            rebind(binds.switchMode, {{{0, GPBtn::LeftThumb}}});
-        } else if (&binds == &input.port2.analogPadBinds) {
-            // Default port 2 Control Pad controller inputs
-            rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
-            rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
-            rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
-            rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
-            rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
-            rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
-            rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}}});
-            rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}}});
-            rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
-            rebind(binds.up, {{{Key::Up}, {Key::Home}}});
-            rebind(binds.down, {{{Key::Down}, {Key::End}}});
-            rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
-            rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
-            rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
-            rebind(binds.analogStick, {{{1, GPAxis2::LeftStick}}});
-            rebind(binds.analogL, {{{1, GPAxis1::LeftTrigger}}});
-            rebind(binds.analogR, {{{1, GPAxis1::RightTrigger}}});
-            rebind(binds.switchMode, {{{1, GPBtn::LeftThumb}}});
-        }
-    } else {
-        rebind(binds.a, {});
-        rebind(binds.b, {});
-        rebind(binds.c, {});
-        rebind(binds.x, {});
-        rebind(binds.y, {});
-        rebind(binds.z, {});
-        rebind(binds.l, {});
-        rebind(binds.r, {});
-        rebind(binds.start, {});
-        rebind(binds.up, {});
-        rebind(binds.down, {});
-        rebind(binds.left, {});
-        rebind(binds.right, {});
-        rebind(binds.dpad, {});
-        rebind(binds.analogStick, {});
-        rebind(binds.analogL, {});
-        rebind(binds.analogR, {});
-        rebind(binds.switchMode, {});
+    if (!useDefaults) {
+        rebindCtx.Rebind(binds.a, {});
+        rebindCtx.Rebind(binds.b, {});
+        rebindCtx.Rebind(binds.c, {});
+        rebindCtx.Rebind(binds.x, {});
+        rebindCtx.Rebind(binds.y, {});
+        rebindCtx.Rebind(binds.z, {});
+        rebindCtx.Rebind(binds.l, {});
+        rebindCtx.Rebind(binds.r, {});
+        rebindCtx.Rebind(binds.start, {});
+        rebindCtx.Rebind(binds.up, {});
+        rebindCtx.Rebind(binds.down, {});
+        rebindCtx.Rebind(binds.left, {});
+        rebindCtx.Rebind(binds.right, {});
+        rebindCtx.Rebind(binds.dpad, {});
+        rebindCtx.Rebind(binds.analogStick, {});
+        rebindCtx.Rebind(binds.analogL, {});
+        rebindCtx.Rebind(binds.analogR, {});
+        rebindCtx.Rebind(binds.switchMode, {});
+    } else if (&binds == &input.port1.analogPadBinds) {
+        // Default port 1 Control Pad controller inputs
+        rebindCtx.Rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
+        rebindCtx.Rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
+        rebindCtx.Rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
+        rebindCtx.Rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
+        rebindCtx.Rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.l, {{{Key::Q}}});
+        rebindCtx.Rebind(binds.r, {{{Key::E}}});
+        rebindCtx.Rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
+        rebindCtx.Rebind(binds.up, {{{Key::W}}});
+        rebindCtx.Rebind(binds.down, {{{Key::S}}});
+        rebindCtx.Rebind(binds.left, {{{Key::A}}});
+        rebindCtx.Rebind(binds.right, {{{Key::D}}});
+        rebindCtx.Rebind(binds.dpad, {{{0, GPAxis2::DPad}}});
+        rebindCtx.Rebind(binds.analogStick, {{{0, GPAxis2::LeftStick}}});
+        rebindCtx.Rebind(binds.analogL, {{{0, GPAxis1::LeftTrigger}}});
+        rebindCtx.Rebind(binds.analogR, {{{0, GPAxis1::RightTrigger}}});
+        rebindCtx.Rebind(binds.switchMode, {{{0, GPBtn::LeftThumb}}});
+    } else if (&binds == &input.port2.analogPadBinds) {
+        // Default port 2 Control Pad controller inputs
+        rebindCtx.Rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
+        rebindCtx.Rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
+        rebindCtx.Rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
+        rebindCtx.Rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
+        rebindCtx.Rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.l, {{{Key::KeyPad7}, {Key::Insert}}});
+        rebindCtx.Rebind(binds.r, {{{Key::KeyPad9}, {Key::PageUp}}});
+        rebindCtx.Rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
+        rebindCtx.Rebind(binds.up, {{{Key::Up}, {Key::Home}}});
+        rebindCtx.Rebind(binds.down, {{{Key::Down}, {Key::End}}});
+        rebindCtx.Rebind(binds.left, {{{Key::Left}, {Key::Delete}}});
+        rebindCtx.Rebind(binds.right, {{{Key::Right}, {Key::PageDown}}});
+        rebindCtx.Rebind(binds.dpad, {{{1, GPAxis2::DPad}, {1, GPAxis2::LeftStick}}});
+        rebindCtx.Rebind(binds.analogStick, {{{1, GPAxis2::LeftStick}}});
+        rebindCtx.Rebind(binds.analogL, {{{1, GPAxis1::LeftTrigger}}});
+        rebindCtx.Rebind(binds.analogR, {{{1, GPAxis1::RightTrigger}}});
+        rebindCtx.Rebind(binds.switchMode, {{{1, GPBtn::LeftThumb}}});
     }
 
     RebindInputs();
 
-    return replacedActions;
+    return rebindCtx.GetReplacedActions();
+}
+
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ArcadeRacerBinds &binds, bool useDefaults) {
+    using namespace input;
+
+    using Key = KeyboardKey;
+    using GPBtn = GamepadButton;
+    using GPAxis1 = GamepadAxis1D;
+
+    RebindContext rebindCtx{*this};
+
+    if (!useDefaults) {
+        rebindCtx.Rebind(binds.a, {});
+        rebindCtx.Rebind(binds.b, {});
+        rebindCtx.Rebind(binds.c, {});
+        rebindCtx.Rebind(binds.x, {});
+        rebindCtx.Rebind(binds.y, {});
+        rebindCtx.Rebind(binds.z, {});
+        rebindCtx.Rebind(binds.start, {});
+        rebindCtx.Rebind(binds.up, {});
+        rebindCtx.Rebind(binds.down, {});
+        rebindCtx.Rebind(binds.wheelLeft, {});
+        rebindCtx.Rebind(binds.wheelRight, {});
+        rebindCtx.Rebind(binds.wheel, {});
+    } else if (&binds == &input.port1.arcadeRacerBinds) {
+        // Default port 1 Arcade Racer controller inputs
+        rebindCtx.Rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
+        rebindCtx.Rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
+        rebindCtx.Rebind(binds.c, {{{Key::L}, {0, GPBtn::B}}});
+        rebindCtx.Rebind(binds.x, {{{Key::U}, {0, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
+        rebindCtx.Rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
+        rebindCtx.Rebind(binds.up, {{{Key::W}, {0, GPBtn::DpadUp}, {0, GPBtn::RightTrigger}, {0, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.down,
+                         {{{Key::S}, {0, GPBtn::DpadDown}, {0, GPBtn::LeftTrigger}, {0, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.wheelLeft, {{{Key::A}}});
+        rebindCtx.Rebind(binds.wheelRight, {{{Key::D}}});
+        rebindCtx.Rebind(binds.wheel, {{{0, GPAxis1::LeftStickX}}});
+    } else if (&binds == &input.port2.arcadeRacerBinds) {
+        // Default port 2 Arcade Racer controller inputs
+        rebindCtx.Rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
+        rebindCtx.Rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
+        rebindCtx.Rebind(binds.c, {{{Key::KeyPad3}, {1, GPBtn::B}}});
+        rebindCtx.Rebind(binds.x, {{{Key::KeyPad4}, {1, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
+        rebindCtx.Rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
+        rebindCtx.Rebind(
+            binds.up,
+            {{{Key::Up}, {Key::Home}, {1, GPBtn::DpadUp}, {1, GPBtn::RightTrigger}, {1, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(
+            binds.down,
+            {{{Key::Down}, {Key::End}, {1, GPBtn::DpadDown}, {1, GPBtn::LeftTrigger}, {1, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.wheelLeft, {{{Key::Left}, {Key::Delete}}});
+        rebindCtx.Rebind(binds.wheelRight, {{{Key::Right}, {Key::PageDown}}});
+        rebindCtx.Rebind(binds.wheel, {{{1, GPAxis1::LeftStickX}}});
+    }
+
+    RebindInputs();
+
+    return rebindCtx.GetReplacedActions();
 }
 
 Settings::InputMap &Settings::GetInputMapForContext(void *context) {
@@ -1772,6 +1799,12 @@ Settings::InputMap &Settings::GetInputMapForContext(void *context) {
     } else if (context == &m_context.analogPadInputs[1]) {
         // Port 2 3D Control Pad inputs
         return m_port2AnalogPadInputs;
+    } else if (context == &m_context.arcadeRacerInputs[0]) {
+        // Port 1 Arcade Racer inputs
+        return m_port1ArcadeRacerInputs;
+    } else if (context == &m_context.arcadeRacerInputs[1]) {
+        // Port 2 Arcade Racer inputs
+        return m_port2ArcadeRacerInputs;
     } else {
         // Hotkeys
         return m_actionInputs;
@@ -1841,6 +1874,44 @@ uint32 CapacityToSize(Settings::Cartridge::BackupRAM::Capacity capacity) {
     case Settings::Cartridge::BackupRAM::Capacity::_16Mbit: return 2_MiB;
     case Settings::Cartridge::BackupRAM::Capacity::_32Mbit: return 4_MiB;
     default: return 4_MiB;
+    }
+}
+
+void Settings::RebindContext::Rebind(input::InputBind &bind,
+                                     const std::array<input::InputElement, input::kNumBindsPerInput> &defaults) {
+    // Unbind the old inputs and remember which actions were bound to them to exclude from the set of replaced actions
+    for (auto &input : bind.elements) {
+        if (auto replaced = m_sharedCtx.inputContext.UnmapInput(input)) {
+            m_previousActions.insert(*replaced);
+        }
+    }
+
+    // Replace the binds
+    bind.elements = defaults;
+
+    // Unbind the new inputs and add the replaced actions to the set if not previously bound to one of the actions we're
+    // replacing
+    for (auto &input : defaults) {
+        if (auto replaced = m_sharedCtx.inputContext.UnmapInput(input)) {
+            if (!m_previousActions.contains(*replaced)) {
+                m_replacedActions.insert(*replaced);
+
+                // Also remove the bind from the settings
+                auto &map = m_settings.GetInputMapForContext(replaced->context);
+                if (map.map.contains(replaced->action)) {
+                    for (auto *replacedBind : map.map.at(replaced->action)) {
+                        assert(replacedBind != nullptr);
+                        for (auto &element : replacedBind->elements) {
+                            for (auto &defaultElem : defaults) {
+                                if (element == defaultElem) {
+                                    element = {};
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

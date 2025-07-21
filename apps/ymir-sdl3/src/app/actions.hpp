@@ -208,4 +208,21 @@ namespace analog_pad {
 
 } // namespace analog_pad
 
+namespace arcade_racer {
+
+    inline constexpr auto A = input::Action::Button(0xC03000, "Arcade Racer", "A");
+    inline constexpr auto B = input::Action::Button(0xC03001, "Arcade Racer", "B");
+    inline constexpr auto C = input::Action::Button(0xC03002, "Arcade Racer", "C");
+    inline constexpr auto X = input::Action::Button(0xC03003, "Arcade Racer", "X");
+    inline constexpr auto Y = input::Action::Button(0xC03004, "Arcade Racer", "Y");
+    inline constexpr auto Z = input::Action::Button(0xC03005, "Arcade Racer", "Z");
+    inline constexpr auto Start = input::Action::Button(0xC03006, "Arcade Racer", "Start");
+    inline constexpr auto Up = input::Action::Button(0xC03007, "Arcade Racer", "Gear up");
+    inline constexpr auto Down = input::Action::Button(0xC03008, "Arcade Racer", "Gear down");
+    inline constexpr auto WheelLeft = input::Action::Button(0xC0300A, "Arcade Racer", "Wheel left");
+    inline constexpr auto WheelRight = input::Action::Button(0xC0300B, "Arcade Racer", "Wheel right");
+    inline constexpr auto AnalogWheel = input::Action::Axis1D(0xC03009, "Arcade Racer", "Wheel (analog)");
+
+} // namespace arcade_racer
+
 } // namespace app::actions

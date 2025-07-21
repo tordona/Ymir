@@ -27,9 +27,12 @@ void AnalogPad::UpdateInputs() {
     }
 
     auto mapAnalogToButton = [&](uint8 analogValue, Button button) {
-        if (analogValue <= 85) {
+        static constexpr uint8 kAnalogToDigitalOffThreshold = 85;
+        static constexpr uint8 kAnalogToDigitalOnThreshold = 145;
+
+        if (analogValue <= kAnalogToDigitalOffThreshold) {
             m_report.buttons |= button;
-        } else if (analogValue >= 145) {
+        } else if (analogValue >= kAnalogToDigitalOnThreshold) {
             m_report.buttons &= ~button;
         }
     };
@@ -44,7 +47,7 @@ uint8 AnalogPad::GetReportLength() const {
 void AnalogPad::Read(std::span<uint8> out) {
     const auto btnValue = static_cast<uint16>(m_report.buttons);
     if (m_analogMode) {
-        // [0] 7-0 = left, right, down, up, start, A, C, B
+        // [0] 7-0 = right, left, down, up, start, A, C, B
         // [1] 7-3 = R, X, Y, Z, L; 2-0 = fixed 0b100
         // [2] AX7-0
         // [3] AY7-0
@@ -58,7 +61,7 @@ void AnalogPad::Read(std::span<uint8> out) {
         out[4] = m_report.r;
         out[5] = m_report.l;
     } else {
-        // [0] 7-0 = left, right, down, up, start, A, C, B
+        // [0] 7-0 = right, left, down, up, start, A, C, B
         // [1] 7-3 = R, X, Y, Z, L; 2-0 = fixed 0b100
         assert(out.size() == 2);
         out[0] = bit::extract<8, 15>(btnValue);

@@ -120,6 +120,8 @@ add_executable(ymir-sdl3
 
     src/app/ui/views/settings/analog_pad_binds_view.cpp
     src/app/ui/views/settings/analog_pad_binds_view.hpp
+    src/app/ui/views/settings/arcade_racer_binds_view.cpp
+    src/app/ui/views/settings/arcade_racer_binds_view.hpp
     src/app/ui/views/settings/audio_settings_view.cpp
     src/app/ui/views/settings/audio_settings_view.hpp
     src/app/ui/views/settings/cartridge_settings_view.cpp

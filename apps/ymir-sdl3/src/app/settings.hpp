@@ -283,6 +283,21 @@ public:
                 input::InputBind analogR{actions::analog_pad::AnalogR};
                 input::InputBind switchMode{actions::analog_pad::SwitchMode};
             } analogPadBinds;
+
+            struct ArcadeRacerBinds {
+                input::InputBind a{actions::arcade_racer::A};
+                input::InputBind b{actions::arcade_racer::B};
+                input::InputBind c{actions::arcade_racer::C};
+                input::InputBind x{actions::arcade_racer::X};
+                input::InputBind y{actions::arcade_racer::Y};
+                input::InputBind z{actions::arcade_racer::Z};
+                input::InputBind start{actions::arcade_racer::Start};
+                input::InputBind up{actions::arcade_racer::Up};
+                input::InputBind down{actions::arcade_racer::Down};
+                input::InputBind wheelLeft{actions::arcade_racer::WheelLeft};
+                input::InputBind wheelRight{actions::arcade_racer::WheelRight};
+                input::InputBind wheel{actions::arcade_racer::AnalogWheel};
+            } arcadeRacerBinds;
         };
         Port port1;
         Port port2;
@@ -370,16 +385,22 @@ public:
     // Returns all unbound actions.
     [[nodiscard]] std::unordered_set<input::MappedAction> ResetHotkeys();
 
-    // Restores all default input binds for the specified control pad
+    // Restores all default input binds for the specified Control Pad.
     // Returns all unbound actions.
     // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
     [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ControlPadBinds &binds,
                                                                      bool useDefaults);
 
-    // Restores all default input binds for the specified 3D control pad
+    // Restores all default input binds for the specified 3D Control Pad.
     // Returns all unbound actions.
     // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
     [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::AnalogPadBinds &binds,
+                                                                     bool useDefaults);
+
+    // Restores all default input binds for the specified Arcade Racer controller.
+    // Returns all unbound actions.
+    // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ArcadeRacerBinds &binds,
                                                                      bool useDefaults);
 
 private:
@@ -398,8 +419,29 @@ private:
     InputMap m_port2ControlPadInputs;
     InputMap m_port1AnalogPadInputs;
     InputMap m_port2AnalogPadInputs;
+    InputMap m_port1ArcadeRacerInputs;
+    InputMap m_port2ArcadeRacerInputs;
 
     InputMap &GetInputMapForContext(void *context);
+
+    struct RebindContext {
+        RebindContext(Settings &settings)
+            : m_sharedCtx(settings.m_context)
+            , m_settings(settings) {}
+
+        void Rebind(input::InputBind &bind, const std::array<input::InputElement, input::kNumBindsPerInput> &defaults);
+
+        std::unordered_set<input::MappedAction> GetReplacedActions() const {
+            return m_replacedActions;
+        }
+
+    private:
+        SharedContext &m_sharedCtx;
+        Settings &m_settings;
+
+        std::unordered_set<input::MappedAction> m_previousActions{};
+        std::unordered_set<input::MappedAction> m_replacedActions{};
+    };
 
     std::filesystem::path Proximate(ProfilePath base, std::filesystem::path path) const;
     std::filesystem::path Absolute(ProfilePath base, std::filesystem::path path) const;

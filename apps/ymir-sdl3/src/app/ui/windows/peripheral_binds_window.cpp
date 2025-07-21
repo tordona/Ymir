@@ -7,7 +7,8 @@ namespace app::ui {
 PeripheralBindsWindow::PeripheralBindsWindow(SharedContext &context)
     : WindowBase(context)
     , m_controlPadView(context)
-    , m_analogPadView(context) {}
+    , m_analogPadView(context)
+    , m_arcadeRacerView(context) {}
 
 void PeripheralBindsWindow::Open(uint32 portIndex, uint32 slotIndex) {
     m_portIndex = std::min(portIndex, 1u);
@@ -34,9 +35,11 @@ void PeripheralBindsWindow::DrawContents() {
     auto &settings = m_portIndex == 0 ? m_context.settings.input.port1 : m_context.settings.input.port2;
 
     switch (periph.GetType()) {
-    case peripheral::PeripheralType::None: break;
-    case peripheral::PeripheralType::ControlPad: m_controlPadView.Display(settings.controlPadBinds, m_portIndex); break;
-    case peripheral::PeripheralType::AnalogPad: m_analogPadView.Display(settings.analogPadBinds, m_portIndex); break;
+        using enum peripheral::PeripheralType;
+    case None: break;
+    case ControlPad: m_controlPadView.Display(settings.controlPadBinds, m_portIndex); break;
+    case AnalogPad: m_analogPadView.Display(settings.analogPadBinds, m_portIndex); break;
+    case ArcadeRacer: m_arcadeRacerView.Display(settings.arcadeRacerBinds, m_portIndex); break;
     }
 }
 

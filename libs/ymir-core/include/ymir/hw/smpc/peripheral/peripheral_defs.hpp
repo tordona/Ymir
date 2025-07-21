@@ -10,7 +10,7 @@
 namespace ymir::peripheral {
 
 /// @brief Peripheral type enumeration.
-enum class PeripheralType { None, ControlPad, AnalogPad };
+enum class PeripheralType { None, ControlPad, AnalogPad, ArcadeRacer };
 
 /// @brief Retrieves the name of a given peripheral type.
 /// @param[in] type the peripheral type
@@ -20,13 +20,14 @@ inline std::string_view GetPeripheralName(PeripheralType type) {
     case PeripheralType::None: return "None";
     case PeripheralType::ControlPad: return "Saturn Control Pad";
     case PeripheralType::AnalogPad: return "Saturn 3D Control Pad";
+    case PeripheralType::ArcadeRacer: return "Arcade Racer";
     default: return "Invalid";
     }
 }
 
 /// @brief All supported peripheral types.
-inline constexpr PeripheralType kTypes[] = {PeripheralType::None, PeripheralType::ControlPad,
-                                            PeripheralType::AnalogPad};
+inline constexpr PeripheralType kTypes[] = {PeripheralType::None, PeripheralType::ControlPad, PeripheralType::AnalogPad,
+                                            PeripheralType::ArcadeRacer};
 
 // Forward declarations of concrete peripheral implementations.
 // See the peripheral_impl_* headers.
@@ -34,6 +35,7 @@ inline constexpr PeripheralType kTypes[] = {PeripheralType::None, PeripheralType
 class NullPeripheral;
 class ControlPad;
 class AnalogPad;
+class ArcadeRacerPeripheral;
 
 namespace detail {
 
@@ -58,6 +60,12 @@ namespace detail {
     template <>
     struct PeripheralTypeMeta<PeripheralType::AnalogPad> {
         using type = AnalogPad;
+    };
+
+    /// @brief Metadata about the Arcade Racer.
+    template <>
+    struct PeripheralTypeMeta<PeripheralType::ArcadeRacer> {
+        using type = ArcadeRacerPeripheral;
     };
 
     /// @brief Retrieves the class type of the given `PeripheralType`.

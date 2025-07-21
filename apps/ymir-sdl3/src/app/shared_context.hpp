@@ -253,8 +253,29 @@ struct SharedContext {
         }
     };
 
+    struct ArcadeRacerInput {
+        ymir::peripheral::Button buttons = ymir::peripheral::Button::Default;
+
+        float wheel = 0.0f; // analog wheel: -1.0f (left) to 1.0f (right)
+
+        std::unordered_map<input::InputElement, Input2D> dpad2DInputs;
+        std::unordered_map<input::InputElement, float> analogWheelInputs;
+
+        void UpdateAnalogWheel() {
+            // Aggregate all analog wheel inputs
+            wheel = 0.0f;
+            for (auto &[_, inputs] : analogWheelInputs) {
+                wheel += inputs;
+            }
+
+            // Clamp to -1.0..1.0
+            wheel = std::clamp(wheel, -1.0f, 1.0f);
+        }
+    };
+
     std::array<ControlPadInput, 2> controlPadInputs;
     std::array<AnalogPadInput, 2> analogPadInputs;
+    std::array<ArcadeRacerInput, 2> arcadeRacerInputs;
 
     Profile profile;
     Settings settings{*this};
