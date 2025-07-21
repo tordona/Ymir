@@ -1,12 +1,14 @@
 # Ymir
 
-[![Main release](https://github.com/StrikerX3/Ymir/actions/workflows/main-release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/main-release.yaml) [![Nightly release](https://github.com/StrikerX3/Ymir/actions/workflows/nightly-release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/nightly-release.yaml) <a href="https://discord.gg/NN3A7n5dzn">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a> <a href="https://patreon.com/StrikerX3">![Patreon Shield](https://img.shields.io/badge/Patreon-F96854?style=flat&logo=patreon&logoColor=white)</a>
+[![Stable release](https://github.com/StrikerX3/Ymir/actions/workflows/stable-release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/stable-release.yaml) [![Nightly release](https://github.com/StrikerX3/Ymir/actions/workflows/nightly-release.yaml/badge.svg)](https://github.com/StrikerX3/Ymir/actions/workflows/nightly-release.yaml) <a href="https://discord.gg/NN3A7n5dzn">![Discord Shield](https://discord.com/api/guilds/1368676375627694341/widget.png?style=shield)</a> <a href="https://patreon.com/StrikerX3">![Patreon Shield](https://img.shields.io/badge/Patreon-F96854?style=flat&logo=patreon&logoColor=white)</a>
 
 A work-in-progress Sega Saturn emulator.
 
 Join the [Discord community](https://discord.gg/NN3A7n5dzn).
 
 Find the official compatibility list [here](https://docs.google.com/spreadsheets/d/1SLZzL9LelSlpEmTKy8cjaQnE7mew2uW1rfCgcekO58Q/edit?usp=sharing).
+
+Grab the latest release: [stable](https://github.com/StrikerX3/Ymir/releases/latest), [nightly](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 
 <div class="grid" markdown>
   <img width="49.5%" src="https://github.com/StrikerX3/Ymir/blob/main/docs/images/cd-player.png"/>
