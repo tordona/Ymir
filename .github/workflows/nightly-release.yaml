@@ -12,6 +12,7 @@ name: Nightly release
 on:
   schedule:
     - cron: '0 3 * * *'
+  workflow_dispatch: # Enable manual runs
 
 concurrency:
   group: ymir-nightly-releases
