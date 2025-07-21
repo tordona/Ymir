@@ -11,7 +11,7 @@ name: Nightly release
 # Run once per day (aka "nightly releases")
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '45 3 * * *'
   workflow_dispatch: # Enable manual runs
 
 env:
