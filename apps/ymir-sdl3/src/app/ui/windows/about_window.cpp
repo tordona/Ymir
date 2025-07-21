@@ -2,6 +2,8 @@
 
 #include <ymir/util/compiler_info.hpp>
 
+#include <SDL3/SDL_clipboard.h>
+
 // Includes for versions only
 #include <RtMidi.h>
 #include <SDL3/SDL.h>
@@ -109,8 +111,8 @@ AboutWindow::AboutWindow(SharedContext &context)
 
 void AboutWindow::PrepareWindow() {
     auto *vp = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f),
-                            ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f), ImGuiCond_Appearing,
+                            ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(660 * m_context.displayScale, 800 * m_context.displayScale),
                              ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSizeConstraints(ImVec2(400 * m_context.displayScale, 240 * m_context.displayScale),
@@ -169,6 +171,10 @@ void AboutWindow::DrawAboutTab() {
     ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
     ImGui::TextUnformatted("A Sega Saturn emulator");
     ImGui::PopFont();
+
+    if (ImGui::Button("Copy version")) {
+        SDL_SetClipboardText(Ymir_FULL_VERSION);
+    }
 
     ImGui::NewLine();
     ImGui::Text("Compiled with %s %s.", compiler::name, compiler::version::string.c_str());
