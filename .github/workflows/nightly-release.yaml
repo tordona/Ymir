@@ -14,6 +14,9 @@ on:
     - cron: '0 3 * * *'
   workflow_dispatch: # Enable manual runs
 
+env:
+  NIGHTLY_TAG_NAME: latest-nightly
+
 concurrency:
   group: ymir-nightly-releases
   cancel-in-progress: true
@@ -65,10 +68,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Create/update latest-nightly tag
+      - name: Create/update ${{ env.NIGHTLY_TAG_NAME }} tag
         run: |
-          git tag -f latest-nightly
-          git push origin -f latest-nightly
+          git tag -f ${{ env.NIGHTLY_TAG_NAME }}
+          git push origin -f ${{ env.NIGHTLY_TAG_NAME }}
 
       - name: Download Ymir artifacts
         uses: actions/download-artifact@v4
@@ -76,6 +79,14 @@ jobs:
           path: ymir
           pattern: ymir-*
           merge-multiple: true
+
+      - name: Delete existing release
+        uses: author/action-rollback@stable
+        with:
+          tag: ${{ env.NIGHTLY_TAG_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true  # in case this fails if the release doesn't exist
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -85,7 +96,7 @@ jobs:
           prerelease: true
           generate_release_notes: true
           make_latest: false
-          tag_name: latest-nightly
+          tag_name: ${{ env.NIGHTLY_TAG_NAME }}
           body: |
             This is a nightly release built from the latest commit. Before you use these builds, **make sure to backup your data, especially the save states!**
           
