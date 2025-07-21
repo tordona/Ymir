@@ -1,4 +1,4 @@
-name: Main release
+name: Stable release
 
 on:
   push:
