@@ -20,8 +20,11 @@ namespace app {
 // Existing versions should convert old formats on a best-effort basis.
 //
 // Change history:
-// v2: renamed "Input.Port#.StandardPadBinds" to "Input.Port#.ControlPadBinds"
-inline constexpr int kConfigVersion = 2;
+// v2:
+// - Renamed "Input.Port#.StandardPadBinds" to "Input.Port#.ControlPadBinds"
+// v3:
+// - Moved "OverrideUIScale" and "UIScale" from "Video" to "GUI"
+inline constexpr int kConfigVersion = 3;
 
 namespace grp {
 
@@ -640,6 +643,8 @@ void Settings::ResetToDefaults() {
     general.useAltSpeed = false;
     general.pauseWhenUnfocused = false;
 
+    gui.overrideUIScale = false;
+    gui.uiScale = 1.0;
     gui.rememberWindowGeometry = true;
     gui.showMessages = true;
     gui.showFrameRateOSD = false;
@@ -682,8 +687,6 @@ void Settings::ResetToDefaults() {
     video.displayVideoOutputInWindow = false;
     video.fullScreen = false;
     video.doubleClickToFullScreen = false;
-    video.overrideUIScale = false;
-    video.uiScale = 1.0;
     video.deinterlace = false;
     video.transparentMeshes = false;
 
@@ -730,6 +733,17 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     }
     auto &emuConfig = m_context.saturn.configuration;
 
+    auto parseUIScaleOptions = [&](auto &tbl) {
+        Parse(tbl, "OverrideUIScale", gui.overrideUIScale);
+
+        // Round scale to steps of 25% and clamp to 100%-200% range
+        double uiScale = gui.uiScale;
+        Parse(tbl, "UIScale", uiScale);
+        uiScale = std::round(uiScale / 0.25) * 0.25;
+        uiScale = std::clamp(uiScale, 1.0, 2.0);
+        gui.uiScale = uiScale;
+    };
+
     if (auto tblGeneral = data["General"]) {
         Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
@@ -764,6 +778,9 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     }
 
     if (auto tblGUI = data["GUI"]) {
+        if (configVersion >= 3) {
+            parseUIScaleOptions(tblGUI);
+        }
         Parse(tblGUI, "RememberWindowGeometry", gui.rememberWindowGeometry);
         Parse(tblGUI, "ShowMessages", gui.showMessages);
         Parse(tblGUI, "ShowFrameRateOSD", gui.showFrameRateOSD);
@@ -952,14 +969,9 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
         Parse(tblVideo, "ThreadedDeinterlacer", emuConfig.video.threadedDeinterlacer);
         Parse(tblVideo, "IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread);
-        Parse(tblVideo, "OverrideUIScale", video.overrideUIScale);
-
-        // Round scale to steps of 25% and clamp to 100%-200% range
-        double uiScale = video.uiScale;
-        Parse(tblVideo, "UIScale", uiScale);
-        uiScale = std::round(uiScale / 0.25) * 0.25;
-        uiScale = std::clamp(uiScale, 1.0, 2.0);
-        video.uiScale = uiScale;
+        if (configVersion <= 2) {
+            parseUIScaleOptions(tblVideo);
+        }
 
         Parse(tblVideo, "Deinterlace", video.deinterlace);
         Parse(tblVideo, "TransparentMeshes", video.transparentMeshes);
@@ -1048,6 +1060,8 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"GUI", toml::table{{
+            {"OverrideUIScale", gui.overrideUIScale.Get()},
+            {"UIScale", gui.uiScale.Get()},
             {"RememberWindowGeometry", gui.rememberWindowGeometry},
             {"ShowMessages", gui.showMessages},
             {"ShowFrameRateOSD", gui.showFrameRateOSD},
@@ -1275,8 +1289,6 @@ SettingsSaveResult Settings::Save() {
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
             {"FullScreen", video.fullScreen.Get()},
             {"DoubleClickToFullScreen", video.doubleClickToFullScreen},
-            {"OverrideUIScale", video.overrideUIScale.Get()},
-            {"UIScale", video.uiScale.Get()},
             {"Deinterlace", video.deinterlace.Get()},
             {"TransparentMeshes", video.transparentMeshes.Get()},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},

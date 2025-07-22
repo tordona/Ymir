@@ -406,11 +406,11 @@ void App::RunEmulator() {
     bool rescaleUIPending = false;
     RescaleUI(SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay()));
     {
-        auto &videoSettings = m_context.settings.video;
+        auto &guiSettings = m_context.settings.gui;
 
         // Observe changes to the UI scale options at this point to avoid "destroying"
-        videoSettings.overrideUIScale.Observe([&](bool) { rescaleUIPending = true; });
-        videoSettings.uiScale.Observe([&](double) { rescaleUIPending = true; });
+        guiSettings.overrideUIScale.Observe([&](bool) { rescaleUIPending = true; });
+        guiSettings.uiScale.Observe([&](double) { rescaleUIPending = true; });
 
         m_context.settings.video.deinterlace.Observe(
             [&](bool value) { m_context.EnqueueEvent(events::emu::SetDeinterlace(value)); });
@@ -1623,7 +1623,7 @@ void App::RunEmulator() {
 
             case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: [[fallthrough]];
             case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-                if (!m_context.settings.video.overrideUIScale) {
+                if (!m_context.settings.gui.overrideUIScale) {
                     const float windowScale = SDL_GetWindowDisplayScale(screen.window);
                     RescaleUI(windowScale);
                     PersistWindowGeometry();
@@ -3233,8 +3233,8 @@ void App::RebindInputs() {
 }
 
 void App::RescaleUI(float displayScale) {
-    if (m_context.settings.video.overrideUIScale) {
-        displayScale = m_context.settings.video.uiScale;
+    if (m_context.settings.gui.overrideUIScale) {
+        displayScale = m_context.settings.gui.uiScale;
     }
     devlog::info<grp::base>("Window DPI scaling: {:.1f}%", displayScale * 100.0f);
 

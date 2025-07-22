@@ -15,6 +15,55 @@ void GUISettingsView::Display() {
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::SeparatorText("UI scaling");
+    ImGui::PopFont();
+
+    // Round scale to steps of 25% and clamp to 100%-200% range
+    bool overrideUIScale = settings.overrideUIScale;
+    double uiScale = overrideUIScale ? settings.uiScale.Get() : m_context.displayScale;
+    uiScale = std::round(uiScale / 0.25) * 0.25;
+    uiScale = std::clamp(uiScale, 1.00, 2.00);
+
+    if (MakeDirty(ImGui::Checkbox(fmt::format("Override UI scale (current: {:.0f}%)", uiScale * 100.0).c_str(),
+                                  &overrideUIScale))) {
+        settings.overrideUIScale = overrideUIScale;
+        // Use current DPI setting when enabling the override
+        if (overrideUIScale) {
+            settings.uiScale = uiScale;
+        }
+    }
+
+    ImGui::Indent();
+    if (!overrideUIScale) {
+        ImGui::BeginDisabled();
+    }
+    if (MakeDirty(ImGui::RadioButton("100%##ui_scale", uiScale == 1.0))) {
+        settings.uiScale = 1.00;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("125%##ui_scale", uiScale == 1.25))) {
+        settings.uiScale = 1.25;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("150%##ui_scale", uiScale == 1.50))) {
+        settings.uiScale = 1.50;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("175%##ui_scale", uiScale == 1.75))) {
+        settings.uiScale = 1.75;
+    }
+    ImGui::SameLine();
+    if (MakeDirty(ImGui::RadioButton("200%##ui_scale", uiScale == 2.00))) {
+        settings.uiScale = 2.00;
+    }
+    if (!overrideUIScale) {
+        ImGui::EndDisabled();
+    }
+    ImGui::Unindent();
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Behavior");
     ImGui::PopFont();
 

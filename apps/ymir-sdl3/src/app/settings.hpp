@@ -149,6 +149,9 @@ public:
     struct GUI {
         enum class FrameRateOSDPosition { TopLeft, TopRight, BottomLeft, BottomRight };
 
+        util::Observable<bool> overrideUIScale;
+        util::Observable<double> uiScale;
+
         bool rememberWindowGeometry;
         bool showMessages;
         bool showFrameRateOSD;
@@ -322,9 +325,6 @@ public:
         bool displayVideoOutputInWindow;
         util::Observable<bool> fullScreen;
         bool doubleClickToFullScreen;
-
-        util::Observable<bool> overrideUIScale;
-        util::Observable<double> uiScale;
 
         util::Observable<bool> deinterlace;
         util::Observable<bool> transparentMeshes;
