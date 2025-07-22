@@ -332,10 +332,10 @@ std::string_view ToHumanString(MouseButton btn) {
 
 std::string_view ToHumanString(MouseAxis1D axis) {
     switch (axis) {
-    case MouseAxis1D::Vertical: return "Vertical Mouse";
-    case MouseAxis1D::Horizontal: return "Horizontal Mouse";
-    case MouseAxis1D::WheelVertical: return "Vertical Mouse Wheel";
-    case MouseAxis1D::WheelHorizontal: return "Horizontal Mouse Wheel";
+    case MouseAxis1D::Vertical: return "Mouse Y";
+    case MouseAxis1D::Horizontal: return "Mouse X";
+    case MouseAxis1D::WheelVertical: return "Mouse Wheel Y";
+    case MouseAxis1D::WheelHorizontal: return "Mouse Wheel X";
     default: return "Unknown";
     }
 }
@@ -383,14 +383,14 @@ std::string_view ToHumanString(GamepadButton btn) {
 
 std::string_view ToHumanString(GamepadAxis1D axis) {
     switch (axis) {
-    case GamepadAxis1D::LeftStickX: return "LS Horizontal";
-    case GamepadAxis1D::LeftStickY: return "LS Vertical";
-    case GamepadAxis1D::RightStickX: return "RS Horizontal";
-    case GamepadAxis1D::RightStickY: return "RS Vertical";
+    case GamepadAxis1D::LeftStickX: return "LS X";
+    case GamepadAxis1D::LeftStickY: return "LS Y";
+    case GamepadAxis1D::RightStickX: return "RS X";
+    case GamepadAxis1D::RightStickY: return "RS Y";
     case GamepadAxis1D::LeftTrigger: return "LT";
     case GamepadAxis1D::RightTrigger: return "RT";
-    case GamepadAxis1D::DPadX: return "DPad Horizontal";
-    case GamepadAxis1D::DPadY: return "DPad Vertical";
+    case GamepadAxis1D::DPadX: return "DPad X";
+    case GamepadAxis1D::DPadY: return "DPad Y";
     default: return "Unknown";
     }
 }
