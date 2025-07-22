@@ -21,8 +21,9 @@ void InputCaptureWidget::DrawInputBindButton(input::InputBind &bind, size_t elem
         case input::Action::Kind::Trigger: [[fallthrough]];
         case input::Action::Kind::RepeatableTrigger: CaptureTrigger(bind, elementIndex, context); break;
         case input::Action::Kind::Button: CaptureButton(bind, elementIndex, context); break;
-        case input::Action::Kind::AbsoluteAxis1D: CaptureAxis1D(bind, elementIndex, context); break;
-        case input::Action::Kind::AbsoluteAxis2D: CaptureAxis2D(bind, elementIndex, context); break;
+        case input::Action::Kind::AbsoluteMonopolarAxis1D: CaptureAxis1D(bind, elementIndex, context, false); break;
+        case input::Action::Kind::AbsoluteBipolarAxis1D: CaptureAxis1D(bind, elementIndex, context, true); break;
+        case input::Action::Kind::AbsoluteBipolarAxis2D: CaptureAxis2D(bind, elementIndex, context); break;
         }
     }
 
@@ -48,13 +49,19 @@ void InputCaptureWidget::DrawCapturePopup() {
             ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.\n\n"
                                    "Press Escape or click outside of this popup to cancel.");
             break;
-        case input::Action::Kind::AbsoluteAxis1D:
-            ImGui::TextUnformatted("Move any one-dimensional axis such as analog triggers to map it.\n\n"
+        case input::Action::Kind::AbsoluteMonopolarAxis1D:
+            ImGui::TextUnformatted("Move any one-dimensional monopolar axis such as analog triggers to map it.\n\n"
                                    "Press Escape or click outside of this popup to cancel.");
             break;
-        case input::Action::Kind::AbsoluteAxis2D:
-            ImGui::TextUnformatted("Move any two-dimensional axis such as sticks to map it.\n\n"
+        case input::Action::Kind::AbsoluteBipolarAxis1D:
+            ImGui::TextUnformatted("Move any one-dimensional bipolar axis such as analog wheels or one direction of an "
+                                   "analog stick to map it.\n\n"
                                    "Press Escape or click outside of this popup to cancel.");
+            break;
+        case input::Action::Kind::AbsoluteBipolarAxis2D:
+            ImGui::TextUnformatted(
+                "Move any two-dimensional bipolar axis such as analog sticks or D-Pads to map it.\n\n"
+                "Press Escape or click outside of this popup to cancel.");
             break;
         }
         ImGui::EndPopup();
@@ -136,10 +143,13 @@ void InputCaptureWidget::CaptureTrigger(input::InputBind &bind, size_t elementIn
     });
 }
 
-void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementIndex, void *context) {
-    m_kind = input::Action::Kind::AbsoluteAxis1D;
+void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementIndex, void *context, bool bipolar) {
+    m_kind = bipolar ? input::Action::Kind::AbsoluteBipolarAxis1D : input::Action::Kind::AbsoluteMonopolarAxis1D;
     m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
         if (!event.element.IsAxis1D()) {
+            return false;
+        }
+        if (event.element.IsBipolarAxis() != bipolar) {
             return false;
         }
         if (abs(event.axis1DValue) < 0.5f) {
@@ -162,9 +172,12 @@ void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementInd
 }
 
 void InputCaptureWidget::CaptureAxis2D(input::InputBind &bind, size_t elementIndex, void *context) {
-    m_kind = input::Action::Kind::AbsoluteAxis2D;
+    m_kind = input::Action::Kind::AbsoluteBipolarAxis2D;
     m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
         if (!event.element.IsAxis2D()) {
+            return false;
+        }
+        if (!event.element.IsBipolarAxis()) {
             return false;
         }
         const float d = event.axis2D.x * event.axis2D.x + event.axis2D.y * event.axis2D.y;

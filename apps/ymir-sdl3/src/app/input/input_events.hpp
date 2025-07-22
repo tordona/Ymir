@@ -97,6 +97,26 @@ struct InputElement {
         return type == Type::MouseAxis2D || type == Type::GamepadAxis2D;
     }
 
+    bool IsMonopolarAxis() const {
+        switch (type) {
+        case Type::MouseAxis1D: return input::IsMonopolarAxis(mouseAxis1D.axis);
+        case Type::MouseAxis2D: return input::IsMonopolarAxis(mouseAxis2D.axis);
+        case Type::GamepadAxis1D: return input::IsMonopolarAxis(gamepadAxis1D.axis);
+        case Type::GamepadAxis2D: return input::IsMonopolarAxis(gamepadAxis2D.axis);
+        default: return false;
+        }
+    }
+
+    bool IsBipolarAxis() const {
+        switch (type) {
+        case Type::MouseAxis1D: return input::IsBipolarAxis(mouseAxis1D.axis);
+        case Type::MouseAxis2D: return input::IsBipolarAxis(mouseAxis2D.axis);
+        case Type::GamepadAxis1D: return input::IsBipolarAxis(gamepadAxis1D.axis);
+        case Type::GamepadAxis2D: return input::IsBipolarAxis(gamepadAxis2D.axis);
+        default: return false;
+        }
+    }
+
     constexpr bool operator==(const InputElement &rhs) const {
         if (type != rhs.type) {
             return false;

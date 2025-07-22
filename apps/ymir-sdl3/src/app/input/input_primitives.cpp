@@ -14,6 +14,38 @@
 
 namespace app::input {
 
+bool IsMonopolarAxis(MouseAxis1D axis) {
+    return false;
+}
+
+bool IsMonopolarAxis(GamepadAxis1D axis) {
+    return axis == GamepadAxis1D::LeftTrigger || axis == GamepadAxis1D::RightTrigger;
+}
+
+bool IsMonopolarAxis(MouseAxis2D axis) {
+    return false;
+}
+
+bool IsMonopolarAxis(GamepadAxis2D axis) {
+    return false;
+}
+
+bool IsBipolarAxis(MouseAxis1D axis) {
+    return !IsMonopolarAxis(axis);
+}
+
+bool IsBipolarAxis(GamepadAxis1D axis) {
+    return !IsMonopolarAxis(axis);
+}
+
+bool IsBipolarAxis(MouseAxis2D axis) {
+    return !IsMonopolarAxis(axis);
+}
+
+bool IsBipolarAxis(GamepadAxis2D axis) {
+    return !IsMonopolarAxis(axis);
+}
+
 MouseAxis2D Get2DAxisFrom1DAxis(MouseAxis1D axis) {
     switch (axis) {
     case MouseAxis1D::Horizontal: [[fallthrough]];

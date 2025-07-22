@@ -19,13 +19,39 @@ struct Action {
         // Synced to a button or keyboard key.
         Button,
 
-        // Synced to an absolute 1D axis such as sticks, triggers or wheels.
-        AbsoluteAxis1D,
+        // Axes are categorized in three ways:
+        // - Absolute or relative
+        // - Monopolar or bipolar
+        // - 1D or 2D
+        //
+        // Absolute axes always output a specific value when held at a particular position, while relative axes output
+        // values based on the amount of movement or change.
+        // Monopolar axes have values ranging from 0.0 to 1.0, while bipolar axes range from -1.0 to +1.0.
+        // 1D and 2D refers to the number of coordinate components in the axis.
+        //
+        // Examples for each combination of axis categories:
+        //
+        // Absolute monopolar 1D axis: gamepad trigger, HOTAS throttle in forward-only mode
+        // Relative monopolar 1D axis: (none?)
+        // Absolute   bipolar 1D axis: HOTAS throttle in forward/reverse mode
+        // Relative   bipolar 1D axis: mouse wheel
+        // Absolute monopolar 2D axis: touchscreen, drawing tablet/pen, light gun (in most cases)
+        // Relative monopolar 2D axis: (none?)
+        // Absolute   bipolar 2D axis: gamepad stick, joystick
+        // Relative   bipolar 2D axis: mouse movement
+        //
+        // Any individual component of a 2D axis is also considered an 1D axis of equivalent category.
 
-        // Synced to an absolute 2D axis such as sticks.
-        AbsoluteAxis2D
+        // Synced to an absolute monopolar 1D axis.
+        AbsoluteMonopolarAxis1D,
 
-        // TODO: introduce relative 1D and 2D axes for mouse movement and mouse wheel
+        // Synced to an absolute bipolar 1D axis.
+        AbsoluteBipolarAxis1D,
+
+        // Synced to an absolute bipolar 2D axis.
+        AbsoluteBipolarAxis2D,
+
+        // TODO: introduce relative bipolar 1D and 2D axes for mouse movement and mouse wheel
     };
 
     uint32 id;
@@ -42,11 +68,14 @@ struct Action {
     static constexpr Action Button(uint32 id, const char *group, const char *name) {
         return {id, Kind::Button, group, name};
     }
-    static constexpr Action AbsoluteAxis1D(uint32 id, const char *group, const char *name) {
-        return {id, Kind::AbsoluteAxis1D, group, name};
+    static constexpr Action AbsoluteMonopolarAxis1D(uint32 id, const char *group, const char *name) {
+        return {id, Kind::AbsoluteMonopolarAxis1D, group, name};
     }
-    static constexpr Action AbsoluteAxis2D(uint32 id, const char *group, const char *name) {
-        return {id, Kind::AbsoluteAxis2D, group, name};
+    static constexpr Action AbsoluteBipolarAxis1D(uint32 id, const char *group, const char *name) {
+        return {id, Kind::AbsoluteBipolarAxis1D, group, name};
+    }
+    static constexpr Action AbsoluteBipolarAxis2D(uint32 id, const char *group, const char *name) {
+        return {id, Kind::AbsoluteBipolarAxis2D, group, name};
     }
 
     constexpr bool operator==(const Action &rhs) const {

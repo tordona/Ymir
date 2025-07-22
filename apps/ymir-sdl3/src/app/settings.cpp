@@ -1428,13 +1428,18 @@ void Settings::RebindInputs() {
                             continue;
                         }
                         break;
-                    case input::Action::Kind::AbsoluteAxis1D:
-                        if (!element.IsAxis1D()) {
+                    case input::Action::Kind::AbsoluteMonopolarAxis1D:
+                        if (!element.IsAxis1D() || !element.IsMonopolarAxis()) {
                             continue;
                         }
                         break;
-                    case input::Action::Kind::AbsoluteAxis2D:
-                        if (!element.IsAxis2D()) {
+                    case input::Action::Kind::AbsoluteBipolarAxis1D:
+                        if (!element.IsAxis1D() || !element.IsBipolarAxis()) {
+                            continue;
+                        }
+                        break;
+                    case input::Action::Kind::AbsoluteBipolarAxis2D:
+                        if (!element.IsAxis2D() || !element.IsBipolarAxis()) {
                             continue;
                         }
                         break;

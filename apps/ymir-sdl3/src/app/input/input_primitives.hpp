@@ -433,6 +433,19 @@ struct MouseCombo {
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Monopolar / bipolar axis identification
+
+bool IsMonopolarAxis(MouseAxis1D axis);
+bool IsMonopolarAxis(GamepadAxis1D axis);
+bool IsMonopolarAxis(MouseAxis2D axis);
+bool IsMonopolarAxis(GamepadAxis2D axis);
+
+bool IsBipolarAxis(MouseAxis1D axis);
+bool IsBipolarAxis(GamepadAxis1D axis);
+bool IsBipolarAxis(MouseAxis2D axis);
+bool IsBipolarAxis(GamepadAxis2D axis);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Axis converters between 1D and 2D
 
 MouseAxis2D Get2DAxisFrom1DAxis(MouseAxis1D axis);
