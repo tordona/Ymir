@@ -19,8 +19,8 @@ protected:
     void DrawContents() override;
 
 private:
-    uint32 m_portIndex;
-    uint32 m_slotIndex;
+    uint32 m_portIndex = 0;
+    uint32 m_slotIndex = 0;
 
     ControlPadConfigView m_controlPadView;
     AnalogPadConfigView m_analogPadView;
