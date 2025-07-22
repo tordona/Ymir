@@ -10,9 +10,11 @@
 - Input: Categorized gamepad triggers and sticks as absolute axes. Absolute axes output fixed values at specific positions.
 - Input: Categorized gamepad triggers as monopolar axes (having values ranging from 0.0 to 1.0) and gamepad sticks as bipolar axes (-1.0 to +1.0).
 - Input: Implemented Arcade Racer peripheral. (#29)
+- Input: Implemented Mission Stick peripheral with toggleable three-axis and six-axis modes. (#30)
 
 ### Fixes
 
+- SMPC: Fixed TL reporting on SH-2 direct mode.
 
 
 ## Version 0.1.6

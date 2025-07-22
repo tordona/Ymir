@@ -1304,6 +1304,109 @@ void App::RunEmulator() {
         m_context.settings.input.port2.arcadeRacer.sensitivity.ObserveAndNotify(makeSensObserver(1));
     }
 
+    // Mission Stick controller
+    {
+        using Button = peripheral::Button;
+
+        auto registerButton = [&](input::Action action, Button button) {
+            inputContext.SetButtonHandler(action, [=](void *context, const input::InputElement &, bool actuated) {
+                auto &input = *reinterpret_cast<SharedContext::MissionStickInput *>(context);
+                if (actuated) {
+                    input.buttons &= ~button;
+                } else {
+                    input.buttons |= button;
+                }
+            });
+        };
+
+        auto registerDigitalStick = [&](input::Action action, bool sub /*false=main, true=sub*/, float x, float y) {
+            inputContext.SetButtonHandler(
+                action, [=, this](void *context, const input::InputElement &element, bool actuated) {
+                    auto &input = *reinterpret_cast<SharedContext::MissionStickInput *>(context);
+                    auto &analogInput = input.sticks[sub].analogStickInputs[element];
+                    if (actuated) {
+                        analogInput.x = x;
+                        analogInput.y = y;
+                    } else {
+                        analogInput.x = 0;
+                        analogInput.y = 0.0f;
+                    }
+                    input.UpdateAnalogStick(sub);
+                });
+        };
+
+        auto registerAnalogStick = [&](input::Action action, bool sub /*false=main, true=sub*/) {
+            inputContext.SetAxis2DHandler(
+                action, [sub](void *context, const input::InputElement &element, float x, float y) {
+                    auto &input = *reinterpret_cast<SharedContext::MissionStickInput *>(context);
+                    auto &analogInput = input.sticks[sub].analogStickInputs[element];
+                    analogInput.x = x;
+                    analogInput.y = y;
+                    input.UpdateAnalogStick(sub);
+                });
+        };
+
+        auto registerDigitalThrottle = [&](input::Action action, bool sub /*false=main, true=sub*/, float delta) {
+            inputContext.SetTriggerHandler(action, [sub, delta](void *context, const input::InputElement &element) {
+                auto &input = *reinterpret_cast<SharedContext::MissionStickInput *>(context);
+                auto &analogInput = input.digitalThrottles[sub];
+                analogInput = std::clamp(analogInput + delta, 0.0f, 1.0f);
+                input.UpdateAnalogThrottle(sub);
+            });
+        };
+
+        auto registerAnalogThrottle = [&](input::Action action, bool sub /*false=main, true=sub*/) {
+            inputContext.SetAxis1DHandler(
+                action, [sub](void *context, const input::InputElement &element, float value) {
+                    auto &input = *reinterpret_cast<SharedContext::MissionStickInput *>(context);
+                    auto &analogInput = input.sticks[sub].analogThrottleInputs[element];
+                    analogInput = value;
+                    input.UpdateAnalogThrottle(sub);
+                });
+        };
+
+        auto registerModeSwitch = [&](input::Action action) {
+            inputContext.SetTriggerHandler(action, [&](void *context, const input::InputElement &element) {
+                auto &input = *reinterpret_cast<SharedContext::MissionStickInput *>(context);
+                input.sixAxisMode ^= true;
+                int portNum = (context == &m_context.missionStickInputs[0]) ? 1 : 2;
+                m_context.DisplayMessage(fmt::format("Port {} Mission Stick switched to {} mode", portNum,
+                                                     (input.sixAxisMode ? "six-axis" : "three-axis")));
+            });
+        };
+
+        registerButton(actions::mission_stick::A, Button::A);
+        registerButton(actions::mission_stick::B, Button::B);
+        registerButton(actions::mission_stick::C, Button::C);
+        registerButton(actions::mission_stick::X, Button::X);
+        registerButton(actions::mission_stick::Y, Button::Y);
+        registerButton(actions::mission_stick::Z, Button::Z);
+        registerButton(actions::mission_stick::L, Button::L);
+        registerButton(actions::mission_stick::R, Button::R);
+        registerButton(actions::mission_stick::Start, Button::Start);
+        registerDigitalStick(actions::mission_stick::MainUp, false, 0.0f, -1.0f);
+        registerDigitalStick(actions::mission_stick::MainDown, false, 0.0f, +1.0f);
+        registerDigitalStick(actions::mission_stick::MainLeft, false, -1.0f, 0.0f);
+        registerDigitalStick(actions::mission_stick::MainRight, false, +1.0f, 0.0f);
+        registerAnalogStick(actions::mission_stick::MainStick, false);
+        registerAnalogThrottle(actions::mission_stick::MainThrottle, false);
+        registerDigitalThrottle(actions::mission_stick::MainThrottleUp, false, +0.1f);
+        registerDigitalThrottle(actions::mission_stick::MainThrottleDown, false, -0.1f);
+        registerDigitalThrottle(actions::mission_stick::MainThrottleMax, false, +1.0f);
+        registerDigitalThrottle(actions::mission_stick::MainThrottleMin, false, -1.0f);
+        registerDigitalStick(actions::mission_stick::SubUp, true, 0.0f, -1.0f);
+        registerDigitalStick(actions::mission_stick::SubDown, true, 0.0f, +1.0f);
+        registerDigitalStick(actions::mission_stick::SubLeft, true, -1.0f, 0.0f);
+        registerDigitalStick(actions::mission_stick::SubRight, true, +1.0f, 0.0f);
+        registerAnalogStick(actions::mission_stick::SubStick, true);
+        registerAnalogThrottle(actions::mission_stick::SubThrottle, true);
+        registerDigitalThrottle(actions::mission_stick::SubThrottleUp, true, +0.1f);
+        registerDigitalThrottle(actions::mission_stick::SubThrottleDown, true, -0.1f);
+        registerDigitalThrottle(actions::mission_stick::SubThrottleMax, true, +1.0f);
+        registerDigitalThrottle(actions::mission_stick::SubThrottleMin, true, -1.0f);
+        registerModeSwitch(actions::mission_stick::SwitchMode);
+    }
+
     RebindInputs();
 
     // ---------------------------------
@@ -3434,22 +3537,36 @@ void App::ReadPeripheral(ymir::peripheral::PeripheralReport &report) {
         break;
     case ymir::peripheral::PeripheralType::AnalogPad: //
     {
-        auto &analogReport = report.report.analogPad;
+        auto &specificReport = report.report.analogPad;
         const auto &inputs = m_context.analogPadInputs[port - 1];
-        analogReport.buttons = inputs.buttons;
-        analogReport.analog = inputs.analogMode;
-        analogReport.x = std::clamp(inputs.x * 128.0f + 128.0f, 0.0f, 255.0f);
-        analogReport.y = std::clamp(inputs.y * 128.0f + 128.0f, 0.0f, 255.0f);
-        analogReport.l = inputs.l * 255.0f;
-        analogReport.r = inputs.r * 255.0f;
+        specificReport.buttons = inputs.buttons;
+        specificReport.analog = inputs.analogMode;
+        specificReport.x = std::clamp(inputs.x * 128.0f + 128.0f, 0.0f, 255.0f);
+        specificReport.y = std::clamp(inputs.y * 128.0f + 128.0f, 0.0f, 255.0f);
+        specificReport.l = inputs.l * 255.0f;
+        specificReport.r = inputs.r * 255.0f;
         break;
     }
     case ymir::peripheral::PeripheralType::ArcadeRacer: //
     {
-        auto &analogReport = report.report.arcadeRacer;
+        auto &specificReport = report.report.arcadeRacer;
         const auto &inputs = m_context.arcadeRacerInputs[port - 1];
-        analogReport.buttons = inputs.buttons;
-        analogReport.wheel = std::clamp(inputs.wheel * 128.0f + 128.0f, 0.0f, 255.0f);
+        specificReport.buttons = inputs.buttons;
+        specificReport.wheel = std::clamp(inputs.wheel * 128.0f + 128.0f, 0.0f, 255.0f);
+        break;
+    }
+    case ymir::peripheral::PeripheralType::MissionStick: //
+    {
+        auto &specificReport = report.report.missionStick;
+        const auto &inputs = m_context.missionStickInputs[port - 1];
+        specificReport.buttons = inputs.buttons;
+        specificReport.sixAxis = inputs.sixAxisMode;
+        specificReport.x1 = std::clamp(inputs.sticks[0].x * 128.0f + 128.0f, 0.0f, 255.0f);
+        specificReport.y1 = std::clamp(inputs.sticks[0].y * 128.0f + 128.0f, 0.0f, 255.0f);
+        specificReport.z1 = inputs.sticks[0].z * 255.0f;
+        specificReport.x2 = std::clamp(inputs.sticks[1].x * 128.0f + 128.0f, 0.0f, 255.0f);
+        specificReport.y2 = std::clamp(inputs.sticks[1].y * 128.0f + 128.0f, 0.0f, 255.0f);
+        specificReport.z2 = inputs.sticks[1].z * 255.0f;
         break;
     }
     default: break;

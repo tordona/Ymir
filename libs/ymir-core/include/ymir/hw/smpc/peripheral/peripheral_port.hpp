@@ -4,6 +4,7 @@
 #include "peripheral_impl_analog_pad.hpp"
 #include "peripheral_impl_arcade_racer.hpp"
 #include "peripheral_impl_control_pad.hpp"
+#include "peripheral_impl_mission_stick.hpp"
 #include "peripheral_impl_null.hpp"
 
 #include <ymir/core/types.hpp>
@@ -46,6 +47,10 @@ public:
 
     ArcadeRacerPeripheral *ConnectArcadeRacer() {
         return ConnectPeripheral<ArcadeRacerPeripheral>(m_cbPeripheralReport);
+    }
+
+    MissionStick *ConnectMissionStick() {
+        return ConnectPeripheral<MissionStick>(m_cbPeripheralReport);
     }
 
     void DisconnectPeripherals() {

@@ -1,7 +1,5 @@
 #include "control_pad_config_view.hpp"
 
-#include <app/events/gui_event_factory.hpp>
-
 namespace app::ui {
 
 ControlPadConfigView::ControlPadConfigView(SharedContext &context)
@@ -9,7 +7,9 @@ ControlPadConfigView::ControlPadConfigView(SharedContext &context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void ControlPadConfigView::Display(Settings::Input::Port::ControlPad::Binds &binds, uint32 portIndex) {
+void ControlPadConfigView::Display(Settings::Input::Port::ControlPad &controllerSettings, uint32 portIndex) {
+    auto &binds = controllerSettings.binds;
+
     if (ImGui::Button("Restore defaults")) {
         m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds, true));
         MakeDirty();
@@ -53,8 +53,8 @@ void ControlPadConfigView::Display(Settings::Input::Port::ControlPad::Binds &bin
         drawRow(binds.r);
         drawRow(binds.start);
         drawRow(binds.up);
-        drawRow(binds.left);
         drawRow(binds.down);
+        drawRow(binds.left);
         drawRow(binds.right);
         drawRow(binds.dpad);
 

@@ -67,16 +67,16 @@ uint8 ArcadeRacerPeripheral::WritePDR(uint8 ddr, uint8 value) {
             const uint8 pos = m_reportPos;
             m_reportPos = (m_reportPos + 1) % 10;
             switch (pos) {
-            case 0: return (m_tl << 5) | 0b0001;
-            case 1: return (m_tl << 5) | 0b0101;
-            case 2: return (m_tl << 5) | bit::extract<12, 15>(btnValue);
-            case 3: return (m_tl << 5) | bit::extract<8, 11>(btnValue);
-            case 4: return (m_tl << 5) | bit::extract<4, 7>(btnValue);
-            case 5: return (m_tl << 5) | (bit::extract<3>(btnValue) << 3) | 0b100;
-            case 6: return (m_tl << 5) | bit::extract<4, 7>(m_report.wheel);
-            case 7: return (m_tl << 5) | bit::extract<0, 3>(m_report.wheel);
-            case 8: return (m_tl << 5) | 0b0000;
-            case 9: return (m_tl << 5) | 0b0001;
+            case 0: return (m_tl << 4) | 0b0001;
+            case 1: return (m_tl << 4) | 0b0101;
+            case 2: return (m_tl << 4) | bit::extract<12, 15>(btnValue);
+            case 3: return (m_tl << 4) | bit::extract<8, 11>(btnValue);
+            case 4: return (m_tl << 4) | bit::extract<4, 7>(btnValue);
+            case 5: return (m_tl << 4) | (bit::extract<3>(btnValue) << 3) | 0b100;
+            case 6: return (m_tl << 4) | bit::extract<4, 7>(m_report.wheel);
+            case 7: return (m_tl << 4) | bit::extract<0, 3>(m_report.wheel);
+            case 8: return (m_tl << 4) | 0b0000;
+            case 9: return (m_tl << 4) | 0b0001;
             }
         }
     }

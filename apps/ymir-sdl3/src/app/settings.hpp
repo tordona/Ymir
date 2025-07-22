@@ -309,6 +309,41 @@ public:
 
                 util::Observable<float> sensitivity;
             } arcadeRacer;
+
+            struct MissionStick {
+                struct Binds {
+                    input::InputBind a{actions::mission_stick::A};
+                    input::InputBind b{actions::mission_stick::B};
+                    input::InputBind c{actions::mission_stick::C};
+                    input::InputBind x{actions::mission_stick::X};
+                    input::InputBind y{actions::mission_stick::Y};
+                    input::InputBind z{actions::mission_stick::Z};
+                    input::InputBind l{actions::mission_stick::L};
+                    input::InputBind r{actions::mission_stick::R};
+                    input::InputBind start{actions::mission_stick::Start};
+                    input::InputBind mainUp{actions::mission_stick::MainUp};
+                    input::InputBind mainDown{actions::mission_stick::MainDown};
+                    input::InputBind mainLeft{actions::mission_stick::MainLeft};
+                    input::InputBind mainRight{actions::mission_stick::MainRight};
+                    input::InputBind mainStick{actions::mission_stick::MainStick};
+                    input::InputBind mainThrottle{actions::mission_stick::MainThrottle};
+                    input::InputBind mainThrottleUp{actions::mission_stick::MainThrottleUp};
+                    input::InputBind mainThrottleDown{actions::mission_stick::MainThrottleDown};
+                    input::InputBind mainThrottleMax{actions::mission_stick::MainThrottleMax};
+                    input::InputBind mainThrottleMin{actions::mission_stick::MainThrottleMin};
+                    input::InputBind subUp{actions::mission_stick::SubUp};
+                    input::InputBind subDown{actions::mission_stick::SubDown};
+                    input::InputBind subLeft{actions::mission_stick::SubLeft};
+                    input::InputBind subRight{actions::mission_stick::SubRight};
+                    input::InputBind subStick{actions::mission_stick::SubStick};
+                    input::InputBind subThrottle{actions::mission_stick::SubThrottle};
+                    input::InputBind subThrottleUp{actions::mission_stick::SubThrottleUp};
+                    input::InputBind subThrottleDown{actions::mission_stick::SubThrottleDown};
+                    input::InputBind subThrottleMax{actions::mission_stick::SubThrottleMax};
+                    input::InputBind subThrottleMin{actions::mission_stick::SubThrottleMin};
+                    input::InputBind switchMode{actions::mission_stick::SwitchMode};
+                } binds;
+            } missionStick;
         };
         Port port1;
         Port port2;
@@ -411,6 +446,12 @@ public:
     [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ArcadeRacer::Binds &binds,
                                                                      bool useDefaults);
 
+    // Restores all default input binds for the specified Mission Stick controller.
+    // Returns all unbound actions.
+    // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::MissionStick::Binds &binds,
+                                                                     bool useDefaults);
+
 private:
     SharedContext &m_context;
 
@@ -429,6 +470,8 @@ private:
     InputMap m_port2AnalogPadInputs;
     InputMap m_port1ArcadeRacerInputs;
     InputMap m_port2ArcadeRacerInputs;
+    InputMap m_port1MissionStickInputs;
+    InputMap m_port2MissionStickInputs;
 
     InputMap &GetInputMapForContext(void *context);
 

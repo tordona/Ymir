@@ -222,11 +222,52 @@ namespace arcade_racer {
     inline constexpr auto Start = input::Action::Button(0xC03006, "Arcade Racer", "Start");
     inline constexpr auto GearUp = input::Action::Button(0xC03007, "Arcade Racer", "Gear up");
     inline constexpr auto GearDown = input::Action::Button(0xC03008, "Arcade Racer", "Gear down");
-    inline constexpr auto WheelLeft = input::Action::Button(0xC0300A, "Arcade Racer", "Wheel left");
-    inline constexpr auto WheelRight = input::Action::Button(0xC0300B, "Arcade Racer", "Wheel right");
+    inline constexpr auto WheelLeft = input::Action::Button(0xC03009, "Arcade Racer", "Wheel left");
+    inline constexpr auto WheelRight = input::Action::Button(0xC0300A, "Arcade Racer", "Wheel right");
     inline constexpr auto AnalogWheel =
-        input::Action::AbsoluteBipolarAxis1D(0xC03009, "Arcade Racer", "Wheel (analog)");
+        input::Action::AbsoluteBipolarAxis1D(0xC0300B, "Arcade Racer", "Wheel (analog)");
 
 } // namespace arcade_racer
+
+namespace mission_stick {
+
+    inline constexpr auto A = input::Action::Button(0xC04000, "Mission Stick", "A");
+    inline constexpr auto B = input::Action::Button(0xC04001, "Mission Stick", "B");
+    inline constexpr auto C = input::Action::Button(0xC04002, "Mission Stick", "C");
+    inline constexpr auto X = input::Action::Button(0xC04003, "Mission Stick", "X");
+    inline constexpr auto Y = input::Action::Button(0xC04004, "Mission Stick", "Y");
+    inline constexpr auto Z = input::Action::Button(0xC04005, "Mission Stick", "Z");
+    inline constexpr auto L = input::Action::Button(0xC04006, "Mission Stick", "L");
+    inline constexpr auto R = input::Action::Button(0xC04007, "Mission Stick", "R");
+    inline constexpr auto Start = input::Action::Button(0xC04008, "Mission Stick", "Start");
+    inline constexpr auto MainUp = input::Action::Button(0xC04009, "Mission Stick", "Main stick up");
+    inline constexpr auto MainDown = input::Action::Button(0xC0400A, "Mission Stick", "Main stick down");
+    inline constexpr auto MainLeft = input::Action::Button(0xC0400B, "Mission Stick", "Main stick left");
+    inline constexpr auto MainRight = input::Action::Button(0xC0400C, "Mission Stick", "Main stick right");
+    inline constexpr auto MainStick = input::Action::AbsoluteBipolarAxis2D(0xC0400D, "Mission Stick", "Main stick");
+    inline constexpr auto MainThrottle =
+        input::Action::AbsoluteMonopolarAxis1D(0xC0400E, "Mission Stick", "Main throttle");
+    inline constexpr auto MainThrottleUp =
+        input::Action::RepeatableTrigger(0xC0400F, "Mission Stick", "Main throttle up");
+    inline constexpr auto MainThrottleDown =
+        input::Action::RepeatableTrigger(0xC04010, "Mission Stick", "Main throttle down");
+    inline constexpr auto MainThrottleMax = input::Action::Trigger(0xC04011, "Mission Stick", "Main throttle max");
+    inline constexpr auto MainThrottleMin = input::Action::Trigger(0xC04012, "Mission Stick", "Main throttle min");
+    inline constexpr auto SubUp = input::Action::Button(0xC04013, "Mission Stick", "Sub stick up");
+    inline constexpr auto SubDown = input::Action::Button(0xC04014, "Mission Stick", "Sub stick down");
+    inline constexpr auto SubLeft = input::Action::Button(0xC04015, "Mission Stick", "Sub stick left");
+    inline constexpr auto SubRight = input::Action::Button(0xC04016, "Mission Stick", "Sub stick right");
+    inline constexpr auto SubStick = input::Action::AbsoluteBipolarAxis2D(0xC04017, "Mission Stick", "Sub stick");
+    inline constexpr auto SubThrottle =
+        input::Action::AbsoluteMonopolarAxis1D(0xC04018, "Mission Stick", "Sub throttle");
+    inline constexpr auto SubThrottleUp =
+        input::Action::RepeatableTrigger(0xC04019, "Mission Stick", "Sub throttle up");
+    inline constexpr auto SubThrottleDown =
+        input::Action::RepeatableTrigger(0xC0401A, "Mission Stick", "Sub throttle down");
+    inline constexpr auto SubThrottleMax = input::Action::Trigger(0xC0401B, "Mission Stick", "Sub throttle max");
+    inline constexpr auto SubThrottleMin = input::Action::Trigger(0xC0401C, "Mission Stick", "Sub throttle min");
+    inline constexpr auto SwitchMode = input::Action::Trigger(0xC0401D, "Mission Stick", "Switch mode");
+
+} // namespace mission_stick
 
 } // namespace app::actions

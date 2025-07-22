@@ -83,6 +83,7 @@ add_library(ymir-core
     include/ymir/hw/smpc/peripheral/peripheral_impl_analog_pad.hpp
     include/ymir/hw/smpc/peripheral/peripheral_impl_arcade_racer.hpp
     include/ymir/hw/smpc/peripheral/peripheral_impl_control_pad.hpp
+    include/ymir/hw/smpc/peripheral/peripheral_impl_mission_stick.hpp
     include/ymir/hw/smpc/peripheral/peripheral_impl_null.hpp
     include/ymir/hw/smpc/peripheral/peripheral_port.hpp
     include/ymir/hw/smpc/peripheral/peripheral_report.hpp
@@ -202,6 +203,7 @@ add_library(ymir-core
     src/ymir/hw/smpc/peripheral/peripheral_impl_analog_pad.cpp
     src/ymir/hw/smpc/peripheral/peripheral_impl_arcade_racer.cpp
     src/ymir/hw/smpc/peripheral/peripheral_impl_control_pad.cpp
+    src/ymir/hw/smpc/peripheral/peripheral_impl_mission_stick.cpp
 
     src/ymir/hw/sh2/sh2.cpp
     

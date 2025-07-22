@@ -7,11 +7,11 @@
 
 namespace app::ui {
 
-class ControlPadConfigView : public SettingsViewBase {
+class MissionStickConfigView : public SettingsViewBase {
 public:
-    ControlPadConfigView(SharedContext &context);
+    MissionStickConfigView(SharedContext &context);
 
-    void Display(Settings::Input::Port::ControlPad &controllerSettings, uint32 portIndex);
+    void Display(Settings::Input::Port::MissionStick &controllerSettings, uint32 portIndex);
 
 private:
     widgets::InputCaptureWidget m_inputCaptureWidget;

@@ -10,7 +10,7 @@
 namespace ymir::peripheral {
 
 /// @brief Peripheral type enumeration.
-enum class PeripheralType { None, ControlPad, AnalogPad, ArcadeRacer };
+enum class PeripheralType { None, ControlPad, AnalogPad, ArcadeRacer, MissionStick };
 
 /// @brief Retrieves the name of a given peripheral type.
 /// @param[in] type the peripheral type
@@ -21,13 +21,14 @@ inline std::string_view GetPeripheralName(PeripheralType type) {
     case PeripheralType::ControlPad: return "Saturn Control Pad";
     case PeripheralType::AnalogPad: return "Saturn 3D Control Pad";
     case PeripheralType::ArcadeRacer: return "Arcade Racer";
+    case PeripheralType::MissionStick: return "Mission Stick";
     default: return "Invalid";
     }
 }
 
 /// @brief All supported peripheral types.
 inline constexpr PeripheralType kTypes[] = {PeripheralType::None, PeripheralType::ControlPad, PeripheralType::AnalogPad,
-                                            PeripheralType::ArcadeRacer};
+                                            PeripheralType::ArcadeRacer, PeripheralType::MissionStick};
 
 // Forward declarations of concrete peripheral implementations.
 // See the peripheral_impl_* headers.
@@ -36,6 +37,7 @@ class NullPeripheral;
 class ControlPad;
 class AnalogPad;
 class ArcadeRacerPeripheral;
+class MissionStickPeripheral;
 
 namespace detail {
 
@@ -66,6 +68,12 @@ namespace detail {
     template <>
     struct PeripheralTypeMeta<PeripheralType::ArcadeRacer> {
         using type = ArcadeRacerPeripheral;
+    };
+
+    /// @brief Metadata about the Mission Stick.
+    template <>
+    struct PeripheralTypeMeta<PeripheralType::MissionStick> {
+        using type = MissionStickPeripheral;
     };
 
     /// @brief Retrieves the class type of the given `PeripheralType`.

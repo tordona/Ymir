@@ -5,6 +5,7 @@
 #include <app/ui/views/settings/analog_pad_config_view.hpp>
 #include <app/ui/views/settings/arcade_racer_config_view.hpp>
 #include <app/ui/views/settings/control_pad_config_view.hpp>
+#include <app/ui/views/settings/mission_stick_config_view.hpp>
 
 namespace app::ui {
 
@@ -25,6 +26,7 @@ private:
     ControlPadConfigView m_controlPadView;
     AnalogPadConfigView m_analogPadView;
     ArcadeRacerConfigView m_arcadeRacerView;
+    MissionStickConfigView m_missionStickView;
 };
 
 } // namespace app::ui

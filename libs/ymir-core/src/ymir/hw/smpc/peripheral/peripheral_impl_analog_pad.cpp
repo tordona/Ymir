@@ -104,22 +104,22 @@ uint8 AnalogPad::WritePDR(uint8 ddr, uint8 value) {
                 const uint8 pos = m_reportPos;
                 m_reportPos = (m_reportPos + 1) & 15;
                 switch (pos) {
-                case 0: return (m_tl << 5) | 0b0001;
-                case 1: return (m_tl << 5) | 0b0101;
-                case 2: return (m_tl << 5) | bit::extract<12, 15>(btnValue);
-                case 3: return (m_tl << 5) | bit::extract<8, 11>(btnValue);
-                case 4: return (m_tl << 5) | bit::extract<4, 7>(btnValue);
-                case 5: return (m_tl << 5) | (bit::extract<3>(btnValue) << 3) | 0b100;
-                case 6: return (m_tl << 5) | bit::extract<4, 7>(m_report.x);
-                case 7: return (m_tl << 5) | bit::extract<0, 3>(m_report.x);
-                case 8: return (m_tl << 5) | bit::extract<4, 7>(m_report.y);
-                case 9: return (m_tl << 5) | bit::extract<0, 3>(m_report.y);
-                case 10: return (m_tl << 5) | bit::extract<4, 7>(m_report.l);
-                case 11: return (m_tl << 5) | bit::extract<0, 3>(m_report.l);
-                case 12: return (m_tl << 5) | bit::extract<4, 7>(m_report.r);
-                case 13: return (m_tl << 5) | bit::extract<0, 3>(m_report.r);
-                case 14: return (m_tl << 5) | 0b0000;
-                case 15: return (m_tl << 5) | 0b0001;
+                case 0: return (m_tl << 4) | 0b0001;
+                case 1: return (m_tl << 4) | 0b0101;
+                case 2: return (m_tl << 4) | bit::extract<12, 15>(btnValue);
+                case 3: return (m_tl << 4) | bit::extract<8, 11>(btnValue);
+                case 4: return (m_tl << 4) | bit::extract<4, 7>(btnValue);
+                case 5: return (m_tl << 4) | (bit::extract<3>(btnValue) << 3) | 0b100;
+                case 6: return (m_tl << 4) | bit::extract<4, 7>(m_report.x);
+                case 7: return (m_tl << 4) | bit::extract<0, 3>(m_report.x);
+                case 8: return (m_tl << 4) | bit::extract<4, 7>(m_report.y);
+                case 9: return (m_tl << 4) | bit::extract<0, 3>(m_report.y);
+                case 10: return (m_tl << 4) | bit::extract<4, 7>(m_report.l);
+                case 11: return (m_tl << 4) | bit::extract<0, 3>(m_report.l);
+                case 12: return (m_tl << 4) | bit::extract<4, 7>(m_report.r);
+                case 13: return (m_tl << 4) | bit::extract<0, 3>(m_report.r);
+                case 14: return (m_tl << 4) | 0b0000;
+                case 15: return (m_tl << 4) | 0b0001;
                 }
             }
         } else {

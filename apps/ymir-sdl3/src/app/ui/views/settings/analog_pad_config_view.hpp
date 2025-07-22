@@ -11,7 +11,7 @@ class AnalogPadConfigView : public SettingsViewBase {
 public:
     AnalogPadConfigView(SharedContext &context);
 
-    void Display(Settings::Input::Port::AnalogPad::Binds &binds, uint32 portIndex);
+    void Display(Settings::Input::Port::AnalogPad &controllerSettings, uint32 portIndex);
 
 private:
     widgets::InputCaptureWidget m_inputCaptureWidget;

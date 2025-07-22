@@ -279,9 +279,56 @@ struct SharedContext {
         }
     };
 
+    struct MissionStickInput {
+        ymir::peripheral::Button buttons = ymir::peripheral::Button::Default;
+
+        struct Stick {
+            float x = 0.0f, y = 0.0f; // analog stick: -1.0f (left/up) to 1.0f (down/right)
+            float z = 0.0f;           // analog throttle: 0.0f (minimum/down) to 1.0f (maximum/up)
+
+            std::unordered_map<input::InputElement, Input2D> analogStickInputs;
+            std::unordered_map<input::InputElement, float> analogThrottleInputs;
+        };
+        std::array<Stick, 2> sticks{};
+        bool sixAxisMode = true;
+
+        // Digital throttles managed by the [Main|Sub]Throttle[Up|Down|Max|Min] actions
+        std::array<float, 2> digitalThrottles{0.0f, 0.0f};
+
+        void UpdateAnalogStick(bool sub) {
+            auto &stick = sticks[sub];
+
+            // Aggregate all analog stick inputs
+            stick.x = 0.0f;
+            stick.y = 0.0f;
+            for (auto &[_, inputs] : stick.analogStickInputs) {
+                stick.x += inputs.x;
+                stick.y += inputs.y;
+            }
+
+            // Clamp to -1.0..1.0
+            stick.x = std::clamp(stick.x, -1.0f, 1.0f);
+            stick.y = std::clamp(stick.y, -1.0f, 1.0f);
+        }
+
+        void UpdateAnalogThrottle(bool sub) {
+            auto &stick = sticks[sub];
+
+            // Aggregate all analog throttle inputs
+            stick.z = 0.0f;
+            for (auto &[_, inputs] : stick.analogThrottleInputs) {
+                stick.z += inputs;
+            }
+            stick.z += digitalThrottles[sub];
+
+            // Clamp to 0.0..1.0
+            stick.z = std::clamp(stick.z, 0.0f, 1.0f);
+        }
+    };
     std::array<ControlPadInput, 2> controlPadInputs;
     std::array<AnalogPadInput, 2> analogPadInputs;
     std::array<ArcadeRacerInput, 2> arcadeRacerInputs;
+    std::array<MissionStickInput, 2> missionStickInputs;
 
     Profile profile;
     Settings settings{*this};

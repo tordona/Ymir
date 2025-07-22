@@ -182,6 +182,7 @@ static void InsertPeripheral(peripheral::PeripheralType type, peripheral::Periph
     case ymir::peripheral::PeripheralType::ControlPad: port.ConnectControlPad(); break;
     case ymir::peripheral::PeripheralType::AnalogPad: port.ConnectAnalogPad(); break;
     case ymir::peripheral::PeripheralType::ArcadeRacer: port.ConnectArcadeRacer(); break;
+    case ymir::peripheral::PeripheralType::MissionStick: port.ConnectMissionStick(); break;
     }
 }
 

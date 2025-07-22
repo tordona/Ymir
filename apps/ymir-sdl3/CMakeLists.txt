@@ -140,6 +140,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/settings/input_settings_view.hpp
     src/app/ui/views/settings/ipl_settings_view.cpp
     src/app/ui/views/settings/ipl_settings_view.hpp
+    src/app/ui/views/settings/mission_stick_config_view.cpp
+    src/app/ui/views/settings/mission_stick_config_view.hpp
     src/app/ui/views/settings/settings_view_base.cpp
     src/app/ui/views/settings/settings_view_base.hpp
     src/app/ui/views/settings/system_settings_view.cpp

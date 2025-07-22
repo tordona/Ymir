@@ -1,24 +1,24 @@
-#include "analog_pad_config_view.hpp"
+#include "mission_stick_config_view.hpp"
 
 namespace app::ui {
 
-AnalogPadConfigView::AnalogPadConfigView(SharedContext &context)
+MissionStickConfigView::MissionStickConfigView(SharedContext &context)
     : SettingsViewBase(context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void AnalogPadConfigView::Display(Settings::Input::Port::AnalogPad &controllerSettings, uint32 portIndex) {
+void MissionStickConfigView::Display(Settings::Input::Port::MissionStick &controllerSettings, uint32 portIndex) {
     auto &binds = controllerSettings.binds;
 
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Mode:");
     ImGui::SameLine();
-    if (ImGui::RadioButton("Analog", m_context.analogPadInputs[portIndex].analogMode)) {
-        m_context.analogPadInputs[portIndex].analogMode = true;
+    if (ImGui::RadioButton("Three-axis", !m_context.missionStickInputs[portIndex].sixAxisMode)) {
+        m_context.missionStickInputs[portIndex].sixAxisMode = false;
     }
     ImGui::SameLine();
-    if (ImGui::RadioButton("Digital", !m_context.analogPadInputs[portIndex].analogMode)) {
-        m_context.analogPadInputs[portIndex].analogMode = false;
+    if (ImGui::RadioButton("Six-axis", m_context.missionStickInputs[portIndex].sixAxisMode)) {
+        m_context.missionStickInputs[portIndex].sixAxisMode = true;
     }
 
     if (ImGui::Button("Restore defaults")) {
@@ -35,7 +35,7 @@ void AnalogPadConfigView::Display(Settings::Input::Port::AnalogPad &controllerSe
     m_unboundActionsWidget.Display();
     if (ImGui::BeginTable("hotkeys", 1 + input::kNumBindsPerInput,
                           ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_ScrollY)) {
-        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 85.0f * m_context.displayScale);
+        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 120.0f * m_context.displayScale);
         for (size_t i = 0; i < input::kNumBindsPerInput; i++) {
             ImGui::TableSetupColumn(fmt::format("Hotkey {}", i + 1).c_str(), ImGuiTableColumnFlags_WidthStretch, 1.0f);
         }
@@ -63,14 +63,26 @@ void AnalogPadConfigView::Display(Settings::Input::Port::AnalogPad &controllerSe
         drawRow(binds.l);
         drawRow(binds.r);
         drawRow(binds.start);
-        drawRow(binds.up);
-        drawRow(binds.down);
-        drawRow(binds.left);
-        drawRow(binds.right);
-        drawRow(binds.dpad);
-        drawRow(binds.analogStick);
-        drawRow(binds.analogL);
-        drawRow(binds.analogR);
+        drawRow(binds.mainUp);
+        drawRow(binds.mainDown);
+        drawRow(binds.mainLeft);
+        drawRow(binds.mainRight);
+        drawRow(binds.mainStick);
+        drawRow(binds.mainThrottle);
+        drawRow(binds.mainThrottleUp);
+        drawRow(binds.mainThrottleDown);
+        drawRow(binds.mainThrottleMax);
+        drawRow(binds.mainThrottleMin);
+        drawRow(binds.subUp);
+        drawRow(binds.subDown);
+        drawRow(binds.subLeft);
+        drawRow(binds.subRight);
+        drawRow(binds.subStick);
+        drawRow(binds.subThrottle);
+        drawRow(binds.subThrottleUp);
+        drawRow(binds.subThrottleDown);
+        drawRow(binds.subThrottleMax);
+        drawRow(binds.subThrottleMin);
         drawRow(binds.switchMode);
 
         m_inputCaptureWidget.DrawCapturePopup();
