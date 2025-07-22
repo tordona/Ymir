@@ -1819,10 +1819,8 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Arcade
         rebindCtx.Rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
         rebindCtx.Rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
         rebindCtx.Rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
-        rebindCtx.Rebind(binds.gearUp,
-                         {{{Key::S}, {0, GPBtn::DpadDown}, {0, GPBtn::RightTrigger}, {0, GPBtn::RightBumper}}});
-        rebindCtx.Rebind(binds.gearDown,
-                         {{{Key::W}, {0, GPBtn::DpadUp}, {0, GPBtn::LeftTrigger}, {0, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.gearUp, {{{Key::S}, {0, GPBtn::DpadDown}, {0, GPBtn::RightTrigger}}});
+        rebindCtx.Rebind(binds.gearDown, {{{Key::W}, {0, GPBtn::DpadUp}, {0, GPBtn::LeftTrigger}}});
         rebindCtx.Rebind(binds.wheelLeft, {{{Key::A}}});
         rebindCtx.Rebind(binds.wheelRight, {{{Key::D}}});
         rebindCtx.Rebind(binds.wheel, {{{0, GPAxis1::LeftStickX}}});
@@ -1835,12 +1833,8 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Arcade
         rebindCtx.Rebind(binds.y, {{{Key::KeyPad5}, {1, GPBtn::Y}}});
         rebindCtx.Rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
         rebindCtx.Rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
-        rebindCtx.Rebind(
-            binds.gearUp,
-            {{{Key::Down}, {Key::End}, {1, GPBtn::DpadDown}, {1, GPBtn::RightTrigger}, {1, GPBtn::RightBumper}}});
-        rebindCtx.Rebind(
-            binds.gearDown,
-            {{{Key::Up}, {Key::Home}, {1, GPBtn::DpadUp}, {1, GPBtn::LeftTrigger}, {1, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.gearUp, {{{Key::Down}, {Key::End}, {1, GPBtn::DpadDown}, {1, GPBtn::RightTrigger}}});
+        rebindCtx.Rebind(binds.gearDown, {{{Key::Up}, {Key::Home}, {1, GPBtn::DpadUp}, {1, GPBtn::LeftTrigger}}});
         rebindCtx.Rebind(binds.wheelLeft, {{{Key::Left}, {Key::Delete}}});
         rebindCtx.Rebind(binds.wheelRight, {{{Key::Right}, {Key::PageDown}}});
         rebindCtx.Rebind(binds.wheel, {{{1, GPAxis1::LeftStickX}}});
