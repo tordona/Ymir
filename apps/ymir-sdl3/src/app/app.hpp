@@ -7,7 +7,7 @@
 
 #include "ui/windows/about_window.hpp"
 #include "ui/windows/backup_ram_manager_window.hpp"
-#include "ui/windows/peripheral_binds_window.hpp"
+#include "ui/windows/peripheral_config_window.hpp"
 #include "ui/windows/settings_window.hpp"
 #include "ui/windows/system_state_window.hpp"
 
@@ -133,7 +133,7 @@ private:
     std::vector<ui::MemoryViewerWindow> m_memoryViewerWindows;
 
     ui::SettingsWindow m_settingsWindow;
-    ui::PeripheralBindsWindow m_periphBindsWindow;
+    ui::PeripheralConfigWindow m_periphConfigWindow;
     ui::AboutWindow m_aboutWindow;
 
     // Generic modal dialog

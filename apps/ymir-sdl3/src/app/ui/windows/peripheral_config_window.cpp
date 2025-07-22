@@ -1,33 +1,41 @@
-#include "peripheral_binds_window.hpp"
+#include "peripheral_config_window.hpp"
 
 using namespace ymir;
 
 namespace app::ui {
 
-PeripheralBindsWindow::PeripheralBindsWindow(SharedContext &context)
+PeripheralConfigWindow::PeripheralConfigWindow(SharedContext &context)
     : WindowBase(context)
     , m_controlPadView(context)
     , m_analogPadView(context)
     , m_arcadeRacerView(context) {}
 
-void PeripheralBindsWindow::Open(uint32 portIndex, uint32 slotIndex) {
+void PeripheralConfigWindow::Open(uint32 portIndex, uint32 slotIndex) {
     m_portIndex = std::min(portIndex, 1u);
     m_slotIndex = std::min(slotIndex, 0u); // TODO: support multi-tap
     WindowBase::Open = true;
 }
 
-void PeripheralBindsWindow::PrepareWindow() {
-    m_windowConfig.name = fmt::format("Port {} input binds###periph_binds_window", m_portIndex + 1);
+void PeripheralConfigWindow::PrepareWindow() {
+    auto &port =
+        m_portIndex == 0 ? m_context.saturn.SMPC.GetPeripheralPort1() : m_context.saturn.SMPC.GetPeripheralPort2();
+    auto &periph = port.GetPeripheral(/* TODO: m_slotIndex */);
+
+    m_windowConfig.name =
+        fmt::format("Port {} {} configuration###periph_config_window", m_portIndex + 1, periph.GetName());
 
     // TODO: include slot index in title when multi-tap is supported
-    // m_windowConfig.name =
-    //     fmt::format("Port {} slot {} input binds###periph_binds_window", m_portIndex + 1, m_slotIndex + 1);
+    // m_windowConfig.name = fmt::format("Port {} slot {} {} configuration###periph_config_window", m_portIndex + 1,
+    //                                   m_slotIndex + 1, periph.GetName());
 
     ImGui::SetNextWindowSizeConstraints(ImVec2(500 * m_context.displayScale, 300 * m_context.displayScale),
                                         ImVec2(FLT_MAX, FLT_MAX));
+    auto *vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f), ImGuiCond_Appearing,
+                            ImVec2(0.5f, 0.5f));
 }
 
-void PeripheralBindsWindow::DrawContents() {
+void PeripheralConfigWindow::DrawContents() {
     auto &port =
         m_portIndex == 0 ? m_context.saturn.SMPC.GetPeripheralPort1() : m_context.saturn.SMPC.GetPeripheralPort2();
     auto &periph = port.GetPeripheral(/* TODO: m_slotIndex */);

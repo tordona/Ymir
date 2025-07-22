@@ -148,7 +148,7 @@ App::App()
     , m_cdblockWindowSet(m_context)
     , m_debugOutputWindow(m_context)
     , m_settingsWindow(m_context)
-    , m_periphBindsWindow(m_context)
+    , m_periphConfigWindow(m_context)
     , m_aboutWindow(m_context) {
 
     // Preinitialize some memory viewers
@@ -4025,7 +4025,7 @@ void App::DrawWindows() {
     }
 
     m_settingsWindow.Display();
-    m_periphBindsWindow.Display();
+    m_periphConfigWindow.Display();
     m_aboutWindow.Display();
 }
 
@@ -4048,8 +4048,8 @@ void App::OpenMemoryViewer() {
 }
 
 void App::OpenPeripheralBindsEditor(const PeripheralBindsParams &params) {
-    m_periphBindsWindow.Open(params.portIndex, params.slotIndex);
-    m_periphBindsWindow.RequestFocus();
+    m_periphConfigWindow.Open(params.portIndex, params.slotIndex);
+    m_periphConfigWindow.RequestFocus();
 }
 
 void App::DrawGenericModal() {

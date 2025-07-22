@@ -1,13 +1,13 @@
-#include "analog_pad_binds_view.hpp"
+#include "analog_pad_config_view.hpp"
 
 namespace app::ui {
 
-AnalogPadBindsView::AnalogPadBindsView(SharedContext &context)
+AnalogPadConfigView::AnalogPadConfigView(SharedContext &context)
     : SettingsViewBase(context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void AnalogPadBindsView::Display(Settings::Input::Port::AnalogPad::Binds &binds, uint32 portIndex) {
+void AnalogPadConfigView::Display(Settings::Input::Port::AnalogPad::Binds &binds, uint32 portIndex) {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Mode:");
     ImGui::SameLine();

@@ -118,18 +118,18 @@ add_executable(ymir-sdl3
     src/app/ui/views/debug/vdp2_vram_delay_view.cpp
     src/app/ui/views/debug/vdp2_vram_delay_view.hpp
 
-    src/app/ui/views/settings/analog_pad_binds_view.cpp
-    src/app/ui/views/settings/analog_pad_binds_view.hpp
-    src/app/ui/views/settings/arcade_racer_binds_view.cpp
-    src/app/ui/views/settings/arcade_racer_binds_view.hpp
+    src/app/ui/views/settings/analog_pad_config_view.cpp
+    src/app/ui/views/settings/analog_pad_config_view.hpp
+    src/app/ui/views/settings/arcade_racer_config_view.cpp
+    src/app/ui/views/settings/arcade_racer_config_view.hpp
     src/app/ui/views/settings/audio_settings_view.cpp
     src/app/ui/views/settings/audio_settings_view.hpp
     src/app/ui/views/settings/cartridge_settings_view.cpp
     src/app/ui/views/settings/cartridge_settings_view.hpp
     src/app/ui/views/settings/cdblock_settings_view.cpp
     src/app/ui/views/settings/cdblock_settings_view.hpp
-    src/app/ui/views/settings/control_pad_binds_view.cpp
-    src/app/ui/views/settings/control_pad_binds_view.hpp
+    src/app/ui/views/settings/control_pad_config_view.cpp
+    src/app/ui/views/settings/control_pad_config_view.hpp
     src/app/ui/views/settings/general_settings_view.cpp
     src/app/ui/views/settings/general_settings_view.hpp
     src/app/ui/views/settings/gui_settings_view.cpp
@@ -172,8 +172,8 @@ add_executable(ymir-sdl3
     src/app/ui/windows/about_window.hpp
     src/app/ui/windows/backup_ram_manager_window.cpp
     src/app/ui/windows/backup_ram_manager_window.hpp
-    src/app/ui/windows/peripheral_binds_window.cpp
-    src/app/ui/windows/peripheral_binds_window.hpp
+    src/app/ui/windows/peripheral_config_window.cpp
+    src/app/ui/windows/peripheral_config_window.hpp
     src/app/ui/windows/settings_window.cpp
     src/app/ui/windows/settings_window.hpp
     src/app/ui/windows/system_state_window.cpp

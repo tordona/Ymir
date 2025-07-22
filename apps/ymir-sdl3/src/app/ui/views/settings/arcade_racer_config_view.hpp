@@ -7,9 +7,9 @@
 
 namespace app::ui {
 
-class ArcadeRacerBindsView : public SettingsViewBase {
+class ArcadeRacerConfigView : public SettingsViewBase {
 public:
-    ArcadeRacerBindsView(SharedContext &context);
+    ArcadeRacerConfigView(SharedContext &context);
 
     void Display(Settings::Input::Port::ArcadeRacer &controllerSettings, uint32 portIndex);
 

@@ -1,15 +1,15 @@
-#include "control_pad_binds_view.hpp"
+#include "control_pad_config_view.hpp"
 
 #include <app/events/gui_event_factory.hpp>
 
 namespace app::ui {
 
-ControlPadBindsView::ControlPadBindsView(SharedContext &context)
+ControlPadConfigView::ControlPadConfigView(SharedContext &context)
     : SettingsViewBase(context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void ControlPadBindsView::Display(Settings::Input::Port::ControlPad::Binds &binds, uint32 portIndex) {
+void ControlPadConfigView::Display(Settings::Input::Port::ControlPad::Binds &binds, uint32 portIndex) {
     if (ImGui::Button("Restore defaults")) {
         m_unboundActionsWidget.Capture(m_context.settings.ResetBinds(binds, true));
         MakeDirty();

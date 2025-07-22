@@ -1,0 +1,30 @@
+#pragma once
+
+#include <app/ui/window_base.hpp>
+
+#include <app/ui/views/settings/analog_pad_config_view.hpp>
+#include <app/ui/views/settings/arcade_racer_config_view.hpp>
+#include <app/ui/views/settings/control_pad_config_view.hpp>
+
+namespace app::ui {
+
+class PeripheralConfigWindow : public WindowBase {
+public:
+    PeripheralConfigWindow(SharedContext &context);
+
+    void Open(uint32 portIndex, uint32 slotIndex);
+
+protected:
+    void PrepareWindow() override;
+    void DrawContents() override;
+
+private:
+    uint32 m_portIndex;
+    uint32 m_slotIndex;
+
+    ControlPadConfigView m_controlPadView;
+    AnalogPadConfigView m_analogPadView;
+    ArcadeRacerConfigView m_arcadeRacerView;
+};
+
+} // namespace app::ui

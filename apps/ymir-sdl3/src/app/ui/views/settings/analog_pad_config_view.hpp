@@ -7,11 +7,11 @@
 
 namespace app::ui {
 
-class ControlPadBindsView : public SettingsViewBase {
+class AnalogPadConfigView : public SettingsViewBase {
 public:
-    ControlPadBindsView(SharedContext &context);
+    AnalogPadConfigView(SharedContext &context);
 
-    void Display(Settings::Input::Port::ControlPad::Binds &binds, uint32 portIndex);
+    void Display(Settings::Input::Port::AnalogPad::Binds &binds, uint32 portIndex);
 
 private:
     widgets::InputCaptureWidget m_inputCaptureWidget;

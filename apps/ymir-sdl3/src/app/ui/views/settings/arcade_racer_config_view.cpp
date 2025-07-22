@@ -1,4 +1,4 @@
-#include "arcade_racer_binds_view.hpp"
+#include "arcade_racer_config_view.hpp"
 
 #include <app/ui/widgets/common_widgets.hpp>
 
@@ -6,12 +6,12 @@
 
 namespace app::ui {
 
-ArcadeRacerBindsView::ArcadeRacerBindsView(SharedContext &context)
+ArcadeRacerConfigView::ArcadeRacerConfigView(SharedContext &context)
     : SettingsViewBase(context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void ArcadeRacerBindsView::Display(Settings::Input::Port::ArcadeRacer &controllerSettings, uint32 portIndex) {
+void ArcadeRacerConfigView::Display(Settings::Input::Port::ArcadeRacer &controllerSettings, uint32 portIndex) {
     auto &binds = controllerSettings.binds;
     float sensitivity = controllerSettings.sensitivity;
     ImGui::AlignTextToFramePadding();
