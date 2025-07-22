@@ -4,6 +4,7 @@
 
 #include <fmt/format.h>
 
+#include <cmath>
 #include <concepts>
 
 namespace app::input {
@@ -31,7 +32,7 @@ inline std::string ToShortcut(InputContext &ctx, std::same_as<Action> auto... ac
 // The value is assumed to be in the 0.0 to 1.0 or -1.0 to +1.0 ranges.
 inline float ApplySensitivity(float value, float sensitivity) {
     const float sign = (value >= 0.0f ? +1.0f : -1.0f);
-    return std::powf(std::fabsf(value), 1.0f / sensitivity) * sign;
+    return std::pow(std::abs(value), 1.0f / sensitivity) * sign;
 }
 
 // Apply deadzone to an 1D axis.
