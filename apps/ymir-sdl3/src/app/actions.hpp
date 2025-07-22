@@ -10,21 +10,27 @@ namespace general {
     inline constexpr auto ToggleWindowedVideoOutput =
         input::Action::Trigger(0x001001, "General", "Toggle windowed video output");
     inline constexpr auto ToggleFullScreen = input::Action::Trigger(0x001002, "General", "Toggle full screen");
-    inline constexpr auto ToggleFrameRateOSD = input::Action::Trigger(0x001003, "General", "Toggle frame rate OSD");
-    inline constexpr auto NextFrameRateOSDPos =
-        input::Action::Trigger(0x001004, "General", "Next frame rate OSD position");
-    inline constexpr auto PrevFrameRateOSDPos =
-        input::Action::Trigger(0x001005, "General", "Previous frame rate OSD position");
 
 } // namespace general
 
+namespace view {
+    inline constexpr auto ToggleFrameRateOSD = input::Action::Trigger(0x001100, "View", "Toggle frame rate OSD");
+    inline constexpr auto NextFrameRateOSDPos =
+        input::Action::Trigger(0x001101, "View", "Next frame rate OSD position");
+    inline constexpr auto PrevFrameRateOSDPos =
+        input::Action::Trigger(0x001102, "View", "Previous frame rate OSD position");
+
+    inline constexpr auto RotateScreenCW = input::Action::Trigger(0x001103, "View", "Rotate screen clockwise");
+    inline constexpr auto RotateScreenCCW = input::Action::Trigger(0x001104, "View", "Rotate screen counterclockwise");
+} // namespace view
+
 namespace audio {
 
-    inline constexpr auto ToggleMute = input::Action::Trigger(0x001100, "Audio", "Toggle mute");
+    inline constexpr auto ToggleMute = input::Action::Trigger(0x001200, "Audio", "Toggle mute");
     inline constexpr auto IncreaseVolume =
-        input::Action::RepeatableTrigger(0x001101, "Audio", "Increase volume by 10%");
+        input::Action::RepeatableTrigger(0x001201, "Audio", "Increase volume by 10%");
     inline constexpr auto DecreaseVolume =
-        input::Action::RepeatableTrigger(0x001102, "Audio", "Decrease volume by 10%");
+        input::Action::RepeatableTrigger(0x001202, "Audio", "Decrease volume by 10%");
 
 } // namespace audio
 

@@ -11,6 +11,7 @@
 - Input: Categorized gamepad triggers as monopolar axes (having values ranging from 0.0 to 1.0) and gamepad sticks as bipolar axes (-1.0 to +1.0).
 - Input: Implemented Arcade Racer peripheral. (#29)
 - Input: Implemented Mission Stick peripheral with toggleable three-axis and six-axis modes. (#30)
+- Video: Added hotkeys to rotate screen clockwise and counterclockwise. (#318)
 
 ### Fixes
 

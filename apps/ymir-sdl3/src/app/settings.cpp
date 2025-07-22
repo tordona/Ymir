@@ -470,6 +470,8 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.toggleFrameRateOSD);
     mapInput(m_actionInputs, hotkeys.nextFrameRateOSDPos);
     mapInput(m_actionInputs, hotkeys.prevFrameRateOSDPos);
+    mapInput(m_actionInputs, hotkeys.rotateScreenCW);
+    mapInput(m_actionInputs, hotkeys.rotateScreenCCW);
 
     mapInput(m_actionInputs, hotkeys.toggleMute);
     mapInput(m_actionInputs, hotkeys.increaseVolume);
@@ -837,6 +839,8 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblHotkeys, "ToggleFrameRateOSD", hotkeys.toggleFrameRateOSD);
         Parse(tblHotkeys, "NextFrameRateOSDPosition", hotkeys.nextFrameRateOSDPos);
         Parse(tblHotkeys, "PreviousFrameRateOSDPosition", hotkeys.prevFrameRateOSDPos);
+        Parse(tblHotkeys, "RotateScreenClockwise", hotkeys.rotateScreenCW);
+        Parse(tblHotkeys, "RotateScreenCounterclockwise", hotkeys.rotateScreenCCW);
 
         Parse(tblHotkeys, "ToggleMute", hotkeys.toggleMute);
         Parse(tblHotkeys, "IncreaseVolume", hotkeys.increaseVolume);
@@ -1180,6 +1184,8 @@ SettingsSaveResult Settings::Save() {
             {"ToggleFrameRateOSD", ToTOML(hotkeys.toggleFrameRateOSD)},
             {"NextFrameRateOSDPosition", ToTOML(hotkeys.nextFrameRateOSDPos)},
             {"PreviousFrameRateOSDPosition", ToTOML(hotkeys.prevFrameRateOSDPos)},
+            {"RotateScreenClockwise", ToTOML(hotkeys.rotateScreenCW)},
+            {"RotateScreenCounterclockwise", ToTOML(hotkeys.rotateScreenCCW)},
             
             {"ToggleMute", ToTOML(hotkeys.toggleMute)},
             {"IncreaseVolume", ToTOML(hotkeys.increaseVolume)},
@@ -1704,6 +1710,8 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     rebindCtx.Rebind(hotkeys.toggleFrameRateOSD, {KeyCombo{Mod::Shift, Key::F1}});
     rebindCtx.Rebind(hotkeys.nextFrameRateOSDPos, {KeyCombo{Mod::Control, Key::F1}});
     rebindCtx.Rebind(hotkeys.prevFrameRateOSDPos, {KeyCombo{Mod::Control | Mod::Shift, Key::F1}});
+    rebindCtx.Rebind(hotkeys.rotateScreenCW, {KeyCombo{Mod::Control, Key::Apostrophe}});
+    rebindCtx.Rebind(hotkeys.rotateScreenCCW, {KeyCombo{Mod::Control | Mod::Shift, Key::Apostrophe}});
 
     rebindCtx.Rebind(hotkeys.toggleMute, {KeyCombo{Mod::Control, Key::M}});
     rebindCtx.Rebind(hotkeys.increaseVolume, {KeyCombo{Mod::Control, Key::EqualsPlus}});

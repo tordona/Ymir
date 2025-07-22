@@ -836,20 +836,32 @@ void App::RunEmulator() {
             m_context.settings.video.fullScreen = !m_context.settings.video.fullScreen;
             m_context.settings.MakeDirty();
         });
-        inputContext.SetTriggerHandler(actions::general::ToggleFrameRateOSD, [&](void *, const input::InputElement &) {
+        inputContext.SetTriggerHandler(actions::view::ToggleFrameRateOSD, [&](void *, const input::InputElement &) {
             m_context.settings.gui.showFrameRateOSD = !m_context.settings.gui.showFrameRateOSD;
             m_context.settings.MakeDirty();
         });
-        inputContext.SetTriggerHandler(actions::general::NextFrameRateOSDPos, [&](void *, const input::InputElement &) {
+        inputContext.SetTriggerHandler(actions::view::NextFrameRateOSDPos, [&](void *, const input::InputElement &) {
             const uint32 pos = static_cast<uint32>(m_context.settings.gui.frameRateOSDPosition);
             const uint32 nextPos = pos >= 3 ? 0 : pos + 1;
             m_context.settings.gui.frameRateOSDPosition = static_cast<Settings::GUI::FrameRateOSDPosition>(nextPos);
             m_context.settings.MakeDirty();
         });
-        inputContext.SetTriggerHandler(actions::general::PrevFrameRateOSDPos, [&](void *, const input::InputElement &) {
+        inputContext.SetTriggerHandler(actions::view::PrevFrameRateOSDPos, [&](void *, const input::InputElement &) {
             const uint32 pos = static_cast<uint32>(m_context.settings.gui.frameRateOSDPosition);
             const uint32 prevPos = pos == 0 ? 3 : pos - 1;
             m_context.settings.gui.frameRateOSDPosition = static_cast<Settings::GUI::FrameRateOSDPosition>(prevPos);
+            m_context.settings.MakeDirty();
+        });
+        inputContext.SetTriggerHandler(actions::view::RotateScreenCW, [&](void *, const input::InputElement &) {
+            const uint32 rot = static_cast<uint32>(m_context.settings.video.rotation);
+            const uint32 nextRot = rot >= 3 ? 0 : rot + 1;
+            m_context.settings.video.rotation = static_cast<Settings::Video::DisplayRotation>(nextRot);
+            m_context.settings.MakeDirty();
+        });
+        inputContext.SetTriggerHandler(actions::view::RotateScreenCCW, [&](void *, const input::InputElement &) {
+            const uint32 rot = static_cast<uint32>(m_context.settings.video.rotation);
+            const uint32 prevRot = rot == 0 ? 3 : rot - 1;
+            m_context.settings.video.rotation = static_cast<Settings::Video::DisplayRotation>(prevRot);
             m_context.settings.MakeDirty();
         });
     }

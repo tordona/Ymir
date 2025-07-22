@@ -173,9 +173,11 @@ public:
         input::InputBind openSettings{actions::general::OpenSettings};
         input::InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
         input::InputBind toggleFullScreen{actions::general::ToggleFullScreen};
-        input::InputBind toggleFrameRateOSD{actions::general::ToggleFrameRateOSD};
-        input::InputBind nextFrameRateOSDPos{actions::general::NextFrameRateOSDPos};
-        input::InputBind prevFrameRateOSDPos{actions::general::PrevFrameRateOSDPos};
+        input::InputBind toggleFrameRateOSD{actions::view::ToggleFrameRateOSD};
+        input::InputBind nextFrameRateOSDPos{actions::view::NextFrameRateOSDPos};
+        input::InputBind prevFrameRateOSDPos{actions::view::PrevFrameRateOSDPos};
+        input::InputBind rotateScreenCW{actions::view::RotateScreenCW};
+        input::InputBind rotateScreenCCW{actions::view::RotateScreenCCW};
 
         input::InputBind toggleMute{actions::audio::ToggleMute};
         input::InputBind increaseVolume{actions::audio::IncreaseVolume};

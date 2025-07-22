@@ -49,9 +49,12 @@ void HotkeysSettingsView::Display() {
         drawRow(hotkeys.openSettings);
         drawRow(hotkeys.toggleWindowedVideoOutput);
         drawRow(hotkeys.toggleFullScreen);
+
         drawRow(hotkeys.toggleFrameRateOSD);
         drawRow(hotkeys.nextFrameRateOSDPos);
         drawRow(hotkeys.prevFrameRateOSDPos);
+        drawRow(hotkeys.rotateScreenCW);
+        drawRow(hotkeys.rotateScreenCCW);
 
         drawRow(hotkeys.toggleMute);
         drawRow(hotkeys.increaseVolume);
