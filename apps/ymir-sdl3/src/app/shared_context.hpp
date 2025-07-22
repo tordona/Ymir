@@ -256,20 +256,26 @@ struct SharedContext {
     struct ArcadeRacerInput {
         ymir::peripheral::Button buttons = ymir::peripheral::Button::Default;
 
-        float wheel = 0.0f; // analog wheel: -1.0f (left) to 1.0f (right)
+        float rawWheel = 0.0f; // raw analog wheel value: -1.0f (left) to 1.0f (right)
+        float wheel = 0.0f;    // analog wheel value with sensitivity curve applied
+
+        float sensitivity = 1.0f; // sensitivity exponent
 
         std::unordered_map<input::InputElement, Input2D> dpad2DInputs;
         std::unordered_map<input::InputElement, float> analogWheelInputs;
 
         void UpdateAnalogWheel() {
             // Aggregate all analog wheel inputs
-            wheel = 0.0f;
+            rawWheel = 0.0f;
             for (auto &[_, inputs] : analogWheelInputs) {
-                wheel += inputs;
+                rawWheel += inputs;
             }
 
             // Clamp to -1.0..1.0
-            wheel = std::clamp(wheel, -1.0f, 1.0f);
+            rawWheel = std::clamp(rawWheel, -1.0f, 1.0f);
+
+            // Apply sensitivity
+            wheel = input::ApplySensitivity(rawWheel, sensitivity);
         }
     };
 

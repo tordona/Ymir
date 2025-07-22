@@ -37,9 +37,9 @@ void PeripheralBindsWindow::DrawContents() {
     switch (periph.GetType()) {
         using enum peripheral::PeripheralType;
     case None: break;
-    case ControlPad: m_controlPadView.Display(settings.controlPadBinds, m_portIndex); break;
-    case AnalogPad: m_analogPadView.Display(settings.analogPadBinds, m_portIndex); break;
-    case ArcadeRacer: m_arcadeRacerView.Display(settings.arcadeRacerBinds, m_portIndex); break;
+    case ControlPad: m_controlPadView.Display(settings.controlPad.binds, m_portIndex); break;
+    case AnalogPad: m_analogPadView.Display(settings.analogPad.binds, m_portIndex); break;
+    case ArcadeRacer: m_arcadeRacerView.Display(settings.arcadeRacer, m_portIndex); break;
     }
 }
 

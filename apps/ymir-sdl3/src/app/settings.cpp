@@ -23,6 +23,7 @@ namespace app {
 // v2:
 // - Renamed "Input.Port#.StandardPadBinds" to "Input.Port#.ControlPadBinds"
 // v3:
+// - Moved "Input.Port#.*Binds" to "Input.Port#.*.Binds" to make room for controller-specific settings
 // - Moved "OverrideUIScale" and "UIScale" from "Video" to "GUI"
 inline constexpr int kConfigVersion = 3;
 
@@ -530,104 +531,104 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.saveStates.save10);
 
     // Saturn Control Pad on port 1
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.a);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.b);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.c);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.x);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.y);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.z);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.l);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.r);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.start);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.up);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.down);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.left);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.right);
-    mapInput(m_port1ControlPadInputs, input.port1.controlPadBinds.dpad);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.a);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.b);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.c);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.x);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.y);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.z);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.l);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.r);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.start);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.up);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.down);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.left);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.right);
+    mapInput(m_port1ControlPadInputs, input.port1.controlPad.binds.dpad);
 
     // Saturn Control Pad on port 2
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.a);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.b);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.c);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.x);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.y);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.z);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.l);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.r);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.start);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.up);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.down);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.left);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.right);
-    mapInput(m_port2ControlPadInputs, input.port2.controlPadBinds.dpad);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.a);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.b);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.c);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.x);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.y);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.z);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.l);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.r);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.start);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.up);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.down);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.left);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.right);
+    mapInput(m_port2ControlPadInputs, input.port2.controlPad.binds.dpad);
 
     // Saturn 3D Control Pad on port 1
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.a);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.b);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.c);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.x);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.y);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.z);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.l);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.r);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.start);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.up);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.down);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.left);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.right);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.dpad);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.analogStick);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.analogL);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.analogR);
-    mapInput(m_port1AnalogPadInputs, input.port1.analogPadBinds.switchMode);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.a);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.b);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.c);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.x);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.y);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.z);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.l);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.r);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.start);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.up);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.down);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.left);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.right);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.dpad);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.analogStick);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.analogL);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.analogR);
+    mapInput(m_port1AnalogPadInputs, input.port1.analogPad.binds.switchMode);
 
     // Saturn 3D Control Pad on port 2
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.a);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.b);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.c);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.x);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.y);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.z);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.l);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.r);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.start);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.up);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.down);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.left);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.right);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.dpad);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.analogStick);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.analogL);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.analogR);
-    mapInput(m_port2AnalogPadInputs, input.port2.analogPadBinds.switchMode);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.a);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.b);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.c);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.x);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.y);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.z);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.l);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.r);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.start);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.up);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.down);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.left);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.right);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.dpad);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.analogStick);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.analogL);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.analogR);
+    mapInput(m_port2AnalogPadInputs, input.port2.analogPad.binds.switchMode);
 
     // Arcade Racer on port 1
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.a);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.b);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.c);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.x);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.y);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.z);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.start);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.up);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.down);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.wheelLeft);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.wheelRight);
-    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacerBinds.wheel);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.a);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.b);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.c);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.x);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.y);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.z);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.start);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.gearUp);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.gearDown);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.wheelLeft);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.wheelRight);
+    mapInput(m_port1ArcadeRacerInputs, input.port1.arcadeRacer.binds.wheel);
 
     // Arcade Racer on port 2
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.a);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.b);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.c);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.x);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.y);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.z);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.start);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.up);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.down);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.wheelLeft);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.wheelRight);
-    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacerBinds.wheel);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.a);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.b);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.c);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.x);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.y);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.z);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.start);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.gearUp);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.gearDown);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.wheelLeft);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.wheelRight);
+    mapInput(m_port2ArcadeRacerInputs, input.port2.arcadeRacer.binds.wheel);
 
     ResetToDefaults();
 }
@@ -665,14 +666,17 @@ void Settings::ResetToDefaults() {
 
         (void)ResetHotkeys();
 
-        (void)ResetBinds(input.port1.controlPadBinds, true);
-        (void)ResetBinds(input.port2.controlPadBinds, true);
+        (void)ResetBinds(input.port1.controlPad.binds, true);
+        (void)ResetBinds(input.port2.controlPad.binds, true);
 
-        (void)ResetBinds(input.port1.analogPadBinds, true);
-        (void)ResetBinds(input.port2.analogPadBinds, true);
+        (void)ResetBinds(input.port1.analogPad.binds, true);
+        (void)ResetBinds(input.port2.analogPad.binds, true);
 
-        (void)ResetBinds(input.port1.arcadeRacerBinds, true);
-        (void)ResetBinds(input.port2.arcadeRacerBinds, true);
+        (void)ResetBinds(input.port1.arcadeRacer.binds, true);
+        (void)ResetBinds(input.port2.arcadeRacer.binds, true);
+
+        input.port1.arcadeRacer.sensitivity = 0.5f;
+        input.port2.arcadeRacer.sensitivity = 0.5f;
     }
 
     input.gamepad.lsDeadzone = 0.15f;
@@ -894,56 +898,85 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
             if (auto tblPort = tblInput[name]) {
                 Parse(tblPort, "PeripheralType", portSettings.type);
 
-                const char *controlPadName = configVersion == 1 ? "StandardPadBinds" : "ControlPadBinds";
-                if (auto tblBinds = tblPort[controlPadName]) {
-                    Parse(tblBinds, "A", portSettings.controlPadBinds.a);
-                    Parse(tblBinds, "B", portSettings.controlPadBinds.b);
-                    Parse(tblBinds, "C", portSettings.controlPadBinds.c);
-                    Parse(tblBinds, "X", portSettings.controlPadBinds.x);
-                    Parse(tblBinds, "Y", portSettings.controlPadBinds.y);
-                    Parse(tblBinds, "Z", portSettings.controlPadBinds.z);
-                    Parse(tblBinds, "L", portSettings.controlPadBinds.l);
-                    Parse(tblBinds, "R", portSettings.controlPadBinds.r);
-                    Parse(tblBinds, "Start", portSettings.controlPadBinds.start);
-                    Parse(tblBinds, "Up", portSettings.controlPadBinds.up);
-                    Parse(tblBinds, "Down", portSettings.controlPadBinds.down);
-                    Parse(tblBinds, "Left", portSettings.controlPadBinds.left);
-                    Parse(tblBinds, "Right", portSettings.controlPadBinds.right);
-                    Parse(tblBinds, "DPad", portSettings.controlPadBinds.dpad);
-                }
-                if (auto tblBinds = tblPort["AnalogPadBinds"]) {
-                    Parse(tblBinds, "A", portSettings.analogPadBinds.a);
-                    Parse(tblBinds, "B", portSettings.analogPadBinds.b);
-                    Parse(tblBinds, "C", portSettings.analogPadBinds.c);
-                    Parse(tblBinds, "X", portSettings.analogPadBinds.x);
-                    Parse(tblBinds, "Y", portSettings.analogPadBinds.y);
-                    Parse(tblBinds, "Z", portSettings.analogPadBinds.z);
-                    Parse(tblBinds, "L", portSettings.analogPadBinds.l);
-                    Parse(tblBinds, "R", portSettings.analogPadBinds.r);
-                    Parse(tblBinds, "Start", portSettings.analogPadBinds.start);
-                    Parse(tblBinds, "Up", portSettings.analogPadBinds.up);
-                    Parse(tblBinds, "Down", portSettings.analogPadBinds.down);
-                    Parse(tblBinds, "Left", portSettings.analogPadBinds.left);
-                    Parse(tblBinds, "Right", portSettings.analogPadBinds.right);
-                    Parse(tblBinds, "DPad", portSettings.analogPadBinds.dpad);
-                    Parse(tblBinds, "AnalogStick", portSettings.analogPadBinds.analogStick);
-                    Parse(tblBinds, "AnalogL", portSettings.analogPadBinds.analogL);
-                    Parse(tblBinds, "AnalogR", portSettings.analogPadBinds.analogR);
-                    Parse(tblBinds, "SwitchMode", portSettings.analogPadBinds.switchMode);
-                }
-                if (auto tblBinds = tblPort["ArcadeRacerBinds"]) {
-                    Parse(tblBinds, "A", portSettings.arcadeRacerBinds.a);
-                    Parse(tblBinds, "B", portSettings.arcadeRacerBinds.b);
-                    Parse(tblBinds, "C", portSettings.arcadeRacerBinds.c);
-                    Parse(tblBinds, "X", portSettings.arcadeRacerBinds.x);
-                    Parse(tblBinds, "Y", portSettings.arcadeRacerBinds.y);
-                    Parse(tblBinds, "Z", portSettings.arcadeRacerBinds.z);
-                    Parse(tblBinds, "Start", portSettings.arcadeRacerBinds.start);
-                    Parse(tblBinds, "Up", portSettings.arcadeRacerBinds.up);
-                    Parse(tblBinds, "Down", portSettings.arcadeRacerBinds.down);
-                    Parse(tblBinds, "WheelLeft", portSettings.arcadeRacerBinds.wheelLeft);
-                    Parse(tblBinds, "WheelRight", portSettings.arcadeRacerBinds.wheelRight);
-                    Parse(tblBinds, "AnalogWheel", portSettings.arcadeRacerBinds.wheel);
+                auto parseControlPadBinds = [&](auto &tblBinds) {
+                    Parse(tblBinds, "A", portSettings.controlPad.binds.a);
+                    Parse(tblBinds, "B", portSettings.controlPad.binds.b);
+                    Parse(tblBinds, "C", portSettings.controlPad.binds.c);
+                    Parse(tblBinds, "X", portSettings.controlPad.binds.x);
+                    Parse(tblBinds, "Y", portSettings.controlPad.binds.y);
+                    Parse(tblBinds, "Z", portSettings.controlPad.binds.z);
+                    Parse(tblBinds, "L", portSettings.controlPad.binds.l);
+                    Parse(tblBinds, "R", portSettings.controlPad.binds.r);
+                    Parse(tblBinds, "Start", portSettings.controlPad.binds.start);
+                    Parse(tblBinds, "Up", portSettings.controlPad.binds.up);
+                    Parse(tblBinds, "Down", portSettings.controlPad.binds.down);
+                    Parse(tblBinds, "Left", portSettings.controlPad.binds.left);
+                    Parse(tblBinds, "Right", portSettings.controlPad.binds.right);
+                    Parse(tblBinds, "DPad", portSettings.controlPad.binds.dpad);
+                };
+                auto parseAnalogPadBinds = [&](auto &tblBinds) {
+                    Parse(tblBinds, "A", portSettings.analogPad.binds.a);
+                    Parse(tblBinds, "B", portSettings.analogPad.binds.b);
+                    Parse(tblBinds, "C", portSettings.analogPad.binds.c);
+                    Parse(tblBinds, "X", portSettings.analogPad.binds.x);
+                    Parse(tblBinds, "Y", portSettings.analogPad.binds.y);
+                    Parse(tblBinds, "Z", portSettings.analogPad.binds.z);
+                    Parse(tblBinds, "L", portSettings.analogPad.binds.l);
+                    Parse(tblBinds, "R", portSettings.analogPad.binds.r);
+                    Parse(tblBinds, "Start", portSettings.analogPad.binds.start);
+                    Parse(tblBinds, "Up", portSettings.analogPad.binds.up);
+                    Parse(tblBinds, "Down", portSettings.analogPad.binds.down);
+                    Parse(tblBinds, "Left", portSettings.analogPad.binds.left);
+                    Parse(tblBinds, "Right", portSettings.analogPad.binds.right);
+                    Parse(tblBinds, "DPad", portSettings.analogPad.binds.dpad);
+                    Parse(tblBinds, "AnalogStick", portSettings.analogPad.binds.analogStick);
+                    Parse(tblBinds, "AnalogL", portSettings.analogPad.binds.analogL);
+                    Parse(tblBinds, "AnalogR", portSettings.analogPad.binds.analogR);
+                    Parse(tblBinds, "SwitchMode", portSettings.analogPad.binds.switchMode);
+                };
+                auto parseArcadeRacerBinds = [&](auto &tblBinds) {
+                    Parse(tblBinds, "A", portSettings.arcadeRacer.binds.a);
+                    Parse(tblBinds, "B", portSettings.arcadeRacer.binds.b);
+                    Parse(tblBinds, "C", portSettings.arcadeRacer.binds.c);
+                    Parse(tblBinds, "X", portSettings.arcadeRacer.binds.x);
+                    Parse(tblBinds, "Y", portSettings.arcadeRacer.binds.y);
+                    Parse(tblBinds, "Z", portSettings.arcadeRacer.binds.z);
+                    Parse(tblBinds, "Start", portSettings.arcadeRacer.binds.start);
+                    Parse(tblBinds, "Up", portSettings.arcadeRacer.binds.gearUp);
+                    Parse(tblBinds, "Down", portSettings.arcadeRacer.binds.gearDown);
+                    Parse(tblBinds, "WheelLeft", portSettings.arcadeRacer.binds.wheelLeft);
+                    Parse(tblBinds, "WheelRight", portSettings.arcadeRacer.binds.wheelRight);
+                    Parse(tblBinds, "AnalogWheel", portSettings.arcadeRacer.binds.wheel);
+                };
+
+                if (configVersion <= 2) {
+                    const char *controlPadName = configVersion == 1 ? "StandardPadBinds" : "ControlPadBinds";
+                    if (auto tblBinds = tblPort[controlPadName]) {
+                        parseControlPadBinds(tblBinds);
+                    }
+                    if (auto tblBinds = tblPort["AnalogPadBinds"]) {
+                        parseAnalogPadBinds(tblBinds);
+                    }
+                } else {
+                    if (auto tblControlPad = tblPort["ControlPad"]) {
+                        if (auto tblBinds = tblControlPad["Binds"]) {
+                            parseControlPadBinds(tblBinds);
+                        }
+                    }
+                    if (auto tblAnalogPad = tblPort["AnalogPad"]) {
+                        if (auto tblBinds = tblPort["Binds"]) {
+                            parseAnalogPadBinds(tblBinds);
+                        }
+                    }
+                    if (auto tblArcadeRacer = tblPort["ArcadeRacer"]) {
+                        if (auto tblBinds = tblPort["Binds"]) {
+                            parseArcadeRacerBinds(tblBinds);
+                        }
+                        float sensitivity;
+                        Parse(tblArcadeRacer, "Sensitivity", sensitivity);
+                        sensitivity = std::clamp(sensitivity, 0.2f, 2.0f);
+                        portSettings.arcadeRacer.sensitivity = sensitivity;
+                    }
                 }
             }
         };
@@ -1171,108 +1204,122 @@ SettingsSaveResult Settings::Save() {
         {"Input", toml::table{{
             {"Port1", toml::table{{
                 {"PeripheralType", ToTOML(input.port1.type)},
-                {"ControlPadBinds", toml::table{{
-                    {"A", ToTOML(input.port1.controlPadBinds.a)},
-                    {"B", ToTOML(input.port1.controlPadBinds.b)},
-                    {"C", ToTOML(input.port1.controlPadBinds.c)},
-                    {"X", ToTOML(input.port1.controlPadBinds.x)},
-                    {"Y", ToTOML(input.port1.controlPadBinds.y)},
-                    {"Z", ToTOML(input.port1.controlPadBinds.z)},
-                    {"L", ToTOML(input.port1.controlPadBinds.l)},
-                    {"R", ToTOML(input.port1.controlPadBinds.r)},
-                    {"Start", ToTOML(input.port1.controlPadBinds.start)},
-                    {"Up", ToTOML(input.port1.controlPadBinds.up)},
-                    {"Down", ToTOML(input.port1.controlPadBinds.down)},
-                    {"Left", ToTOML(input.port1.controlPadBinds.left)},
-                    {"Right", ToTOML(input.port1.controlPadBinds.right)},
-                    {"DPad", ToTOML(input.port1.controlPadBinds.dpad)},
+                {"ControlPad", toml::table{{
+                    {"Binds", toml::table{{
+                        {"A", ToTOML(input.port1.controlPad.binds.a)},
+                        {"B", ToTOML(input.port1.controlPad.binds.b)},
+                        {"C", ToTOML(input.port1.controlPad.binds.c)},
+                        {"X", ToTOML(input.port1.controlPad.binds.x)},
+                        {"Y", ToTOML(input.port1.controlPad.binds.y)},
+                        {"Z", ToTOML(input.port1.controlPad.binds.z)},
+                        {"L", ToTOML(input.port1.controlPad.binds.l)},
+                        {"R", ToTOML(input.port1.controlPad.binds.r)},
+                        {"Start", ToTOML(input.port1.controlPad.binds.start)},
+                        {"Up", ToTOML(input.port1.controlPad.binds.up)},
+                        {"Down", ToTOML(input.port1.controlPad.binds.down)},
+                        {"Left", ToTOML(input.port1.controlPad.binds.left)},
+                        {"Right", ToTOML(input.port1.controlPad.binds.right)},
+                        {"DPad", ToTOML(input.port1.controlPad.binds.dpad)},
+                    }}},
                 }}},
-                {"AnalogPadBinds", toml::table{{
-                    {"A", ToTOML(input.port1.analogPadBinds.a)},
-                    {"B", ToTOML(input.port1.analogPadBinds.b)},
-                    {"C", ToTOML(input.port1.analogPadBinds.c)},
-                    {"X", ToTOML(input.port1.analogPadBinds.x)},
-                    {"Y", ToTOML(input.port1.analogPadBinds.y)},
-                    {"Z", ToTOML(input.port1.analogPadBinds.z)},
-                    {"L", ToTOML(input.port1.analogPadBinds.l)},
-                    {"R", ToTOML(input.port1.analogPadBinds.r)},
-                    {"Start", ToTOML(input.port1.analogPadBinds.start)},
-                    {"Up", ToTOML(input.port1.analogPadBinds.up)},
-                    {"Down", ToTOML(input.port1.analogPadBinds.down)},
-                    {"Left", ToTOML(input.port1.analogPadBinds.left)},
-                    {"Right", ToTOML(input.port1.analogPadBinds.right)},
-                    {"DPad", ToTOML(input.port1.analogPadBinds.dpad)},
-                    {"AnalogStick", ToTOML(input.port1.analogPadBinds.analogStick)},
-                    {"AnalogL", ToTOML(input.port1.analogPadBinds.analogL)},
-                    {"AnalogR", ToTOML(input.port1.analogPadBinds.analogR)},
-                    {"SwitchMode", ToTOML(input.port1.analogPadBinds.switchMode)},
+                {"AnalogPad", toml::table{{
+                    {"Binds", toml::table{{
+                        {"A", ToTOML(input.port1.analogPad.binds.a)},
+                        {"B", ToTOML(input.port1.analogPad.binds.b)},
+                        {"C", ToTOML(input.port1.analogPad.binds.c)},
+                        {"X", ToTOML(input.port1.analogPad.binds.x)},
+                        {"Y", ToTOML(input.port1.analogPad.binds.y)},
+                        {"Z", ToTOML(input.port1.analogPad.binds.z)},
+                        {"L", ToTOML(input.port1.analogPad.binds.l)},
+                        {"R", ToTOML(input.port1.analogPad.binds.r)},
+                        {"Start", ToTOML(input.port1.analogPad.binds.start)},
+                        {"Up", ToTOML(input.port1.analogPad.binds.up)},
+                        {"Down", ToTOML(input.port1.analogPad.binds.down)},
+                        {"Left", ToTOML(input.port1.analogPad.binds.left)},
+                        {"Right", ToTOML(input.port1.analogPad.binds.right)},
+                        {"DPad", ToTOML(input.port1.analogPad.binds.dpad)},
+                        {"AnalogStick", ToTOML(input.port1.analogPad.binds.analogStick)},
+                        {"AnalogL", ToTOML(input.port1.analogPad.binds.analogL)},
+                        {"AnalogR", ToTOML(input.port1.analogPad.binds.analogR)},
+                        {"SwitchMode", ToTOML(input.port1.analogPad.binds.switchMode)},
+                    }}},
                 }}},
-                {"ArcadeRacerBinds", toml::table{{
-                    {"A", ToTOML(input.port1.arcadeRacerBinds.a)},
-                    {"B", ToTOML(input.port1.arcadeRacerBinds.b)},
-                    {"C", ToTOML(input.port1.arcadeRacerBinds.c)},
-                    {"X", ToTOML(input.port1.arcadeRacerBinds.x)},
-                    {"Y", ToTOML(input.port1.arcadeRacerBinds.y)},
-                    {"Z", ToTOML(input.port1.arcadeRacerBinds.z)},
-                    {"Start", ToTOML(input.port1.arcadeRacerBinds.start)},
-                    {"Up", ToTOML(input.port1.arcadeRacerBinds.up)},
-                    {"Down", ToTOML(input.port1.arcadeRacerBinds.down)},
-                    {"WheelLeft", ToTOML(input.port1.arcadeRacerBinds.wheelLeft)},
-                    {"WheelRight", ToTOML(input.port1.arcadeRacerBinds.wheelRight)},
-                    {"Wheel", ToTOML(input.port1.arcadeRacerBinds.wheel)},
+                {"ArcadeRacer", toml::table{{
+                    {"Binds", toml::table{{
+                        {"A", ToTOML(input.port1.arcadeRacer.binds.a)},
+                        {"B", ToTOML(input.port1.arcadeRacer.binds.b)},
+                        {"C", ToTOML(input.port1.arcadeRacer.binds.c)},
+                        {"X", ToTOML(input.port1.arcadeRacer.binds.x)},
+                        {"Y", ToTOML(input.port1.arcadeRacer.binds.y)},
+                        {"Z", ToTOML(input.port1.arcadeRacer.binds.z)},
+                        {"Start", ToTOML(input.port1.arcadeRacer.binds.start)},
+                        {"Up", ToTOML(input.port1.arcadeRacer.binds.gearUp)},
+                        {"Down", ToTOML(input.port1.arcadeRacer.binds.gearDown)},
+                        {"WheelLeft", ToTOML(input.port1.arcadeRacer.binds.wheelLeft)},
+                        {"WheelRight", ToTOML(input.port1.arcadeRacer.binds.wheelRight)},
+                        {"Wheel", ToTOML(input.port1.arcadeRacer.binds.wheel)},
+                    }}},
+                    {"Sensitivity", input.port1.arcadeRacer.sensitivity.Get()},
                 }}},
             }}},
             {"Port2", toml::table{{
                 {"PeripheralType", ToTOML(input.port2.type)},
-                {"ControlPadBinds", toml::table{{
-                    {"A", ToTOML(input.port2.controlPadBinds.a)},
-                    {"B", ToTOML(input.port2.controlPadBinds.b)},
-                    {"C", ToTOML(input.port2.controlPadBinds.c)},
-                    {"X", ToTOML(input.port2.controlPadBinds.x)},
-                    {"Y", ToTOML(input.port2.controlPadBinds.y)},
-                    {"Z", ToTOML(input.port2.controlPadBinds.z)},
-                    {"L", ToTOML(input.port2.controlPadBinds.l)},
-                    {"R", ToTOML(input.port2.controlPadBinds.r)},
-                    {"Start", ToTOML(input.port2.controlPadBinds.start)},
-                    {"Up", ToTOML(input.port2.controlPadBinds.up)},
-                    {"Down", ToTOML(input.port2.controlPadBinds.down)},
-                    {"Left", ToTOML(input.port2.controlPadBinds.left)},
-                    {"Right", ToTOML(input.port2.controlPadBinds.right)},
-                    {"DPad", ToTOML(input.port2.controlPadBinds.dpad)},
+                {"ControlPad", toml::table{{
+                    {"Binds", toml::table{{
+                        {"A", ToTOML(input.port2.controlPad.binds.a)},
+                        {"B", ToTOML(input.port2.controlPad.binds.b)},
+                        {"C", ToTOML(input.port2.controlPad.binds.c)},
+                        {"X", ToTOML(input.port2.controlPad.binds.x)},
+                        {"Y", ToTOML(input.port2.controlPad.binds.y)},
+                        {"Z", ToTOML(input.port2.controlPad.binds.z)},
+                        {"L", ToTOML(input.port2.controlPad.binds.l)},
+                        {"R", ToTOML(input.port2.controlPad.binds.r)},
+                        {"Start", ToTOML(input.port2.controlPad.binds.start)},
+                        {"Up", ToTOML(input.port2.controlPad.binds.up)},
+                        {"Down", ToTOML(input.port2.controlPad.binds.down)},
+                        {"Left", ToTOML(input.port2.controlPad.binds.left)},
+                        {"Right", ToTOML(input.port2.controlPad.binds.right)},
+                        {"DPad", ToTOML(input.port2.controlPad.binds.dpad)},
+                    }}},
                 }}},
-                {"AnalogPadBinds", toml::table{{
-                    {"A", ToTOML(input.port2.analogPadBinds.a)},
-                    {"B", ToTOML(input.port2.analogPadBinds.b)},
-                    {"C", ToTOML(input.port2.analogPadBinds.c)},
-                    {"X", ToTOML(input.port2.analogPadBinds.x)},
-                    {"Y", ToTOML(input.port2.analogPadBinds.y)},
-                    {"Z", ToTOML(input.port2.analogPadBinds.z)},
-                    {"L", ToTOML(input.port2.analogPadBinds.l)},
-                    {"R", ToTOML(input.port2.analogPadBinds.r)},
-                    {"Start", ToTOML(input.port2.analogPadBinds.start)},
-                    {"Up", ToTOML(input.port2.analogPadBinds.up)},
-                    {"Down", ToTOML(input.port2.analogPadBinds.down)},
-                    {"Left", ToTOML(input.port2.analogPadBinds.left)},
-                    {"Right", ToTOML(input.port2.analogPadBinds.right)},
-                    {"DPad", ToTOML(input.port2.analogPadBinds.dpad)},
-                    {"AnalogStick", ToTOML(input.port2.analogPadBinds.analogStick)},
-                    {"AnalogL", ToTOML(input.port2.analogPadBinds.analogL)},
-                    {"AnalogR", ToTOML(input.port2.analogPadBinds.analogR)},
-                    {"SwitchMode", ToTOML(input.port2.analogPadBinds.switchMode)},
+                {"AnalogPad", toml::table{{
+                    {"Binds", toml::table{{
+                        {"A", ToTOML(input.port2.analogPad.binds.a)},
+                        {"B", ToTOML(input.port2.analogPad.binds.b)},
+                        {"C", ToTOML(input.port2.analogPad.binds.c)},
+                        {"X", ToTOML(input.port2.analogPad.binds.x)},
+                        {"Y", ToTOML(input.port2.analogPad.binds.y)},
+                        {"Z", ToTOML(input.port2.analogPad.binds.z)},
+                        {"L", ToTOML(input.port2.analogPad.binds.l)},
+                        {"R", ToTOML(input.port2.analogPad.binds.r)},
+                        {"Start", ToTOML(input.port2.analogPad.binds.start)},
+                        {"Up", ToTOML(input.port2.analogPad.binds.up)},
+                        {"Down", ToTOML(input.port2.analogPad.binds.down)},
+                        {"Left", ToTOML(input.port2.analogPad.binds.left)},
+                        {"Right", ToTOML(input.port2.analogPad.binds.right)},
+                        {"DPad", ToTOML(input.port2.analogPad.binds.dpad)},
+                        {"AnalogStick", ToTOML(input.port2.analogPad.binds.analogStick)},
+                        {"AnalogL", ToTOML(input.port2.analogPad.binds.analogL)},
+                        {"AnalogR", ToTOML(input.port2.analogPad.binds.analogR)},
+                        {"SwitchMode", ToTOML(input.port2.analogPad.binds.switchMode)},
+                    }}},
                 }}},
-                {"ArcadeRacerBinds", toml::table{{
-                    {"A", ToTOML(input.port2.arcadeRacerBinds.a)},
-                    {"B", ToTOML(input.port2.arcadeRacerBinds.b)},
-                    {"C", ToTOML(input.port2.arcadeRacerBinds.c)},
-                    {"X", ToTOML(input.port2.arcadeRacerBinds.x)},
-                    {"Y", ToTOML(input.port2.arcadeRacerBinds.y)},
-                    {"Z", ToTOML(input.port2.arcadeRacerBinds.z)},
-                    {"Start", ToTOML(input.port2.arcadeRacerBinds.start)},
-                    {"Up", ToTOML(input.port2.arcadeRacerBinds.up)},
-                    {"Down", ToTOML(input.port2.arcadeRacerBinds.down)},
-                    {"WheelLeft", ToTOML(input.port2.arcadeRacerBinds.wheelLeft)},
-                    {"WheelRight", ToTOML(input.port2.arcadeRacerBinds.wheelRight)},
-                    {"Wheel", ToTOML(input.port2.arcadeRacerBinds.wheel)},
+                {"ArcadeRacer", toml::table{{
+                    {"Binds", toml::table{{
+                        {"A", ToTOML(input.port2.arcadeRacer.binds.a)},
+                        {"B", ToTOML(input.port2.arcadeRacer.binds.b)},
+                        {"C", ToTOML(input.port2.arcadeRacer.binds.c)},
+                        {"X", ToTOML(input.port2.arcadeRacer.binds.x)},
+                        {"Y", ToTOML(input.port2.arcadeRacer.binds.y)},
+                        {"Z", ToTOML(input.port2.arcadeRacer.binds.z)},
+                        {"Start", ToTOML(input.port2.arcadeRacer.binds.start)},
+                        {"Up", ToTOML(input.port2.arcadeRacer.binds.gearUp)},
+                        {"Down", ToTOML(input.port2.arcadeRacer.binds.gearDown)},
+                        {"WheelLeft", ToTOML(input.port2.arcadeRacer.binds.wheelLeft)},
+                        {"WheelRight", ToTOML(input.port2.arcadeRacer.binds.wheelRight)},
+                        {"Wheel", ToTOML(input.port2.arcadeRacer.binds.wheel)},
+                    }}},
+                    {"Sensitivity", input.port2.arcadeRacer.sensitivity.Get()},
                 }}},
             }}},
             {"GamepadLSDeadzone", input.gamepad.lsDeadzone.Get()},
@@ -1597,7 +1644,7 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     return rebindCtx.GetReplacedActions();
 }
 
-std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ControlPadBinds &binds, bool useDefaults) {
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ControlPad::Binds &binds, bool useDefaults) {
     using namespace input;
 
     using Key = KeyboardKey;
@@ -1621,7 +1668,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Contro
         rebindCtx.Rebind(binds.left, {});
         rebindCtx.Rebind(binds.right, {});
         rebindCtx.Rebind(binds.dpad, {});
-    } else if (&binds == &input.port1.controlPadBinds) {
+    } else if (&binds == &input.port1.controlPad.binds) {
         // Default port 1 Control Pad controller inputs
         rebindCtx.Rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
         rebindCtx.Rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
@@ -1637,7 +1684,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Contro
         rebindCtx.Rebind(binds.left, {{{Key::A}}});
         rebindCtx.Rebind(binds.right, {{{Key::D}}});
         rebindCtx.Rebind(binds.dpad, {{{0, GPAxis2::DPad}, {0, GPAxis2::LeftStick}}});
-    } else if (&binds == &input.port2.controlPadBinds) {
+    } else if (&binds == &input.port2.controlPad.binds) {
         // Default port 2 Control Pad controller inputs
         rebindCtx.Rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
         rebindCtx.Rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
@@ -1660,7 +1707,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Contro
     return rebindCtx.GetReplacedActions();
 }
 
-std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::AnalogPadBinds &binds, bool useDefaults) {
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::AnalogPad::Binds &binds, bool useDefaults) {
     using namespace input;
 
     using Key = KeyboardKey;
@@ -1689,7 +1736,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Analog
         rebindCtx.Rebind(binds.analogL, {});
         rebindCtx.Rebind(binds.analogR, {});
         rebindCtx.Rebind(binds.switchMode, {});
-    } else if (&binds == &input.port1.analogPadBinds) {
+    } else if (&binds == &input.port1.analogPad.binds) {
         // Default port 1 Control Pad controller inputs
         rebindCtx.Rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
         rebindCtx.Rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
@@ -1709,7 +1756,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Analog
         rebindCtx.Rebind(binds.analogL, {{{0, GPAxis1::LeftTrigger}}});
         rebindCtx.Rebind(binds.analogR, {{{0, GPAxis1::RightTrigger}}});
         rebindCtx.Rebind(binds.switchMode, {{{0, GPBtn::LeftThumb}}});
-    } else if (&binds == &input.port2.analogPadBinds) {
+    } else if (&binds == &input.port2.analogPad.binds) {
         // Default port 2 Control Pad controller inputs
         rebindCtx.Rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
         rebindCtx.Rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
@@ -1736,7 +1783,7 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Analog
     return rebindCtx.GetReplacedActions();
 }
 
-std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ArcadeRacerBinds &binds, bool useDefaults) {
+std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::ArcadeRacer::Binds &binds, bool useDefaults) {
     using namespace input;
 
     using Key = KeyboardKey;
@@ -1753,12 +1800,12 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Arcade
         rebindCtx.Rebind(binds.y, {});
         rebindCtx.Rebind(binds.z, {});
         rebindCtx.Rebind(binds.start, {});
-        rebindCtx.Rebind(binds.up, {});
-        rebindCtx.Rebind(binds.down, {});
+        rebindCtx.Rebind(binds.gearUp, {});
+        rebindCtx.Rebind(binds.gearDown, {});
         rebindCtx.Rebind(binds.wheelLeft, {});
         rebindCtx.Rebind(binds.wheelRight, {});
         rebindCtx.Rebind(binds.wheel, {});
-    } else if (&binds == &input.port1.arcadeRacerBinds) {
+    } else if (&binds == &input.port1.arcadeRacer.binds) {
         // Default port 1 Arcade Racer controller inputs
         rebindCtx.Rebind(binds.a, {{{Key::J}, {0, GPBtn::X}}});
         rebindCtx.Rebind(binds.b, {{{Key::K}, {0, GPBtn::A}}});
@@ -1767,13 +1814,14 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Arcade
         rebindCtx.Rebind(binds.y, {{{Key::I}, {0, GPBtn::Y}}});
         rebindCtx.Rebind(binds.z, {{{Key::O}, {0, GPBtn::RightBumper}}});
         rebindCtx.Rebind(binds.start, {{{Key::F}, {Key::G}, {Key::H}, {0, GPBtn::Start}}});
-        rebindCtx.Rebind(binds.up, {{{Key::W}, {0, GPBtn::DpadUp}, {0, GPBtn::RightTrigger}, {0, GPBtn::RightBumper}}});
-        rebindCtx.Rebind(binds.down,
-                         {{{Key::S}, {0, GPBtn::DpadDown}, {0, GPBtn::LeftTrigger}, {0, GPBtn::LeftBumper}}});
+        rebindCtx.Rebind(binds.gearUp,
+                         {{{Key::S}, {0, GPBtn::DpadDown}, {0, GPBtn::RightTrigger}, {0, GPBtn::RightBumper}}});
+        rebindCtx.Rebind(binds.gearDown,
+                         {{{Key::W}, {0, GPBtn::DpadUp}, {0, GPBtn::LeftTrigger}, {0, GPBtn::LeftBumper}}});
         rebindCtx.Rebind(binds.wheelLeft, {{{Key::A}}});
         rebindCtx.Rebind(binds.wheelRight, {{{Key::D}}});
         rebindCtx.Rebind(binds.wheel, {{{0, GPAxis1::LeftStickX}}});
-    } else if (&binds == &input.port2.arcadeRacerBinds) {
+    } else if (&binds == &input.port2.arcadeRacer.binds) {
         // Default port 2 Arcade Racer controller inputs
         rebindCtx.Rebind(binds.a, {{{Key::KeyPad1}, {1, GPBtn::X}}});
         rebindCtx.Rebind(binds.b, {{{Key::KeyPad2}, {1, GPBtn::A}}});
@@ -1783,11 +1831,11 @@ std::unordered_set<input::MappedAction> Settings::ResetBinds(Input::Port::Arcade
         rebindCtx.Rebind(binds.z, {{{Key::KeyPad6}, {1, GPBtn::RightBumper}}});
         rebindCtx.Rebind(binds.start, {{{Key::KeyPadEnter}, {1, GPBtn::Start}}});
         rebindCtx.Rebind(
-            binds.up,
-            {{{Key::Up}, {Key::Home}, {1, GPBtn::DpadUp}, {1, GPBtn::RightTrigger}, {1, GPBtn::RightBumper}}});
+            binds.gearUp,
+            {{{Key::Down}, {Key::End}, {1, GPBtn::DpadDown}, {1, GPBtn::RightTrigger}, {1, GPBtn::RightBumper}}});
         rebindCtx.Rebind(
-            binds.down,
-            {{{Key::Down}, {Key::End}, {1, GPBtn::DpadDown}, {1, GPBtn::LeftTrigger}, {1, GPBtn::LeftBumper}}});
+            binds.gearDown,
+            {{{Key::Up}, {Key::Home}, {1, GPBtn::DpadUp}, {1, GPBtn::LeftTrigger}, {1, GPBtn::LeftBumper}}});
         rebindCtx.Rebind(binds.wheelLeft, {{{Key::Left}, {Key::Delete}}});
         rebindCtx.Rebind(binds.wheelRight, {{{Key::Right}, {Key::PageDown}}});
         rebindCtx.Rebind(binds.wheel, {{{1, GPAxis1::LeftStickX}}});

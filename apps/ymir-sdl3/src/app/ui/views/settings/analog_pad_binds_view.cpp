@@ -7,7 +7,7 @@ AnalogPadBindsView::AnalogPadBindsView(SharedContext &context)
     , m_inputCaptureWidget(context, m_unboundActionsWidget)
     , m_unboundActionsWidget(context) {}
 
-void AnalogPadBindsView::Display(Settings::Input::Port::AnalogPadBinds &binds, uint32 portIndex) {
+void AnalogPadBindsView::Display(Settings::Input::Port::AnalogPad::Binds &binds, uint32 portIndex) {
     ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted("Mode:");
     ImGui::SameLine();

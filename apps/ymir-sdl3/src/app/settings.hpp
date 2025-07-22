@@ -249,58 +249,66 @@ public:
         struct Port {
             util::Observable<ymir::peripheral::PeripheralType> type;
 
-            struct ControlPadBinds {
-                input::InputBind a{actions::control_pad::A};
-                input::InputBind b{actions::control_pad::B};
-                input::InputBind c{actions::control_pad::C};
-                input::InputBind x{actions::control_pad::X};
-                input::InputBind y{actions::control_pad::Y};
-                input::InputBind z{actions::control_pad::Z};
-                input::InputBind l{actions::control_pad::L};
-                input::InputBind r{actions::control_pad::R};
-                input::InputBind start{actions::control_pad::Start};
-                input::InputBind up{actions::control_pad::Up};
-                input::InputBind down{actions::control_pad::Down};
-                input::InputBind left{actions::control_pad::Left};
-                input::InputBind right{actions::control_pad::Right};
-                input::InputBind dpad{actions::control_pad::DPad};
-            } controlPadBinds;
+            struct ControlPad {
+                struct Binds {
+                    input::InputBind a{actions::control_pad::A};
+                    input::InputBind b{actions::control_pad::B};
+                    input::InputBind c{actions::control_pad::C};
+                    input::InputBind x{actions::control_pad::X};
+                    input::InputBind y{actions::control_pad::Y};
+                    input::InputBind z{actions::control_pad::Z};
+                    input::InputBind l{actions::control_pad::L};
+                    input::InputBind r{actions::control_pad::R};
+                    input::InputBind start{actions::control_pad::Start};
+                    input::InputBind up{actions::control_pad::Up};
+                    input::InputBind down{actions::control_pad::Down};
+                    input::InputBind left{actions::control_pad::Left};
+                    input::InputBind right{actions::control_pad::Right};
+                    input::InputBind dpad{actions::control_pad::DPad};
+                } binds;
+            } controlPad;
 
-            struct AnalogPadBinds {
-                input::InputBind a{actions::analog_pad::A};
-                input::InputBind b{actions::analog_pad::B};
-                input::InputBind c{actions::analog_pad::C};
-                input::InputBind x{actions::analog_pad::X};
-                input::InputBind y{actions::analog_pad::Y};
-                input::InputBind z{actions::analog_pad::Z};
-                input::InputBind l{actions::analog_pad::L};
-                input::InputBind r{actions::analog_pad::R};
-                input::InputBind start{actions::analog_pad::Start};
-                input::InputBind up{actions::analog_pad::Up};
-                input::InputBind down{actions::analog_pad::Down};
-                input::InputBind left{actions::analog_pad::Left};
-                input::InputBind right{actions::analog_pad::Right};
-                input::InputBind dpad{actions::analog_pad::DPad};
-                input::InputBind analogStick{actions::analog_pad::AnalogStick};
-                input::InputBind analogL{actions::analog_pad::AnalogL};
-                input::InputBind analogR{actions::analog_pad::AnalogR};
-                input::InputBind switchMode{actions::analog_pad::SwitchMode};
-            } analogPadBinds;
+            struct AnalogPad {
+                struct Binds {
+                    input::InputBind a{actions::analog_pad::A};
+                    input::InputBind b{actions::analog_pad::B};
+                    input::InputBind c{actions::analog_pad::C};
+                    input::InputBind x{actions::analog_pad::X};
+                    input::InputBind y{actions::analog_pad::Y};
+                    input::InputBind z{actions::analog_pad::Z};
+                    input::InputBind l{actions::analog_pad::L};
+                    input::InputBind r{actions::analog_pad::R};
+                    input::InputBind start{actions::analog_pad::Start};
+                    input::InputBind up{actions::analog_pad::Up};
+                    input::InputBind down{actions::analog_pad::Down};
+                    input::InputBind left{actions::analog_pad::Left};
+                    input::InputBind right{actions::analog_pad::Right};
+                    input::InputBind dpad{actions::analog_pad::DPad};
+                    input::InputBind analogStick{actions::analog_pad::AnalogStick};
+                    input::InputBind analogL{actions::analog_pad::AnalogL};
+                    input::InputBind analogR{actions::analog_pad::AnalogR};
+                    input::InputBind switchMode{actions::analog_pad::SwitchMode};
+                } binds;
+            } analogPad;
 
-            struct ArcadeRacerBinds {
-                input::InputBind a{actions::arcade_racer::A};
-                input::InputBind b{actions::arcade_racer::B};
-                input::InputBind c{actions::arcade_racer::C};
-                input::InputBind x{actions::arcade_racer::X};
-                input::InputBind y{actions::arcade_racer::Y};
-                input::InputBind z{actions::arcade_racer::Z};
-                input::InputBind start{actions::arcade_racer::Start};
-                input::InputBind up{actions::arcade_racer::Up};
-                input::InputBind down{actions::arcade_racer::Down};
-                input::InputBind wheelLeft{actions::arcade_racer::WheelLeft};
-                input::InputBind wheelRight{actions::arcade_racer::WheelRight};
-                input::InputBind wheel{actions::arcade_racer::AnalogWheel};
-            } arcadeRacerBinds;
+            struct ArcadeRacer {
+                struct Binds {
+                    input::InputBind a{actions::arcade_racer::A};
+                    input::InputBind b{actions::arcade_racer::B};
+                    input::InputBind c{actions::arcade_racer::C};
+                    input::InputBind x{actions::arcade_racer::X};
+                    input::InputBind y{actions::arcade_racer::Y};
+                    input::InputBind z{actions::arcade_racer::Z};
+                    input::InputBind start{actions::arcade_racer::Start};
+                    input::InputBind gearUp{actions::arcade_racer::GearUp};
+                    input::InputBind gearDown{actions::arcade_racer::GearDown};
+                    input::InputBind wheelLeft{actions::arcade_racer::WheelLeft};
+                    input::InputBind wheelRight{actions::arcade_racer::WheelRight};
+                    input::InputBind wheel{actions::arcade_racer::AnalogWheel};
+                } binds;
+
+                util::Observable<float> sensitivity;
+            } arcadeRacer;
         };
         Port port1;
         Port port2;
@@ -388,19 +396,19 @@ public:
     // Restores all default input binds for the specified Control Pad.
     // Returns all unbound actions.
     // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
-    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ControlPadBinds &binds,
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ControlPad::Binds &binds,
                                                                      bool useDefaults);
 
     // Restores all default input binds for the specified 3D Control Pad.
     // Returns all unbound actions.
     // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
-    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::AnalogPadBinds &binds,
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::AnalogPad::Binds &binds,
                                                                      bool useDefaults);
 
     // Restores all default input binds for the specified Arcade Racer controller.
     // Returns all unbound actions.
     // If useDefaults is true, restores the default binds, otherwise all binds are cleared.
-    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ArcadeRacerBinds &binds,
+    [[nodiscard]] std::unordered_set<input::MappedAction> ResetBinds(Input::Port::ArcadeRacer::Binds &binds,
                                                                      bool useDefaults);
 
 private:

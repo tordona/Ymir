@@ -1287,11 +1287,21 @@ void App::RunEmulator() {
         registerButton(actions::arcade_racer::Y, Button::Y);
         registerButton(actions::arcade_racer::Z, Button::Z);
         registerButton(actions::arcade_racer::Start, Button::Start);
-        registerButton(actions::arcade_racer::Up, Button::Up);
-        registerButton(actions::arcade_racer::Down, Button::Down);
+        registerButton(actions::arcade_racer::GearUp, Button::Down); // yes, it's reversed
+        registerButton(actions::arcade_racer::GearDown, Button::Up);
         registerDigitalWheel(actions::arcade_racer::WheelLeft, false);
         registerDigitalWheel(actions::arcade_racer::WheelRight, true);
         registerAnalogWheel(actions::arcade_racer::AnalogWheel);
+
+        auto makeSensObserver = [&](const int index) {
+            return [=, this](float value) {
+                m_context.arcadeRacerInputs[index].sensitivity = value;
+                m_context.arcadeRacerInputs[index].UpdateAnalogWheel();
+            };
+        };
+
+        m_context.settings.input.port1.arcadeRacer.sensitivity.ObserveAndNotify(makeSensObserver(0));
+        m_context.settings.input.port2.arcadeRacer.sensitivity.ObserveAndNotify(makeSensObserver(1));
     }
 
     RebindInputs();

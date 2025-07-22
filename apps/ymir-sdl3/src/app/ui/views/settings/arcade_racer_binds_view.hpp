@@ -11,7 +11,7 @@ class ArcadeRacerBindsView : public SettingsViewBase {
 public:
     ArcadeRacerBindsView(SharedContext &context);
 
-    void Display(Settings::Input::Port::ArcadeRacerBinds &binds, uint32 portIndex);
+    void Display(Settings::Input::Port::ArcadeRacer &controllerSettings, uint32 portIndex);
 
 private:
     widgets::InputCaptureWidget m_inputCaptureWidget;
