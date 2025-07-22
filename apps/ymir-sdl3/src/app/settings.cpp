@@ -1428,12 +1428,12 @@ void Settings::RebindInputs() {
                             continue;
                         }
                         break;
-                    case input::Action::Kind::Axis1D:
+                    case input::Action::Kind::AbsoluteAxis1D:
                         if (!element.IsAxis1D()) {
                             continue;
                         }
                         break;
-                    case input::Action::Kind::Axis2D:
+                    case input::Action::Kind::AbsoluteAxis2D:
                         if (!element.IsAxis2D()) {
                             continue;
                         }

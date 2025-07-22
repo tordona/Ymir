@@ -21,8 +21,8 @@ void InputCaptureWidget::DrawInputBindButton(input::InputBind &bind, size_t elem
         case input::Action::Kind::Trigger: [[fallthrough]];
         case input::Action::Kind::RepeatableTrigger: CaptureTrigger(bind, elementIndex, context); break;
         case input::Action::Kind::Button: CaptureButton(bind, elementIndex, context); break;
-        case input::Action::Kind::Axis1D: CaptureAxis1D(bind, elementIndex, context); break;
-        case input::Action::Kind::Axis2D: CaptureAxis2D(bind, elementIndex, context); break;
+        case input::Action::Kind::AbsoluteAxis1D: CaptureAxis1D(bind, elementIndex, context); break;
+        case input::Action::Kind::AbsoluteAxis2D: CaptureAxis2D(bind, elementIndex, context); break;
         }
     }
 
@@ -48,11 +48,11 @@ void InputCaptureWidget::DrawCapturePopup() {
             ImGui::TextUnformatted("Press any key, mouse button or gamepad button to map it.\n\n"
                                    "Press Escape or click outside of this popup to cancel.");
             break;
-        case input::Action::Kind::Axis1D:
+        case input::Action::Kind::AbsoluteAxis1D:
             ImGui::TextUnformatted("Move any one-dimensional axis such as analog triggers to map it.\n\n"
                                    "Press Escape or click outside of this popup to cancel.");
             break;
-        case input::Action::Kind::Axis2D:
+        case input::Action::Kind::AbsoluteAxis2D:
             ImGui::TextUnformatted("Move any two-dimensional axis such as sticks to map it.\n\n"
                                    "Press Escape or click outside of this popup to cancel.");
             break;
@@ -137,7 +137,7 @@ void InputCaptureWidget::CaptureTrigger(input::InputBind &bind, size_t elementIn
 }
 
 void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementIndex, void *context) {
-    m_kind = input::Action::Kind::Axis1D;
+    m_kind = input::Action::Kind::AbsoluteAxis1D;
     m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
         if (!event.element.IsAxis1D()) {
             return false;
@@ -162,7 +162,7 @@ void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementInd
 }
 
 void InputCaptureWidget::CaptureAxis2D(input::InputBind &bind, size_t elementIndex, void *context) {
-    m_kind = input::Action::Kind::Axis2D;
+    m_kind = input::Action::Kind::AbsoluteAxis2D;
     m_context.inputContext.Capture([=, this, &bind](const input::InputEvent &event) -> bool {
         if (!event.element.IsAxis2D()) {
             return false;

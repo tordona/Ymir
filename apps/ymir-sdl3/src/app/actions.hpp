@@ -181,7 +181,7 @@ namespace control_pad {
     inline constexpr auto Down = input::Action::Button(0xC0100A, "Saturn Control Pad", "Down");
     inline constexpr auto Left = input::Action::Button(0xC0100B, "Saturn Control Pad", "Left");
     inline constexpr auto Right = input::Action::Button(0xC0100C, "Saturn Control Pad", "Right");
-    inline constexpr auto DPad = input::Action::Axis2D(0xC0100D, "Saturn Control Pad", "D-Pad axis");
+    inline constexpr auto DPad = input::Action::AbsoluteAxis2D(0xC0100D, "Saturn Control Pad", "D-Pad axis");
 
 } // namespace control_pad
 
@@ -200,10 +200,11 @@ namespace analog_pad {
     inline constexpr auto Down = input::Action::Button(0xC0200A, "Saturn 3D Control Pad", "Down");
     inline constexpr auto Left = input::Action::Button(0xC0200B, "Saturn 3D Control Pad", "Left");
     inline constexpr auto Right = input::Action::Button(0xC0200C, "Saturn 3D Control Pad", "Right");
-    inline constexpr auto DPad = input::Action::Axis2D(0xC0200D, "Saturn 3D Control Pad", "D-Pad axis");
-    inline constexpr auto AnalogStick = input::Action::Axis2D(0xC0200E, "Saturn 3D Control Pad", "Analog stick");
-    inline constexpr auto AnalogL = input::Action::Axis1D(0xC0200F, "Saturn 3D Control Pad", "Analog L");
-    inline constexpr auto AnalogR = input::Action::Axis1D(0xC02010, "Saturn 3D Control Pad", "Analog R");
+    inline constexpr auto DPad = input::Action::AbsoluteAxis2D(0xC0200D, "Saturn 3D Control Pad", "D-Pad axis");
+    inline constexpr auto AnalogStick =
+        input::Action::AbsoluteAxis2D(0xC0200E, "Saturn 3D Control Pad", "Analog stick");
+    inline constexpr auto AnalogL = input::Action::AbsoluteAxis1D(0xC0200F, "Saturn 3D Control Pad", "Analog L");
+    inline constexpr auto AnalogR = input::Action::AbsoluteAxis1D(0xC02010, "Saturn 3D Control Pad", "Analog R");
     inline constexpr auto SwitchMode = input::Action::Trigger(0xC02011, "Saturn 3D Control Pad", "Switch mode");
 
 } // namespace analog_pad
@@ -221,7 +222,7 @@ namespace arcade_racer {
     inline constexpr auto GearDown = input::Action::Button(0xC03008, "Arcade Racer", "Gear down");
     inline constexpr auto WheelLeft = input::Action::Button(0xC0300A, "Arcade Racer", "Wheel left");
     inline constexpr auto WheelRight = input::Action::Button(0xC0300B, "Arcade Racer", "Wheel right");
-    inline constexpr auto AnalogWheel = input::Action::Axis1D(0xC03009, "Arcade Racer", "Wheel (analog)");
+    inline constexpr auto AnalogWheel = input::Action::AbsoluteAxis1D(0xC03009, "Arcade Racer", "Wheel (analog)");
 
 } // namespace arcade_racer
 

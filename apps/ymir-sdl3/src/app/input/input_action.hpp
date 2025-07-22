@@ -19,11 +19,13 @@ struct Action {
         // Synced to a button or keyboard key.
         Button,
 
-        // Synced to an 1D axis.
-        Axis1D,
+        // Synced to an absolute 1D axis such as sticks, triggers or wheels.
+        AbsoluteAxis1D,
 
-        // Synced to a 2D axis.
-        Axis2D
+        // Synced to an absolute 2D axis such as sticks.
+        AbsoluteAxis2D
+
+        // TODO: introduce relative 1D and 2D axes for mouse movement and mouse wheel
     };
 
     uint32 id;
@@ -40,11 +42,11 @@ struct Action {
     static constexpr Action Button(uint32 id, const char *group, const char *name) {
         return {id, Kind::Button, group, name};
     }
-    static constexpr Action Axis1D(uint32 id, const char *group, const char *name) {
-        return {id, Kind::Axis1D, group, name};
+    static constexpr Action AbsoluteAxis1D(uint32 id, const char *group, const char *name) {
+        return {id, Kind::AbsoluteAxis1D, group, name};
     }
-    static constexpr Action Axis2D(uint32 id, const char *group, const char *name) {
-        return {id, Kind::Axis2D, group, name};
+    static constexpr Action AbsoluteAxis2D(uint32 id, const char *group, const char *name) {
+        return {id, Kind::AbsoluteAxis2D, group, name};
     }
 
     constexpr bool operator==(const Action &rhs) const {
