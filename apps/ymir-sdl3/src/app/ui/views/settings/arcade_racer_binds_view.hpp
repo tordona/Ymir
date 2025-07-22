@@ -16,6 +16,8 @@ public:
 private:
     widgets::InputCaptureWidget m_inputCaptureWidget;
     widgets::UnboundActionsWidget m_unboundActionsWidget;
+
+    bool m_showRawValueInMeter = false;
 };
 
 } // namespace app::ui

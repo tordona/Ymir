@@ -114,9 +114,11 @@ void ArcadeRacerBindsView::Display(Settings::Input::Port::ArcadeRacer &controlle
                           ImVec2(pos.x + meterSize.x * 0.5f, pos.y + meterSize.y), kZeroLineColor, zeroLineThickness);
 
         // Raw value
-        drawList->AddLine(ImVec2(pos.x + meterSize.x * (currRawValue + 1.0f) * 0.5f, pos.y),
-                          ImVec2(pos.x + meterSize.x * (currRawValue + 1.0f) * 0.5f, pos.y + meterSize.y), kValueColor,
-                          valueLineThickness);
+        if (m_showRawValueInMeter) {
+            drawList->AddLine(ImVec2(pos.x + meterSize.x * (currRawValue + 1.0f) * 0.5f, pos.y),
+                              ImVec2(pos.x + meterSize.x * (currRawValue + 1.0f) * 0.5f, pos.y + meterSize.y),
+                              kValueColor, valueLineThickness);
+        }
 
         // Adjusted value
         drawList->AddLine(ImVec2(pos.x + meterSize.x * (currValue + 1.0f) * 0.5f, pos.y),
@@ -129,6 +131,7 @@ void ArcadeRacerBindsView::Display(Settings::Input::Port::ArcadeRacer &controlle
 
         ImGui::Dummy(meterSize);
     }
+    ImGui::Checkbox("Display raw value in meter", &m_showRawValueInMeter);
 
     ImGui::Separator();
 
