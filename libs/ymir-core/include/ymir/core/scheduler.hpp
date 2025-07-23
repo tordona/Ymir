@@ -71,9 +71,6 @@ public:
     /// @brief Creates a new, empty scheduler.
     Scheduler() {
         m_eventPtrs.fill(kInvalidEvent);
-        for (Event &event : m_events) {
-            event.target = kNoDeadline;
-        }
         m_nextEventIndex = 0;
         Reset();
     }
@@ -81,10 +78,10 @@ public:
     /// @brief Resets the scheduler's current and target counters.
     void Reset() {
         m_currCount = 0;
-        m_nextCount = kNoDeadline;
-        for (const Event &event : m_events) {
-            m_nextCount = std::min(m_nextCount, event.target);
+        for (Event &event : m_events) {
+            event.target = kNoDeadline;
         }
+        RecalcSchedule();
     }
 
     /// @brief Registers an event. The returned ID must be used to refer to the event.
@@ -301,52 +298,59 @@ private:
         Event &event = m_events[id];
         event.target = target;
         const uint64 scaledTarget = event.CalcTargetScaledByReciprocal();
-        m_nextCount = std::min(m_nextCount, scaledTarget);
+        if (scaledTarget < m_nextCount) {
+            m_nextCount = scaledTarget;
+            m_nextEvent = id;
+        }
     }
 
     /// @brief Executes all scheduled events up to the current count.
     FORCE_INLINE void Execute() {
-        const uint64 currCount = m_currCount;
-        for (size_t index = 0; index < kNumScheduledEvents; ++index) {
-            Event &event = m_events[index];
-            if (event.target == kNoDeadline) {
-                continue;
-            }
+        while (m_currCount >= m_nextCount) {
+            Event &event = m_events[m_nextEvent];
+            assert(event.target != kNoDeadline);
+
+            const uint64 currCount = m_currCount;
+
             uint64 target = event.target;
             const uint64 scaledCurrCount = currCount * event.countNumerator / event.countDenominator;
             if (scaledCurrCount >= target) {
                 const EventCallback callback = event.callback;
                 void *const userContext = event.userContext;
-                while (scaledCurrCount >= target) {
-                    EventContext eventContext;
-                    callback(eventContext, userContext);
-                    if (eventContext.reschedule) {
-                        target += eventContext.interval;
-                    } else {
-                        target = kNoDeadline;
-                    }
+                EventContext eventContext;
+                callback(eventContext, userContext);
+                if (eventContext.reschedule) {
+                    target += eventContext.interval;
+                } else {
+                    target = kNoDeadline;
                 }
                 event.target = target;
             }
-        }
 
-        RecalcSchedule();
+            RecalcSchedule();
+        }
     }
 
     /// @brief Recalculates the next deadline.
     FORCE_INLINE void RecalcSchedule() {
         m_nextCount = kNoDeadline;
-        for (const Event &event : m_events) {
+        m_nextEvent = m_events.size();
+        for (size_t index = 0; index < m_events.size(); ++index) {
+            const Event &event = m_events[index];
             if (event.target == kNoDeadline) {
                 continue;
             }
             const uint64 scaledTarget = event.CalcTargetScaledByReciprocal();
-            m_nextCount = std::min(m_nextCount, scaledTarget);
+            if (scaledTarget < m_nextCount) {
+                m_nextCount = scaledTarget;
+                m_nextEvent = index;
+            }
         }
     }
 
     uint64 m_currCount;                                     ///< The primary cycle counter
     uint64 m_nextCount;                                     ///< The cached cycle counter to the next event
+    size_t m_nextEvent;                                     ///< The cached index of the next event
     std::array<Event, kNumScheduledEvents> m_events;        ///< Schedulable events
     std::array<UserEventID, kNumScheduledEvents> m_userIDs; ///< User IDs associated with events
     size_t m_nextEventIndex;                                ///< The next event index on which to register new events

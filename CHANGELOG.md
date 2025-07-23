@@ -18,6 +18,7 @@
 
 ### Fixes
 
+- Scheduler: Ensure events are executed in chronological order.
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 
 
