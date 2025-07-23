@@ -6,14 +6,16 @@ The repository includes several vendored dependencies as Git submodules. When cl
 You can also initialize submodules with `git submodule update --init --recursive` after a `git clone` or when pulling changes.
 
 Ymir has been successfully compiled with the following toolchains:
-- Visual Studio 2022's Clang 19.1.1
-- Visual Studio 2022's MSVC 19.43.34810.0
-- Clang 14.0.0 on WSL Ubuntu 22.04.5 LTS (`clang`)
-- Clang 15.0.7 on WSL Ubuntu 22.04.5 LTS (`clang-15`)
-- Clang 19.1.1 on Ubuntu 24.04.2 LTS (`clang-19`)
+- Visual Studio 2022's Clang 19.1.5
+- Visual Studio 2022's MSVC 19.44.35213.0
+- Clang 15.0.7 on WSL Ubuntu 24.04.5 LTS (`clang-15` / `clang++-15`)
+- Clang 18.1.3 on WSL Ubuntu 24.04.5 LTS (`clang` / `clang++`)
+- Clang 19.1.1 on Ubuntu 24.04.2 LTS (`clang-19` / `clang++-19`)
 - Apple Clang 17 on macOS 15 Sequoia
 
 The project has been compiled for x86_64 and ARM64 Windows, Linux and macOS platforms.
+
+Clang is the preferred compiler for it's multiplatform support and excellent code generation. Ymir requires Clang 15 or later.
 
 
 ## Build configuration
