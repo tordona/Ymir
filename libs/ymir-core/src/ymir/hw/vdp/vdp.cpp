@@ -2742,7 +2742,6 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
             bgState.fracScrollX = bit::extract<8, 26>(read());
         }
         if (bgParams.lineScrollYEnable) {
-            // TODO: check/optimize this
             bgState.fracScrollY = bit::extract<8, 26>(read());
         }
         if (bgParams.lineZoomEnable) {

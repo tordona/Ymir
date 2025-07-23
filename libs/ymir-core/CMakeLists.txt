@@ -155,6 +155,7 @@ add_library(ymir-core
     include/ymir/util/constexpr_for.hpp
     include/ymir/util/data_ops.hpp
     include/ymir/util/date_time.hpp
+    include/ymir/util/dev_assert.hpp
     include/ymir/util/dev_log.hpp
     include/ymir/util/event.hpp
     include/ymir/util/function_info.hpp
@@ -326,6 +327,7 @@ target_compile_definitions(ymir-core PUBLIC Ymir_VERSION_BUILD="${Ymir_VERSION_B
 
 ## Define additional macros
 target_compile_definitions(ymir-core PUBLIC "Ymir_ENABLE_DEVLOG=$<BOOL:${Ymir_ENABLE_DEVLOG}>")
+target_compile_definitions(ymir-core PUBLIC "Ymir_DEV_ASSERTIONS=$<BOOL:${Ymir_ENABLE_DEV_ASSERTIONS}>")
 target_compile_definitions(ymir-core PUBLIC "Ymir_DEV_BUILD=$<BOOL:${Ymir_DEV_BUILD}>")
 target_compile_definitions(ymir-core PUBLIC "Ymir_EXTRA_INLINING=$<BOOL:${Ymir_EXTRA_INLINING}>")
 target_compile_definitions(ymir-core PUBLIC "TOML_EXCEPTIONS=0")

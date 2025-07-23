@@ -2,6 +2,7 @@
 
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/data_ops.hpp>
+#include <ymir/util/dev_assert.hpp>
 #include <ymir/util/dev_log.hpp>
 #include <ymir/util/unreachable.hpp>
 
@@ -306,10 +307,9 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         m_cyclesExecuted += InterpretNext<debug, enableCache>();
 
-        // If PC is in any of these places, something went horribly wrong
-        /*if ((PC & 1) || ((PC >> 29u) != 0b000 && (PC >> 29u) != 0b001 && (PC >> 29u) != 0b101)) {
-            __debugbreak();
-        }*/
+        // If PC is not in any of these places, something went horribly wrong
+        util::dev_assert((PC & 1) == 0);
+        util::dev_assert((PC >> 29u) == 0b000 || (PC >> 29u) == 0b001 || (PC >> 29u) == 0b101);
 
         if constexpr (devlog::debug_enabled<grp::exec_dump>) {
             // Dump stack trace on SYS_EXECDMP
