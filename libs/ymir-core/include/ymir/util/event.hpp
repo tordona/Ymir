@@ -10,7 +10,7 @@
 
 namespace util {
 
-/// @brief An event, based on a condition variable, that blocks threads until it is signaled.
+/// @brief An event that blocks threads until it is signaled.
 ///
 /// Example usage:
 ///
@@ -71,24 +71,17 @@ public:
     /// @param[in] autoReset whether to automatically clear the event after being signaled
     void Wait(bool autoReset) {
         std::unique_lock<std::mutex> lock(m_mutex);
-        while (!m_set) {
-            m_condVar.wait(lock);
-        }
+        m_condVar.wait(lock, [this] { return m_set; });
         if (autoReset) {
             m_set = false;
         }
     }
 
-    /// @brief Signals the event and notifies waiting threads.
-    /// @param[in] notifyAll `true` to notify all waiting threads, `false` to notify one thread at random
-    void Set(bool notifyAll = true) {
+    /// @brief Signals the event and notifies all waiting threads.
+    void Set() {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_set = true;
-        if (notifyAll) {
-            m_condVar.notify_all();
-        } else {
-            m_condVar.notify_one();
-        }
+        m_condVar.notify_all();
     }
 
     /// @brief Resets (clears) the event signal.
