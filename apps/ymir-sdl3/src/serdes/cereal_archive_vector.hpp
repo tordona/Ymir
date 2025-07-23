@@ -9,7 +9,7 @@ template <typename T>
     requires(sizeof(T) == sizeof(char))
 class BinaryVectorOutputArchive : public OutputArchive<BinaryVectorOutputArchive<T>, AllowEmptyClassElision> {
 public:
-    BinaryVectorOutputArchive<T>(std::vector<T> &vector)
+    BinaryVectorOutputArchive(std::vector<T> &vector)
         : OutputArchive<BinaryVectorOutputArchive<T>, AllowEmptyClassElision>(this)
         , itsVector(vector) {}
 
@@ -27,7 +27,7 @@ template <typename T>
     requires(sizeof(T) == sizeof(char))
 class BinaryVectorInputArchive : public InputArchive<BinaryVectorInputArchive<T>, AllowEmptyClassElision> {
 public:
-    BinaryVectorInputArchive<T>(std::vector<T> &vector)
+    BinaryVectorInputArchive(std::vector<T> &vector)
         : InputArchive<BinaryVectorInputArchive<T>, AllowEmptyClassElision>(this)
         , itsVector(vector) {}
 
