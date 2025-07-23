@@ -58,10 +58,14 @@ For use with functions that heavily impact build times.
     #define FORCE_INLINE inline
     #define NO_INLINE
     #define FLATTEN
-#elif (defined(__GNUC__) || defined(__GNUG__) || defined(__clang__))
+#elif defined(__clang__)
     #define FORCE_INLINE [[gnu::always_inline]] inline
     #define NO_INLINE [[gnu::noinline]]
     #define FLATTEN [[gnu::flatten]]
+#elif (defined(__GNUC__) || defined(__GNUG__))
+    #define FORCE_INLINE [[gnu::always_inline]] inline
+    #define NO_INLINE [[gnu::noinline]]
+    #define FLATTEN // GCC dies when [[gnu::flatten]] is (ab)used
 #elif defined(_MSC_VER)
     #define FORCE_INLINE [[msvc::forceinline]] inline
     #define NO_INLINE [[msvc::noinline]]

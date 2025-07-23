@@ -308,7 +308,7 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint8 reverse(uint8 value) noexcept {
-#if defined(__clang__) || defined(__GNUC__)
+#if defined(__clang__) /*|| defined(__GNUC__)*/ // builtin only available on Clang for now
     return __builtin_bitreverse8(value);
 #else
     value = (value << 4u) | (value >> 4u);
@@ -323,7 +323,7 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint16 reverse(uint16 value) noexcept {
-#if defined(__clang__) || defined(__GNUC__)
+#if defined(__clang__) /*|| defined(__GNUC__)*/ // builtin only available on Clang for now
     return __builtin_bitreverse16(value);
 #else
     value = (value << 8u) | (value >> 8u);
@@ -339,7 +339,7 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint32 reverse(uint32 value) noexcept {
-#if defined(__clang__) || defined(__GNUC__)
+#if defined(__clang__) /*|| defined(__GNUC__)*/ // builtin only available on Clang for now
     return __builtin_bitreverse32(value);
 #else
     value = (value << 16u) | (value >> 16u);
@@ -356,7 +356,7 @@ template <std::unsigned_integral T>
 /// @param[in] value the value to reverse bits from
 /// @return `value` with its bits reversed
 [[nodiscard]] FORCE_INLINE constexpr uint64 reverse(uint64 value) noexcept {
-#if defined(__clang__) || defined(__GNUC__)
+#if defined(__clang__) /*|| defined(__GNUC__)*/ // builtin only available on Clang for now
     return __builtin_bitreverse64(value);
 #else
     value = (value << 32ull) | (value >> 32ull);

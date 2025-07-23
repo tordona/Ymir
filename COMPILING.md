@@ -11,6 +11,7 @@ Ymir has been successfully compiled with the following toolchains:
 - Clang 15.0.7 on WSL Ubuntu 24.04.5 LTS (`clang-15` / `clang++-15`)
 - Clang 18.1.3 on WSL Ubuntu 24.04.5 LTS (`clang` / `clang++`)
 - Clang 19.1.1 on Ubuntu 24.04.2 LTS (`clang-19` / `clang++-19`)
+- GCC 14.2.0 on Ubuntu 24.04.2 LTS (`gcc-14` / `g++-14`)
 - Apple Clang 17 on macOS 15 Sequoia
 
 The project has been compiled for x86_64 and ARM64 Windows, Linux and macOS platforms.
