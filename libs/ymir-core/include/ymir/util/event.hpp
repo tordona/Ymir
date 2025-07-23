@@ -5,8 +5,16 @@
 @brief Defines `util::Event`, a synchronization primitive that blocks threads until a signal is raised.
 */
 
-#include <condition_variable>
-#include <mutex>
+#if defined(_WIN32)
+    #include <ymir/core/types.hpp>
+
+    #include <atomic>
+#elif defined(__linux__)
+    #include <atomic>
+#else
+    #include <condition_variable>
+    #include <mutex>
+#endif
 
 namespace util {
 
@@ -21,9 +29,7 @@ namespace util {
 ///     // Inserts a value in the queue.
 ///     void Offer(T value) {
 ///         // Wait until the queue is not full.
-///         // `false` causes the signal to not be reset once received.
-///         // This will block the thread until the event is signaled.
-///         m_queueNotFullEvent.Wait(false);
+///         m_queueNotFullEvent.Wait();
 ///
 ///         // Push the element to the queue
 ///         // NOTE: synchronization omitted for brevity
@@ -37,9 +43,7 @@ namespace util {
 ///     // Removes a value from the queue.
 ///     T Poll() {
 ///         // Wait until the queue is not empty.
-///         // `false` causes the signal to not be reset once received.
-///         // This will block the thread until the event is signaled.
-///         m_queueNotEmptyEvent.Wait(false);
+///         m_queueNotEmptyEvent.Wait();
 ///
 ///         // Pop the element from the queue
 ///         // NOTE: synchronization omitted for brevity
@@ -61,20 +65,43 @@ namespace util {
 ///
 /// ```
 class Event {
+#if defined(_WIN32) || defined(__linux__)
+    // Windows- and Linux-specific implementation
+
+public:
+    /// @brief Constructs a new event with an initial signal state.
+    /// @param[in] set the signal state
+    [[nodiscard]] explicit Event(bool set = false) noexcept;
+
+    /// @brief Waits until the event is signaled.
+    void Wait();
+
+    /// @brief Signals the event and notifies all waiting threads.
+    void Set();
+
+    /// @brief Resets (clears) the event signal.
+    void Reset();
+
+private:
+    #ifdef _WIN32
+    std::atomic<uint8> m_value;
+    #else // __linux__
+    std::atomic<int> m_value;
+    #endif
+
+#else
+    // Generic condvar-based implementation
+
 public:
     /// @brief Constructs a new event with an initial signal state.
     /// @param[in] set the signal state
     [[nodiscard]] explicit Event(bool set = false) noexcept
         : m_set(set) {}
 
-    /// @brief Waits until the event is signaled, optionally resetting it.
-    /// @param[in] autoReset whether to automatically clear the event after being signaled
-    void Wait(bool autoReset) {
+    /// @brief Waits until the event is signaled.
+    void Wait() {
         std::unique_lock<std::mutex> lock(m_mutex);
         m_condVar.wait(lock, [this] { return m_set; });
-        if (autoReset) {
-            m_set = false;
-        }
     }
 
     /// @brief Signals the event and notifies all waiting threads.
@@ -94,6 +121,8 @@ private:
     std::mutex m_mutex;
     std::condition_variable m_condVar;
     bool m_set;
+
+#endif
 };
 
 } // namespace util

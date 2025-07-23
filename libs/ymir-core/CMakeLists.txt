@@ -230,6 +230,7 @@ add_library(ymir-core
 
     src/ymir/util/backup_datetime.cpp
     src/ymir/util/date_time.cpp
+    src/ymir/util/event.cpp
     src/ymir/util/process.cpp
 )
 add_library(ymir::ymir-core ALIAS ymir-core)
@@ -250,6 +251,13 @@ target_link_libraries(ymir-core PUBLIC
     xxHash::xxHash
     chdr-static
 )
+if (WIN32)
+    ## synchronization.lib required for WaitOnAddress and WakeByAddressAll
+    target_link_libraries(ymir-core PUBLIC
+        synchronization
+    )
+endif ()
+
 
 # Build precompiled header
 target_precompile_headers(ymir-core

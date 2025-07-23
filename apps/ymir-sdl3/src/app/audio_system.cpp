@@ -75,7 +75,7 @@ void AudioSystem::ReceiveSample(sint16 left, sint16 right) {
     // If we're doing audio sync, wait until the buffer is no longer full.
     // Otherwise, simply overrun the buffer.
     if (m_sync) {
-        m_bufferNotFullEvent.Wait(false);
+        m_bufferNotFullEvent.Wait();
     }
 
     m_buffer[m_writePos] = {left, right};

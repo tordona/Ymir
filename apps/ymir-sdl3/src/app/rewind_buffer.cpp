@@ -111,7 +111,8 @@ FLATTEN void RewindBuffer::ProcThread() {
     util::SetCurrentThreadName("Rewind buffer processor");
 
     while (m_running) {
-        m_nextStateEvent.Wait(true);
+        m_nextStateEvent.Wait();
+        m_nextStateEvent.Reset();
         if (!m_running) {
             break;
         }

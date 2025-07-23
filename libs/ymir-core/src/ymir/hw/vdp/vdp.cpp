@@ -378,7 +378,8 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
 void VDP::SaveState(state::VDPState &state) const {
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::PreSaveStateSync());
-        m_VDPRenderContext.preSaveSyncSignal.Wait(true);
+        m_VDPRenderContext.preSaveSyncSignal.Wait();
+        m_VDPRenderContext.preSaveSyncSignal.Reset();
     }
 
     m_state.SaveState(state);
@@ -459,7 +460,8 @@ void VDP::LoadState(const state::VDPState &state) {
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::PostLoadStateSync());
-        m_VDPRenderContext.postLoadSyncSignal.Wait(true);
+        m_VDPRenderContext.postLoadSyncSignal.Wait();
+        m_VDPRenderContext.postLoadSyncSignal.Reset();
     }
 
     m_VDP1RenderContext.sysClipH = state.renderer.vdp1State.sysClipH;
@@ -564,7 +566,8 @@ void VDP::EnableThreadedVDP(bool enable) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::PostLoadStateSync());
         m_VDPRenderThread = std::thread{[&] { VDPRenderThread(); }};
         m_VDPDeinterlaceRenderThread = std::thread{[&] { VDPDeinterlaceRenderThread(); }};
-        m_VDPRenderContext.postLoadSyncSignal.Wait(true);
+        m_VDPRenderContext.postLoadSyncSignal.Wait();
+        m_VDPRenderContext.postLoadSyncSignal.Reset();
     } else {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Shutdown());
         if (m_VDPRenderThread.joinable()) {
@@ -586,7 +589,8 @@ void VDP::IncludeVDP1RenderInVDPThread(bool enable) {
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::UpdateEffectiveRenderingFlags());
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1StateSync());
-        m_VDPRenderContext.postLoadSyncSignal.Wait(true);
+        m_VDPRenderContext.postLoadSyncSignal.Wait();
+        m_VDPRenderContext.postLoadSyncSignal.Reset();
     } else {
         UpdateEffectiveRenderingFlags();
     }
@@ -985,7 +989,8 @@ void VDP::BeginHPhaseRightBorder() {
             if (m_threadedVDPRendering) {
                 m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1EraseFramebuffer());
                 if (!m_effectiveRenderVDP1InVDP2Thread) {
-                    m_VDPRenderContext.eraseFramebufferReadySignal.Wait(true);
+                    m_VDPRenderContext.eraseFramebufferReadySignal.Wait();
+                    m_VDPRenderContext.eraseFramebufferReadySignal.Reset();
                     VDP1EraseFramebuffer();
                 }
             } else {
@@ -1092,7 +1097,8 @@ void VDP::BeginVPhaseBlankingAndSync() {
     devlog::trace<grp::base>("End VDP2 frame");
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2EndFrame());
-        m_VDPRenderContext.renderFinishedSignal.Wait(true);
+        m_VDPRenderContext.renderFinishedSignal.Wait();
+        m_VDPRenderContext.renderFinishedSignal.Reset();
     }
     m_cbFrameComplete(m_framebuffer.data(), m_HRes, m_VRes);
 }
@@ -1181,7 +1187,8 @@ void VDP::VDPRenderThread() {
                 (this->*m_fnVDP2DrawLine)(event.drawLine.vcnt, false);
                 if (deinterlaceRender && interlaced) {
                     if (threadedDeinterlacer) {
-                        rctx.deinterlaceRenderEndSignal.Wait(true);
+                        rctx.deinterlaceRenderEndSignal.Wait();
+                        rctx.deinterlaceRenderEndSignal.Reset();
                     } else {
                         (this->*m_fnVDP2DrawLine)(event.drawLine.vcnt, true);
                     }
@@ -1297,7 +1304,8 @@ void VDP::VDPRenderThread() {
             case EvtType::Shutdown:
                 rctx.deinterlaceShutdown = true;
                 rctx.deinterlaceRenderBeginSignal.Set();
-                rctx.deinterlaceRenderEndSignal.Wait(true);
+                rctx.deinterlaceRenderEndSignal.Wait();
+                rctx.deinterlaceRenderEndSignal.Reset();
                 running = false;
                 break;
             }
@@ -1311,7 +1319,8 @@ void VDP::VDPDeinterlaceRenderThread() {
     auto &rctx = m_VDPRenderContext;
 
     while (true) {
-        rctx.deinterlaceRenderBeginSignal.Wait(true);
+        rctx.deinterlaceRenderBeginSignal.Wait();
+        rctx.deinterlaceRenderBeginSignal.Reset();
         if (rctx.deinterlaceShutdown) {
             rctx.deinterlaceShutdown = false;
             rctx.deinterlaceRenderEndSignal.Set();
@@ -1473,7 +1482,8 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1SwapFramebuffer());
-        m_VDPRenderContext.framebufferSwapSignal.Wait(true);
+        m_VDPRenderContext.framebufferSwapSignal.Wait();
+        m_VDPRenderContext.framebufferSwapSignal.Reset();
     }
 
     m_state.displayFB ^= 1;

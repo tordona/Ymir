@@ -7,6 +7,7 @@
 - App: Added a button to copy the version string from the About window.
 - App: Auto-center About window whenever it is opened.
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
+- Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
 - Input: Categorized gamepad triggers and sticks as absolute axes. Absolute axes output fixed values at specific positions.
 - Input: Categorized gamepad triggers as monopolar axes (having values ranging from 0.0 to 1.0) and gamepad sticks as bipolar axes (-1.0 to +1.0).
 - Input: Implemented Arcade Racer peripheral. (#29)

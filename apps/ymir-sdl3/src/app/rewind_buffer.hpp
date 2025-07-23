@@ -45,7 +45,8 @@ public:
     // Tells the rewind buffer processor thread that the next state is ready to be processed.
     // Should be invoked by the emulator thread after saving a state to NextState.
     void ProcessState() {
-        m_stateProcessedEvent.Wait(true);
+        m_stateProcessedEvent.Wait();
+        m_stateProcessedEvent.Reset();
         m_nextStateEvent.Set();
     }
 

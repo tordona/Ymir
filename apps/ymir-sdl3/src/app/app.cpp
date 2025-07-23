@@ -667,7 +667,8 @@ void App::RunEmulator() {
              ++screen.VDP2Frames;
 
              if (sharedCtx.emuSpeed.limitSpeed && screen.videoSync) {
-                 screen.frameRequestEvent.Wait(true);
+                 screen.frameRequestEvent.Wait();
+                 screen.frameRequestEvent.Reset();
              }
              if (screen.reduceLatency || !screen.updated || screen.videoSync) {
                  std::unique_lock lock{screen.mtxFramebuffer};
@@ -1874,7 +1875,8 @@ void App::RunEmulator() {
         // Update display
         if (screen.updated || screen.videoSync) {
             if (screen.videoSync && screen.expectFrame) {
-                screen.frameReadyEvent.Wait(true);
+                screen.frameReadyEvent.Wait();
+                screen.frameReadyEvent.Reset();
                 screen.expectFrame = false;
             }
             screen.updated = false;
@@ -3163,7 +3165,8 @@ void App::EmulatorThread() {
         if (!paused) {
             // Synchronize with GUI thread
             if (m_context.emuSpeed.limitSpeed && m_context.screen.videoSync) {
-                m_emuProcessEvent.Wait(true);
+                m_emuProcessEvent.Wait();
+                m_emuProcessEvent.Reset();
             }
 
             const bool rewindEnabled = m_context.rewindBuffer.IsRunning();
