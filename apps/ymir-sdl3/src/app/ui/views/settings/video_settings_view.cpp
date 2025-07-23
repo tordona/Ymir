@@ -67,12 +67,22 @@ void VideoSettingsView::Display() {
                                 "Can be helpful when used in conjunction with the debugger windows.",
                                 m_context.displayScale);
 
+    ImGui::Separator();
+
     bool fullScreen = settings.fullScreen.Get();
     if (MakeDirty(ImGui::Checkbox("Full screen", &fullScreen))) {
         settings.fullScreen = fullScreen;
     }
 
     MakeDirty(ImGui::Checkbox("Double-click to toggle full screen", &settings.doubleClickToFullScreen));
+
+    MakeDirty(ImGui::Checkbox("Use full refresh rate in full screen mode", &settings.useFullRefreshRateInFullScreen));
+    widgets::ExplanationTooltip(
+        "When enabled, while in full screen, the GUI frame rate will be adjusted to the largest multiple of the "
+        "emulator's target frame rate that's not greater than your display's refresh rate.\n"
+        "When disabled, the GUI frame rate will be limited to the emulator's target frame rate.\n"
+        "Enabling this option can slightly reduce input latency on high refresh rate displays.",
+        m_context.displayScale);
 
     // -----------------------------------------------------------------------------------------------------------------
 

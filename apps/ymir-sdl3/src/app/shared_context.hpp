@@ -121,10 +121,6 @@ struct SharedContext {
         uint64 dupGUIFrames = 0;
         uint64 dupGUIFrameCounter = 0;
 
-        // Skip frames in fullscreen mode to stay below display refresh rate when running at high speeds
-        uint64 skipEmuFrames = 0;
-        uint64 skipEmuFrameCounter = 0;
-
         uint64 VDP2Frames = 0;
         uint64 VDP1Frames = 0;
 

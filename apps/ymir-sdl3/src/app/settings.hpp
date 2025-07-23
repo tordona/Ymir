@@ -370,6 +370,7 @@ public:
         bool displayVideoOutputInWindow;
         util::Observable<bool> fullScreen;
         bool doubleClickToFullScreen;
+        bool useFullRefreshRateInFullScreen;
 
         util::Observable<bool> deinterlace;
         util::Observable<bool> transparentMeshes;

@@ -12,6 +12,9 @@
 - Input: Implemented Arcade Racer peripheral. (#29)
 - Input: Implemented Mission Stick peripheral with toggleable three-axis and six-axis modes. (#30)
 - Video: Added hotkeys to rotate screen clockwise and counterclockwise. (#318)
+- Video: Added option to reduce input lag by adjusting GUI frame rate to the largest multiple of the emulator's target frame rate that's not greater than the display's refresh rate.
+- Video: Avoid frame skipping on slow refresh rate monitors by disabling VSync if the target frame rate exceeds the display's refresh rate.
+- Video: Simplify frame rate control in full screen mode.
 
 ### Fixes
 
