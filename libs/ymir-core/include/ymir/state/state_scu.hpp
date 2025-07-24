@@ -87,7 +87,7 @@ struct SCUState {
 
     uint32 intrMask;
     uint32 intrStatus;
-    bool abusIntrAck;
+    uint16 abusIntrsPendingAck;
     uint8 pendingIntrLevel;
     uint8 pendingIntrIndex;
 

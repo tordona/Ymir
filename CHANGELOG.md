@@ -21,6 +21,7 @@
 
 - Media: Add support for CD-ROM Mode 2 tracks. Fixes Last Bronx not booting. (#238)
 - Scheduler: Ensure events are executed in chronological order.
+- SCU: Fix A-Bus external interrupt handling.
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 
 

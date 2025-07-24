@@ -176,7 +176,7 @@ private:
 
     InterruptMask m_intrMask;
     InterruptStatus m_intrStatus;
-    bool m_abusIntrAck;
+    uint16 m_abusIntrsPendingAck;
     uint8 m_pendingIntrLevel;
     uint8 m_pendingIntrIndex;
 
@@ -316,11 +316,11 @@ public:
 
         InterruptMask &GetInterruptMask();
         InterruptStatus &GetInterruptStatus();
-        bool &GetABusInterruptAcknowledge();
+        uint16 &GetABusInterruptsPendingAcknowledge();
 
         const InterruptMask &GetInterruptMask() const;
         const InterruptStatus &GetInterruptStatus() const;
-        const bool &GetABusInterruptAcknowledge() const;
+        const uint16 &GetABusInterruptsPendingAcknowledge() const;
 
         uint8 GetPendingInterruptLevel() const;
         uint8 GetPendingInterruptIndex() const;

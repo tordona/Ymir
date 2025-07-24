@@ -64,7 +64,7 @@ void SCU::Reset(bool hard) {
     m_cartSlot.Reset(hard);
 
     m_intrMask.u32 = 0xBFFF;
-    m_abusIntrAck = false;
+    m_abusIntrsPendingAck = 0x0000;
     m_pendingIntrLevel = 0;
     m_pendingIntrIndex = 0;
 
@@ -279,7 +279,7 @@ void SCU::TriggerSpriteDrawEnd() {
 }
 
 void SCU::TriggerExternalInterrupt0() {
-    if (m_intrStatus.ABus_ExtIntr0 != 1) {
+    if (m_intrStatus.ABus_ExtIntr0 != 1 && !bit::test<0>(m_abusIntrsPendingAck)) {
         m_intrStatus.ABus_ExtIntr0 = 1;
         UpdateMasterInterruptLevel();
     }
@@ -390,7 +390,7 @@ void SCU::SaveState(state::SCUState &state) const {
 
     state.intrMask = m_intrMask.u32;
     state.intrStatus = m_intrStatus.u32;
-    state.abusIntrAck = m_abusIntrAck;
+    state.abusIntrsPendingAck = m_abusIntrsPendingAck;
     state.pendingIntrLevel = m_pendingIntrLevel;
     state.pendingIntrIndex = m_pendingIntrIndex;
 
@@ -460,7 +460,7 @@ void SCU::LoadState(const state::SCUState &state) {
 
     m_intrMask.u32 = state.intrMask & 0x0000BFFF;
     m_intrStatus.u32 = state.intrStatus & 0xFFFFBFFF;
-    m_abusIntrAck = state.abusIntrAck;
+    m_abusIntrsPendingAck = state.abusIntrsPendingAck;
     m_pendingIntrLevel = state.pendingIntrLevel & 0xF;
     m_pendingIntrIndex = state.pendingIntrIndex & 0x1F;
 
@@ -558,8 +558,8 @@ FORCE_INLINE void SCU::UpdateMasterInterruptLevel() {
     const uint8 internalLevel = kInternalLevels[internalIndex];
     const uint8 externalLevel = kExternalLevels[externalIndex];
     devlog::trace<grp::intr>("Intr states:  {:04X} {:04X}", m_intrStatus.internal, m_intrStatus.external);
-    devlog::trace<grp::intr>("Intr masks:   {:04X} {:04X} {}", (uint16)m_intrMask.internal,
-                             m_intrMask.ABus_ExtIntrs * 0xFFFF, m_abusIntrAck);
+    devlog::trace<grp::intr>("Intr masks:   {:04X} {:04X} {:04X}", (uint16)m_intrMask.internal,
+                             m_intrMask.ABus_ExtIntrs * 0xFFFF, m_abusIntrsPendingAck);
     devlog::trace<grp::intr>("Intr bits:    {:04X} {:04X}", internalBits, externalBits);
     devlog::trace<grp::intr>("Intr indices: {:X} {:X}", internalIndex, externalIndex);
     devlog::trace<grp::intr>("Intr levels:  {:X} {:X}", internalLevel, externalLevel);
@@ -573,7 +573,7 @@ FORCE_INLINE void SCU::UpdateMasterInterruptLevel() {
         m_intrStatus.internal &= ~(1u << internalIndex);
 
         m_cbExternalMasterInterrupt(internalLevel, internalIndex + 0x40);
-    } else if (m_abusIntrAck) {
+    } else if (~m_abusIntrsPendingAck & (1u << externalIndex)) {
         devlog::trace<grp::intr>("Raising external interrupt {:X}, level {:X}", externalIndex, externalLevel);
         TraceRaiseInterrupt(m_tracer, externalIndex + 16, externalLevel);
 
@@ -581,7 +581,7 @@ FORCE_INLINE void SCU::UpdateMasterInterruptLevel() {
         m_pendingIntrIndex = externalIndex + 16;
         m_intrStatus.external &= ~(1u << externalIndex);
 
-        m_abusIntrAck = false;
+        m_abusIntrsPendingAck |= 1u << externalIndex;
         m_cbExternalMasterInterrupt(externalLevel, externalIndex + 0x50);
     }
 }
@@ -1112,8 +1112,8 @@ FORCE_INLINE T SCU::ReadReg(uint32 address) {
             return m_intrMask.u32;
         case 0xA4: // (IST) Interrupt Status
             return m_intrStatus.u32;
-        case 0xA8: // (AIACK) A-Bus Interrupt Acknowledge
-            return m_abusIntrAck;
+        case 0xA8: // (AIACK) A-Bus Interrupt Acknowledge (write-only)
+            return 0;
 
         case 0xB0: // (ASR0) A-Bus Set (part 1) (write-only)
             if constexpr (peek) {
@@ -1178,7 +1178,9 @@ FORCE_INLINE void SCU::WriteRegByte(uint32 address, uint8 value) {
     case 0xA9: break; // (AIACK) A-Bus Interrupt Acknowledge (bits 16-23)
     case 0xAA: break; // (AIACK) A-Bus Interrupt Acknowledge (bits 8-15)
     case 0xAB:        // (AIACK) A-Bus Interrupt Acknowledge (bits 0-7)
-        m_abusIntrAck = bit::test<0>(value);
+        if (bit::test<0>(value)) {
+            m_abusIntrsPendingAck = 0;
+        }
         if constexpr (!poke) {
             UpdateMasterInterruptLevel();
         }
@@ -1369,7 +1371,9 @@ FORCE_INLINE void SCU::WriteRegLong(uint32 address, uint32 value) {
         }
         break;
     case 0xA8: // (AIACK) A-Bus Interrupt Acknowledge
-        m_abusIntrAck = bit::test<0>(value);
+        if (bit::test<0>(value)) {
+            m_abusIntrsPendingAck = 0;
+        }
         if constexpr (!poke) {
             UpdateMasterInterruptLevel();
         }
@@ -1425,8 +1429,8 @@ InterruptStatus &SCU::Probe::GetInterruptStatus() {
     return m_scu.m_intrStatus;
 }
 
-bool &SCU::Probe::GetABusInterruptAcknowledge() {
-    return m_scu.m_abusIntrAck;
+uint16 &SCU::Probe::GetABusInterruptsPendingAcknowledge() {
+    return m_scu.m_abusIntrsPendingAck;
 }
 
 const InterruptMask &SCU::Probe::GetInterruptMask() const {
@@ -1437,8 +1441,8 @@ const InterruptStatus &SCU::Probe::GetInterruptStatus() const {
     return m_scu.m_intrStatus;
 }
 
-const bool &SCU::Probe::GetABusInterruptAcknowledge() const {
-    return m_scu.m_abusIntrAck;
+const uint16 &SCU::Probe::GetABusInterruptsPendingAcknowledge() const {
+    return m_scu.m_abusIntrsPendingAck;
 }
 
 uint8 SCU::Probe::GetPendingInterruptLevel() const {

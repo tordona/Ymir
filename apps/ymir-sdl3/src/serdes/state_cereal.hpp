@@ -12,7 +12,7 @@ namespace ymir::state {
 // Current save state format version.
 // Increment once per release if there are any changes to the serializers.
 // Remember to document every change!
-inline constexpr uint32 kVersion = 7;
+inline constexpr uint32 kVersion = 8;
 
 } // namespace ymir::state
 
@@ -137,6 +137,11 @@ void serialize(Archive &ar, SH2State::Cache::Entry &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SCUState &s, const uint32 version) {
+    // v8:
+    // - New fields
+    //   - abusIntrsPendingAck = intrStatus >> 16  (or 0 if abusIntrAck == true in versions 7 and below)
+    // - Removed fields
+    //   - bool abusIntrAck
     // v5:
     // - New fields
     //   - pendingIntrLevel = 0
@@ -188,7 +193,14 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
     if (!s.cartData.empty()) {
         ar(cereal::binary_data(s.cartData.data(), s.cartData.size()));
     }
-    ar(s.intrMask, s.intrStatus, s.abusIntrAck);
+    ar(s.intrMask, s.intrStatus);
+    if (version >= 8) {
+        ar(s.abusIntrsPendingAck);
+    } else {
+        bool abusIntrAck;
+        ar(abusIntrAck);
+        s.abusIntrsPendingAck = abusIntrAck ? 0x0000 : (s.intrStatus >> 16u);
+    }
     if (version >= 5) {
         ar(s.pendingIntrLevel, s.pendingIntrIndex);
     } else {

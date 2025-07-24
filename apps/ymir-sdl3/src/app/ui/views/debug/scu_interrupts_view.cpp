@@ -8,12 +8,32 @@ SCUInterruptsView::SCUInterruptsView(SharedContext &context)
 
 void SCUInterruptsView::Display() {
     if (ImGui::BeginTable("main", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
-        ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 265 * m_context.displayScale);
+        ImGui::TableSetupColumn("##left", ImGuiTableColumnFlags_WidthFixed, 280 * m_context.displayScale);
         ImGui::TableSetupColumn("##right", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableNextRow();
 
         if (ImGui::TableNextColumn()) {
             DisplayInternalInterrupts();
+
+            auto &probe = m_scu.GetProbe();
+            ImGui::AlignTextToFramePadding();
+            const uint8 pendingIntrLevel = probe.GetPendingInterruptLevel();
+            if (pendingIntrLevel > 0) {
+                const uint8 index = probe.GetPendingInterruptIndex();
+                if (index < 16) {
+                    static constexpr const char *kNames[] = {
+                        "VDP2 VBlank IN",     "VDP2 VBlank OUT",      "VDP2 HBlank IN",      "SCU Timer 0",
+                        "SCU Timer 1",        "SCU DSP End",          "SCSP Sound Request",  "SMPC System Manager",
+                        "SMPC PAD Interrupt", "SCU Level 2 DMA End",  "SCU Level 1 DMA End", "SCU Level 0 DMA End",
+                        "SCU DMA-illegal",    "VDP1 Sprite Draw End", "Unknown (14)",        "Unknown (15)",
+                    };
+                    ImGui::Text("%s, level %X", kNames[index], pendingIntrLevel);
+                } else {
+                    ImGui::Text("External %X, level %X", index, pendingIntrLevel - 16);
+                }
+            } else {
+                ImGui::TextDisabled("No pending interrupt");
+            }
         }
         if (ImGui::TableNextColumn()) {
             DisplayExternalInterrupts();
@@ -21,37 +41,12 @@ void SCUInterruptsView::Display() {
 
         ImGui::EndTable();
     }
-
-    auto &probe = m_scu.GetProbe();
-    const uint8 pendingIntrLevel = probe.GetPendingInterruptLevel();
-    if (pendingIntrLevel > 0) {
-        const uint8 index = probe.GetPendingInterruptIndex();
-        if (index < 16) {
-            static constexpr const char *kNames[] = {
-                "VDP2 VBlank IN",     "VDP2 VBlank OUT",      "VDP2 HBlank IN",      "SCU Timer 0",
-                "SCU Timer 1",        "SCU DSP End",          "SCSP Sound Request",  "SMPC System Manager",
-                "SMPC PAD Interrupt", "SCU Level 2 DMA End",  "SCU Level 1 DMA End", "SCU Level 0 DMA End",
-                "SCU DMA-illegal",    "VDP1 Sprite Draw End", "Unknown (14)",        "Unknown (15)",
-            };
-            ImGui::Text("Pending interrupt: %s, level %X", kNames[index], pendingIntrLevel);
-        } else {
-            ImGui::Text("Pending interrupt: External %X, level %X", index, pendingIntrLevel - 16);
-        }
-    } else {
-        ImGui::TextDisabled("No pending interrupt");
-    }
 }
 
 void SCUInterruptsView::DisplayInternalInterrupts() {
     auto &probe = m_scu.GetProbe();
     auto &intrStatus = probe.GetInterruptStatus();
     auto &intrMask = probe.GetInterruptMask();
-
-    bool flag = intrMask.ABus_ExtIntrs;
-    if (ImGui::Checkbox("A-Bus external interrupt mask", &flag)) {
-        intrMask.ABus_ExtIntrs = flag;
-    }
-    ImGui::Checkbox("A-Bus interrupt acknowledge", &probe.GetABusInterruptAcknowledge());
 
     ImGui::Separator();
 
@@ -118,6 +113,38 @@ void SCUInterruptsView::DisplayInternalInterrupts() {
         drawRow(12, "SCU", "DMA-illegal", 0x4C, 0x3);
         drawRow(13, "VDP1", "Sprite Draw End", 0x4D, 0x2);
 
+        // A-Bus external interrupts
+        ImGui::TableNextRow();
+        if (ImGui::TableNextColumn()) {
+            probe.GetABusInterruptsPendingAcknowledge();
+            bool flag = intrStatus.external != 0;
+            ImGui::BeginDisabled();
+            ImGui::Checkbox("##sts_abus_ext_any", &flag);
+            ImGui::EndDisabled();
+        }
+        if (ImGui::TableNextColumn()) {
+            bool flag = intrMask.ABus_ExtIntrs;
+            if (ImGui::Checkbox("##msk_abus_ext", &flag)) {
+                intrMask.ABus_ExtIntrs = flag;
+            }
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("A-Bus");
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::TextUnformatted("External interrupts");
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::TextUnformatted("--");
+            ImGui::PopFont();
+        }
+        if (ImGui::TableNextColumn()) {
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::TextUnformatted("-");
+            ImGui::PopFont();
+        }
+
         ImGui::EndTable();
     }
 }
@@ -127,8 +154,9 @@ void SCUInterruptsView::DisplayExternalInterrupts() {
     ImGui::TextUnformatted("External (A-Bus)");
     ImGui::PopFont();
 
-    if (ImGui::BeginTable("external_intrs", 4, ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::BeginTable("external_intrs", 5, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("St");
+        ImGui::TableSetupColumn("Pnd");
         ImGui::TableSetupColumn("#");
         ImGui::TableSetupColumn("Vec");
         ImGui::TableSetupColumn("Lv");
@@ -136,6 +164,7 @@ void SCUInterruptsView::DisplayExternalInterrupts() {
 
         auto &probe = m_scu.GetProbe();
         auto &intrStatus = probe.GetInterruptStatus();
+        auto &pending = probe.GetABusInterruptsPendingAcknowledge();
 
         for (uint32 i = 0; i < 16; i++) {
             const uint32 bit = i + 16;
@@ -146,6 +175,13 @@ void SCUInterruptsView::DisplayExternalInterrupts() {
                 if (ImGui::Checkbox(fmt::format("##sts_ext_{}", i).c_str(), &flag)) {
                     intrStatus.u32 &= ~bitVal;
                     intrStatus.u32 |= static_cast<uint32>(flag) << bit;
+                }
+            }
+            if (ImGui::TableNextColumn()) {
+                bool flag = pending & bitVal;
+                if (ImGui::Checkbox(fmt::format("##pending_abus_ext_{}", i).c_str(), &flag)) {
+                    pending &= ~bitVal;
+                    pending |= static_cast<uint16>(flag) << (bit - 16);
                 }
             }
             if (ImGui::TableNextColumn()) {
