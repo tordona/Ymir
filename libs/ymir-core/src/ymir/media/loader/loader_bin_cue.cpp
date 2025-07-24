@@ -192,6 +192,8 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
                 return false;
             }
 
+            bool mode2 = false;
+
             uint32 trackNum{};
             std::string format{};
             ins >> trackNum >> format;
@@ -222,6 +224,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
                     // MODE1/2352   MODE2/2352
                     sectorSize = std::stoi(format.substr(6));
                 }
+                mode2 = format.starts_with("MODE2");
                 controlADR = 0x41;
             } else if (format == "CDG") {
                 // Karaoke CD+G track
@@ -242,6 +245,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
             currTrackIndex = trackNum - 1;
 
             auto &track = session.tracks[currTrackIndex];
+            track.mode2 = mode2;
             track.SetSectorSize(sectorSize);
             track.controlADR = controlADR;
             track.interleavedSubchannel = false;

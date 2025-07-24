@@ -83,48 +83,77 @@ private:
 static bool SetTrackInfo(const chd_header *header, std::string_view typestring, Track &track) {
     // NOTE: This loader uses raw sector sizes which is determined by the unit size from the CHD header
     if (typestring == "MODE1") {
+        track.mode2 = false;
         track.SetSectorSize(header->unitbytes); // 2048
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE1/2048") {
+        track.mode2 = false;
         track.SetSectorSize(header->unitbytes); // 2048
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE1_RAW") {
+        track.mode2 = false;
         track.SetSectorSize(header->unitbytes); // 2352
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE1/2352") {
+        track.mode2 = false;
         track.SetSectorSize(header->unitbytes); // 2352
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2336
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2/2336") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2336
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2_FORM1") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2048
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2/2048") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2048
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2_FORM2") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2324
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2/2324") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2324
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2_FORM_MIX") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2336
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2_RAW") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2352
         track.controlADR = 0x41;
+
     } else if (typestring == "MODE2/2352") {
+        track.mode2 = true;
         track.SetSectorSize(header->unitbytes); // 2352
         track.controlADR = 0x41;
+
     } else if (typestring == "CDI/2352") {
+        track.mode2 = false;
         track.SetSectorSize(header->unitbytes); // 2352
         track.controlADR = 0x41;
+
     } else if (typestring == "AUDIO") {
+        track.mode2 = false;
         track.SetSectorSize(header->unitbytes); // 2352
         track.controlADR = 0x01;
         track.bigEndian = true;

@@ -28,6 +28,7 @@ struct Track {
     uint32 sectorSize = 0;
     uint32 userDataOffset = 0;
     uint8 controlADR = 0;
+    bool mode2 = false;
     bool interleavedSubchannel = false; // true=96-byte PW subchannel, interleaved
     bool bigEndian = false;             // indicates audio data endianness on audio tracks
 
@@ -50,7 +51,7 @@ struct Track {
 
     void SetSectorSize(uint32 size) {
         sectorSize = size;
-        userDataOffset = size >= 2352 ? 16 : size >= 2340 ? 4 : 0;
+        userDataOffset = size >= 2352 ? (mode2 ? 24 : 16) : size >= 2340 ? (mode2 ? 12 : 4) : 0;
     }
 
     // Reads the user data portion of a sector.
@@ -100,7 +101,7 @@ struct Track {
         const bool hasSubheader = sectorSize >= 2336;
 
         // Determine how much data needs to be skipped from the raw sector read and where we need to write it
-        const uint32 readOffset = (!needsSyncBytes && hasSyncBytes) * 12 + (!needsHeader && hasHeader) * 4;
+        const uint32 readOffset = (!needsSyncBytes && hasSyncBytes) * 12 + (!needsHeader && hasHeader) * 4 + mode2 * 8;
         const uint32 writeOffset = (needsSyncBytes && !hasSyncBytes) * 12 + (needsHeader && !hasHeader) * 4;
 
         // Try to read raw sector data based on specifications
