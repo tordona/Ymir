@@ -309,7 +309,8 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
 
         // If PC is not in any of these places, something went horribly wrong
         util::dev_assert((PC & 1) == 0);
-        util::dev_assert((PC >> 29u) == 0b000 || (PC >> 29u) == 0b001 || (PC >> 29u) == 0b101);
+        util::dev_assert((PC >> 29u) == 0b000 || (PC >> 29u) == 0b001 || (PC >> 29u) == 0b100 || (PC >> 29u) == 0b101 ||
+                         (PC >> 29u) == 0b110);
 
         if constexpr (devlog::debug_enabled<grp::exec_dump>) {
             // Dump stack trace on SYS_EXECDMP
