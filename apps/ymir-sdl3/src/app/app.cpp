@@ -3231,20 +3231,8 @@ void App::RunEmulator() {
             targetInfo.cycle = false;
             SDL_GPURenderPass *renderPass = SDL_BeginGPURenderPass(commandBuffer, &targetInfo, 1, nullptr);
 
-            // TODO: check if this is still necessary
-            /*#if defined(__APPLE__)
-                        // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
-                        const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
-                        SDL_SetRenderScale(renderer, pixelDensity, pixelDensity);
-            #endif*/
-
             // Render ImGui
             ImGui_ImplSDLGPU3_RenderDrawData(drawData, commandBuffer, renderPass);
-
-            // TODO: check if this is still necessary
-            /*#if defined(__APPLE__)
-                        SDL_SetRenderScale(renderer, 1.0f, 1.0f);
-            #endif*/
 
             SDL_EndGPURenderPass(renderPass);
         }
