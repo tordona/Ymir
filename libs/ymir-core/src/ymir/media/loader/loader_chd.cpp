@@ -1,9 +1,11 @@
 #include <ymir/media/loader/loader_chd.hpp>
 
 #include <ymir/media/binary_reader/binary_reader_subview.hpp>
+#include <ymir/media/frame_address.hpp>
 
 #include <ymir/core/types.hpp>
 
+#include <ymir/util/arith_ops.hpp>
 #include <ymir/util/scope_guard.hpp>
 
 #include <fmt/format.h>
@@ -37,6 +39,10 @@ public:
 
     CHDBinaryReader &operator=(const CHDBinaryReader &) = default;
     CHDBinaryReader &operator=(CHDBinaryReader &&) = default;
+
+    uint32 HunkSize() const {
+        return m_header->hunkbytes;
+    }
 
     uintmax_t Size() const final {
         return m_header->logicalbytes;
@@ -160,9 +166,6 @@ static bool SetTrackInfo(const chd_header *header, std::string_view typestring, 
     } else {
         return false;
     }
-    if (track.controlADR == 0x41) {
-        track.userDataOffset = track.sectorSize >= 2352 ? 16 : track.sectorSize >= 2340 ? 4 : 0;
-    }
     return true;
 }
 
@@ -181,30 +184,16 @@ bool Load(std::filesystem::path chdPath, Disc &disc, bool preloadToRAM) {
         chd_precache(file);
     }
 
-    std::shared_ptr<IBinaryReader> binaryReader = std::make_shared<CHDBinaryReader>(file);
+    auto binaryReader = std::make_shared<CHDBinaryReader>(file);
 
     auto &session = disc.sessions.emplace_back();
 
-    // Read Saturn disc header
-    {
-        // Skip sync bytes and/or header if present
-        const uintmax_t userDataOffset = header->unitbytes >= 2352 ? 16 : header->unitbytes >= 2340 ? 4 : 0;
-
-        std::array<uint8, 256> headerData{};
-        const uintmax_t readSize = binaryReader->Read(userDataOffset, 256, headerData);
-        if (readSize < 256) {
-            // fmt::println("CHD: File truncated");
-            return false;
-        }
-
-        disc.header.ReadFrom(headerData);
-    }
-
-    // Parse metadata and build track list
     std::vector<char> metabuf;
     uint32 resultlen;
     uint32 resulttag;
     uint8 resultflags;
+
+    // Parse metadata and build track list
     uint32 metaIndex = 0;
     uint32 frameAddress = 150;
     uintmax_t byteOffset = 0;
@@ -329,8 +318,19 @@ bool Load(std::filesystem::path chdPath, Disc &disc, bool preloadToRAM) {
                 // fmt::println("CHD: Unknown track type {}\n", type);
                 return false;
             }
-            track.binaryReader = std::make_unique<SharedSubviewBinaryReader>(
-                binaryReader, byteOffset + pregap * track.sectorSize, frames * track.sectorSize);
+            uintmax_t subviewOffset = byteOffset;
+            if (track.controlADR == 0x01) {
+                // Add pregap on audio tracks
+                subviewOffset += pregap * track.sectorSize;
+            } else {
+                // Round offset up to next hunk
+                const uintmax_t remainder = byteOffset % binaryReader->HunkSize();
+                if (remainder != 0) {
+                    byteOffset += binaryReader->HunkSize() - remainder;
+                }
+            }
+            track.binaryReader =
+                std::make_unique<SharedSubviewBinaryReader>(binaryReader, subviewOffset, frames * track.sectorSize);
             track.startFrameAddress = frameAddress;
             track.endFrameAddress = frameAddress + frames - 1;
             track.interleavedSubchannel = false;
@@ -361,6 +361,17 @@ bool Load(std::filesystem::path chdPath, Disc &disc, bool preloadToRAM) {
     session.startFrameAddress = 0;
     session.endFrameAddress = frameAddress - 1;
     session.BuildTOC();
+
+    // Read Saturn disc header
+    if (session.numTracks > 0) {
+        std::array<uint8, 2048> headerData{};
+        if (!session.tracks[session.firstTrackIndex].ReadSectorUserData(150, headerData)) {
+            // fmt::println("CHD: Could not read Saturn disc header");
+            return false;
+        }
+
+        disc.header.ReadFrom(std::span<uint8, 256>{headerData.begin(), 256});
+    }
 
     sgInvalidateDisc.Cancel();
     return true;

@@ -21,6 +21,8 @@
 ### Fixes
 
 - Media: Add support for CD-ROM Mode 2 tracks. Fixes Last Bronx not booting. (#238)
+- Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Hopefully fixes some Last Bronx dumps not booting.
+- Media: Realign data offset to hunks between tracks in CHDs. Fixes Last Bronx CHD dumps not booting.
 - Scheduler: Ensure events are executed in chronological order.
 - SCU: Fix A-Bus external interrupt handling.
 - SMPC: Fixed TL reporting on SH-2 direct mode.

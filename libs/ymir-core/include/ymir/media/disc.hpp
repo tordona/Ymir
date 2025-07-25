@@ -152,6 +152,7 @@ struct Track {
             std::fill_n(outBuf.begin() + writeOffset + 2048, 288, 0x00);
             // fmt::println("  Added subheader");
         }
+
         /*fmt::println("Raw sector data:");
         for (uint32 i = 0; i < targetSize; i++) {
             fmt::print("{:02X}", outBuf[i]);
