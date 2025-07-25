@@ -50,6 +50,11 @@ void GeneralSettingsView::Display() {
         "May help reduce stuttering if you're loading images from a slow disk or from the network.",
         m_context.displayScale);
 
+    MakeDirty(ImGui::Checkbox("Remember last loaded disc image", &settings.rememberLastLoadedDisc));
+    widgets::ExplanationTooltip(
+        "When enabled, Ymir will automatically load the most recently loaded game disc on startup.",
+        m_context.displayScale);
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);

@@ -645,6 +645,7 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
 
 void Settings::ResetToDefaults() {
     general.preloadDiscImagesToRAM = false;
+    general.rememberLastLoadedDisc = true;
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
     general.enableRewindBuffer = false;
@@ -764,6 +765,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
 
     if (auto tblGeneral = data["General"]) {
         Parse(tblGeneral, "PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM);
+        Parse(tblGeneral, "RememberLastLoadedDisc", general.rememberLastLoadedDisc);
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
@@ -1126,6 +1128,7 @@ SettingsSaveResult Settings::Save() {
 
         {"General", toml::table{{
             {"PreloadDiscImagesToRAM", general.preloadDiscImagesToRAM},
+            {"RememberLastLoadedDisc", general.rememberLastLoadedDisc},
             {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
             {"BoostProcessPriority", general.boostProcessPriority},
             {"EnableRewindBuffer", general.enableRewindBuffer},

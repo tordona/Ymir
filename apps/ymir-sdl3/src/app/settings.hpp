@@ -131,6 +131,7 @@ public:
 
     struct General {
         bool preloadDiscImagesToRAM;
+        bool rememberLastLoadedDisc;
 
         bool boostEmuThreadPriority;
         bool boostProcessPriority;

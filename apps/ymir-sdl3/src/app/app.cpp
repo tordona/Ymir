@@ -311,8 +311,10 @@ int App::Run(const CommandLineOptions &options) {
 
     // Load disc image if provided
     if (!options.gameDiscPath.empty()) {
+        // This also inserts the game-specific cartridges or the one configured by the user in Settings > Cartridge
         LoadDiscImage(options.gameDiscPath);
-        // also inserts the game-specific cartridges or the one configured by the user in Settings > Cartridge
+    } else if (m_context.settings.general.rememberLastLoadedDisc && !m_context.state.recentDiscs.empty()) {
+        LoadDiscImage(m_context.state.recentDiscs[0]);
     } else {
         m_context.EnqueueEvent(events::emu::InsertCartridgeFromSettings());
     }
