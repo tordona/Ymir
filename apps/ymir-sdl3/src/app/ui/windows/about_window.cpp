@@ -151,7 +151,7 @@ void AboutWindow::DrawContents() {
 void AboutWindow::DrawAboutTab() {
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
 
-    ImGui::Image((ImTextureID)m_context.images.ymirLogo.texture,
+    ImGui::Image((ImTextureID)&m_context.images.ymirLogo.binding,
                  ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale,
                         m_context.images.ymirLogo.size.y * m_context.displayScale));
 

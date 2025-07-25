@@ -22,7 +22,7 @@
 
 #include <imgui.h>
 
-#include <SDL3/SDL_render.h>
+#include <SDL3/SDL_gpu.h>
 
 #include <blockingconcurrentqueue.h>
 
@@ -405,7 +405,7 @@ struct SharedContext {
 
     struct Images {
         struct Image {
-            SDL_Texture *texture = nullptr;
+            SDL_GPUTextureSamplerBinding binding{nullptr, nullptr};
             ImVec2 size;
         };
 

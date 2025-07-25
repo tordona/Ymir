@@ -109,7 +109,7 @@
 #include <SDL3/SDL_misc.h>
 
 #include <backends/imgui_impl_sdl3.h>
-#include <backends/imgui_impl_sdlrenderer3.h>
+#include <backends/imgui_impl_sdlgpu3.h>
 
 #include <imgui.h>
 
@@ -521,26 +521,30 @@ void App::RunEmulator() {
     }};
 
     // ---------------------------------
-    // Create renderer
+    // Create GPU Device
 
-    SDL_PropertiesID rendererProps = SDL_CreateProperties();
-    if (rendererProps == 0) {
-        devlog::error<grp::base>("Unable to create renderer properties: {}", SDL_GetError());
+    SDL_GPUDevice *gpuDevice = SDL_CreateGPUDevice(
+        SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB, true, nullptr);
+    if (gpuDevice == nullptr) {
+        devlog::error<grp::base>("Unable to create GPU device: {}", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyRendererProps{[&] { SDL_DestroyProperties(rendererProps); }};
+    ScopeGuard sgDestroyGPUDevice{[&] { SDL_DestroyGPUDevice(gpuDevice); }};
 
-    // Assume the following calls succeed
-    int vsync = 1;
-    SDL_SetPointerProperty(rendererProps, SDL_PROP_RENDERER_CREATE_WINDOW_POINTER, screen.window);
-    SDL_SetNumberProperty(rendererProps, SDL_PROP_RENDERER_CREATE_PRESENT_VSYNC_NUMBER, vsync);
-
-    auto renderer = SDL_CreateRendererWithProperties(rendererProps);
-    if (renderer == nullptr) {
-        devlog::error<grp::base>("Unable to create renderer: {}", SDL_GetError());
+    // Claim window for GPU Device
+    if (!SDL_ClaimWindowForGPUDevice(gpuDevice, screen.window)) {
+        printf("Error: SDL_ClaimWindowForGPUDevice(): %s\n", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyRenderer{[&] { SDL_DestroyRenderer(renderer); }};
+
+    SDL_GPUPresentMode presentMode = SDL_GPU_PRESENTMODE_VSYNC;
+    if (!SDL_SetGPUSwapchainParameters(gpuDevice, screen.window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR, presentMode)) {
+        printf("Error: SDL_SetGPUSwapchainParameters(): %s\n", SDL_GetError());
+    }
+    const SDL_GPUPresentMode nonVSyncPresentMode =
+        SDL_WindowSupportsGPUPresentMode(gpuDevice, screen.window, SDL_GPU_PRESENTMODE_MAILBOX)
+            ? SDL_GPU_PRESENTMODE_MAILBOX
+            : SDL_GPU_PRESENTMODE_IMMEDIATE;
 
     m_context.settings.video.fullScreen.Observe([&](bool fullScreen) {
         devlog::info<grp::base>("{} full screen mode", (fullScreen ? "Entering" : "Leaving"));
@@ -559,27 +563,78 @@ void App::RunEmulator() {
     // nearest interpolation with an integer scale, then rendering the display texture onto the screen with linear
     // interpolation.
 
+    SDL_GPUTextureCreateInfo texInfo{};
+    SDL_GPUSamplerCreateInfo smpInfo{};
+
     // Framebuffer texture
-    auto fbTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
-                                       vdp::kMaxResV);
-    if (fbTexture == nullptr) {
-        devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
+    SDL_GPUTextureSamplerBinding fbTexSmpBind{};
+    texInfo = {
+        .type = SDL_GPU_TEXTURETYPE_2D,
+        .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+        .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .width = vdp::kMaxResH,
+        .height = vdp::kMaxResV,
+        .layer_count_or_depth = 1,
+        .num_levels = 1,
+        .sample_count = SDL_GPU_SAMPLECOUNT_1,
+        .props = 0,
+    };
+    fbTexSmpBind.texture = SDL_CreateGPUTexture(gpuDevice, &texInfo);
+    if (fbTexSmpBind.texture == nullptr) {
+        devlog::error<grp::base>("Unable to create framebuffer texture: {}", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyFbTexture{[&] { SDL_DestroyTexture(fbTexture); }};
-    SDL_SetTextureScaleMode(fbTexture, SDL_SCALEMODE_NEAREST);
+    ScopeGuard sgDestroyFbTexture{[&] { SDL_ReleaseGPUTexture(gpuDevice, fbTexSmpBind.texture); }};
+    smpInfo = {
+        .min_filter = SDL_GPU_FILTER_NEAREST,
+        .mag_filter = SDL_GPU_FILTER_NEAREST,
+        .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
+        .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .mip_lod_bias = 0.0f,
+        .compare_op = SDL_GPU_COMPAREOP_ALWAYS,
+        .enable_anisotropy = false,
+        .enable_compare = false,
+    };
+    fbTexSmpBind.sampler = SDL_CreateGPUSampler(gpuDevice, &smpInfo);
+    ScopeGuard sgDestroyFbTexSampler{[&] { SDL_ReleaseGPUSampler(gpuDevice, fbTexSmpBind.sampler); }};
 
     // Display texture, containing the scaled framebuffer to be displayed on the screen
-    auto dispTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_TARGET,
-                                         vdp::kMaxResH * screen.fbScale, vdp::kMaxResV * screen.fbScale);
-    if (dispTexture == nullptr) {
-        devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
+    SDL_GPUTextureSamplerBinding dispTexSmpBind{};
+    texInfo = {
+        .type = SDL_GPU_TEXTURETYPE_2D,
+        .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+        .usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER,
+        .width = vdp::kMaxResH * screen.fbScale,
+        .height = vdp::kMaxResV * screen.fbScale,
+        .layer_count_or_depth = 1,
+        .num_levels = 1,
+        .sample_count = SDL_GPU_SAMPLECOUNT_1,
+        .props = 0,
+    };
+    dispTexSmpBind.texture = SDL_CreateGPUTexture(gpuDevice, &texInfo);
+    if (dispTexSmpBind.texture == nullptr) {
+        devlog::error<grp::base>("Unable to create display texture: {}", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyDispTexture{[&] { SDL_DestroyTexture(dispTexture); }};
-    SDL_SetTextureScaleMode(dispTexture, SDL_SCALEMODE_LINEAR);
+    ScopeGuard sgDestroyDispTexture{[&] { SDL_ReleaseGPUTexture(gpuDevice, dispTexSmpBind.texture); }};
+    smpInfo = {
+        .min_filter = SDL_GPU_FILTER_LINEAR,
+        .mag_filter = SDL_GPU_FILTER_LINEAR,
+        .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
+        .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .mip_lod_bias = 0.0f,
+        .compare_op = SDL_GPU_COMPAREOP_ALWAYS,
+        .enable_anisotropy = false,
+        .enable_compare = false,
+    };
+    dispTexSmpBind.sampler = SDL_CreateGPUSampler(gpuDevice, &smpInfo);
+    ScopeGuard sgDestroyDispTexSampler{[&] { SDL_ReleaseGPUSampler(gpuDevice, dispTexSmpBind.sampler); }};
 
-    auto renderDispTexture = [&](double targetWidth, double targetHeight) {
+    auto renderDispTexture = [&](SDL_GPUCommandBuffer *cmdBuf, double targetWidth, double targetHeight) {
         auto &videoSettings = m_context.settings.video;
         const bool forceAspectRatio = videoSettings.forceAspectRatio;
         const double forcedAspect = videoSettings.forcedAspect;
@@ -593,25 +648,50 @@ void App::RunEmulator() {
         // Recreate render target texture if scale changed
         if (scale != screen.fbScale) {
             screen.fbScale = scale;
-            SDL_DestroyTexture(dispTexture);
-            dispTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_TARGET,
-                                            vdp::kMaxResH * screen.fbScale, vdp::kMaxResV * screen.fbScale);
+            SDL_ReleaseGPUTexture(gpuDevice, dispTexSmpBind.texture);
+            texInfo = {
+                .type = SDL_GPU_TEXTURETYPE_2D,
+                .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+                .usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER,
+                .width = vdp::kMaxResH * screen.fbScale,
+                .height = vdp::kMaxResV * screen.fbScale,
+                .layer_count_or_depth = 1,
+                .num_levels = 1,
+                .sample_count = SDL_GPU_SAMPLECOUNT_1,
+                .props = 0,
+            };
+            dispTexSmpBind.texture = SDL_CreateGPUTexture(gpuDevice, &texInfo);
         }
 
         // Remember previous render target to be restored later
-        SDL_Texture *prevRenderTarget = SDL_GetRenderTarget(renderer);
-
         // Render scaled framebuffer into display texture
-        SDL_FRect srcRect{.x = 0.0f, .y = 0.0f, .w = (float)screen.width, .h = (float)screen.height};
-        SDL_FRect dstRect{.x = 0.0f,
-                          .y = 0.0f,
-                          .w = (float)screen.width * screen.fbScale,
-                          .h = (float)screen.height * screen.fbScale};
-        SDL_SetRenderTarget(renderer, dispTexture);
-        SDL_RenderTexture(renderer, fbTexture, &srcRect, &dstRect);
-
-        // Restore render target
-        SDL_SetRenderTarget(renderer, prevRenderTarget);
+        SDL_GPUBlitInfo blitInfo{
+            .source =
+                {
+                    .texture = fbTexSmpBind.texture,
+                    .mip_level = 0,
+                    .layer_or_depth_plane = 0,
+                    .x = 0,
+                    .y = 0,
+                    .w = screen.width,
+                    .h = screen.height,
+                },
+            .destination =
+                {
+                    .texture = dispTexSmpBind.texture,
+                    .mip_level = 0,
+                    .layer_or_depth_plane = 0,
+                    .x = 0,
+                    .y = 0,
+                    .w = screen.width * screen.fbScale,
+                    .h = screen.height * screen.fbScale,
+                },
+            .load_op = SDL_GPU_LOADOP_DONT_CARE,
+            .flip_mode = SDL_FLIP_NONE,
+            .filter = SDL_GPU_FILTER_NEAREST,
+            .cycle = false,
+        };
+        SDL_BlitGPUTexture(cmdBuf, &blitInfo);
     };
 
     // Logo texture
@@ -632,25 +712,87 @@ void App::RunEmulator() {
         }
 
         // Create texture with the logo image
-        m_context.images.ymirLogo.texture =
-            SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, imgW, imgH);
-        if (m_context.images.ymirLogo.texture == nullptr) {
+        SDL_GPUTextureCreateInfo texInfo{
+            .type = SDL_GPU_TEXTURETYPE_2D,
+            .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+            .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+            .width = (uint32)imgW,
+            .height = (uint32)imgH,
+            .layer_count_or_depth = 1,
+            .num_levels = 1,
+            .sample_count = SDL_GPU_SAMPLECOUNT_1,
+            .props = 0,
+        };
+        m_context.images.ymirLogo.binding.texture = SDL_CreateGPUTexture(gpuDevice, &texInfo);
+        if (m_context.images.ymirLogo.binding.texture == nullptr) {
             devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
             return;
         }
-        SDL_SetTextureScaleMode(m_context.images.ymirLogo.texture, SDL_SCALEMODE_LINEAR);
-        SDL_UpdateTexture(m_context.images.ymirLogo.texture, nullptr, imgData, imgW * sizeof(uint32));
+
+        SDL_GPUTransferBufferCreateInfo xferBufInfo{
+            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+            .size = (uint32)(imgW * imgH * sizeof(uint32)),
+        };
+        SDL_GPUTransferBuffer *xferBuf = SDL_CreateGPUTransferBuffer(gpuDevice, &xferBufInfo);
+        void *texData = SDL_MapGPUTransferBuffer(gpuDevice, xferBuf, false);
+        std::memcpy(texData, imgData, xferBufInfo.size);
+        SDL_UnmapGPUTransferBuffer(gpuDevice, xferBuf);
+
+        SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
+        SDL_GPUCopyPass *copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+        SDL_GPUTextureTransferInfo src{
+            .transfer_buffer = xferBuf,
+            .offset = 0,
+            .pixels_per_row = (uint32)imgW,
+            .rows_per_layer = (uint32)imgH,
+        };
+        SDL_GPUTextureRegion dst{
+            .texture = m_context.images.ymirLogo.binding.texture,
+            .mip_level = 0,
+            .layer = 0,
+            .x = 0,
+            .y = 0,
+            .z = 0,
+            .w = (uint32)imgW,
+            .h = (uint32)imgH,
+            .d = 1,
+        };
+        SDL_UploadToGPUTexture(copyPass, &src, &dst, true);
+        SDL_EndGPUCopyPass(copyPass);
+        SDL_SubmitGPUCommandBuffer(commandBuffer);
+        SDL_ReleaseGPUTransferBuffer(gpuDevice, xferBuf);
 
         m_context.images.ymirLogo.size.x = imgW;
         m_context.images.ymirLogo.size.y = imgH;
     }
-    ScopeGuard sgDestroyYmirLogoTexture{[&] { SDL_DestroyTexture(m_context.images.ymirLogo.texture); }};
+    ScopeGuard sgDestroyYmirLogoTexture{
+        [&] { SDL_ReleaseGPUTexture(gpuDevice, m_context.images.ymirLogo.binding.texture); }};
+
+    smpInfo = {
+        .min_filter = SDL_GPU_FILTER_LINEAR,
+        .mag_filter = SDL_GPU_FILTER_LINEAR,
+        .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
+        .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+        .mip_lod_bias = 0.0f,
+        .compare_op = SDL_GPU_COMPAREOP_ALWAYS,
+        .enable_anisotropy = false,
+        .enable_compare = false,
+    };
+    m_context.images.ymirLogo.binding.sampler = SDL_CreateGPUSampler(gpuDevice, &smpInfo);
+    ScopeGuard sgDestroyLogoTexSampler{
+        [&] { SDL_ReleaseGPUSampler(gpuDevice, m_context.images.ymirLogo.binding.sampler); }};
 
     // ---------------------------------
     // Setup Dear ImGui Platform/Renderer backends
 
-    ImGui_ImplSDL3_InitForSDLRenderer(screen.window, renderer);
-    ImGui_ImplSDLRenderer3_Init(renderer);
+    ImGui_ImplSDL3_InitForSDLGPU(screen.window);
+    ImGui_ImplSDLGPU3_InitInfo initInfo = {};
+    initInfo.Device = gpuDevice;
+    initInfo.ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpuDevice, screen.window);
+    initInfo.MSAASamples = SDL_GPU_SAMPLECOUNT_1;
+    ImGui_ImplSDLGPU3_Init(&initInfo);
 
     ImVec4 clearColor = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);
 
@@ -1553,16 +1695,18 @@ void App::RunEmulator() {
             }
 
             // Update VSync setting
-            int newVSync;
+            SDL_GPUPresentMode newPresentMode;
             if (fullScreen) {
-                newVSync = baseFrameRate <= maxFrameRate ? 1 : SDL_RENDERER_VSYNC_DISABLED;
+                newPresentMode = baseFrameRate <= maxFrameRate ? SDL_GPU_PRESENTMODE_VSYNC : nonVSyncPresentMode;
             } else {
-                newVSync = 1;
+                newPresentMode = SDL_GPU_PRESENTMODE_VSYNC;
             }
-            if (vsync != newVSync) {
-                if (SDL_SetRenderVSync(renderer, newVSync)) {
-                    devlog::info<grp::base>("VSync {}", (newVSync == 1 ? "enabled" : "disabled"));
-                    vsync = newVSync;
+            if (presentMode != newPresentMode) {
+                if (SDL_SetGPUSwapchainParameters(gpuDevice, screen.window, SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+                                                  newPresentMode)) {
+                    devlog::info<grp::base>("VSync {}",
+                                            (newPresentMode == SDL_GPU_PRESENTMODE_VSYNC ? "enabled" : "disabled"));
+                    presentMode = newPresentMode;
                 } else {
                     devlog::warn<grp::base>("Could not change VSync mode: {}", SDL_GetError());
                 }
@@ -1881,17 +2025,39 @@ void App::RunEmulator() {
             }
             screen.updated = false;
             std::unique_lock lock{screen.mtxFramebuffer};
-            uint32 *pixels = nullptr;
-            int pitch = 0;
-            SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
-            if (SDL_LockTexture(fbTexture, &area, (void **)&pixels, &pitch)) {
-                for (uint32 y = 0; y < screen.height; y++) {
-                    std::copy_n(&screen.framebuffer[y * screen.width], screen.width,
-                                &pixels[y * pitch / sizeof(uint32)]);
-                }
-                // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);
-                SDL_UnlockTexture(fbTexture);
-            }
+
+            SDL_GPUTransferBufferCreateInfo xferBufInfo{
+                .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+                .size = (uint32)(screen.width * screen.height * sizeof(uint32)),
+            };
+            SDL_GPUTransferBuffer *xferBuf = SDL_CreateGPUTransferBuffer(gpuDevice, &xferBufInfo);
+            void *texData = SDL_MapGPUTransferBuffer(gpuDevice, xferBuf, false);
+            std::memcpy(texData, screen.framebuffer.data(), xferBufInfo.size);
+            SDL_UnmapGPUTransferBuffer(gpuDevice, xferBuf);
+
+            SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
+            SDL_GPUCopyPass *copyPass = SDL_BeginGPUCopyPass(commandBuffer);
+            SDL_GPUTextureTransferInfo src{
+                .transfer_buffer = xferBuf,
+                .offset = 0,
+                .pixels_per_row = screen.width,
+                .rows_per_layer = screen.height,
+            };
+            SDL_GPUTextureRegion dst{
+                .texture = fbTexSmpBind.texture,
+                .mip_level = 0,
+                .layer = 0,
+                .x = 0,
+                .y = 0,
+                .z = 0,
+                .w = screen.width,
+                .h = screen.height,
+                .d = 1,
+            };
+            SDL_UploadToGPUTexture(copyPass, &src, &dst, true);
+            SDL_EndGPUCopyPass(copyPass);
+            SDL_SubmitGPUCommandBuffer(commandBuffer);
+            SDL_ReleaseGPUTransferBuffer(gpuDevice, xferBuf);
         }
 
         // Calculate performance and update title bar
@@ -1972,7 +2138,7 @@ void App::RunEmulator() {
         // Draw ImGui widgets
 
         // Start the Dear ImGui frame
-        ImGui_ImplSDLRenderer3_NewFrame();
+        ImGui_ImplSDLGPU3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
@@ -2521,7 +2687,7 @@ void App::RunEmulator() {
 
             auto &videoSettings = m_context.settings.video;
 
-            // Draw video output as a window
+            // Draw Saturn screen
             if (videoSettings.displayVideoOutputInWindow) {
                 std::string title = fmt::format("Video Output - {}x{}###Display", screen.width, screen.height);
 
@@ -2547,7 +2713,13 @@ void App::RunEmulator() {
                 if (ImGui::Begin(title.c_str(), &videoSettings.displayVideoOutputInWindow,
                                  ImGuiWindowFlags_NoNavInputs)) {
                     const ImVec2 avail = ImGui::GetContentRegionAvail();
-                    renderDispTexture(avail.x, avail.y);
+                    // Acquire a GPU command buffer
+                    SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
+
+                    // Render framebuffer to display texture
+                    renderDispTexture(commandBuffer, avail.x, avail.y);
+
+                    SDL_SubmitGPUCommandBuffer(commandBuffer);
 
                     const ImVec2 pos = ImGui::GetCursorScreenPos();
                     const auto tl = pos;
@@ -2563,16 +2735,16 @@ void App::RunEmulator() {
                     switch (videoSettings.rotation) {
                     default: [[fallthrough]];
                     case Settings::Video::DisplayRotation::Normal:
-                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv1, uv2, uv3, uv4);
+                        drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv1, uv2, uv3, uv4);
                         break;
                     case Settings::Video::DisplayRotation::_90CW:
-                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv4, uv1, uv2, uv3);
+                        drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv4, uv1, uv2, uv3);
                         break;
                     case Settings::Video::DisplayRotation::_180:
-                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv3, uv4, uv1, uv2);
+                        drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv3, uv4, uv1, uv2);
                         break;
                     case Settings::Video::DisplayRotation::_90CCW:
-                        drawList->AddImageQuad((ImTextureID)dispTexture, tl, tr, br, bl, uv2, uv3, uv4, uv1);
+                        drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv2, uv3, uv4, uv1);
                         break;
                     }
 
@@ -2580,6 +2752,160 @@ void App::RunEmulator() {
                 }
                 ImGui::End();
                 ImGui::PopStyleVar();
+            } else {
+                const auto &videoSettings = m_context.settings.video;
+                const bool forceAspectRatio = videoSettings.forceAspectRatio;
+                const double forcedAspect = videoSettings.forcedAspect;
+                const bool aspectRatioChanged = forceAspectRatio && forcedAspect != prevForcedAspect;
+                const bool forceAspectRatioChanged = prevForceAspectRatio != forceAspectRatio;
+                const bool screenSizeChanged =
+                    aspectRatioChanged || forceAspectRatioChanged || screen.resolutionChanged;
+                const bool fitWindowToScreen =
+                    (videoSettings.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
+                const bool horzDisplay = videoSettings.rotation == Settings::Video::DisplayRotation::Normal ||
+                                         videoSettings.rotation == Settings::Video::DisplayRotation::_180;
+
+                float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
+
+                // Get window size
+                int ww, wh;
+                SDL_GetWindowSize(screen.window, &ww, &wh);
+
+#if defined(__APPLE__)
+                // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
+                const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
+                ww *= pixelDensity;
+                wh *= pixelDensity;
+
+                menuBarHeight *= pixelDensity;
+#endif
+
+                wh -= menuBarHeight;
+
+                double baseWidth = forceAspectRatio ? std::ceil(screen.height * screen.scaleY * forcedAspect)
+                                                    : screen.width * screen.scaleX;
+                double baseHeight = screen.height * screen.scaleY;
+                if (!horzDisplay) {
+                    std::swap(baseWidth, baseHeight);
+                }
+
+                double scale;
+                if (forceScreenScale) {
+                    const bool doubleRes = screen.width >= 640 || screen.height >= 400;
+                    scale = doubleRes ? forcedScreenScale : forcedScreenScale * 2;
+                } else {
+                    // Compute maximum scale to fit the display given the constraints above
+                    double scaleFactor = 1.0;
+
+                    const double scaleX = (double)ww / baseWidth;
+                    const double scaleY = (double)wh / baseHeight;
+                    scale = std::max(1.0, std::min(scaleX, scaleY));
+
+                    // Preserve the previous scale if the aspect ratio changed or the force option was just
+                    // enabled/disabled when fitting the window to the screen
+                    if (fitWindowToScreen) {
+                        int screenWidth = screen.width;
+                        int screenHeight = screen.height;
+                        int screenScaleX = screen.scaleX;
+                        int screenScaleY = screen.scaleY;
+                        if (screen.resolutionChanged) {
+                            // Handle double resolution scaling
+                            const bool currDoubleRes = screen.prevWidth >= 640 || screen.prevHeight >= 400;
+                            const bool nextDoubleRes = screen.width >= 640 || screen.height >= 400;
+                            if (currDoubleRes != nextDoubleRes) {
+                                scaleFactor = nextDoubleRes ? 0.5 : 2.0;
+                            }
+                            screenWidth = screen.prevWidth;
+                            screenHeight = screen.prevHeight;
+                            screenScaleX = screen.prevScaleX;
+                            screenScaleY = screen.prevScaleY;
+                        }
+                        if (screenSizeChanged) {
+                            double baseWidth = forceAspectRatio
+                                                   ? std::ceil(screenHeight * screenScaleY * prevForcedAspect)
+                                                   : screenWidth * screenScaleX;
+                            double baseHeight = screenHeight * screenScaleY;
+                            if (!horzDisplay) {
+                                std::swap(baseWidth, baseHeight);
+                            }
+                            const double scaleX = (double)ww / baseWidth;
+                            const double scaleY = (double)wh / baseHeight;
+                            scale = std::max(1.0, std::min(scaleX, scaleY));
+                        }
+                    }
+                    scale *= scaleFactor;
+                    if (videoSettings.forceIntegerScaling) {
+                        scale = floor(scale);
+                    }
+                }
+                int scaledWidth = baseWidth * scale;
+                int scaledHeight = baseHeight * scale;
+
+                // Resize window without moving the display position relative to the screen
+                if (fitWindowToScreen && (ww != scaledWidth || wh != scaledHeight)) {
+                    int wx, wy;
+                    SDL_GetWindowPosition(screen.window, &wx, &wy);
+
+                    // Get window decoration borders in order to prevent moving it off the screen
+                    int wbt = 0;
+                    int wbl = 0;
+                    SDL_GetWindowBordersSize(screen.window, &wbt, &wbl, nullptr, nullptr);
+
+                    int dx = scaledWidth - ww;
+                    int dy = scaledHeight - wh;
+                    SDL_SetWindowSize(screen.window, scaledWidth, scaledHeight + menuBarHeight);
+
+                    int nwx = std::max(wx - dx / 2, wbt);
+                    int nwy = std::max(wy - dy / 2, wbl);
+                    SDL_SetWindowPosition(screen.window, nwx, nwy);
+                }
+                if (!horzDisplay) {
+                    std::swap(scaledWidth, scaledHeight);
+                }
+
+                // Acquire a GPU command buffer
+                SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
+
+                // Render framebuffer to display texture
+                renderDispTexture(commandBuffer, scaledWidth, scaledHeight);
+
+                SDL_SubmitGPUCommandBuffer(commandBuffer);
+
+                // Determine how much slack there is on each axis in order to center the image on the window
+                if (!horzDisplay) {
+                    std::swap(scaledWidth, scaledHeight);
+                }
+                const int slackX = ww - scaledWidth;
+                const int slackY = wh - scaledHeight;
+
+                // Figure out UV coordinates so that the image is rotated properly
+                const ImVec2 tl{floorf(slackX * 0.5f), floorf(slackY * 0.5f + menuBarHeight)};
+                const ImVec2 br{tl.x + scaledWidth, tl.y + scaledHeight};
+                const ImVec2 tr{br.x, tl.y};
+                const ImVec2 bl{tl.x, br.y};
+                const ImVec2 uv{(float)screen.width / vdp::kMaxResH, (float)screen.height / vdp::kMaxResV};
+                const ImVec2 uv1{0, 0};
+                const ImVec2 uv2{uv.x, 0};
+                const ImVec2 uv3{uv.x, uv.y};
+                const ImVec2 uv4{0, uv.y};
+
+                // Draw the texture
+                auto *drawList = ImGui::GetBackgroundDrawList();
+                switch (videoSettings.rotation) {
+                default: [[fallthrough]];
+                case Settings::Video::DisplayRotation::Normal:
+                    drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv1, uv2, uv3, uv4);
+                    break;
+                case Settings::Video::DisplayRotation::_90CW:
+                    drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv4, uv1, uv2, uv3);
+                    break;
+                case Settings::Video::DisplayRotation::_180:
+                    drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv3, uv4, uv1, uv2);
+                    break;
+                case Settings::Video::DisplayRotation::_90CCW:
+                    drawList->AddImageQuad((ImTextureID)&dispTexSmpBind, tl, tr, br, bl, uv2, uv3, uv4, uv1);
+                    break;
+                }
             }
 
             // Draw windows and modals
@@ -2872,170 +3198,59 @@ void App::RunEmulator() {
         }
         ImGui::End();
 
+        screen.resolutionChanged = false;
+
         // ---------------------------------------------------------------------
         // Render window
 
         ImGui::Render();
 
-        // Clear screen
         const ImVec4 bgClearColor = fullScreen ? ImVec4(0, 0, 0, 1.0f) : clearColor;
-        SDL_SetRenderDrawColorFloat(renderer, bgClearColor.x, bgClearColor.y, bgClearColor.z, bgClearColor.w);
-        SDL_RenderClear(renderer);
 
-        // Draw Saturn screen
-        if (!m_context.settings.video.displayVideoOutputInWindow) {
-            const auto &videoSettings = m_context.settings.video;
-            const bool forceAspectRatio = videoSettings.forceAspectRatio;
-            const double forcedAspect = videoSettings.forcedAspect;
-            const bool aspectRatioChanged = forceAspectRatio && forcedAspect != prevForcedAspect;
-            const bool forceAspectRatioChanged = prevForceAspectRatio != forceAspectRatio;
-            const bool screenSizeChanged = aspectRatioChanged || forceAspectRatioChanged || screen.resolutionChanged;
-            const bool fitWindowToScreen =
-                (videoSettings.autoResizeWindow && screenSizeChanged) || fitWindowToScreenNow;
-            const bool horzDisplay = videoSettings.rotation == Settings::Video::DisplayRotation::Normal ||
-                                     videoSettings.rotation == Settings::Video::DisplayRotation::_180;
+        // Acquire a GPU command buffer
+        SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(gpuDevice);
 
-            float menuBarHeight = drawMainMenu ? ImGui::GetFrameHeight() : 0.0f;
+        // Acquire a swapchain texture
+        SDL_GPUTexture *swapchainTexture;
+        SDL_WaitAndAcquireGPUSwapchainTexture(commandBuffer, screen.window, &swapchainTexture, nullptr, nullptr);
 
-            // Get window size
-            int ww, wh;
-            SDL_GetWindowSize(screen.window, &ww, &wh);
+        ImDrawData *drawData = ImGui::GetDrawData();
+        const bool isMinimized = (drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f);
+        if (swapchainTexture != nullptr && !isMinimized) {
+            // This is mandatory: call ImGui_ImplSDLGPU3_PrepareDrawData() to upload the vertex/index buffer!
+            ImGui_ImplSDLGPU3_PrepareDrawData(drawData, commandBuffer);
 
-#if defined(__APPLE__)
-            // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
-            const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
-            ww *= pixelDensity;
-            wh *= pixelDensity;
+            // Setup and start a render pass
+            SDL_GPUColorTargetInfo targetInfo = {};
+            targetInfo.texture = swapchainTexture;
+            targetInfo.clear_color = SDL_FColor{bgClearColor.x, bgClearColor.y, bgClearColor.z, bgClearColor.w};
+            targetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+            targetInfo.store_op = SDL_GPU_STOREOP_STORE;
+            targetInfo.mip_level = 0;
+            targetInfo.layer_or_depth_plane = 0;
+            targetInfo.cycle = false;
+            SDL_GPURenderPass *renderPass = SDL_BeginGPURenderPass(commandBuffer, &targetInfo, 1, nullptr);
 
-            menuBarHeight *= pixelDensity;
-#endif
+            // TODO: check if this is still necessary
+            /*#if defined(__APPLE__)
+                        // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
+                        const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
+                        SDL_SetRenderScale(renderer, pixelDensity, pixelDensity);
+            #endif*/
 
-            wh -= menuBarHeight;
+            // Render ImGui
+            ImGui_ImplSDLGPU3_RenderDrawData(drawData, commandBuffer, renderPass);
 
-            double baseWidth = forceAspectRatio ? std::ceil(screen.height * screen.scaleY * forcedAspect)
-                                                : screen.width * screen.scaleX;
-            double baseHeight = screen.height * screen.scaleY;
-            if (!horzDisplay) {
-                std::swap(baseWidth, baseHeight);
-            }
+            // TODO: check if this is still necessary
+            /*#if defined(__APPLE__)
+                        SDL_SetRenderScale(renderer, 1.0f, 1.0f);
+            #endif*/
 
-            double scale;
-            if (forceScreenScale) {
-                const bool doubleRes = screen.width >= 640 || screen.height >= 400;
-                scale = doubleRes ? forcedScreenScale : forcedScreenScale * 2;
-            } else {
-                // Compute maximum scale to fit the display given the constraints above
-                double scaleFactor = 1.0;
-
-                const double scaleX = (double)ww / baseWidth;
-                const double scaleY = (double)wh / baseHeight;
-                scale = std::max(1.0, std::min(scaleX, scaleY));
-
-                // Preserve the previous scale if the aspect ratio changed or the force option was just enabled/disabled
-                // when fitting the window to the screen
-                if (fitWindowToScreen) {
-                    int screenWidth = screen.width;
-                    int screenHeight = screen.height;
-                    int screenScaleX = screen.scaleX;
-                    int screenScaleY = screen.scaleY;
-                    if (screen.resolutionChanged) {
-                        // Handle double resolution scaling
-                        const bool currDoubleRes = screen.prevWidth >= 640 || screen.prevHeight >= 400;
-                        const bool nextDoubleRes = screen.width >= 640 || screen.height >= 400;
-                        if (currDoubleRes != nextDoubleRes) {
-                            scaleFactor = nextDoubleRes ? 0.5 : 2.0;
-                        }
-                        screenWidth = screen.prevWidth;
-                        screenHeight = screen.prevHeight;
-                        screenScaleX = screen.prevScaleX;
-                        screenScaleY = screen.prevScaleY;
-                    }
-                    if (screenSizeChanged) {
-                        double baseWidth = forceAspectRatio ? std::ceil(screenHeight * screenScaleY * prevForcedAspect)
-                                                            : screenWidth * screenScaleX;
-                        double baseHeight = screenHeight * screenScaleY;
-                        if (!horzDisplay) {
-                            std::swap(baseWidth, baseHeight);
-                        }
-                        const double scaleX = (double)ww / baseWidth;
-                        const double scaleY = (double)wh / baseHeight;
-                        scale = std::max(1.0, std::min(scaleX, scaleY));
-                    }
-                }
-                scale *= scaleFactor;
-                if (videoSettings.forceIntegerScaling) {
-                    scale = floor(scale);
-                }
-            }
-            int scaledWidth = baseWidth * scale;
-            int scaledHeight = baseHeight * scale;
-
-            // Resize window without moving the display position relative to the screen
-            if (fitWindowToScreen && (ww != scaledWidth || wh != scaledHeight)) {
-                int wx, wy;
-                SDL_GetWindowPosition(screen.window, &wx, &wy);
-
-                // Get window decoration borders in order to prevent moving it off the screen
-                int wbt = 0;
-                int wbl = 0;
-                SDL_GetWindowBordersSize(screen.window, &wbt, &wbl, nullptr, nullptr);
-
-                int dx = scaledWidth - ww;
-                int dy = scaledHeight - wh;
-                SDL_SetWindowSize(screen.window, scaledWidth, scaledHeight + menuBarHeight);
-
-                int nwx = std::max(wx - dx / 2, wbt);
-                int nwy = std::max(wy - dy / 2, wbl);
-                SDL_SetWindowPosition(screen.window, nwx, nwy);
-            }
-            if (!horzDisplay) {
-                std::swap(scaledWidth, scaledHeight);
-            }
-
-            // Render framebuffer to display texture
-            renderDispTexture(scaledWidth, scaledHeight);
-
-            // Determine how much slack there is on each axis in order to center the image on the window
-            const int slackX = ww - scaledWidth;
-            const int slackY = wh - scaledHeight;
-
-            double rotAngle;
-            switch (videoSettings.rotation) {
-            default: [[fallthrough]];
-            case Settings::Video::DisplayRotation::Normal: rotAngle = 0.0; break;
-            case Settings::Video::DisplayRotation::_90CW: rotAngle = 90.0; break;
-            case Settings::Video::DisplayRotation::_180: rotAngle = 180.0; break;
-            case Settings::Video::DisplayRotation::_90CCW: rotAngle = 270.0; break;
-            }
-
-            // Draw the texture
-            SDL_FRect srcRect{.x = 0.0f,
-                              .y = 0.0f,
-                              .w = (float)(screen.width * screen.fbScale),
-                              .h = (float)(screen.height * screen.fbScale)};
-            SDL_FRect dstRect{.x = floorf(slackX * 0.5f),
-                              .y = floorf(slackY * 0.5f + menuBarHeight),
-                              .w = (float)scaledWidth,
-                              .h = (float)scaledHeight};
-            SDL_RenderTextureRotated(renderer, dispTexture, &srcRect, &dstRect, rotAngle, nullptr, SDL_FLIP_NONE);
+            SDL_EndGPURenderPass(renderPass);
         }
 
-        screen.resolutionChanged = false;
-
-        // Render ImGui widgets
-#if defined(__APPLE__)
-        // Logical->Physical window-coordinate fix primarily for MacOS Retina displays
-        const float pixelDensity = SDL_GetWindowPixelDensity(screen.window);
-        SDL_SetRenderScale(renderer, pixelDensity, pixelDensity);
-#endif
-
-        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-
-#if defined(__APPLE__)
-        SDL_SetRenderScale(renderer, 1.0f, 1.0f);
-#endif
-
-        SDL_RenderPresent(renderer);
+        // Submit the command buffer
+        SDL_SubmitGPUCommandBuffer(commandBuffer);
 
         // Process ImGui INI file write requests
         // TODO: compress and include in state blob
@@ -3219,7 +3434,7 @@ void App::OpenWelcomeModal(bool scanIPLROMs) {
         bool doSelectRom = false;
         bool doOpenSettings = false;
 
-        ImGui::Image((ImTextureID)m_context.images.ymirLogo.texture,
+        ImGui::Image((ImTextureID)&m_context.images.ymirLogo.binding,
                      ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale * 0.7f,
                             m_context.images.ymirLogo.size.y * m_context.displayScale * 0.7f));
 
