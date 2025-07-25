@@ -5,6 +5,7 @@
 #include <ymir/sys/clocks.hpp>
 
 #include <ymir/util/arith_ops.hpp>
+#include <ymir/util/dev_assert.hpp>
 
 #include <cassert>
 #include <utility>
@@ -1549,7 +1550,10 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
         break;
         // case 0xE2: CmdGetMpegROM(); break;
 
-    default: devlog::warn<grp::base>("Unimplemented command {:02X}", cmd); break;
+    default:
+        devlog::warn<grp::base>("Unimplemented command {:02X}", cmd);
+        util::dev_assert(false);
+        break;
     }
 
     devlog::trace<grp::base>("Command response:  {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
@@ -2522,6 +2526,7 @@ void CDBlock::CmdExecuteFADSearch() {
     // TODO: search for a sector with the largest FAD <= searched FAD within specified partition
     // - how does sectorPos factor in here?
     devlog::info<grp::base>("Execute frame address search command is unimplemented");
+    util::dev_assert(false);
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2540,6 +2545,7 @@ void CDBlock::CmdGetFADSearchResults() {
 
     // TODO: return search FAD results
     devlog::info<grp::base>("Get frame address search results command is unimplemented");
+    util::dev_assert(false);
 
     // Output structure:
     // status code        <blank>
@@ -2741,6 +2747,7 @@ void CDBlock::CmdCopySectorData() {
     // TODO: setup async sector copy transfer
     // TODO: report Reject status if not enough buffer space available
     devlog::info<grp::base>("Copy sector data command is unimplemented");
+    util::dev_assert(false);
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2763,6 +2770,7 @@ void CDBlock::CmdMoveSectorData() {
 
     // TODO: setup async sector move transfer
     devlog::info<grp::base>("Move sector data command is unimplemented");
+    util::dev_assert(false);
 
     // Output structure: standard CD status data
     ReportCDStatus();
@@ -2835,15 +2843,27 @@ void CDBlock::CmdReadDirectory() {
     // <blank>
     // filter number   file ID bits 23-16
     // file ID bits 15-0
-    // const uint8 filterNum = bit::extract<8, 15>(m_CR[2]);
-    // const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
+    const uint8 filterNumber = bit::extract<8, 15>(m_CR[2]);
+    const uint32 fileID = (bit::extract<0, 7>(m_CR[2]) << 16u) | m_CR[3];
 
-    // TODO: read directory contents starting from fileID
-    // TODO: write sectors to specified filter
-    devlog::info<grp::base>("Read directory command is unimplemented");
+    bool reject = false;
+    if (filterNumber < m_filters.size()) {
+        // TODO: use filter to read the sector(s) containing the directory record
+        reject = !m_fs.ReadDirectory(fileID);
+        if (!reject) {
+            devlog::debug<grp::base>("Reading directory {} (file ID {:X}) using filter {}",
+                                     m_fs.GetFileInfo(fileID).name, fileID, filterNumber);
+        }
+    } else if (filterNumber == 0xFF) {
+        reject = true;
+    }
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (reject) [[unlikely]] {
+        ReportCDStatus(kStatusReject);
+    } else {
+        ReportCDStatus();
+    }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_EFLS);
 }
@@ -2973,6 +2993,7 @@ void CDBlock::CmdMpegInit() {
 
     // TODO: initialize MPEG stuff
     devlog::info<grp::base>("MPEG init command is unimplemented");
+    util::dev_assert(false);
 
     // Output structure:
     // status code (FF=unauthenticated)  <blank>

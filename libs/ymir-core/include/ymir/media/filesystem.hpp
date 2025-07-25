@@ -9,6 +9,7 @@
 #include "iso9660.hpp"
 
 #include <cassert>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -77,8 +78,20 @@ public:
         return m_isDirectory;
     }
 
+    bool IsSelfDirectory() const {
+        return m_isDirectory && m_name == ".";
+    }
+
+    bool IsParentDirectory() const {
+        return m_isDirectory && m_name == "..";
+    }
+
     const FileInfo &GetFileInfo() const {
         return m_fileInfo;
+    }
+
+    const std::string_view Name() const {
+        return m_name;
     }
 
 private:
@@ -100,12 +113,20 @@ public:
         assert(bit::test<1>(dirRecord.flags));
     }
 
+    bool IsRoot() const {
+        return m_name == ".";
+    }
+
     uint32 FrameAddress() const {
         return m_frameAddress;
     }
 
     uint16 Parent() const {
         return m_parent;
+    }
+
+    const std::string_view Name() const {
+        return m_name;
     }
 
     const std::vector<FilesystemEntry> &GetContents() const {
@@ -119,8 +140,14 @@ private:
 
     std::vector<FilesystemEntry> m_contents;
 
+    std::map<uint32, uint32> m_dirMappings; // file ID to Directory index mapping
+
     std::vector<FilesystemEntry> &GetContents() {
         return m_contents;
+    }
+
+    std::map<uint32, uint32> &GetDirectoryMappings() {
+        return m_dirMappings;
     }
 
     friend class Filesystem;
@@ -140,6 +167,11 @@ public:
     // Returns true if succesful, false if fileID is not a directory or does not exist.
     // The filesystem state is not modified on failure.
     bool ChangeDirectory(uint32 fileID);
+
+    // Attempts to read the specified directory.
+    // Returns true if succesful, false if fileID is not a directory or does not exist.
+    // The filesystem state is not modified on failure.
+    bool ReadDirectory(uint32 fileID);
 
     // Retrieves the path to the current directory.
     // Returns an empty string if the file system is invalid.

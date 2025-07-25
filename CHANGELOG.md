@@ -20,6 +20,7 @@
 
 ### Fixes
 
+- CD Block: Fix directory indexing for ReadDirectory and ChangeDirectory commands. Fixes Sega Rally Championship Plus (Japan) not booting.
 - Media: Add support for CD-ROM Mode 2 tracks. Fixes Last Bronx not booting. (#238)
 - Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Hopefully fixes some Last Bronx dumps not booting.
 - Media: Realign data offset to hunks between tracks in CHDs. Fixes Last Bronx CHD dumps not booting.

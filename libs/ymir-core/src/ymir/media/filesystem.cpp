@@ -126,15 +126,33 @@ bool Filesystem::ChangeDirectory(uint32 fileID) {
     } else if (m_currDirectory != ~0 && fileID == 1) {
         // Go to parent directory
         m_currDirectory = m_directories[m_currDirectory].m_parent - 1;
-    } else if (m_currDirectory != ~0 && fileID - 2 + m_currFileOffset < m_directories.size()) {
+    } else if (fileID + m_currFileOffset < m_directories[m_currDirectory].GetContents().size()) {
         // Go to specified directory
-        m_currDirectory = fileID - 2 + m_currFileOffset;
+        const auto &mapping = m_directories[m_currDirectory].GetDirectoryMappings();
+        const uint32 id = fileID + m_currFileOffset;
+        if (!mapping.contains(id)) {
+            return false;
+        }
+        m_currDirectory = mapping.at(id);
     } else {
         // File ID out of range or invalid current directory
         return false;
     }
 
     m_currFileOffset = 0;
+    return true;
+}
+
+bool Filesystem::ReadDirectory(uint32 fileID) {
+    if (!IsValid()) {
+        return false;
+    }
+    if (!HasCurrentDirectory()) {
+        return false;
+    }
+    assert(m_currDirectory < m_directories.size());
+
+    // TODO: should read and retain up to 254 files (plus self and parent dirs) starting from fileID
     return true;
 }
 
@@ -306,6 +324,35 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
 
                     dirRecOffset += subdirRecord.recordSize;
                 }
+            }
+        }
+    }
+
+    // Map subdirectories to their directory entries
+    std::unordered_map<std::string, size_t> dirRefs{};
+    for (size_t i = 0; i < m_directories.size(); ++i) {
+        const auto &dir = m_directories[i];
+        if (dir.IsRoot()) {
+            continue;
+        }
+        dirRefs[std::string(dir.Name())] = i;
+    }
+
+    for (size_t i = 0; i < m_directories.size(); ++i) {
+        auto &dir = m_directories[i];
+        const auto &subdirs = dir.GetContents();
+        for (size_t j = 0; j < subdirs.size(); ++j) {
+            auto &subdir = subdirs[j];
+            if (!subdir.IsDirectory()) {
+                continue;
+            }
+            if (subdir.IsSelfDirectory() || subdir.IsParentDirectory()) {
+                continue;
+            }
+
+            if (dirRefs.contains(std::string(subdir.Name()))) {
+                const size_t pos = dirRefs.at(std::string(subdir.Name()));
+                dir.GetDirectoryMappings()[j] = pos;
             }
         }
     }
