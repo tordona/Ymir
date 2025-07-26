@@ -2586,6 +2586,7 @@ void App::RunEmulator() {
                             ImGui::MenuItem("[WIP] Debugger", nullptr, &set.debugger.Open);
                             ImGui::MenuItem("Interrupts", nullptr, &set.interrupts.Open);
                             ImGui::MenuItem("Interrupt trace", nullptr, &set.interruptTrace.Open);
+                            ImGui::MenuItem("Exception vectors", nullptr, &set.exceptionVectors.Open);
                             ImGui::MenuItem("Cache", nullptr, &set.cache.Open);
                             ImGui::MenuItem("Division unit (DIVU)", nullptr, &set.divisionUnit.Open);
                             ImGui::MenuItem("Timers (FRT and WDT)", nullptr, &set.timers.Open);

@@ -5,6 +5,7 @@
 #include "sh2_divu_window.hpp"
 #include "sh2_dmac_trace_window.hpp"
 #include "sh2_dmac_window.hpp"
+#include "sh2_exception_vectors_window.hpp"
 #include "sh2_interrupt_trace_window.hpp"
 #include "sh2_interrupts_window.hpp"
 #include "sh2_timers_window.hpp"
@@ -16,6 +17,7 @@ struct SH2WindowSet {
         : debugger(context, master)
         , interrupts(context, master)
         , interruptTrace(context, master)
+        , exceptionVectors(context, master)
         , cache(context, master)
         , divisionUnit(context, master)
         , timers(context, master)
@@ -26,6 +28,7 @@ struct SH2WindowSet {
         debugger.Display();
         interrupts.Display();
         interruptTrace.Display();
+        exceptionVectors.Display();
         cache.Display();
         divisionUnit.Display();
         timers.Display();
@@ -36,6 +39,7 @@ struct SH2WindowSet {
     SH2DebuggerWindow debugger;
     SH2InterruptsWindow interrupts;
     SH2InterruptTraceWindow interruptTrace;
+    SH2ExceptionVectorsWindow exceptionVectors;
     SH2CacheWindow cache;
     SH2DivisionUnitWindow divisionUnit;
     SH2TimersWindow timers;
