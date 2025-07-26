@@ -1,5 +1,7 @@
 #include "sh2_breakpoints_view.hpp"
 
+#include <app/events/emu_event_factory.hpp>
+
 #include <imgui.h>
 
 using namespace ymir;
@@ -28,6 +30,15 @@ void SH2BreakpointsView::Display() {
     };
 
     ImGui::BeginGroup();
+
+    if (!m_context.saturn.IsDebugTracingEnabled()) {
+        ImGui::TextColored(m_context.colors.warn, "Debug tracing is disabled.");
+        ImGui::TextColored(m_context.colors.warn, "Breakpoints will not work.");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Enable##debug_tracing")) {
+            m_context.EnqueueEvent(events::emu::SetDebugTrace(true));
+        }
+    }
 
     if (drawHex32("addr", m_address)) {
         m_address &= ~1u;
