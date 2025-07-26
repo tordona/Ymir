@@ -3355,10 +3355,9 @@ void App::EmulatorThread() {
 
             case RunFunction: std::get<std::function<void(SharedContext &)>>(evt.value)(m_context); break;
 
-            case ReceiveMidiInput: {
+            case ReceiveMidiInput:
                 m_context.saturn.SCSP.ReceiveMidiInput(std::get<ymir::scsp::MidiMessage>(evt.value));
                 break;
-            }
 
             case SetThreadPriority: util::BoostCurrentThreadPriority(std::get<bool>(evt.value)); break;
 
