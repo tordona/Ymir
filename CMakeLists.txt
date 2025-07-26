@@ -3,6 +3,7 @@ project(Ymir VERSION 0.1.7)
 
 include(cmake/CMakeRC.cmake)
 include(cmake/CopyRuntimeDLLs.cmake)
+include(cmake/TargetConditionalSources.cmake)
 
 # CMake project structured adapted from Alex Reinking's SharedStaticStarter
 # GitHub: https://github.com/alexreinking/SharedStaticStarter
@@ -29,6 +30,11 @@ else ()
 endif ()
 message(STATUS "Ymir: Devlog ${Ymir_ENABLE_DEVLOG}")
 message(STATUS "Ymir: Extra inlining ${Ymir_EXTRA_INLINING}")
+
+# Create Universal Binary on MacOS
+if (APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+endif ()
 
 # Detect target architectures
 # ARCHITECTURES may have multiple variables in the case of a multi-arch build
