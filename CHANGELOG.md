@@ -7,6 +7,7 @@
 - App: Added a button to copy the version string from the About window.
 - App: Added option to automatically load most recently loaded game disc image on startup.
 - App: Auto-center About window whenever it is opened.
+- Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
 - Debug: Added SH-2 exception vector list view.
