@@ -6,7 +6,8 @@ add_library(xxHash
 
 if ("x86_64" IN_LIST ARCHITECTURES)
     set(XXHSUM_DISPATCH ON)
-	target_sources(xxHash PRIVATE
+	target_conditional_sources(
+		xxHash "defined(__x86_64__) || defined(_M_X64)"
 		xxHash/xxh_x86dispatch.c
 		xxHash/xxh_x86dispatch.h
 	)
