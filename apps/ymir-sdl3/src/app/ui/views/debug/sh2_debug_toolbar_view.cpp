@@ -30,15 +30,25 @@ void SH2DebugToolbarView::Display() {
         ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
         ImGui::SameLine();
     }
-    if (!enabled) {
-        ImGui::BeginDisabled();
-    }
-    if (ImGui::Button("Step")) {
-        m_context.EnqueueEvent(master ? events::emu::StepMSH2() : events::emu::StepSSH2());
-    }
-    if (!enabled) {
+    ImGui::BeginDisabled(!enabled);
+    {
+        if (ImGui::Button("Step")) {
+            m_context.EnqueueEvent(master ? events::emu::StepMSH2() : events::emu::StepSSH2());
+        }
+        ImGui::SameLine();
+        ImGui::BeginDisabled(m_context.paused);
+        if (ImGui::Button("Pause")) {
+            m_context.EnqueueEvent(events::emu::SetPaused(true));
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!m_context.paused);
+        if (ImGui::Button("Resume")) {
+            m_context.EnqueueEvent(events::emu::SetPaused(false));
+        }
         ImGui::EndDisabled();
     }
+    ImGui::EndDisabled();
 
     ImGui::EndGroup();
 }

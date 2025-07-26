@@ -13,6 +13,27 @@ SH2DisassemblyView::SH2DisassemblyView(SharedContext &context, ymir::sh2::SH2 &s
 void SH2DisassemblyView::Display() {
     using namespace ymir;
 
+    if (ImGui::BeginMenuBar()) {
+        if (ImGui::BeginMenu("View")) {
+            ImGui::MenuItem("Display opcode bytes", nullptr, &m_settings.displayOpcodeBytes);
+            ImGui::MenuItem("Display opcode ASCII", nullptr, &m_settings.displayOpcodeAscii);
+
+            ImGui::Separator();
+
+            ImGui::MenuItem("Alternate line colors", nullptr, &m_settings.altLineColors);
+            ImGui::Indent();
+            ImGui::MenuItem("Based on addresses", nullptr, &m_settings.altLineAddresses);
+            ImGui::Unindent();
+
+            ImGui::Separator();
+
+            ImGui::MenuItem("Colorize mnemonics by type", nullptr, &m_settings.colorizeMnemonicsByType);
+
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
+
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const ImVec2 disasmCharSize = ImGui::CalcTextSize("x");
     const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
@@ -637,27 +658,6 @@ void SH2DisassemblyView::Display() {
         ImGui::PopFont();
     }
     ImGui::EndChild();
-
-    if (ImGui::BeginMenuBar()) {
-        if (ImGui::BeginMenu("View")) {
-            ImGui::MenuItem("Display opcode bytes", nullptr, &m_settings.displayOpcodeBytes);
-            ImGui::MenuItem("Display opcode ASCII", nullptr, &m_settings.displayOpcodeAscii);
-
-            ImGui::Separator();
-
-            ImGui::MenuItem("Alternate line colors", nullptr, &m_settings.altLineColors);
-            ImGui::Indent();
-            ImGui::MenuItem("Based on addresses", nullptr, &m_settings.altLineAddresses);
-            ImGui::Unindent();
-
-            ImGui::Separator();
-
-            ImGui::MenuItem("Colorize mnemonics by type", nullptr, &m_settings.colorizeMnemonicsByType);
-
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
 }
 
 } // namespace app::ui
