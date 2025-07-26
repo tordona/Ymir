@@ -260,10 +260,8 @@ jobs:
       matrix:
         build_type: [Release]
         arch:
-          - name: "arm64"
-            isa_name: "AArch64"
-          - name: "x86_64"
-            isa_name: "x86_64"
+          - name: "universal"
+            isa_name: "x64;a64"
 
     steps:
       - uses: actions/checkout@v4
@@ -276,14 +274,14 @@ jobs:
         run: |
           export BUILD_VERSION=${{ needs.get-project-version.outputs.project-version }}
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-          echo "ymir-artifact-name=ymir-macos-${{ matrix.arch.isa_name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ymir-artifact-name=ymir-macos-${{ matrix.arch.name }}-${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Configure CMake
         run: >
           cmake -B ${{ steps.strings.outputs.build-output-dir }}
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DBUILD_SHARED_LIBS=OFF
-          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch.name }}
+          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch.isa_name }}
           -DYmir_ENABLE_IPO=ON
           -DYmir_ENABLE_DEVLOG=OFF
           -DYmir_ENABLE_IMGUI_DEMO=OFF

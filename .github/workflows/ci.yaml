@@ -171,7 +171,7 @@ jobs:
         run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel
 
   build-macos:
-    name: macos-${{ matrix.arch.isa_name }}
+    name: macos-${{ matrix.arch.name }}
     runs-on: macos-latest
 
     strategy:
@@ -179,10 +179,8 @@ jobs:
 
       matrix:
         arch:
-          - name: "arm64"
-            isa_name: "a64"
-          - name: "x86_64"
-            isa_name: "x64"
+          - name: "universal"
+            isa_name: "x64;a64"
 
     steps:
       - uses: actions/checkout@v4
@@ -200,7 +198,7 @@ jobs:
           cmake -B ${{ steps.strings.outputs.build-output-dir }}
           -DCMAKE_BUILD_TYPE=Debug
           -DBUILD_SHARED_LIBS=OFF
-          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch.name }}
+          -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch.isa_name }}
           -DYmir_ENABLE_DEVLOG=OFF
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
