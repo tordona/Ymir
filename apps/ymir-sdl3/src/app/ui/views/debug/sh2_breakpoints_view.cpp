@@ -47,16 +47,19 @@ void SH2BreakpointsView::Display() {
     if (ImGui::Button("Add")) {
         std::unique_lock lock{m_context.locks.breakpoints};
         m_sh2.AddBreakpoint(m_address);
+        m_context.debuggers.MakeDirty();
     }
     ImGui::SameLine();
     if (ImGui::Button("Remove")) {
         std::unique_lock lock{m_context.locks.breakpoints};
         m_sh2.RemoveBreakpoint(m_address);
+        m_context.debuggers.MakeDirty();
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear")) {
         std::unique_lock lock{m_context.locks.breakpoints};
         m_sh2.ClearBreakpoints();
+        m_context.debuggers.MakeDirty();
     }
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
@@ -80,12 +83,14 @@ void SH2BreakpointsView::Display() {
                     std::unique_lock lock{m_context.locks.breakpoints};
                     m_sh2.RemoveBreakpoint(prevAddress);
                     m_sh2.AddBreakpoint(address);
+                    m_context.debuggers.MakeDirty();
                 }
             }
             if (ImGui::TableNextColumn()) {
                 if (ImGui::Button(fmt::format("Remove##{}", i).c_str())) {
                     std::unique_lock lock{m_context.locks.breakpoints};
                     m_sh2.RemoveBreakpoint(address);
+                    m_context.debuggers.MakeDirty();
                 }
             }
         }

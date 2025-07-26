@@ -458,6 +458,16 @@ struct SharedContext {
         }
     } messages;
 
+    struct Debuggers {
+        bool dirty = false;
+        std::chrono::steady_clock::time_point dirtyTimestamp;
+
+        void MakeDirty(bool dirty = true) {
+            this->dirty = dirty;
+            dirtyTimestamp = std::chrono::steady_clock::now();
+        }
+    } debuggers;
+
     // -----------------------------------------------------------------------------------------------------------------
     // Convenience methods
 

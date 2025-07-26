@@ -346,6 +346,10 @@ int App::Run(const CommandLineOptions &options) {
 
     LoadSaveStates();
 
+    m_context.debuggers.dirty = false;
+    m_context.debuggers.dirtyTimestamp = clk::now();
+    LoadDebuggerState();
+
     RunEmulator();
 
     return 0;
@@ -520,6 +524,7 @@ void App::RunEmulator() {
     ScopeGuard sgDestroyWindow{[&] {
         PersistWindowGeometry();
         SDL_DestroyWindow(screen.window);
+        SaveDebuggerState();
     }};
 
     // ---------------------------------
@@ -3277,6 +3282,7 @@ void App::RunEmulator() {
         }
 
         m_context.settings.CheckDirty();
+        CheckDebuggerStateDirty();
     }
 
 end_loop:; // the semicolon is not a typo!
@@ -3359,6 +3365,7 @@ void App::EmulatorThread() {
                 // LoadDiscImage locks the disc mutex
                 if (LoadDiscImage(path)) {
                     LoadSaveStates();
+                    LoadDebuggerState();
                     auto iplLoadResult = LoadIPLROM();
                     if (!iplLoadResult.succeeded) {
                         OpenSimpleErrorModal(fmt::format("Could not load IPL ROM: {}", iplLoadResult.errorMessage));
@@ -3809,6 +3816,33 @@ void App::PersistWindowGeometry() {
             std::ofstream out{m_context.profile.GetPath(ProfilePath::PersistentState) / "window.txt"};
             out << fmt::format("{} {} {} {}", wx, wy, ww, wh);
         }
+    }
+}
+
+void App::LoadDebuggerState() {
+    const auto path = m_context.profile.GetPath(ProfilePath::PersistentState) / "debugger";
+    if (std::filesystem::is_directory(path)) {
+        m_masterSH2WindowSet.debugger.LoadState(path);
+        m_slaveSH2WindowSet.debugger.LoadState(path);
+        m_context.debuggers.dirty = false;
+        m_context.debuggers.dirtyTimestamp = clk::now();
+    }
+}
+
+void App::SaveDebuggerState() {
+    const auto path = m_context.profile.GetPath(ProfilePath::PersistentState) / "debugger";
+    std::filesystem::create_directories(path);
+    m_masterSH2WindowSet.debugger.SaveState(path);
+    m_slaveSH2WindowSet.debugger.SaveState(path);
+    m_context.debuggers.dirty = false;
+}
+
+void App::CheckDebuggerStateDirty() {
+    using namespace std::chrono_literals;
+
+    if (m_context.debuggers.dirty && (clk::now() - m_context.debuggers.dirtyTimestamp) > 250ms) {
+        SaveDebuggerState();
+        m_context.debuggers.dirty = false;
     }
 }
 

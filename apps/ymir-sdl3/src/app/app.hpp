@@ -69,6 +69,10 @@ private:
 
     void PersistWindowGeometry();
 
+    void LoadDebuggerState();
+    void SaveDebuggerState();
+    void CheckDebuggerStateDirty();
+
     template <int port>
     void ReadPeripheral(ymir::peripheral::PeripheralReport &report);
 

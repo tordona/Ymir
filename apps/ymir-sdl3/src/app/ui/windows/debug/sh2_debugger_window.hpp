@@ -12,6 +12,9 @@ class SH2DebuggerWindow : public SH2WindowBase {
 public:
     SH2DebuggerWindow(SharedContext &context, bool master);
 
+    void LoadState(std::filesystem::path path);
+    void SaveState(std::filesystem::path path);
+
 protected:
     void PrepareWindow() override;
     void DrawContents() override;
