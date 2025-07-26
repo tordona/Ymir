@@ -6,11 +6,20 @@ add_library(xxHash
 
 if ("x86_64" IN_LIST ARCHITECTURES)
     set(XXHSUM_DISPATCH ON)
-	target_conditional_sources(
-		xxHash "defined(__x86_64__) || defined(_M_X64)"
-		xxHash/xxh_x86dispatch.c
-		xxHash/xxh_x86dispatch.h
-	)
+	# Apple is the only target that supports fat binaries
+	if (APPLE)
+		target_conditional_sources(
+			xxHash "defined(__x86_64__) || defined(_M_X64)"
+			xxHash/xxh_x86dispatch.c
+			xxHash/xxh_x86dispatch.h
+		)
+	else()
+		target_sources(
+			xxHash PRIVATE
+			xxHash/xxh_x86dispatch.c
+			xxHash/xxh_x86dispatch.h
+		)
+	endif()
 	target_compile_definitions(xxHash PRIVATE XXHSUM_DISPATCH=1)
 endif ()
 
