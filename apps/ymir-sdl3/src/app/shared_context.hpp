@@ -409,6 +409,12 @@ struct SharedContext {
         } sizes;
     } fonts;
 
+    struct Colors {
+        ImVec4 good{0.25f, 1.00f, 0.41f, 1.00f};
+        ImVec4 notice{1.00f, 0.71f, 0.25f, 1.00f};
+        ImVec4 warn{1.00f, 0.41f, 0.25f, 1.00f};
+    } colors;
+
     struct Images {
         struct Image {
             SDL_GPUTextureSamplerBinding binding{nullptr, nullptr};

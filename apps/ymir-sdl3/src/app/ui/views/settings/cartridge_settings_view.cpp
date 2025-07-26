@@ -116,21 +116,20 @@ void CartridgeSettingsView::Display() {
         if (wantedCartType != cart::CartType::None && currCartType != wantedCartType) {
             ImGui::AlignTextToFramePadding();
 
-            static constexpr ImVec4 kColor{1.00f, 0.71f, 0.25f, 1.00f};
+            const auto color = m_context.colors.notice;
 
             switch (gameInfo->cartridge) {
             case db::Cartridge::DRAM8Mbit:
-                ImGui::TextColored(kColor, "The currently loaded game requires an 8 Mbit DRAM cartridge.");
+                ImGui::TextColored(color, "The currently loaded game requires an 8 Mbit DRAM cartridge.");
                 break;
             case db::Cartridge::DRAM32Mbit:
-                ImGui::TextColored(kColor, "The currently loaded game requires a 32 Mbit DRAM cartridge.");
+                ImGui::TextColored(color, "The currently loaded game requires a 32 Mbit DRAM cartridge.");
                 break;
             case db::Cartridge::ROM_KOF95:
-                ImGui::TextColored(kColor,
-                                   "The currently loaded game requires the King of Fighters '95 ROM cartridge.");
+                ImGui::TextColored(color, "The currently loaded game requires the King of Fighters '95 ROM cartridge.");
                 break;
             case db::Cartridge::ROM_Ultraman:
-                ImGui::TextColored(kColor, "The currently loaded game requires the Ultraman ROM cartridge.");
+                ImGui::TextColored(color, "The currently loaded game requires the Ultraman ROM cartridge.");
                 break;
             default: break;
             }

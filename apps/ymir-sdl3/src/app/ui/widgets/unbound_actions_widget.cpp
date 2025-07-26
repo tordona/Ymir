@@ -11,9 +11,8 @@ void UnboundActionsWidget::Display() {
         return;
     }
 
-    static constexpr ImVec4 kColor{1.00f, 0.41f, 0.25f, 1.00f};
     const bool plural = m_unboundActions.size() > 1;
-    ImGui::TextColored(kColor, "%zu %s", m_unboundActions.size(),
+    ImGui::TextColored(m_context.colors.warn, "%zu %s", m_unboundActions.size(),
                        (plural ? "actions were unbound" : "action was unbound"));
     ImGui::SameLine();
     if (ImGui::SmallButton("View")) {

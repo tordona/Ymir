@@ -17,8 +17,7 @@ void SH2DebugToolbarView::Display() {
     ImGui::BeginGroup();
 
     if (!m_context.saturn.IsDebugTracingEnabled()) {
-        static constexpr ImVec4 kColor{1.00f, 0.41f, 0.25f, 1.00f};
-        ImGui::TextColored(kColor, "Debug tracing is disabled. Some features will not work.");
+        ImGui::TextColored(m_context.colors.warn, "Debug tracing is disabled. Some features will not work.");
         ImGui::SameLine();
         if (ImGui::SmallButton("Enable##debug_tracing")) {
             m_context.EnqueueEvent(events::emu::SetDebugTrace(true));

@@ -21,8 +21,8 @@ void VDP2VRAMDelayView::Display() {
     ImGui::PopFont();
     const float spaceWidth = ImGui::CalcTextSize(" ").x;
 
-    static constexpr ImVec4 kColorGood{1.00f, 0.41f, 0.25f, 1.00f};
-    static constexpr ImVec4 kColorBad{0.25f, 1.00f, 0.41f, 1.00f};
+    const auto colorGood = m_context.colors.good;
+    const auto colorBad = m_context.colors.warn;
 
     auto checkbox = [](const char *label, bool value, bool sameLine = false) {
         if (sameLine) {
@@ -280,7 +280,7 @@ void VDP2VRAMDelayView::Display() {
                 if (regs2.bgEnabled[i]) {
                     const auto &bgParams = regs2.bgParams[i + 1];
                     if (!bgParams.bitmap && bgParams.charPatDelay) {
-                        ImGui::TextColored(kColorGood, "yes");
+                        ImGui::TextColored(colorBad, "yes");
                     } else if (bgParams.bitmap) {
                         std::vector<const char *> delayedBanks{};
 
@@ -308,7 +308,7 @@ void VDP2VRAMDelayView::Display() {
                         }
 
                         if (delayedBanks.empty()) {
-                            ImGui::TextColored(kColorBad, "no");
+                            ImGui::TextColored(colorGood, "no");
                         } else {
                             bool first = true;
                             for (const char *bank : delayedBanks) {
@@ -317,11 +317,11 @@ void VDP2VRAMDelayView::Display() {
                                 } else {
                                     ImGui::SameLine(0.0f, spaceWidth);
                                 }
-                                ImGui::TextColored(kColorGood, "%s", bank);
+                                ImGui::TextColored(colorBad, "%s", bank);
                             }
                         }
                     } else {
-                        ImGui::TextColored(kColorBad, "no");
+                        ImGui::TextColored(colorGood, "no");
                     }
                 }
             }
@@ -336,9 +336,9 @@ void VDP2VRAMDelayView::Display() {
                 if (regs2.bgEnabled[i]) {
                     if (regs2.bgParams[i + 1].verticalCellScrollEnable) {
                         if (nbgLayerStates[i].vertCellScrollDelay) {
-                            ImGui::TextColored(kColorGood, "yes");
+                            ImGui::TextColored(colorBad, "yes");
                         } else {
-                            ImGui::TextColored(kColorBad, "no");
+                            ImGui::TextColored(colorGood, "no");
                         }
                     } else {
                         ImGui::TextUnformatted("-");
@@ -355,9 +355,9 @@ void VDP2VRAMDelayView::Display() {
             if (regs2.bgEnabled[0]) {
                 if (regs2.bgParams[1].verticalCellScrollEnable) {
                     if (nbgLayerStates[0].vertCellScrollRepeat) {
-                        ImGui::TextColored(kColorGood, "yes");
+                        ImGui::TextColored(colorBad, "yes");
                     } else {
-                        ImGui::TextColored(kColorBad, "no");
+                        ImGui::TextColored(colorGood, "no");
                     }
                 } else {
                     ImGui::TextUnformatted("-");
