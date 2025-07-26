@@ -254,6 +254,7 @@ void Saturn::SaveState(state::State &state) const {
     m_system.SaveState(state.system);
     mem.SaveState(state.system);
     state.system.slaveSH2Enabled = slaveSH2Enabled;
+    state.ssh2SpilloverCycles = m_ssh2SpilloverCycles;
     masterSH2.SaveState(state.msh2);
     slaveSH2.SaveState(state.ssh2);
     SCU.SaveState(state.scu);
@@ -299,6 +300,7 @@ bool Saturn::LoadState(const state::State &state) {
     m_system.LoadState(state.system);
     mem.LoadState(state.system);
     slaveSH2Enabled = state.system.slaveSH2Enabled;
+    m_ssh2SpilloverCycles = state.ssh2SpilloverCycles;
     masterSH2.LoadState(state.msh2);
     slaveSH2.LoadState(state.ssh2);
     SCU.LoadState(state.scu);
