@@ -250,7 +250,7 @@ jobs:
           path: ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz
 
   build-macos:
-    name: macos-${{ matrix.arch.isa_name }}
+    name: macos-${{ matrix.arch.name }}
     runs-on: macos-latest
     needs: [get-project-version]
 
@@ -261,7 +261,7 @@ jobs:
         build_type: [Release]
         arch:
           - name: "universal"
-            isa_name: "x86_64;arm64"
+            isa_name: "'x86_64;arm64'"
 
     steps:
       - uses: actions/checkout@v4
