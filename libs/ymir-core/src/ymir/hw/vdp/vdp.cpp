@@ -2008,7 +2008,7 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
             case 5: // 16 bpp, 32768 colors, RGB mode
                 color = VDP1ReadRendererVRAM<uint16>(lineParams.charAddr + charIndex * sizeof(uint16));
                 processEndCode(color == 0x7FFF);
-                transparent = color == 0x0000;
+                transparent = !bit::test<15>(color);
                 break;
             }
 
@@ -3653,10 +3653,17 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
         }
     }
     const uint32 colorIndex = params.colorDataOffset + spriteData.colorData;
+    const Color888 color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
+    /*if (color.msb == 0) {
+        // Transparent pixel, don't bother plotting it
+        if constexpr (!applyMesh) {
+            layerState.pixels.transparent[x] = true;
+        }
+        return;
+    }*/
     if constexpr (applyMesh) {
         // If the pixel in the sprite layer is transparent, write the mesh color as is and mark the pixel as
         // "transparent mesh" to be handled in VDP2ComposeLine, otherwise blend with the existing pixel.
-        const Color888 color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
         Color888 &layerColor = layerState.pixels.color[x];
         if (layerState.pixels.transparent[x]) {
             layerColor = color;
@@ -3669,7 +3676,7 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
         }
         layerState.pixels.transparent[x] = false;
     } else {
-        layerState.pixels.color[x] = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
+        layerState.pixels.color[x] = color;
         layerState.pixels.transparent[x] = spriteData.special == SpriteData::Special::Transparent;
     }
     layerState.pixels.priority[x] = params.priorities[spriteData.priority];

@@ -29,6 +29,7 @@
 - Scheduler: Ensure events are executed in chronological order.
 - SCU: Fix A-Bus external interrupt handling.
 - SMPC: Fixed TL reporting on SH-2 direct mode.
+- VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
 
 
 ## Version 0.1.6

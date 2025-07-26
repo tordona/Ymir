@@ -1,0 +1,29 @@
+=================================================
+Games that use illegal VRAM access cycle patterns
+=================================================
+
+Street Fighter Zero
+Street Fighter Zero 2
+Street Fighter Zero 3
+Vampire Hunter - Darkstalkers' Revenge
+Vampire Savior - The Lord of Vampire
+  Sets up two consecutive accesses for NBG0 vertical cell scroll table during intro videos:
+    CYCB1 = FFFFCCFF
+  This causes every vertical cell scroll fetch for NBG0 to happen twice; the first value is discarded.
+
+Rayman
+  Sets up illegal vertical cell scroll fetch timing for NBG1, causing it to be delayed.
+
+Capcom Generation - Dai-5-shuu Kakutouka-tachi 
+  Sets up illegal character pattern read cycles for NBG0 bitmap data in VRAM bank B in the image gallery, causing the
+  bottom portion of the image (starting at Y=256) to be shifted left. The game compensates for that in VRAM.
+
+Battle Arena Toshinden Remix
+  Sets up multiple PN accesses for NBG2 in-game to display UI elements.
+
+
+=======
+Context
+=======
+
+See docs/dev-notes/system-info/vdp2-vram-access-cycles.txt
