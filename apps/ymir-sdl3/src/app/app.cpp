@@ -957,12 +957,9 @@ void App::RunEmulator() {
 
     auto &inputContext = m_context.inputContext;
 
-    bool &paused = m_context.paused;
-    paused = m_options.startPaused;
+    m_context.paused = m_options.startPaused;
+    events::emu::SetPaused(m_options.startPaused);
     bool pausedByLostFocus = false;
-    if (paused) {
-        m_context.EnqueueEvent(events::emu::SetPaused(paused));
-    }
 
     // General
     {
@@ -1196,16 +1193,13 @@ void App::RunEmulator() {
         });
 
         inputContext.SetTriggerHandler(actions::emu::PauseResume, [&](void *, const input::InputElement &) {
-            paused = !paused;
-            m_context.EnqueueEvent(events::emu::SetPaused(paused));
+            m_context.EnqueueEvent(events::emu::SetPaused(!m_context.paused));
         });
         inputContext.SetTriggerHandler(actions::emu::ForwardFrameStep, [&](void *, const input::InputElement &) {
-            paused = true;
             m_context.EnqueueEvent(events::emu::ForwardFrameStep());
         });
         inputContext.SetTriggerHandler(actions::emu::ReverseFrameStep, [&](void *, const input::InputElement &) {
             if (m_context.rewindBuffer.IsRunning()) {
-                paused = true;
                 m_context.EnqueueEvent(events::emu::ReverseFrameStep());
             }
         });
@@ -1575,7 +1569,6 @@ void App::RunEmulator() {
 
     m_context.saturn.SetDebugBreakRaisedCallback({&m_context, [](void *ctx) {
                                                       auto &sharedCtx = *static_cast<SharedContext *>(ctx);
-                                                      sharedCtx.paused = true;
                                                       sharedCtx.EnqueueEvent(events::emu::SetPaused(true));
                                                       // TODO: handle specific types of debug break infos
                                                       // - open debugger window
@@ -1601,7 +1594,6 @@ void App::RunEmulator() {
         // TODO: fix this hacky mess
         // HACK: unpause, unsilence audio system and set frame request signal in order to unlock the emulator thread if
         // it is waiting for free space in the audio buffer due to being paused
-        paused = false;
         m_emuProcessEvent.Set();
         m_audioSystem.SetSilent(false);
         screen.frameRequestEvent.Set();
@@ -1661,7 +1653,7 @@ void App::RunEmulator() {
 
         // Use video sync if in full screen mode and not paused or fast-forwarding
         const bool fullScreen = m_context.settings.video.fullScreen;
-        screen.videoSync = fullScreen && !paused && m_context.emuSpeed.limitSpeed;
+        screen.videoSync = fullScreen && !m_context.paused && m_context.emuSpeed.limitSpeed;
 
         const double frameIntervalAdjustFactor = 0.2; // how much adjustment is applied to the frame interval
 
@@ -1939,19 +1931,17 @@ void App::RunEmulator() {
 
             case SDL_EVENT_WINDOW_FOCUS_GAINED:
                 if (m_context.settings.general.pauseWhenUnfocused) {
-                    if (paused && pausedByLostFocus) {
-                        paused = false;
-                        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+                    if (m_context.paused && pausedByLostFocus) {
+                        m_context.EnqueueEvent(events::emu::SetPaused(false));
                     }
                     pausedByLostFocus = false;
                 }
                 break;
             case SDL_EVENT_WINDOW_FOCUS_LOST:
                 if (m_context.settings.general.pauseWhenUnfocused) {
-                    if (!paused) {
-                        paused = true;
+                    if (!m_context.paused) {
                         pausedByLostFocus = true;
-                        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+                        m_context.EnqueueEvent(events::emu::SetPaused(true));
                     }
                 }
                 break;
@@ -2112,14 +2102,14 @@ void App::RunEmulator() {
                 }
                 fullGameTitle = fmt::format("{}{}", productNumber, gameTitle);
             }
-            std::string speed = paused ? "paused"
+            std::string speed = m_context.paused ? "paused"
                                 : m_context.emuSpeed.limitSpeed
                                     ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
                                                   m_context.emuSpeed.altSpeed ? " (alt)" : "")
                                     : "unlimited";
 
             std::string title{};
-            if (paused) {
+            if (m_context.paused) {
                 title = fmt::format("Ymir " Ymir_FULL_VERSION
                                     " - {} | Speed: {} | VDP2: paused | VDP1: paused | GUI: {:.0f} fps",
                                     fullGameTitle, speed, io.Framerate);
@@ -2520,19 +2510,16 @@ void App::RunEmulator() {
 
                     if (ImGui::MenuItem("Pause/resume",
                                         input::ToShortcut(inputContext, actions::emu::PauseResume).c_str())) {
-                        paused = !paused;
-                        m_context.EnqueueEvent(events::emu::SetPaused(paused));
+                        m_context.EnqueueEvent(events::emu::SetPaused(!m_context.paused));
                     }
                     if (ImGui::MenuItem("Forward frame step",
                                         input::ToShortcut(inputContext, actions::emu::ForwardFrameStep).c_str())) {
-                        paused = true;
                         m_context.EnqueueEvent(events::emu::ForwardFrameStep());
                     }
                     if (ImGui::MenuItem("Reverse frame step",
                                         input::ToShortcut(inputContext, actions::emu::ReverseFrameStep).c_str(),
                                         nullptr, rewindEnabled)) {
                         if (rewindEnabled) {
-                            paused = true;
                             m_context.EnqueueEvent(events::emu::ReverseFrameStep());
                         }
                     }
@@ -2950,7 +2937,7 @@ void App::RunEmulator() {
                 const float vpBottomQuarter =
                     viewport->Pos.y +
                     std::min(viewport->Size.y * 0.75f, viewport->Size.y - 120.0f * m_context.displayScale);
-                if ((mouseMoved && mousePosY >= vpBottomQuarter) || m_context.rewinding || paused) {
+                if ((mouseMoved && mousePosY >= vpBottomQuarter) || m_context.rewinding || m_context.paused) {
                     m_rewindBarFadeTimeBase = now;
                 }
 
@@ -2998,7 +2985,7 @@ void App::RunEmulator() {
                 const uint32 color = 0xFFFFFF | (alphaU32 << 24u);
                 const uint32 shadowColor = 0x000000 | (alphaU32 << 24u);
 
-                if (paused) {
+                if (m_context.paused) {
                     drawList->AddRectFilled(ImVec2(tl.x + size * 0.2f + shadowOffset, tl.y + shadowOffset),
                                             ImVec2(tl.x + size * 0.4f + shadowOffset, br.y + shadowOffset), shadowColor,
                                             rounding);
@@ -3111,13 +3098,13 @@ void App::RunEmulator() {
 
             // Draw frame rate counters
             if (m_context.settings.gui.showFrameRateOSD) {
-                std::string speed = paused ? "paused"
+                std::string speed = m_context.paused ? "paused"
                                     : m_context.emuSpeed.limitSpeed
                                         ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
                                                       m_context.emuSpeed.altSpeed ? " (alt)" : "")
                                         : "unlimited";
                 std::string fpsText{};
-                if (paused) {
+                if (m_context.paused) {
                     fpsText =
                         fmt::format("VDP2: paused\nVDP1: paused\nGUI: {:.0f} fps\nSpeed: {}", io.Framerate, speed);
                 } else {
@@ -3289,15 +3276,13 @@ void App::EmulatorThread() {
     util::SetCurrentThreadName("Emulator thread");
     util::BoostCurrentThreadPriority(m_context.settings.general.boostEmuThreadPriority);
 
-    enum class StepAction { RunFrame, StepMSH2, StepSSH2 };
+    enum class StepAction { Noop, RunFrame, FrameStep, StepMSH2, StepSSH2 };
 
     std::array<EmuEvent, 64> evts{};
 
-    bool paused = false;
-    bool frameStep = false;
-
     while (true) {
-        StepAction stepAction = StepAction::RunFrame;
+        const bool paused = m_context.paused;
+        StepAction stepAction = paused ? StepAction::Noop : StepAction::RunFrame;
 
         // Process all pending events
         const size_t evtCount = paused ? m_context.eventQueues.emulator.wait_dequeue_bulk(evts.begin(), evts.size())
@@ -3311,24 +3296,26 @@ void App::EmulatorThread() {
             case SoftReset: m_context.saturn.Reset(false); break;
             case SetResetButton: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(evt.value)); break;
 
-            case SetPaused:
-                paused = std::get<bool>(evt.value);
-                m_audioSystem.SetSilent(paused);
+            case SetPaused: //
+            {
+                const bool newPaused = std::get<bool>(evt.value);
+                m_context.paused = newPaused;
+                m_audioSystem.SetSilent(newPaused);
                 break;
+            }
             case ForwardFrameStep:
-                frameStep = true;
-                paused = false;
+                stepAction = StepAction::FrameStep;
+                m_context.paused = true;
                 m_audioSystem.SetSilent(false);
                 break;
             case ReverseFrameStep:
-                frameStep = true;
-                paused = false;
+                stepAction = StepAction::FrameStep;
+                m_context.paused = true;
                 m_context.rewinding = true;
                 m_audioSystem.SetSilent(false);
                 break;
             case StepMSH2:
                 stepAction = StepAction::StepMSH2;
-                paused = false;
                 if (!m_context.paused) {
                     m_context.paused = true;
                     m_context.DisplayMessage("Paused due to single-stepping master SH-2");
@@ -3337,7 +3324,6 @@ void App::EmulatorThread() {
                 break;
             case StepSSH2:
                 stepAction = StepAction::StepSSH2;
-                paused = false;
                 if (!m_context.paused) {
                     m_context.paused = true;
                     m_context.DisplayMessage("Paused due to single-stepping slave SH-2");
@@ -3416,60 +3402,56 @@ void App::EmulatorThread() {
         }
 
         // Emulate one frame
-        if (!paused) {
-            switch (stepAction) {
-            case StepAction::RunFrame: //
-            {
-                // Synchronize with GUI thread
-                if (m_context.emuSpeed.limitSpeed && m_context.screen.videoSync) {
-                    m_emuProcessEvent.Wait();
-                    m_emuProcessEvent.Reset();
-                }
+        switch (stepAction) {
+        case StepAction::Noop: break;
+        case StepAction::RunFrame: [[fallthrough]];
+        case StepAction::FrameStep: //
+        {
+            // Synchronize with GUI thread
+            if (m_context.emuSpeed.limitSpeed && m_context.screen.videoSync) {
+                m_emuProcessEvent.Wait();
+                m_emuProcessEvent.Reset();
+            }
 
-                const bool rewindEnabled = m_context.rewindBuffer.IsRunning();
-                bool doRunFrame = true;
-                if (rewindEnabled && m_context.rewinding) {
-                    if (m_context.rewindBuffer.PopState()) {
-                        if (!m_context.saturn.LoadState(m_context.rewindBuffer.NextState)) {
-                            doRunFrame = false;
-                        }
-                    } else {
+            const bool rewindEnabled = m_context.rewindBuffer.IsRunning();
+            bool doRunFrame = true;
+            if (rewindEnabled && m_context.rewinding) {
+                if (m_context.rewindBuffer.PopState()) {
+                    if (!m_context.saturn.LoadState(m_context.rewindBuffer.NextState)) {
                         doRunFrame = false;
                     }
+                } else {
+                    doRunFrame = false;
                 }
+            }
 
-                if (doRunFrame) [[likely]] {
-                    m_context.saturn.RunFrame();
-                }
+            if (doRunFrame) [[likely]] {
+                m_context.saturn.RunFrame();
+            }
 
-                if (rewindEnabled && !m_context.rewinding) {
-                    m_context.saturn.SaveState(m_context.rewindBuffer.NextState);
-                    m_context.rewindBuffer.ProcessState();
-                }
+            if (rewindEnabled && !m_context.rewinding) {
+                m_context.saturn.SaveState(m_context.rewindBuffer.NextState);
+                m_context.rewindBuffer.ProcessState();
+            }
 
-                if (frameStep) {
-                    frameStep = false;
-                    paused = true;
-                    m_context.rewinding = false;
-                    m_audioSystem.SetSilent(true);
-                }
-                break;
+            if (stepAction == StepAction::FrameStep) {
+                m_context.rewinding = false;
+                m_audioSystem.SetSilent(true);
             }
-            case StepAction::StepMSH2: //
-            {
-                const uint64 cycles = m_context.saturn.StepMasterSH2();
-                devlog::debug<grp::base>("SH2-M stepped for {} cycles", cycles);
-                paused = true;
-                break;
-            }
-            case StepAction::StepSSH2: //
-            {
-                const uint64 cycles = m_context.saturn.StepSlaveSH2();
-                devlog::debug<grp::base>("SH2-S stepped for {} cycles", cycles);
-                paused = true;
-                break;
-            }
-            }
+            break;
+        }
+        case StepAction::StepMSH2: //
+        {
+            const uint64 cycles = m_context.saturn.StepMasterSH2();
+            devlog::debug<grp::base>("SH2-M stepped for {} cycles", cycles);
+            break;
+        }
+        case StepAction::StepSSH2: //
+        {
+            const uint64 cycles = m_context.saturn.StepSlaveSH2();
+            devlog::debug<grp::base>("SH2-S stepped for {} cycles", cycles);
+            break;
+        }
         }
     }
 }
