@@ -83,6 +83,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/debug/scu_registers_view.hpp
     src/app/ui/views/debug/scu_timers_view.cpp
     src/app/ui/views/debug/scu_timers_view.hpp
+    src/app/ui/views/debug/sh2_breakpoints_view.cpp
+    src/app/ui/views/debug/sh2_breakpoints_view.hpp
     src/app/ui/views/debug/sh2_cache_entries_view.cpp
     src/app/ui/views/debug/sh2_cache_entries_view.hpp
     src/app/ui/views/debug/sh2_cache_register_view.cpp
@@ -205,6 +207,8 @@ add_executable(ymir-sdl3
     src/app/ui/windows/debug/scu_registers_window.cpp
     src/app/ui/windows/debug/scu_registers_window.hpp
     src/app/ui/windows/debug/scu_window_set.hpp
+    src/app/ui/windows/debug/sh2_breakpoints_window.cpp
+    src/app/ui/windows/debug/sh2_breakpoints_window.hpp
     src/app/ui/windows/debug/sh2_cache_window.cpp
     src/app/ui/windows/debug/sh2_cache_window.hpp
     src/app/ui/windows/debug/sh2_debugger_window.cpp

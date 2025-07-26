@@ -1,6 +1,7 @@
 #include "sh2_debug_toolbar_view.hpp"
 
 #include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
 
 #include <imgui.h>
 
@@ -49,6 +50,10 @@ void SH2DebugToolbarView::Display() {
         ImGui::EndDisabled();
     }
     ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::Button("Breakpoints")) {
+        m_context.EnqueueEvent(events::gui::OpenSH2BreakpointsWindow(m_sh2.IsMaster()));
+    }
 
     ImGui::EndGroup();
 }

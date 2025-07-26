@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sh2_breakpoints_window.hpp"
 #include "sh2_cache_window.hpp"
 #include "sh2_debugger_window.hpp"
 #include "sh2_divu_window.hpp"
@@ -15,6 +16,7 @@ namespace app::ui {
 struct SH2WindowSet {
     SH2WindowSet(SharedContext &context, bool master)
         : debugger(context, master)
+        , breakpoints(context, master)
         , interrupts(context, master)
         , interruptTrace(context, master)
         , exceptionVectors(context, master)
@@ -26,6 +28,7 @@ struct SH2WindowSet {
 
     void DisplayAll() {
         debugger.Display();
+        breakpoints.Display();
         interrupts.Display();
         interruptTrace.Display();
         exceptionVectors.Display();
@@ -37,6 +40,7 @@ struct SH2WindowSet {
     }
 
     SH2DebuggerWindow debugger;
+    SH2BreakpointsWindow breakpoints;
     SH2InterruptsWindow interrupts;
     SH2InterruptTraceWindow interruptTrace;
     SH2ExceptionVectorsWindow exceptionVectors;

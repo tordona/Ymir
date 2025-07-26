@@ -35,6 +35,10 @@ inline GUIEvent OpenSettings(ui::SettingsTab tab) {
     return {.type = GUIEvent::Type::OpenSettings, .value = tab};
 }
 
+inline GUIEvent OpenSH2BreakpointsWindow(bool master) {
+    return {.type = GUIEvent::Type::OpenSH2BreakpointsWindow, .value = master};
+}
+
 inline GUIEvent OpenFile(FileDialogParams &&params) {
     return {.type = GUIEvent::Type::OpenFile, .value = std::move(params)};
 }

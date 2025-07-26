@@ -1988,6 +1988,13 @@ void App::RunEmulator() {
 
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
             case EvtType::OpenSettings: m_settingsWindow.OpenTab(std::get<ui::SettingsTab>(evt.value)); break;
+            case EvtType::OpenSH2BreakpointsWindow:
+                if (std::get<bool>(evt.value)) {
+                    m_masterSH2WindowSet.breakpoints.Open = true;
+                } else {
+                    m_slaveSH2WindowSet.breakpoints.Open = true;
+                }
+                break;
 
             case EvtType::SetProcessPriority: util::BoostCurrentProcessPriority(std::get<bool>(evt.value)); break;
 
@@ -2595,7 +2602,12 @@ void App::RunEmulator() {
 
                     auto sh2Menu = [&](const char *name, ui::SH2WindowSet &set) {
                         if (ImGui::BeginMenu(name)) {
-                            ImGui::MenuItem("[WIP] Debugger", nullptr, &set.debugger.Open);
+                            ImGui::MenuItem("Debugger", nullptr, &set.debugger.Open);
+                            ImGui::Indent();
+                            {
+                                ImGui::MenuItem("Breakpoints", nullptr, &set.breakpoints.Open);
+                            }
+                            ImGui::Unindent();
                             ImGui::MenuItem("Interrupts", nullptr, &set.interrupts.Open);
                             ImGui::MenuItem("Interrupt trace", nullptr, &set.interruptTrace.Open);
                             ImGui::MenuItem("Exception vectors", nullptr, &set.exceptionVectors.Open);
@@ -3299,6 +3311,7 @@ void App::EmulatorThread() {
             case SetPaused: //
             {
                 const bool newPaused = std::get<bool>(evt.value);
+                stepAction = newPaused ? StepAction::Noop : StepAction::RunFrame;
                 m_context.paused = newPaused;
                 m_audioSystem.SetSilent(newPaused);
                 break;

@@ -58,7 +58,8 @@ struct GUIEvent {
         SelectFolder,  // Invoke generic select folder dialog; uses FolderDialogParams
 
         OpenBackupMemoryManager,
-        OpenSettings, // Opens a specific Settings tab; uses ui::SettingsTab
+        OpenSettings,             // Opens a specific Settings tab; uses ui::SettingsTab
+        OpenSH2BreakpointsWindow, // Opens an SH-2 breakpoints use; uses bool
 
         SetProcessPriority,
 
