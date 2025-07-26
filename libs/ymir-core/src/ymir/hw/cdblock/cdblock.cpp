@@ -378,6 +378,8 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
     state.putSectorLength = m_putSectorLength;
 
     state.processingCommand = m_processingCommand;
+
+    m_fs.SaveState(state.fs);
 }
 
 bool CDBlock::ValidateState(const state::CDBlockState &state) const {
@@ -385,6 +387,9 @@ bool CDBlock::ValidateState(const state::CDBlockState &state) const {
         return false;
     }
     if (!m_partitionManager.ValidateState(state)) {
+        return false;
+    }
+    if (!m_fs.ValidateState(state.fs)) {
         return false;
     }
     return true;
@@ -498,6 +503,8 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
     m_putSectorLength = state.putSectorLength;
 
     m_processingCommand = state.processingCommand;
+
+    m_fs.LoadState(state.fs);
 }
 
 void CDBlock::OnDriveStateUpdateEvent(core::EventContext &eventContext, void *userContext) {

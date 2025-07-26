@@ -12,6 +12,15 @@ namespace ymir::state {
 // Current save state format version.
 // Increment once per release if there are any changes to the serializers.
 // Remember to document every change!
+// Versions:
+//   1 = 0.1.0
+//   2 = 0.1.1
+//   3 = 0.1.2
+//   4 = 0.1.3
+//   5 = 0.1.4
+//   6 = 0.1.5
+//   7 = 0.1.6
+//   8 = 0.1.7
 inline constexpr uint32 kVersion = 8;
 
 } // namespace ymir::state
@@ -863,6 +872,9 @@ void serialize(Archive &ar, SCSPTimer &s) {
 
 template <class Archive>
 void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
+    // v8:
+    // - New fields
+    //   - fs
     // v5:
     // - New fields
     //   - enum CDBlockState::TransferType: added PutSector (= 6)
@@ -909,6 +921,7 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     ar(s.calculatedPartitionSize);
     ar(s.getSectorLength, s.putSectorLength);
     ar(s.processingCommand);
+    serialize(ar, s.fs, version);
 }
 
 template <class Archive>
@@ -943,6 +956,22 @@ void serialize(Archive &ar, CDBlockState::FilterState &s) {
     ar(s.submodeMask, s.submodeValue);
     ar(s.codingInfoMask, s.codingInfoValue);
     ar(s.passOutput, s.failOutput);
+}
+
+template <class Archive>
+void serialize(Archive &ar, CDBlockState::FilesystemState &s, const uint32 version) {
+    // v8:
+    // - Struct newly introduced
+    // - New fields:
+    //   - currDirectory = 0; not much can be done since the information is completely missing from earlier versions
+    //   - currFileOffset = 0
+
+    if (version >= 8) {
+        ar(s.currDirectory, s.currFileOffset);
+    } else {
+        s.currDirectory = 0;
+        s.currFileOffset = 0;
+    }
 }
 
 template <class Archive>

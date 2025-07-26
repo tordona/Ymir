@@ -3,6 +3,8 @@
 #include <ymir/core/hash.hpp>
 #include <ymir/core/types.hpp>
 
+#include <ymir/state/state_cdblock.hpp>
+
 #include <ymir/util/bit_ops.hpp>
 
 #include "disc.hpp"
@@ -207,14 +209,25 @@ public:
     // Retrieves the file info from the current directory for the given absolute file ID.
     const FileInfo &GetFileInfo(uint32 fileID) const;
 
+    // -------------------------------------------------------------------------
+    // Save states
+
+    void SaveState(state::CDBlockState::FilesystemState &state) const;
+    [[nodiscard]] bool ValidateState(const state::CDBlockState::FilesystemState &state) const;
+    void LoadState(const state::CDBlockState::FilesystemState &state);
+
 private:
     // Directories parsed from the path table records.
     std::vector<Directory> m_directories;
 
+    // Disc hash
+    XXH128Hash m_hash{};
+
+    // Current file system operation state.
+    // These fields should be stored in the save state
+
     uint32 m_currDirectory;
     uint32 m_currFileOffset;
-
-    XXH128Hash m_hash{};
 
     bool ReadPathTableRecords(const Track &track, const media::iso9660::VolumeDescriptor &volDesc);
 };

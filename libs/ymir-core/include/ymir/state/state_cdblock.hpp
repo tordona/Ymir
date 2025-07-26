@@ -119,6 +119,11 @@ struct CDBlockState {
     uint32 putSectorLength;
 
     bool processingCommand;
+
+    struct FilesystemState {
+        uint32 currDirectory;
+        uint32 currFileOffset;
+    } fs;
 };
 
 } // namespace ymir::state

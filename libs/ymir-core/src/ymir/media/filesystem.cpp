@@ -244,6 +244,23 @@ const FileInfo &media::fs::Filesystem::GetFileInfo(uint32 fileID) const {
     return currDirContents[fileID].GetFileInfo();
 }
 
+void Filesystem::SaveState(state::CDBlockState::FilesystemState &state) const {
+    state.currDirectory = m_currDirectory;
+    state.currFileOffset = m_currFileOffset;
+}
+
+bool Filesystem::ValidateState(const state::CDBlockState::FilesystemState &state) const {
+    if (state.currDirectory >= m_directories.size()) {
+        return false;
+    }
+    return true;
+}
+
+void Filesystem::LoadState(const state::CDBlockState::FilesystemState &state) {
+    m_currDirectory = state.currDirectory;
+    m_currFileOffset = state.currFileOffset;
+}
+
 bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor &volDesc) {
     // Fail if there is no LSB path table
     // TODO: support MSB path table
