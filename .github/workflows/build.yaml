@@ -8,11 +8,11 @@ on:
         type: boolean
       build-version:
         required: false
-        default: ''
+        default: ""
         type: string
       prerelease-version:
         required: false
-        default: ''
+        default: ""
         type: string
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
     steps:
       # Set up MASM for lzma
       - uses: glslang/setup-masm@v1
-  
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -159,7 +159,7 @@ jobs:
             enable_avx2_option: "ON"
             runner: ubuntu-22.04
           - name: "AArch64-NEON"
-            enable_avx2_option: "OFF"  # doesn't matter actually
+            enable_avx2_option: "OFF" # doesn't matter actually
             runner: ubuntu-22.04
         include:
           - c_compiler: clang
@@ -261,7 +261,7 @@ jobs:
         build_type: [Release]
         arch:
           - name: "universal"
-            isa_name: "x64;a64"
+            isa_name: "x86_64;arm64"
 
     steps:
       - uses: actions/checkout@v4
