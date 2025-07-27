@@ -15,9 +15,7 @@ add_library(ymir-core
     include/ymir/db/rom_cart_db.hpp
 
     include/ymir/debug/cdblock_tracer_base.hpp
-    include/ymir/debug/debug_break_info.hpp
-    include/ymir/debug/debug_callbacks.hpp
-    include/ymir/debug/debug_internal_callbacks.hpp
+    include/ymir/debug/debug_break.hpp
     include/ymir/debug/scu_tracer_base.hpp
     include/ymir/debug/sh2_tracer_base.hpp
 

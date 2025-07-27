@@ -18,7 +18,6 @@
 
 #include <ymir/hw/hw_defs.hpp>
 
-#include <ymir/debug/debug_internal_callbacks.hpp>
 #include <ymir/hw/scu/scu_internal_callbacks.hpp>
 #include <ymir/hw/sh2/sh2_internal_callbacks.hpp>
 
@@ -28,6 +27,7 @@
 
 #include <ymir/state/state_sh2.hpp>
 
+#include <ymir/debug/debug_break.hpp>
 #include <ymir/debug/sh2_tracer_base.hpp>
 
 #include <ymir/core/types.hpp>
@@ -52,8 +52,8 @@ public:
         m_cbAcknowledgeExternalInterrupt = callback;
     }
 
-    void MapDebugBreakCallback(debug::CBRaiseDebugBreak callback) {
-        m_cbRaiseDebugBreak = callback;
+    void UseDebugBreakManager(debug::DebugBreakManager *mgr) {
+        m_debugBreakMgr = mgr;
     }
 
     void MapMemory(sys::Bus &bus);
@@ -477,7 +477,7 @@ private:
     bool m_delaySlot;
 
     CBAcknowledgeExternalInterrupt m_cbAcknowledgeExternalInterrupt;
-    debug::CBRaiseDebugBreak m_cbRaiseDebugBreak;
+    debug::DebugBreakManager *m_debugBreakMgr = nullptr;
 
     // -------------------------------------------------------------------------
     // Cycle counting

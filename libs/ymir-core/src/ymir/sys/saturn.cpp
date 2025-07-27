@@ -85,8 +85,8 @@ Saturn::Saturn()
     m_system.AddClockSpeedChangeCallback(SMPC.CbClockSpeedChange);
     m_system.AddClockSpeedChangeCallback(CDBlock.CbClockSpeedChange);
 
-    masterSH2.MapDebugBreakCallback(CbRaiseDebugBreak);
-    slaveSH2.MapDebugBreakCallback(CbRaiseDebugBreak);
+    masterSH2.UseDebugBreakManager(&m_debugBreakMgr);
+    slaveSH2.UseDebugBreakManager(&m_debugBreakMgr);
 
     mem.MapMemory(mainBus);
     masterSH2.MapMemory(mainBus);
@@ -370,7 +370,7 @@ bool Saturn::Run() {
             slaveCycles = slaveSH2.Advance<debug, enableSH2Cache>(execCycles, slaveCycles);
             SCU.Advance<debug>(execCycles - prevExecCycles);
             if constexpr (debug) {
-                if (m_debugBreak) {
+                if (m_debugBreakMgr.IsDebugBreakRaised()) {
                     break;
                 }
             }
@@ -383,7 +383,7 @@ bool Saturn::Run() {
             execCycles = masterSH2.Advance<debug, enableSH2Cache>(targetCycles, execCycles);
             SCU.Advance<debug>(execCycles - prevExecCycles);
             if constexpr (debug) {
-                if (m_debugBreak) {
+                if (m_debugBreakMgr.IsDebugBreakRaised()) {
                     break;
                 }
             }
@@ -404,8 +404,7 @@ bool Saturn::Run() {
     m_scheduler.Advance(execCycles);
 
     if constexpr (debug) {
-        if (m_debugBreak) {
-            m_debugBreak = false;
+        if (m_debugBreakMgr.LowerDebugBreak()) {
             return false;
         }
     }
@@ -532,14 +531,6 @@ void Saturn::UpdateSH2CacheEmulation(bool enabled) {
 void Saturn::UpdateVideoStandard(core::config::sys::VideoStandard videoStandard) {
     m_system.videoStandard = videoStandard;
     m_system.UpdateClockRatios();
-}
-
-void Saturn::SignalDebugBreak(const debug::DebugBreakInfo &info) {
-    // Debug break signals should only be raised while debug tracing is enabled
-    assert(m_systemFeatures.enableDebugTracing);
-
-    m_debugBreak = true;
-    m_cbDebugBreakRaised(info);
 }
 
 // -----------------------------------------------------------------------------

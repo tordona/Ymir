@@ -14,8 +14,7 @@ See @ref index for instructions on how to use the emulator.
 
 #include <ymir/state/state.hpp>
 
-#include <ymir/debug/debug_callbacks.hpp>
-#include <ymir/debug/debug_internal_callbacks.hpp>
+#include <ymir/debug/debug_break.hpp>
 
 #include "memory.hpp"
 #include "system.hpp"
@@ -243,6 +242,15 @@ struct Saturn {
     /// @return `true` if the state was loaded successfully
     [[nodiscard]] bool LoadState(const state::State &state);
 
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    /// @brief Sets the debug break callback to be invoked when the debug break signal is raised.
+    /// @param[in] callback the debug break callback
+    void SetDebugBreakRaisedCallback(debug::CBDebugBreakRaised callback) {
+        m_debugBreakMgr.SetDebugBreakRaisedCallback(callback);
+    }
+
 private:
     /// @brief Runs the emulator until the end of the current frame.
     /// @tparam debug whether to use debug tracing
@@ -386,25 +394,7 @@ private:
     // -------------------------------------------------------------------------
     // Debugger
 
-public:
-    /// @brief Sets the debug break callback to be invoked when the debug break signal is raised.
-    /// @param[in] callback the debug break callback
-    void SetDebugBreakRaisedCallback(debug::CBDebugBreakRaised callback) {
-        m_cbDebugBreakRaised = callback;
-    }
-
-private:
-    /// @brief Signals a debug break which interrupts emulation and invokes the attached debug break handler.
-    void SignalDebugBreak(const debug::DebugBreakInfo &info);
-
-    bool m_debugBreak = false; ///< Debug break signal
-
-    /// @brief Callback invoked when the debug break signal is raised.
-    debug::CBDebugBreakRaised m_cbDebugBreakRaised;
-
-public:
-    /// @brief The debug break signal callback to be used by other components.
-    debug::CBRaiseDebugBreak CbRaiseDebugBreak = util::MakeClassMemberRequiredCallback<&Saturn::SignalDebugBreak>(this);
+    debug::DebugBreakManager m_debugBreakMgr;
 };
 
 } // namespace ymir
