@@ -93,6 +93,8 @@
 #include <app/input/input_backend_sdl3.hpp>
 #include <app/input/input_utils.hpp>
 
+#include <app/ui/fonts/IconsMaterialSymbols.h>
+
 #include <app/ui/widgets/cartridge_widgets.hpp>
 #include <app/ui/widgets/savestate_widgets.hpp>
 #include <app/ui/widgets/settings_widgets.hpp>
@@ -3794,7 +3796,7 @@ void App::LoadFonts() {
 
     io.Fonts->Clear();
 
-    auto loadFont = [&](std::string_view name, const char *path) {
+    auto loadFont = [&](std::string_view name, const char *path, bool includeIcons) {
         std::span configName{config.Name};
         std::fill(configName.begin(), configName.end(), '\0');
         name = name.substr(0, configName.size());
@@ -3804,16 +3806,29 @@ void App::LoadFonts() {
 
         ImFont *font = io.Fonts->AddFontFromMemoryTTF((void *)file.begin(), file.size(), style.FontSizeBase, &config);
         IM_ASSERT(font != nullptr);
+        if (includeIcons) {
+            cmrc::file iconFile = embedfs.open("fonts/MaterialSymbolsOutlined_Filled-Regular.ttf");
+
+            static const ImWchar iconsRanges[] = {ICON_MIN_MS, ICON_MAX_16_MS, 0};
+            ImFontConfig iconsConfig;
+            iconsConfig.MergeMode = true;
+            iconsConfig.PixelSnapH = true;
+            iconsConfig.PixelSnapV = true;
+            iconsConfig.GlyphMinAdvanceX = 20.0f;
+            iconsConfig.GlyphOffset.y = 4.0f;
+            font = io.Fonts->AddFontFromMemoryTTF((void *)iconFile.begin(), iconFile.size(), 20.0f, &iconsConfig,
+                                                  iconsRanges);
+        }
         return font;
     };
 
-    m_context.fonts.sansSerif.regular = loadFont("SplineSans Medium", "fonts/SplineSans-Medium.ttf");
-    m_context.fonts.sansSerif.bold = loadFont("SplineSans Bold", "fonts/SplineSans-Bold.ttf");
+    m_context.fonts.sansSerif.regular = loadFont("SplineSans Medium", "fonts/SplineSans-Medium.ttf", true);
+    m_context.fonts.sansSerif.bold = loadFont("SplineSans Bold", "fonts/SplineSans-Bold.ttf", true);
 
-    m_context.fonts.monospace.regular = loadFont("SplineSansMono Medium", "fonts/SplineSansMono-Medium.ttf");
-    m_context.fonts.monospace.bold = loadFont("SplineSansMono Bold", "fonts/SplineSansMono-Bold.ttf");
+    m_context.fonts.monospace.regular = loadFont("SplineSansMono Medium", "fonts/SplineSansMono-Medium.ttf", false);
+    m_context.fonts.monospace.bold = loadFont("SplineSansMono Bold", "fonts/SplineSansMono-Bold.ttf", false);
 
-    m_context.fonts.display = loadFont("ZenDots Regular", "fonts/ZenDots-Regular.ttf");
+    m_context.fonts.display = loadFont("ZenDots Regular", "fonts/ZenDots-Regular.ttf", false);
 
     io.FontDefault = m_context.fonts.sansSerif.regular;
 }

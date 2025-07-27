@@ -50,6 +50,8 @@ add_executable(ymir-sdl3
     src/app/ui/window_base.cpp
     src/app/ui/window_base.hpp
 
+    src/app/ui/fonts/IconsMaterialSymbols.h
+
     src/app/ui/state/debug/memory_viewer_state.hpp
 
     src/app/ui/views/backup_memory_view.cpp
@@ -284,6 +286,7 @@ cmrc_add_resource_library(ymir-sdl3-rc
     NAMESPACE Ymir_sdl3_rc
     WHENCE res/embed
 
+    res/embed/fonts/MaterialSymbolsOutlined_Filled-Regular.ttf
     res/embed/fonts/SplineSans-Bold.ttf
     res/embed/fonts/SplineSans-Medium.ttf
     res/embed/fonts/SplineSansMono-Bold.ttf

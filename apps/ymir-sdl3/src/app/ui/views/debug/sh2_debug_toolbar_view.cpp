@@ -3,6 +3,8 @@
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
+#include <app/ui/fonts/IconsMaterialSymbols.h>
+
 #include <app/ui/widgets/common_widgets.hpp>
 
 #include <imgui.h>
@@ -47,26 +49,46 @@ void SH2DebugToolbarView::Display() {
 
     ImGui::BeginDisabled(!enabled);
     {
-        if (ImGui::Button("Step")) {
+        if (ImGui::Button(ICON_MS_STEP)) {
             m_context.EnqueueEvent(master ? events::emu::StepMSH2() : events::emu::StepSSH2());
         }
+        if (ImGui::BeginItemTooltip()) {
+            ImGui::TextUnformatted("Step");
+            ImGui::EndTooltip();
+        }
+
         ImGui::SameLine();
+
         ImGui::BeginDisabled(m_context.paused);
-        if (ImGui::Button("Pause")) {
+        if (ImGui::Button(ICON_MS_PAUSE)) {
             m_context.EnqueueEvent(events::emu::SetPaused(true));
         }
         ImGui::EndDisabled();
+        if (ImGui::BeginItemTooltip()) {
+            ImGui::TextUnformatted("Pause");
+            ImGui::EndTooltip();
+        }
+
         ImGui::SameLine();
+
         ImGui::BeginDisabled(!m_context.paused);
-        if (ImGui::Button("Resume")) {
+        if (ImGui::Button(ICON_MS_PLAY_ARROW)) {
             m_context.EnqueueEvent(events::emu::SetPaused(false));
         }
         ImGui::EndDisabled();
+        if (ImGui::BeginItemTooltip()) {
+            ImGui::TextUnformatted("Resume");
+            ImGui::EndTooltip();
+        }
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
-    if (ImGui::Button("Breakpoints")) {
+    if (ImGui::Button(ICON_MS_MASKED_TRANSITIONS)) {
         m_context.EnqueueEvent(events::gui::OpenSH2BreakpointsWindow(m_sh2.IsMaster()));
+    }
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::TextUnformatted("Breakpoints");
+        ImGui::EndTooltip();
     }
 
     ImGui::EndGroup();

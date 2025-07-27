@@ -2,6 +2,8 @@
 
 #include <ymir/util/compiler_info.hpp>
 
+#include <app/ui/fonts/IconsMaterialSymbols.h>
+
 #include <SDL3/SDL_clipboard.h>
 
 // Includes for versions only
@@ -51,10 +53,11 @@ struct FontDesc {
     const License &license;
     const char *url;
     FontFn fontFn;
+    const char *demoText;
 };
 
 // clang-format off
-//inline constexpr License licenseApache2_0   {.name = "Apache-2.0",    .url = "https://opensource.org/licenses/Apache-2.0"};
+inline constexpr License licenseApache2_0   {.name = "Apache-2.0",    .url = "https://opensource.org/licenses/Apache-2.0"};
 inline constexpr License licenseBSD2        {.name = "BSD-2-Clause",  .url = "https://opensource.org/licenses/BSD-2-Clause"};
 inline constexpr License licenseBSD3        {.name = "BSD-3-Clause",  .url = "https://opensource.org/licenses/BSD-3-Clause"};
 //inline constexpr License licenseBSL         {.name = "BSL-1.0", .      url = "https://opensource.org/license/bsl-1-0"};
@@ -96,10 +99,24 @@ static const struct {
 };
 
 
+static const char *demoTextStandard =
+    "The quick brown fox jumps over the lazy dog\n"
+    "0123456789 `~!@#$%^&*()_+-=[]{}<>,./?;:'\"\\|\n"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ  \u00C0\u00C9\u00CE\u00D5\u00DA\u00D1\u00C7\u00DD\n"
+    "abcdefghijklmnopqrstuvwxyz  \u00E0\u00E9\u00EE\u00F5\u00FA\u00F1\u00E7\u00FD";
+
+static const char *demoTextMaterialSymbols =
+    ICON_MS_HOME          ICON_MS_HELP         ICON_MS_FOLDER         ICON_MS_DOCS             ICON_MS_SETTINGS      ICON_MS_MENU         ICON_MS_HISTORY      ICON_MS_HISTORY_OFF    "\n"
+    ICON_MS_PLAY_ARROW    ICON_MS_PAUSE        ICON_MS_PLAY_PAUSE     ICON_MS_ARROW_BACK_2     ICON_MS_FAST_FORWARD  ICON_MS_FAST_REWIND  ICON_MS_SKIP_NEXT    ICON_MS_SKIP_PREVIOUS  "\n"
+    ICON_MS_VOLUME_MUTE   ICON_MS_VOLUME_UP    ICON_MS_VOLUME_DOWN    ICON_MS_VOLUME_OFF       ICON_MS_NO_SOUND      ICON_MS_TUNE         ICON_MS_EJECT        ICON_MS_ALBUM          "\n"
+    ICON_MS_STEP          ICON_MS_STEP_INTO    ICON_MS_STEP_OVER      ICON_MS_STEP_OUT         ICON_MS_BUG_REPORT    ICON_MS_CODE         ICON_MS_MEMORY       ICON_MS_TV             "\n"
+    ICON_MS_CONTENT_COPY  ICON_MS_CONTENT_CUT  ICON_MS_CONTENT_PASTE  ICON_MS_VIDEOGAME_ASSET  ICON_MS_JOYSTICK      ICON_MS_GAMEPAD      ICON_MS_MOUSE        ICON_MS_KEYBOARD;
+
 static const FontDesc fontDescs[] = {
-    { .name = "Spline Sans",      .license = licenseOFL, .url = "https://github.com/SorkinType/SplineSans",     .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.sansSerif.regular, 16.0f}; } },
-    { .name = "Spline Sans Mono", .license = licenseOFL, .url = "https://github.com/SorkinType/SplineSansMono", .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.monospace.regular, 16.0f}; } },
-    { .name = "Zen Dots",         .license = licenseOFL, .url = "https://github.com/googlefonts/zen-dots",      .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.display,           24.0f}; } },
+    { .name = "Material Symbols", .license = licenseApache2_0, .url = "https://fonts.google.com/icons",               .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.sansSerif.regular, 24.0f}; }, .demoText = demoTextMaterialSymbols },
+    { .name = "Spline Sans",      .license = licenseOFL,       .url = "https://github.com/SorkinType/SplineSans",     .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.sansSerif.regular, 16.0f}; }, .demoText = demoTextStandard },
+    { .name = "Spline Sans Mono", .license = licenseOFL,       .url = "https://github.com/SorkinType/SplineSansMono", .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.monospace.regular, 16.0f}; }, .demoText = demoTextStandard },
+    { .name = "Zen Dots",         .license = licenseOFL,       .url = "https://github.com/googlefonts/zen-dots",      .fontFn = [](SharedContext &ctx) -> FontInfo { return {ctx.fonts.display,           24.0f}; }, .demoText = demoTextStandard },
 };
 // clang-format on
 
@@ -346,10 +363,7 @@ void AboutWindow::DrawDependenciesTab() {
                 ImGui::BeginTooltip();
                 auto [fontPtr, fontSize] = font.fontFn(m_context);
                 ImGui::PushFont(fontPtr, fontSize);
-                ImGui::TextUnformatted("The quick brown fox jumps over the lazy dog\n"
-                                       "0123456789 `~!@#$%^&*()_+-=[]{}<>,./?;:'\"\\|\n"
-                                       "ABCDEFGHIJKLMNOPQRSTUVWXYZ  \u00C0\u00C9\u00CE\u00D5\u00DA\u00D1\u00C7\u00DD\n"
-                                       "abcdefghijklmnopqrstuvwxyz  \u00E0\u00E9\u00EE\u00F5\u00FA\u00F1\u00E7\u00FD");
+                ImGui::TextUnformatted(font.demoText);
                 ImGui::PopFont();
                 ImGui::EndTooltip();
             }
