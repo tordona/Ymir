@@ -30,23 +30,6 @@ void SH2DebugToolbarView::Display() {
     const bool master = m_sh2.IsMaster();
     const bool enabled = master || m_context.saturn.slaveSH2Enabled;
 
-    if (!master) {
-        ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
-        ImGui::SameLine();
-    }
-
-    if (!m_context.saturn.IsDebugTracingEnabled()) {
-        ImGui::BeginDisabled();
-    }
-    bool suspended = m_sh2.IsCPUSuspended();
-    if (ImGui::Checkbox("Suspended", &suspended)) {
-        m_sh2.SetCPUSuspended(suspended);
-    }
-    widgets::ExplanationTooltip("Disables the CPU while in debug mode.", m_context.displayScale);
-    if (!m_context.saturn.IsDebugTracingEnabled()) {
-        ImGui::EndDisabled();
-    }
-
     ImGui::BeginDisabled(!enabled);
     {
         if (ImGui::Button(ICON_MS_STEP)) {
@@ -89,6 +72,24 @@ void SH2DebugToolbarView::Display() {
     if (ImGui::BeginItemTooltip()) {
         ImGui::TextUnformatted("Breakpoints");
         ImGui::EndTooltip();
+    }
+
+    if (!master) {
+        ImGui::SameLine();
+        ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
+    }
+
+    ImGui::SameLine();
+    if (!m_context.saturn.IsDebugTracingEnabled()) {
+        ImGui::BeginDisabled();
+    }
+    bool suspended = m_sh2.IsCPUSuspended();
+    if (ImGui::Checkbox("Suspended", &suspended)) {
+        m_sh2.SetCPUSuspended(suspended);
+    }
+    widgets::ExplanationTooltip("Disables the CPU while in debug mode.", m_context.displayScale);
+    if (!m_context.saturn.IsDebugTracingEnabled()) {
+        ImGui::EndDisabled();
     }
 
     ImGui::EndGroup();
