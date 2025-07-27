@@ -457,14 +457,16 @@ void SH2::LoadState(const state::SH2State &state) {
 
 template <mem_primitive T, bool instrFetch, bool peek, bool enableCache>
 T SH2::MemRead(uint32 address) {
+    static constexpr uint32 kAddressMask = ~(static_cast<uint32>(sizeof(T)) - 1u);
+
     const uint32 partition = (address >> 29u) & 0b111;
-    if (address & static_cast<uint32>(sizeof(T) - 1)) {
+    if (address & ~kAddressMask) {
         if constexpr (!peek) {
             devlog::trace<grp::mem>(m_logPrefix, "WARNING: misaligned {}-bit read from {:08X}", sizeof(T) * 8, address);
             // TODO: raise CPU address error due to misaligned access
             // - might have to store data in a class member instead of returning
         }
-        address &= ~(sizeof(T) - 1);
+        address &= kAddressMask;
     }
 
     switch (partition) {
@@ -579,14 +581,16 @@ T SH2::MemRead(uint32 address) {
 
 template <mem_primitive T, bool poke, bool debug, bool enableCache>
 void SH2::MemWrite(uint32 address, T value) {
+    static constexpr uint32 kAddressMask = ~(static_cast<uint32>(sizeof(T)) - 1u);
+
     const uint32 partition = address >> 29u;
-    if (address & static_cast<uint32>(sizeof(T) - 1)) {
+    if (address & ~kAddressMask) {
         if constexpr (!poke) {
             devlog::trace<grp::mem>(m_logPrefix, "WARNING: misaligned {}-bit write to {:08X} = {:X}", sizeof(T) * 8,
                                     address, value);
             // TODO: address error (misaligned access)
         }
-        address &= ~(sizeof(T) - 1);
+        address &= kAddressMask;
     }
 
     switch (partition) {
