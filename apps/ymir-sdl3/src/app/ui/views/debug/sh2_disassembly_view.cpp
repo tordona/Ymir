@@ -37,6 +37,7 @@ void SH2DisassemblyView::Display() {
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const ImVec2 disasmCharSize = ImGui::CalcTextSize("x");
     const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
+    const float itemSpacing = ImGui::GetStyle().ItemSpacing.y;
     ImGui::PopFont();
 
     ImDrawList *drawList = ImGui::GetWindowDrawList();
@@ -45,7 +46,7 @@ void SH2DisassemblyView::Display() {
 
     if (ImGui::BeginChild("##disasm", availArea, ImGuiChildFlags_None,
                           ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-        const uint32 lines = availArea.y / lineHeight + 1;
+        const uint32 lines = availArea.y / (lineHeight + itemSpacing) + 1;
         // TODO: branch arrows
         // TODO: cursor
 
@@ -53,13 +54,19 @@ void SH2DisassemblyView::Display() {
         auto &probe = m_sh2.GetProbe();
         const uint32 pc = probe.PC() & ~1;
         const uint32 pr = probe.PR() & ~1;
-        const uint32 baseAddress = (pc - lines - 1) & ~1;
+        const uint32 baseAddress = (pc - lines + 2) & ~1;
         for (uint32 i = 0; i < lines; i++) {
             const uint32 address = baseAddress + i * sizeof(uint16);
             const uint16 prevOpcode = m_context.saturn.mainBus.Peek<uint16>(address - 2);
             const uint16 opcode = m_context.saturn.mainBus.Peek<uint16>(address);
             const sh2::DisassembledInstruction &prevDisasm = sh2::Disassemble(prevOpcode);
             const sh2::DisassembledInstruction &disasm = sh2::Disassemble(opcode);
+
+            const auto basePos = ImGui::GetCursorScreenPos();
+            ImGui::SetCursorScreenPos(ImVec2(basePos.x, basePos.y - itemSpacing));
+            ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::round(lineHeight + itemSpacing)));
+            const bool lineHovered = ImGui::IsItemHovered();
+            ImGui::SetCursorScreenPos(basePos);
 
             const bool isBreakpointSet = [&] {
                 std::unique_lock lock{m_context.locks.breakpoints};
@@ -133,29 +140,24 @@ void SH2DisassemblyView::Display() {
                 if (color.w == 0.0f) {
                     return;
                 }
-                const ImVec2 pos = ImGui::GetCursorScreenPos();
-                const ImVec2 size{ImGui::GetContentRegionAvail().x,
-                                  ImGui::CalcTextSize("X").y + ImGui::GetStyle().FramePadding.y};
-                const ImVec2 end{pos.x + size.x, pos.y + size.y};
+                const ImVec2 size{ImGui::GetContentRegionAvail().x, lineHeight};
+                const ImVec2 rectPos{basePos.x, basePos.y - itemSpacing};
+                const ImVec2 rectEnd{basePos.x + size.x, basePos.y + size.y};
                 if (filled) {
-                    drawList->AddRectFilled(pos, end, ImGui::ColorConvertFloat4ToU32(color));
+                    drawList->AddRectFilled(rectPos, rectEnd, ImGui::ColorConvertFloat4ToU32(color));
                 } else {
                     ImVec4 fillColor = color;
                     fillColor.w *= 0.4f;
-                    auto borderPos = ImVec2(pos.x + 0.5f, pos.y + 0.5f);
-                    auto borderEnd = ImVec2(end.x - 0.5f, end.y - 0.5f);
-                    drawList->AddRectFilled(pos, end, ImGui::ColorConvertFloat4ToU32(fillColor));
+                    auto borderPos = ImVec2(rectPos.x + 0.5f, rectPos.y + 0.5f);
+                    auto borderEnd = ImVec2(rectEnd.x - 0.5f, rectEnd.y - 0.5f);
+                    drawList->AddRectFilled(rectPos, rectEnd, ImGui::ColorConvertFloat4ToU32(fillColor));
                     drawList->AddRect(borderPos, borderEnd, ImGui::ColorConvertFloat4ToU32(color), 0.0f,
                                       ImDrawFlags_None, 2.0f);
                 }
             };
 
             auto drawIcons = [&] {
-                auto pos = ImGui::GetCursorScreenPos();
-                ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, lineHeight));
-                const bool lineHovered = ImGui::IsItemHovered();
-                ImGui::SetCursorScreenPos(pos);
-
+                ImVec2 pos = basePos;
                 pos.x -= 1.5f;
                 pos.y -= 1.5f;
                 const ImVec2 baseCenter{pos.x + lineHeight * 0.5f, pos.y + lineHeight * 0.5f};
@@ -692,11 +694,11 @@ void SH2DisassemblyView::Display() {
                 drawOp2();
                 // TODO: show short annotations
                 ImGui::SameLine(0, 0);
-                ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, 0));
+                ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, lineHeight));
             }
             ImGui::EndGroup();
 
-            if (ImGui::IsItemHovered()) {
+            if (lineHovered) {
                 if (ImGui::BeginTooltip()) {
                     auto notImm = [](sh2::Operand::Type opType) {
                         return opType != sh2::Operand::Type::Imm && opType != sh2::Operand::Type::DispPC;
