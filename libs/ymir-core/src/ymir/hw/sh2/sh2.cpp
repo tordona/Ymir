@@ -315,7 +315,7 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
         // Check for breakpoints in debug tracing mode
         if constexpr (debug) {
             if (m_breakpoints.contains(PC)) {
-                m_cbRaiseDebugBreak();
+                m_cbRaiseDebugBreak(debug::DebugBreakInfo::SH2Breakpoint(IsMaster(), PC));
                 break;
             }
             // TODO: bail out if debug break was raised on watchpoints or other cases

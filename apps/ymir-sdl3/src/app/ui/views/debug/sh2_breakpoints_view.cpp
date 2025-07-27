@@ -42,7 +42,9 @@ void SH2BreakpointsView::Display() {
 
     if (drawHex32("addr", m_address)) {
         m_address &= ~1u;
-        if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter) ||
+            ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown)) {
+
             std::unique_lock lock{m_context.locks.breakpoints};
             m_sh2.AddBreakpoint(m_address);
             m_context.debuggers.MakeDirty();

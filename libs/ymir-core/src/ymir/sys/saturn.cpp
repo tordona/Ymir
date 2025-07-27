@@ -534,12 +534,12 @@ void Saturn::UpdateVideoStandard(core::config::sys::VideoStandard videoStandard)
     m_system.UpdateClockRatios();
 }
 
-void Saturn::SignalDebugBreak() {
+void Saturn::SignalDebugBreak(const debug::DebugBreakInfo &info) {
     // Debug break signals should only be raised while debug tracing is enabled
     assert(m_systemFeatures.enableDebugTracing);
 
     m_debugBreak = true;
-    m_cbDebugBreakRaised();
+    m_cbDebugBreakRaised(info);
 }
 
 // -----------------------------------------------------------------------------

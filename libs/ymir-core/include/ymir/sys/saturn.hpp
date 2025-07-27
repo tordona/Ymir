@@ -395,7 +395,7 @@ public:
 
 private:
     /// @brief Signals a debug break which interrupts emulation and invokes the attached debug break handler.
-    void SignalDebugBreak(/* TODO: const DebugBreakInfo &info */);
+    void SignalDebugBreak(const debug::DebugBreakInfo &info);
 
     bool m_debugBreak = false; ///< Debug break signal
 

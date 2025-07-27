@@ -88,6 +88,7 @@
 #include <ymir/util/thread_name.hpp>
 
 #include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
 
 #include <app/input/input_backend_sdl3.hpp>
 #include <app/input/input_utils.hpp>
@@ -1573,18 +1574,21 @@ void App::RunEmulator() {
     // ---------------------------------
     // Debugger
 
-    m_context.saturn.SetDebugBreakRaisedCallback({&m_context, [](void *ctx) {
-                                                      auto &sharedCtx = *static_cast<SharedContext *>(ctx);
-                                                      sharedCtx.EnqueueEvent(events::emu::SetPaused(true));
-                                                      // TODO: handle specific types of debug break infos
-                                                      // - open debugger window
-                                                      // - include extra information (e.g. for a watchpoint, what
-                                                      // component/operation did the access -- it could be an SH2
-                                                      // instruction, an SH2 DMAC transfer, an SCU DMA transfer, an SCU
-                                                      // DSP DMA transfer, etc.)
-                                                      // - display appropriate message instead of this generic message
-                                                      sharedCtx.DisplayMessage("Paused due to a debug break event");
-                                                  }});
+    m_context.saturn.SetDebugBreakRaisedCallback(
+        {&m_context, [](const debug::DebugBreakInfo &info, void *ctx) {
+             auto &sharedCtx = *static_cast<SharedContext *>(ctx);
+             sharedCtx.EnqueueEvent(events::emu::SetPaused(true));
+             switch (info.event) {
+                 using enum debug::DebugBreakInfo::Event;
+             case SH2Breakpoint: //
+                 sharedCtx.DisplayMessage(fmt::format("{}SH2 breakpoint hit at {:08X}",
+                                                      (info.details.sh2Breakpoint.master ? 'M' : 'S'),
+                                                      info.details.sh2Breakpoint.pc));
+                 sharedCtx.EnqueueEvent(events::gui::OpenSH2DebuggerWindow(info.details.sh2Breakpoint.master));
+                 break;
+             default: sharedCtx.DisplayMessage("Paused due to a debug break event"); break;
+             }
+         }});
 
     // ---------------------------------
     // Main emulator loop
@@ -1994,6 +1998,13 @@ void App::RunEmulator() {
 
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
             case EvtType::OpenSettings: m_settingsWindow.OpenTab(std::get<ui::SettingsTab>(evt.value)); break;
+            case EvtType::OpenSH2DebuggerWindow: //
+            {
+                auto &windowSet = std::get<bool>(evt.value) ? m_masterSH2WindowSet : m_slaveSH2WindowSet;
+                windowSet.debugger.Open = true;
+                windowSet.debugger.RequestFocus();
+                break;
+            }
             case EvtType::OpenSH2BreakpointsWindow: //
             {
                 auto &windowSet = std::get<bool>(evt.value) ? m_masterSH2WindowSet : m_slaveSH2WindowSet;
