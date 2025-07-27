@@ -50,11 +50,20 @@ private:
             ImVec4 addrDec{C(194, 159, 147)};   // - (@-Rn)
 
             ImVec4 pcIconColor{C(15, 189, 219)};
+            ImVec4 pcHoveredIconColor{C(65, 216, 242)};
+            ImVec4 pcActiveIconColor{C(9, 155, 181)};
+
             ImVec4 prIconColor{C(17, 113, 237)};
+            ImVec4 prHoveredIconColor{C(68, 148, 252)};
+            ImVec4 prActiveIconColor{C(10, 93, 201)};
+
             ImVec4 bkptIconColor{C(250, 52, 17)};
             ImVec4 bkptHoveredIconColor{C(255, 97, 69)};
             ImVec4 bkptActiveIconColor{C(209, 40, 10)};
+
             ImVec4 wtptIconColor{C(193, 37, 250)};
+            ImVec4 wtptHoveredIconColor{C(210, 87, 255)};
+            ImVec4 wtptActiveIconColor{C(148, 18, 196)};
 
             ImVec4 cursorBgColor{C(34, 61, 2)};
             ImVec4 pcBgColor{C(3, 61, 71)};
@@ -79,6 +88,11 @@ private:
         float disasmAnnotationSpacing = 32.0f;
         // Spacing between different annotation elements
         float annotationInnerSpacing = 20.0f;
+
+        // Thickness of disassembly icon contours
+        float iconContourThickness = 2.0f;
+        // Alpha factor to apply to colors of disabled (hovered/active) icons
+        float iconDisabledAlphaFactor = 0.6f;
     } m_style;
 
     struct Settings {

@@ -179,62 +179,106 @@ void SH2DisassemblyView::Display() {
                 ImGui::Dummy(ImVec2(lineHeight, 0.0f));
                 ImGui::SameLine(0.0f, 0.0f);
 
+                if (ImGui::InvisibleButton(fmt::format("toggle_bkpt_{}", address).c_str(),
+                                           ImVec2(lineHeight, lineHeight))) {
+                    toggleBreakpoint();
+                }
                 {
-                    if (ImGui::InvisibleButton(fmt::format("bkpt_{}", address).c_str(),
-                                               ImVec2(lineHeight, lineHeight))) {
-                        toggleBreakpoint();
-                    }
+                    const bool visible = isBreakpointSet;
                     const bool hovered = ImGui::IsItemHovered();
                     const bool active = ImGui::IsItemActive();
 
-                    if (isBreakpointSet || hovered || lineHovered) {
+                    if (visible || hovered || lineHovered) {
                         const ImVec2 center{pos.x + lineHeight * 1.5f, pos.y + lineHeight * 0.5f};
                         ImVec4 baseColor = active    ? m_colors.disasm.bkptActiveIconColor
                                            : hovered ? m_colors.disasm.bkptHoveredIconColor
                                                      : m_colors.disasm.bkptIconColor;
-                        if (!isBreakpointSet) {
-                            baseColor.w *= 0.6f;
+                        if (!visible) {
+                            baseColor.w *= m_style.iconDisabledAlphaFactor;
                         }
                         const ImU32 color = ImGui::ColorConvertFloat4ToU32(baseColor);
 
                         const float circleRadiusFactor = active ? 0.20f : hovered ? 0.30f : 0.25f;
                         const float circleRadius = lineHeight * circleRadiusFactor;
 
-                        if (m_context.saturn.IsDebugTracingEnabled() && isBreakpointSet) {
+                        if (m_context.saturn.IsDebugTracingEnabled() && visible) {
                             drawList->AddCircleFilled(center, circleRadius, color);
                         } else {
-                            drawList->AddCircle(center, circleRadius, color, 0, 2.0f * m_context.displayScale);
+                            drawList->AddCircle(center, circleRadius, color, 0,
+                                                m_style.iconContourThickness * m_context.displayScale);
                         }
                     }
-                    ImGui::SameLine(0.0f, 0.0f);
                 }
-
-                if (address == pr) {
-                    const ImVec2 center{baseCenter.x + lineHeight * 2.0f, baseCenter.y};
-                    const ImVec2 points[] = {
-                        {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
-                        {center.x + lineHeight * 0.25f, center.y},
-                        {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
-                        {center.x - lineHeight * 0.15f, center.y},
-                    };
-                    drawList->AddConcavePolyFilled(points, std::size(points),
-                                                   ImGui::ColorConvertFloat4ToU32(m_colors.disasm.prIconColor));
-                }
-                ImGui::Dummy(ImVec2(lineHeight, 0.0f));
                 ImGui::SameLine(0.0f, 0.0f);
 
-                if (address == pc) {
-                    const ImVec2 center{baseCenter.x + lineHeight * 3.0f, baseCenter.y};
-                    const ImVec2 points[] = {
-                        {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
-                        {center.x + lineHeight * 0.25f, center.y},
-                        {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
-                        {center.x - lineHeight * 0.15f, center.y},
-                    };
-                    drawList->AddConcavePolyFilled(points, std::size(points),
-                                                   ImGui::ColorConvertFloat4ToU32(m_colors.disasm.pcIconColor));
+                if (ImGui::InvisibleButton(fmt::format("set_pr_{}", address).c_str(), ImVec2(lineHeight, lineHeight))) {
+                    probe.PR() = address;
                 }
-                ImGui::Dummy(ImVec2(lineHeight, 0.0f));
+                {
+                    const bool visible = address == pr;
+                    const bool hovered = ImGui::IsItemHovered();
+                    const bool active = ImGui::IsItemActive();
+
+                    if (visible || hovered || active) {
+                        ImVec4 baseColor = active    ? m_colors.disasm.prActiveIconColor
+                                           : hovered ? m_colors.disasm.prHoveredIconColor
+                                                     : m_colors.disasm.prIconColor;
+                        if (!visible) {
+                            baseColor.w *= m_style.iconDisabledAlphaFactor;
+                        }
+                        const ImU32 color = ImGui::ColorConvertFloat4ToU32(baseColor);
+
+                        const float sizeFactor = active ? 0.8f : hovered ? 1.2f : 1.0f;
+                        const ImVec2 center{baseCenter.x + lineHeight * 2.0f, baseCenter.y};
+                        const ImVec2 points[] = {
+                            {center.x - lineHeight * 0.25f * sizeFactor, center.y - lineHeight * 0.25f * sizeFactor},
+                            {center.x + lineHeight * 0.25f * sizeFactor, center.y},
+                            {center.x - lineHeight * 0.25f * sizeFactor, center.y + lineHeight * 0.25f * sizeFactor},
+                            {center.x - lineHeight * 0.15f * sizeFactor, center.y},
+                        };
+                        if (visible) {
+                            drawList->AddConcavePolyFilled(points, std::size(points), color);
+                        } else {
+                            drawList->AddPolyline(points, std::size(points), color, ImDrawFlags_Closed,
+                                                  m_style.iconContourThickness * m_context.displayScale);
+                        }
+                    }
+                }
+                ImGui::SameLine(0.0f, 0.0f);
+
+                if (ImGui::InvisibleButton(fmt::format("set_pc_{}", address).c_str(), ImVec2(lineHeight, lineHeight))) {
+                    probe.PC() = address;
+                }
+                {
+                    const bool visible = address == pc;
+                    const bool hovered = ImGui::IsItemHovered();
+                    const bool active = ImGui::IsItemActive();
+
+                    if (visible || hovered || active) {
+                        ImVec4 baseColor = active    ? m_colors.disasm.pcActiveIconColor
+                                           : hovered ? m_colors.disasm.pcHoveredIconColor
+                                                     : m_colors.disasm.pcIconColor;
+                        if (!visible) {
+                            baseColor.w *= m_style.iconDisabledAlphaFactor;
+                        }
+                        const ImU32 color = ImGui::ColorConvertFloat4ToU32(baseColor);
+
+                        const float sizeFactor = active ? 0.8f : hovered ? 1.2f : 1.0f;
+                        const ImVec2 center{baseCenter.x + lineHeight * 3.0f, baseCenter.y};
+                        const ImVec2 points[] = {
+                            {center.x - lineHeight * 0.25f * sizeFactor, center.y - lineHeight * 0.25f * sizeFactor},
+                            {center.x + lineHeight * 0.25f * sizeFactor, center.y},
+                            {center.x - lineHeight * 0.25f * sizeFactor, center.y + lineHeight * 0.25f * sizeFactor},
+                            {center.x - lineHeight * 0.15f * sizeFactor, center.y},
+                        };
+                        if (visible) {
+                            drawList->AddConcavePolyFilled(points, std::size(points), color);
+                        } else {
+                            drawList->AddPolyline(points, std::size(points), color, ImDrawFlags_Closed,
+                                                  m_style.iconContourThickness * m_context.displayScale);
+                        }
+                    }
+                }
                 ImGui::SameLine(0.0f, 0.0f);
             };
 

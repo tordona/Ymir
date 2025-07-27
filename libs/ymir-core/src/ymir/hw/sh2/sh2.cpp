@@ -318,6 +318,10 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
                 m_cbRaiseDebugBreak();
                 break;
             }
+            // TODO: bail out if debug break was raised on watchpoints or other cases
+            // if (m_fnIsDebugBreakRaised()) {
+            //     break;
+            // }
         }
 
         if constexpr (devlog::debug_enabled<grp::exec_dump>) {
