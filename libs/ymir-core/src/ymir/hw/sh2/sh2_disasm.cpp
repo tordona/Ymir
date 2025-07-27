@@ -237,7 +237,7 @@ DisassemblyTable::DisassemblyTable() {
                 case 0x08: makeOp(SHLL2, Op::Rn_RW(decodeN())); break;
                 case 0x09: makeOp(SHLR2, Op::Rn_RW(decodeN())); break;
                 case 0x0A: makeOp(LDS, Op::Rn_R(decodeM()), Op::MACH_W()); break;
-                case 0x0B: makeOp(JSR, Op::AtRn_R(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
+                case 0x0B: makeOp(JSR, Op::AtRnPC(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
 
                 case 0x0E: makeOp(LDC, Op::Rn_R(decodeM()), Op::SR_W()); break;
 
@@ -267,7 +267,7 @@ DisassemblyTable::DisassemblyTable() {
                 case 0x28: makeOp(SHLL16, Op::Rn_RW(decodeN())); break;
                 case 0x29: makeOp(SHLR16, Op::Rn_RW(decodeN())); break;
                 case 0x2A: makeOp(LDS, Op::Rn_R(decodeM()), Op::PR_W()); break;
-                case 0x2B: makeOp(JMP, Op::AtRn_R(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
+                case 0x2B: makeOp(JMP, Op::AtRnPC(decodeM())), hasDelaySlot(), invalidInDelaySlot(); break;
 
                 case 0x2E: makeOp(LDC, Op::Rn_R(decodeM()), Op::VBR_W()); break;
                 }

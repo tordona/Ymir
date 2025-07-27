@@ -83,7 +83,8 @@ void SH2DisassemblyView::Display() {
                 switch (disasm.opSize) {
                 case sh2::OperandSize::Byte: return probe.MemPeekByte(address, false);
                 case sh2::OperandSize::Word: return probe.MemPeekWord(address, false);
-                case sh2::OperandSize::Long: return probe.MemPeekLong(address, false);
+                case sh2::OperandSize::Long: [[fallthrough]];
+                case sh2::OperandSize::LongImplicit: return probe.MemPeekLong(address, false);
                 default: return 0;
                 }
             };
@@ -101,6 +102,7 @@ void SH2DisassemblyView::Display() {
                 case sh2::Operand::Type::AtR0GBR: return memRead(probe.GBR() + probe.R(0));
                 case sh2::Operand::Type::AtDispPC: return memRead(address + op.immDisp);
                 case sh2::Operand::Type::AtDispPCWordAlign: return memRead((address & ~3) + op.immDisp);
+                case sh2::Operand::Type::AtRnPC: return probe.R(op.reg);
                 case sh2::Operand::Type::DispPC: return memRead(address + op.immDisp);
                 case sh2::Operand::Type::RnPC: return probe.R(op.reg) + address;
                 case sh2::Operand::Type::SR: return probe.SR().u32;
@@ -655,6 +657,11 @@ void SH2DisassemblyView::Display() {
                     drawImm((address & ~3) + op.immDisp);
                     ImGui::SameLine(0, 0);
                     drawRWSymbol(")", false);
+                    break;
+                case sh2::Operand::Type::AtRnPC:
+                    drawRWSymbol("@", op.write);
+                    ImGui::SameLine(0, 0);
+                    drawRnRead(op.reg);
                     break;
                 case sh2::Operand::Type::DispPC: drawImm(address + op.immDisp); break;
                 case sh2::Operand::Type::RnPC: drawRnRead(op.reg); break;

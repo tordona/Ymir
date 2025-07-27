@@ -210,6 +210,7 @@ struct SH2Disassembler {
         case OpType::AtR0GBR:
             ReadWriteSymbol("@(", op.write).RnRead(0).Comma().OperandRead("gbr").ReadWriteSymbol(")", op.write);
             break;
+        case OpType::AtRnPC: ReadWriteSymbol("@", op.write).RnRead(op.reg); break;
         case OpType::AtDispPC:
             ReadWriteSymbol("@(", false).Imm(address + op.immDisp).ReadWriteSymbol(")", false);
             break;

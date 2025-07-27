@@ -105,6 +105,7 @@ struct Operand {
         AtR0Rn,            // @(R0,Rn)
         AtDispGBR,         // @(disp,GBR)
         AtR0GBR,           // @(R0,GBR)
+        AtRnPC,            // @Rn [JMP, JSR]
         AtDispPC,          // @(disp,PC)
         AtDispPCWordAlign, // @(disp,PC) [PC & ~3]
         DispPC,            // disp[+PC]
@@ -201,6 +202,11 @@ struct Operand {
     }
     static Operand AtR0GBR_RW() {
         return {.type = Type::AtR0GBR, .read = true, .write = true};
+    }
+
+    // @Rn [JMP, JSR]
+    static Operand AtRnPC(uint8 rn) {
+        return {.type = Type::AtRnPC, .read = true, .write = false, .reg = rn};
     }
 
     // @(disp,PC)
