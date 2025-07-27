@@ -436,6 +436,8 @@ public:
 
         uint8 GetReadSpeed() const;
 
+        std::span<const Filter, kNumFilters> GetFilters() const;
+
     private:
         CDBlock &m_cdblock;
     };

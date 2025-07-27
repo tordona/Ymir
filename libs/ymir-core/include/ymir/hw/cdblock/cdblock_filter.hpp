@@ -74,9 +74,6 @@ struct Filter {
         return true;
     }
 
-    // Filter index. Do not touch!
-    uint8 index;
-
     // Frame address filters
     uint32 startFrameAddress;
     uint32 frameAddressCount;
@@ -107,6 +104,9 @@ struct Filter {
     // Output connectors
     uint8 passOutput; // buffer index;  0xFF = disconnected
     uint8 failOutput; // filter number; 0xFF = disconnected
+
+    // Filter index. Do not touch!
+    uint8 index;
 };
 
 } // namespace ymir::cdblock

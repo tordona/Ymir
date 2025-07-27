@@ -3142,4 +3142,8 @@ uint8 CDBlock::Probe::GetReadSpeed() const {
     return m_cdblock.m_readSpeed;
 }
 
+std::span<const Filter, kNumFilters> CDBlock::Probe::GetFilters() const {
+    return m_cdblock.m_filters;
+}
+
 } // namespace ymir::cdblock

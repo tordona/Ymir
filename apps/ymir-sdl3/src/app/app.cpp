@@ -2676,6 +2676,7 @@ void App::RunEmulator() {
 
                     if (ImGui::BeginMenu("CD Block")) {
                         ImGui::MenuItem("Command trace", nullptr, &m_cdblockWindowSet.cmdTrace.Open);
+                        ImGui::MenuItem("Filters", nullptr, &m_cdblockWindowSet.filters.Open);
                         ImGui::EndMenu();
                     }
 

@@ -59,6 +59,8 @@ add_executable(ymir-sdl3
 
     src/app/ui/views/debug/cdblock_cmd_trace_view.cpp
     src/app/ui/views/debug/cdblock_cmd_trace_view.hpp
+    src/app/ui/views/debug/cdblock_filters_view.cpp
+    src/app/ui/views/debug/cdblock_filters_view.hpp
     src/app/ui/views/debug/debug_output_view.cpp
     src/app/ui/views/debug/debug_output_view.hpp
     src/app/ui/views/debug/scu_dma_registers_view.cpp
@@ -191,6 +193,8 @@ add_executable(ymir-sdl3
 
     src/app/ui/windows/debug/cdblock_cmd_trace_window.cpp
     src/app/ui/windows/debug/cdblock_cmd_trace_window.hpp
+    src/app/ui/windows/debug/cdblock_filters_window.cpp
+    src/app/ui/windows/debug/cdblock_filters_window.hpp
     src/app/ui/windows/debug/cdblock_window_base.cpp
     src/app/ui/windows/debug/cdblock_window_base.hpp
     src/app/ui/windows/debug/cdblock_window_set.hpp

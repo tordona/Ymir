@@ -10,6 +10,7 @@
 - Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
+- Debugger: Added CD Block filters view.
 - Debugger: Added SH-2 exception vector list view.
 - Debugger: Added rudimentary SH-2 breakpoint management and per-game debugger state persistence. (#22)
 - Debugger: Allow suspending SH-2 CPUs in debug mode. (#22)
