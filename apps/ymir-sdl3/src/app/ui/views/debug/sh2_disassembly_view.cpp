@@ -760,6 +760,9 @@ void SH2DisassemblyView::Display() {
                             drawValue(probe.R(op.reg));
                             break;
                         case sh2::Operand::Type::AtDispRn:
+                            drawRnRead(op.reg);
+                            drawValue(probe.R(op.reg));
+
                             drawImm(op.immDisp);
                             ImGui::SameLine(0, 0);
                             drawComma();
@@ -769,6 +772,12 @@ void SH2DisassemblyView::Display() {
                             break;
                         case sh2::Operand::Type::AtR0Rn:
                             drawRnRead(0);
+                            drawValue(probe.R(0));
+
+                            drawRnRead(op.reg);
+                            drawValue(probe.R(op.reg));
+
+                            drawRnRead(0);
                             ImGui::SameLine(0, 0);
                             drawComma();
                             ImGui::SameLine(0, 0);
@@ -776,6 +785,9 @@ void SH2DisassemblyView::Display() {
                             drawValue(probe.R(op.reg) + probe.R(0));
                             break;
                         case sh2::Operand::Type::AtDispGBR:
+                            drawRegRead("gbr");
+                            drawValue(probe.GBR());
+
                             drawImm(op.immDisp);
                             ImGui::SameLine(0, 0);
                             drawComma();
@@ -784,6 +796,12 @@ void SH2DisassemblyView::Display() {
                             drawValue(probe.GBR() + op.immDisp);
                             break;
                         case sh2::Operand::Type::AtR0GBR:
+                            drawRnRead(0);
+                            drawValue(probe.R(0));
+
+                            drawRegRead("gbr");
+                            drawValue(probe.GBR());
+
                             drawRnRead(0);
                             ImGui::SameLine(0, 0);
                             drawComma();
