@@ -11,9 +11,9 @@
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
 - Debugger: Added SH-2 exception vector list view.
-- Debugger: Added rudimentary SH-2 breakpoint management and per-game debugger state persistence.
-- Debugger: Implemented SH-2 breakpoints.
-- Debugger: Introduced debug break signal that can be raised from just about anywhere.
+- Debugger: Added rudimentary SH-2 breakpoint management and per-game debugger state persistence. (#22)
+- Debugger: Implemented SH-2 breakpoints. (#22)
+- Debugger: Introduced debug break signal that can be raised from just about anywhere. (#21)
 - Input: Categorized gamepad triggers and sticks as absolute axes. Absolute axes output fixed values at specific positions.
 - Input: Categorized gamepad triggers as monopolar axes (having values ranging from 0.0 to 1.0) and gamepad sticks as bipolar axes (-1.0 to +1.0).
 - Input: Implemented Arcade Racer peripheral. (#29)
