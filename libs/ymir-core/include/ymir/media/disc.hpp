@@ -177,28 +177,26 @@ struct Track {
             return;
         }
 
-        // Subheader is only present when the raw sector size is at least 2336 bytes long
-        if (sectorSize < 2336) {
-            return;
-        }
-
-        // Read mode byte and subheader
-        const bool hasSyncBytes = sectorSize >= 2352;
-        std::array<uint8, 5> modeAndSubheader{};
-        if (binaryReader->Read(hasSyncBytes ? 0xF : 0x3, 5, modeAndSubheader) < 5) {
-            return;
-        }
-
         // Subheader is only present in mode 2 tracks
-        if (modeAndSubheader[0] != 0x02) {
+        if (!mode2) {
+            return;
+        }
+
+        // Read subheader
+        const bool hasSyncBytes = sectorSize >= 2352;
+        const bool hasHeader = sectorSize >= 2340;
+        const uintmax_t baseOffset = static_cast<uintmax_t>(frameAddress - startFrameAddress) * sectorSize;
+        const uintmax_t subheaderOffset = hasSyncBytes ? 16 : hasHeader ? 4 : 0;
+        std::array<uint8, 4> subheaderData{};
+        if (binaryReader->Read(baseOffset + subheaderOffset, 4, subheaderData) < 4) {
             return;
         }
 
         // Fill in subheader data
-        subheader.fileNum = modeAndSubheader[1];
-        subheader.chanNum = modeAndSubheader[2];
-        subheader.submode = modeAndSubheader[3];
-        subheader.codingInfo = modeAndSubheader[4];
+        subheader.fileNum = subheaderData[0];
+        subheader.chanNum = subheaderData[1];
+        subheader.submode = subheaderData[2];
+        subheader.codingInfo = subheaderData[3];
     }
 };
 
