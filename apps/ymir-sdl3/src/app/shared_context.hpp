@@ -73,6 +73,7 @@ struct SharedContext {
         }
 
         SDL_Window *window = nullptr;
+        SDL_GPUDevice *gpuDevice = nullptr;
 
         uint32 width;
         uint32 height;

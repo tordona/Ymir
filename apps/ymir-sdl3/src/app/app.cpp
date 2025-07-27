@@ -530,13 +530,14 @@ void App::RunEmulator() {
     // ---------------------------------
     // Create GPU Device
 
-    SDL_GPUDevice *gpuDevice = SDL_CreateGPUDevice(
+    m_context.screen.gpuDevice = SDL_CreateGPUDevice(
         SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB, true, nullptr);
-    if (gpuDevice == nullptr) {
+    if (m_context.screen.gpuDevice == nullptr) {
         devlog::error<grp::base>("Unable to create GPU device: {}", SDL_GetError());
         return;
     }
-    ScopeGuard sgDestroyGPUDevice{[&] { SDL_DestroyGPUDevice(gpuDevice); }};
+    ScopeGuard sgDestroyGPUDevice{[&] { SDL_DestroyGPUDevice(m_context.screen.gpuDevice); }};
+    SDL_GPUDevice *gpuDevice = m_context.screen.gpuDevice;
 
     // Claim window for GPU Device
     if (!SDL_ClaimWindowForGPUDevice(gpuDevice, screen.window)) {

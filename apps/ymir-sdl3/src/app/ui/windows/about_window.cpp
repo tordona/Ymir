@@ -103,6 +103,53 @@ static const FontDesc fontDescs[] = {
 };
 // clang-format on
 
+static const std::unordered_map<std::string_view, const char *> kVideoDrivers = {
+    {"vulkan", "Vulkan"},
+    {"direct3d12", "Direct3D 12"},
+    {"metal", "Metal"},
+};
+
+const char *GPUDriverToHumanReadableString(std::string_view driver) {
+    if (kVideoDrivers.contains(driver)) {
+        return kVideoDrivers.at(driver);
+    }
+    return "unknown";
+}
+
+// If only SDL3 exposed the nice desc field they already have in the SDL_AudioDriver struct...
+// Also note that just because certain systems are listed here, it doesn't mean Ymir actually supports them.
+static const std::unordered_map<std::string_view, const char *> kAudioDrivers = {
+    {"AAudio", "AAudio audio driver"},
+    {"alsa", "ALSA PCM audio"},
+    {"coreaudio", "CoreAudio"},
+    {"directsound", "DirectSound"},
+    {"disk", "direct-to-disk audio"},
+    {"dsp", "Open Sound System (/dev/dsp)"},
+    {"dummy", "SDL dummy audio driver"},
+    {"emscripten", "SDL emscripten audio driver"},
+    {"haiku", "Haiku BSoundPlayer"},
+    {"jack", "JACK Audio Connection Kit"},
+    {"netbsd", "NetBSD audio"},
+    {"N-Gage", "N-Gage audio driver"},
+    {"n3ds", "SDL N3DS audio driver"},
+    {"openslES", "OpenSL ES audio driver"},
+    {"pipewire", "Pipewire"},
+    {"psp", "PSP audio driver"},
+    {"ps2", "PS2 audio driver"},
+    {"pulseaudio", "PulseAudio"},
+    {"qsa", "QNX QSA Audio"},
+    {"sndio", "OpenBSD sndio"},
+    {"vita", "VITA audio driver"},
+    {"wasapi", "WASAPI"},
+};
+
+const char *AudioDriverToHumanReadableString(std::string_view driver) {
+    if (kAudioDrivers.contains(driver)) {
+        return kAudioDrivers.at(driver);
+    }
+    return "unknown";
+}
+
 AboutWindow::AboutWindow(SharedContext &context)
     : WindowBase(context) {
 
@@ -178,11 +225,19 @@ void AboutWindow::DrawAboutTab() {
 
     ImGui::NewLine();
     ImGui::Text("Compiled with %s %s.", compiler::name, compiler::version::string.c_str());
-#ifdef Ymir_AVX2
+#if defined(__x86_64__) || defined(_M_X64)
+    #ifdef Ymir_AVX2
     ImGui::Text("Using AVX2 instruction set.");
-#else
+    #else
     ImGui::Text("Using SSE2 instruction set.");
+    #endif
+#elif defined(__aarch64__) || defined(__arm64__)
+    ImGui::Text("Using NEON instruction set.");
 #endif
+    const char *gpuDriver = SDL_GetGPUDeviceDriver(m_context.screen.gpuDevice);
+    const char *audioDriver = SDL_GetCurrentAudioDriver();
+    ImGui::Text("Using %s renderer.", GPUDriverToHumanReadableString(gpuDriver));
+    ImGui::Text("Using %s audio driver.", AudioDriverToHumanReadableString(audioDriver));
 
     ImGui::NewLine();
     ImGui::TextUnformatted("Licensed under ");
