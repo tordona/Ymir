@@ -23,10 +23,10 @@ void SH2BreakpointsView::Display() {
     auto drawHex32 = [&](auto id, uint32 &value) {
         ImGui::PushFont(m_context.fonts.monospace.regular, fontSize);
         ImGui::SetNextItemWidth(vecFieldWidth);
-        bool changed = ImGui::InputScalar(fmt::format("##input_{}", id).c_str(), ImGuiDataType_U32, &value, nullptr,
-                                          nullptr, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
+        ImGui::InputScalar(fmt::format("##input_{}", id).c_str(), ImGuiDataType_U32, &value, nullptr, nullptr, "%08X",
+                           ImGuiInputTextFlags_CharsHexadecimal);
         ImGui::PopFont();
-        return changed;
+        return ImGui::IsItemDeactivated();
     };
 
     ImGui::BeginGroup();
@@ -42,6 +42,11 @@ void SH2BreakpointsView::Display() {
 
     if (drawHex32("addr", m_address)) {
         m_address &= ~1u;
+        if (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown)) {
+            std::unique_lock lock{m_context.locks.breakpoints};
+            m_sh2.AddBreakpoint(m_address);
+            m_context.debuggers.MakeDirty();
+        }
     }
     ImGui::SameLine();
     if (ImGui::Button("Add")) {
