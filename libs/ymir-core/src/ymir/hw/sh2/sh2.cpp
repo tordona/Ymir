@@ -303,6 +303,14 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
     m_cyclesExecuted = spilloverCycles;
     AdvanceWDT<false>();
     AdvanceFRT<false>();
+
+    if constexpr (debug) {
+        if (m_debugSuspend) {
+            m_cyclesExecuted = cycles;
+            return m_cyclesExecuted;
+        }
+    }
+
     while (m_cyclesExecuted < cycles) {
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         m_cyclesExecuted += InterpretNext<debug, enableCache>();

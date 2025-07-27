@@ -3,6 +3,8 @@
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
+#include <app/ui/widgets/common_widgets.hpp>
+
 #include <imgui.h>
 
 using namespace ymir;
@@ -30,6 +32,19 @@ void SH2DebugToolbarView::Display() {
         ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
         ImGui::SameLine();
     }
+
+    if (!m_context.saturn.IsDebugTracingEnabled()) {
+        ImGui::BeginDisabled();
+    }
+    bool suspended = m_sh2.IsCPUSuspended();
+    if (ImGui::Checkbox("Suspended", &suspended)) {
+        m_sh2.SetCPUSuspended(suspended);
+    }
+    widgets::ExplanationTooltip("Disables the CPU while in debug mode.", m_context.displayScale);
+    if (!m_context.saturn.IsDebugTracingEnabled()) {
+        ImGui::EndDisabled();
+    }
+
     ImGui::BeginDisabled(!enabled);
     {
         if (ImGui::Button("Step")) {

@@ -12,6 +12,7 @@
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
 - Debugger: Added SH-2 exception vector list view.
 - Debugger: Added rudimentary SH-2 breakpoint management and per-game debugger state persistence. (#22)
+- Debugger: Allow suspending SH-2 CPUs in debug mode. (#22)
 - Debugger: Implemented SH-2 breakpoints. (#22)
 - Debugger: Introduced debug break signal that can be raised from just about anywhere. (#21)
 - Input: Categorized gamepad triggers and sticks as absolute axes. Absolute axes output fixed values at specific positions.

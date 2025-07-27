@@ -161,6 +161,16 @@ public:
         return m_breakpoints.contains(address & ~1u);
     }
 
+    // Suspends (disabled) the CPU in debug mode.
+    void SetCPUSuspended(bool suspend) {
+        m_debugSuspend = suspend;
+    }
+
+    // Determines if the CPU is suspended in debug mode.
+    bool IsCPUSuspended() const {
+        return m_debugSuspend;
+    }
+
     class Probe {
     public:
         Probe(SH2 &sh2);
@@ -715,6 +725,7 @@ private:
     debug::ISH2Tracer *m_tracer = nullptr;
 
     std::set<uint32> m_breakpoints;
+    bool m_debugSuspend = false; // Disables CPU while in debug mode
 
     const std::string_view m_logPrefix;
 
