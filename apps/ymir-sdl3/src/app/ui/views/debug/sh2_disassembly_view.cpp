@@ -127,10 +127,7 @@ void SH2DisassemblyView::Display() {
                     color = m_colors.disasm.prBgColor;
                 } else if (isBreakpointSet) {
                     color = m_colors.disasm.bkptBgColor;
-                } /*else if (probe.IsWatchpointSet(address)) {
-                    color = m_colors.disasm.wtptBgColor;
-                }*/
-                else if (m_settings.altLineColors && (m_settings.altLineAddresses ? (address & 2) : (i & 1))) {
+                } else if (m_settings.altLineColors && (m_settings.altLineAddresses ? (address & 2) : (i & 1))) {
                     color = m_colors.disasm.altLineBgColor;
                 }
                 if (color.w == 0.0f) {
@@ -163,22 +160,6 @@ void SH2DisassemblyView::Display() {
                 pos.y -= 1.5f;
                 const ImVec2 baseCenter{pos.x + lineHeight * 0.5f, pos.y + lineHeight * 0.5f};
 
-                /*if (probe.IsWatchpointSet(address)) {
-                    const ImVec2 center{pos.x + lineHeight * 0.5f, pos.y + lineHeight * 0.5f};
-                    const ImVec2 p1{center.x, center.y - lineHeight * 0.25f};
-                    const ImVec2 p2{center.x - lineHeight * 0.25f, center.y};
-                    const ImVec2 p3{center.x, center.y + lineHeight * 0.25f};
-                    const ImVec2 p4{center.x + lineHeight * 0.25f, center.y};
-                    const ImU32 color = ImGui::ColorConvertFloat4ToU32(m_colors.disasm.wtptIconColor);
-                    if (m_context.saturn.IsDebugTracingEnabled()) {
-                        drawList->AddQuadFilled(p1, p2, p3, p4, color);
-                    } else {
-                        drawList->AddQuad(p1, p2, p3, p4, color, 2.0f);
-                    }
-                }*/
-                ImGui::Dummy(ImVec2(lineHeight, 0.0f));
-                ImGui::SameLine(0.0f, 0.0f);
-
                 if (ImGui::InvisibleButton(fmt::format("toggle_bkpt_{}", address).c_str(),
                                            ImVec2(lineHeight, lineHeight))) {
                     toggleBreakpoint();
@@ -189,7 +170,7 @@ void SH2DisassemblyView::Display() {
                     const bool active = ImGui::IsItemActive();
 
                     if (visible || hovered || lineHovered) {
-                        const ImVec2 center{pos.x + lineHeight * 1.5f, pos.y + lineHeight * 0.5f};
+                        const ImVec2 center = baseCenter;
                         ImVec4 baseColor = active    ? m_colors.disasm.bkptActiveIconColor
                                            : hovered ? m_colors.disasm.bkptHoveredIconColor
                                                      : m_colors.disasm.bkptIconColor;
@@ -229,7 +210,7 @@ void SH2DisassemblyView::Display() {
                         const ImU32 color = ImGui::ColorConvertFloat4ToU32(baseColor);
 
                         const float sizeFactor = active ? 0.8f : hovered ? 1.2f : 1.0f;
-                        const ImVec2 center{baseCenter.x + lineHeight * 2.0f, baseCenter.y};
+                        const ImVec2 center{baseCenter.x + lineHeight * 1.0f, baseCenter.y};
                         const ImVec2 points[] = {
                             {center.x - lineHeight * 0.25f * sizeFactor, center.y - lineHeight * 0.25f * sizeFactor},
                             {center.x + lineHeight * 0.25f * sizeFactor, center.y},
@@ -264,7 +245,7 @@ void SH2DisassemblyView::Display() {
                         const ImU32 color = ImGui::ColorConvertFloat4ToU32(baseColor);
 
                         const float sizeFactor = active ? 0.8f : hovered ? 1.2f : 1.0f;
-                        const ImVec2 center{baseCenter.x + lineHeight * 3.0f, baseCenter.y};
+                        const ImVec2 center{baseCenter.x + lineHeight * 2.0f, baseCenter.y};
                         const ImVec2 points[] = {
                             {center.x - lineHeight * 0.25f * sizeFactor, center.y - lineHeight * 0.25f * sizeFactor},
                             {center.x + lineHeight * 0.25f * sizeFactor, center.y},
