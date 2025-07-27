@@ -66,6 +66,12 @@ void SH2DisassemblyView::Display() {
                 return m_sh2.IsBreakpointSet(address);
             }();
 
+            auto toggleBreakpoint = [&] {
+                std::unique_lock lock{m_context.locks.breakpoints};
+                m_sh2.ToggleBreakpoint(address);
+                m_context.debuggers.MakeDirty();
+            };
+
             auto memRead = [&](uint32 address) -> uint32 {
                 switch (disasm.opSize) {
                 case sh2::OperandSize::Byte: return probe.MemPeekByte(address, false);
@@ -149,40 +155,14 @@ void SH2DisassemblyView::Display() {
 
             auto drawIcons = [&] {
                 auto pos = ImGui::GetCursorScreenPos();
+                ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, lineHeight));
+                const bool lineHovered = ImGui::IsItemHovered();
+                ImGui::SetCursorScreenPos(pos);
+
                 pos.x -= 1.5f;
                 pos.y -= 1.5f;
                 const ImVec2 baseCenter{pos.x + lineHeight * 0.5f, pos.y + lineHeight * 0.5f};
-                if (address == pc) {
-                    const ImVec2 center{baseCenter.x + lineHeight * 3.0f, baseCenter.y};
-                    const ImVec2 points[] = {
-                        {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
-                        {center.x + lineHeight * 0.25f, center.y},
-                        {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
-                        {center.x - lineHeight * 0.15f, center.y},
-                    };
-                    drawList->AddConcavePolyFilled(points, std::size(points),
-                                                   ImGui::ColorConvertFloat4ToU32(m_colors.disasm.pcIconColor));
-                }
-                if (address == pr) {
-                    const ImVec2 center{baseCenter.x + lineHeight * 2.0f, baseCenter.y};
-                    const ImVec2 points[] = {
-                        {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
-                        {center.x + lineHeight * 0.25f, center.y},
-                        {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
-                        {center.x - lineHeight * 0.15f, center.y},
-                    };
-                    drawList->AddConcavePolyFilled(points, std::size(points),
-                                                   ImGui::ColorConvertFloat4ToU32(m_colors.disasm.prIconColor));
-                }
-                if (isBreakpointSet) {
-                    const ImVec2 center{pos.x + lineHeight * 1.5f, pos.y + lineHeight * 0.5f};
-                    const ImU32 color = ImGui::ColorConvertFloat4ToU32(m_colors.disasm.bkptIconColor);
-                    if (m_context.saturn.IsDebugTracingEnabled()) {
-                        drawList->AddCircleFilled(center, lineHeight * 0.25f, color);
-                    } else {
-                        drawList->AddCircle(center, lineHeight * 0.25f, color, 0, 2.0f);
-                    }
-                }
+
                 /*if (probe.IsWatchpointSet(address)) {
                     const ImVec2 center{pos.x + lineHeight * 0.5f, pos.y + lineHeight * 0.5f};
                     const ImVec2 p1{center.x, center.y - lineHeight * 0.25f};
@@ -196,7 +176,65 @@ void SH2DisassemblyView::Display() {
                         drawList->AddQuad(p1, p2, p3, p4, color, 2.0f);
                     }
                 }*/
-                ImGui::Dummy(ImVec2(lineHeight * 4, 0.0f));
+                ImGui::Dummy(ImVec2(lineHeight, 0.0f));
+                ImGui::SameLine(0.0f, 0.0f);
+
+                {
+                    if (ImGui::InvisibleButton(fmt::format("bkpt_{}", address).c_str(),
+                                               ImVec2(lineHeight, lineHeight))) {
+                        toggleBreakpoint();
+                    }
+                    const bool hovered = ImGui::IsItemHovered();
+                    const bool active = ImGui::IsItemActive();
+
+                    if (isBreakpointSet || hovered || lineHovered) {
+                        const ImVec2 center{pos.x + lineHeight * 1.5f, pos.y + lineHeight * 0.5f};
+                        ImVec4 baseColor = active    ? m_colors.disasm.bkptActiveIconColor
+                                           : hovered ? m_colors.disasm.bkptHoveredIconColor
+                                                     : m_colors.disasm.bkptIconColor;
+                        if (!isBreakpointSet) {
+                            baseColor.w *= 0.6f;
+                        }
+                        const ImU32 color = ImGui::ColorConvertFloat4ToU32(baseColor);
+
+                        const float circleRadiusFactor = active ? 0.20f : hovered ? 0.30f : 0.25f;
+                        const float circleRadius = lineHeight * circleRadiusFactor;
+
+                        if (m_context.saturn.IsDebugTracingEnabled() && isBreakpointSet) {
+                            drawList->AddCircleFilled(center, circleRadius, color);
+                        } else {
+                            drawList->AddCircle(center, circleRadius, color, 0, 2.0f * m_context.displayScale);
+                        }
+                    }
+                    ImGui::SameLine(0.0f, 0.0f);
+                }
+
+                if (address == pr) {
+                    const ImVec2 center{baseCenter.x + lineHeight * 2.0f, baseCenter.y};
+                    const ImVec2 points[] = {
+                        {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
+                        {center.x + lineHeight * 0.25f, center.y},
+                        {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
+                        {center.x - lineHeight * 0.15f, center.y},
+                    };
+                    drawList->AddConcavePolyFilled(points, std::size(points),
+                                                   ImGui::ColorConvertFloat4ToU32(m_colors.disasm.prIconColor));
+                }
+                ImGui::Dummy(ImVec2(lineHeight, 0.0f));
+                ImGui::SameLine(0.0f, 0.0f);
+
+                if (address == pc) {
+                    const ImVec2 center{baseCenter.x + lineHeight * 3.0f, baseCenter.y};
+                    const ImVec2 points[] = {
+                        {center.x - lineHeight * 0.25f, center.y - lineHeight * 0.25f},
+                        {center.x + lineHeight * 0.25f, center.y},
+                        {center.x - lineHeight * 0.25f, center.y + lineHeight * 0.25f},
+                        {center.x - lineHeight * 0.15f, center.y},
+                    };
+                    drawList->AddConcavePolyFilled(points, std::size(points),
+                                                   ImGui::ColorConvertFloat4ToU32(m_colors.disasm.pcIconColor));
+                }
+                ImGui::Dummy(ImVec2(lineHeight, 0.0f));
                 ImGui::SameLine(0.0f, 0.0f);
             };
 

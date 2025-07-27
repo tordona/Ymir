@@ -123,6 +123,18 @@ public:
         return m_breakpoints.erase(address & ~1u);
     }
 
+    // Toggles the breakpoint at the specified address.
+    // The address is force-aligned to word boundaries.
+    // Returns `true` if the breakpoint was added, `false` if it was removed.
+    bool ToggleBreakpoint(uint32 address) {
+        address &= ~1u;
+        const bool result = m_breakpoints.insert(address).second;
+        if (!result) {
+            m_breakpoints.erase(address);
+        }
+        return result;
+    }
+
     // Clears all breakpoints.
     void ClearBreakpoints() {
         m_breakpoints.clear();

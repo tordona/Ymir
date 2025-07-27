@@ -17,6 +17,8 @@ SH2DebuggerWindow::SH2DebuggerWindow(SharedContext &context, bool master)
 }
 
 void SH2DebuggerWindow::LoadState(std::filesystem::path path) {
+    // TODO: this feels like the wrong place for this...
+
     const auto discHash = [&] {
         std::unique_lock lock{m_context.locks.disc};
         return ToString(m_context.saturn.GetDiscHash());
@@ -45,6 +47,8 @@ void SH2DebuggerWindow::LoadState(std::filesystem::path path) {
 }
 
 void SH2DebuggerWindow::SaveState(std::filesystem::path path) {
+    // TODO: this feels like the wrong place for this...
+
     const auto discHash = [&] {
         std::unique_lock lock{m_context.locks.disc};
         return ToString(m_context.saturn.GetDiscHash());
@@ -59,10 +63,14 @@ void SH2DebuggerWindow::SaveState(std::filesystem::path path) {
         breakpoints = m_sh2.GetBreakpoints();
     }
 
-    std::ofstream out{breakpointsFile, std::ios::binary};
-    out << std::hex;
-    for (uint32 address : breakpoints) {
-        out << address << "\n";
+    if (breakpoints.empty()) {
+        std::filesystem::remove(breakpointsFile);
+    } else {
+        std::ofstream out{breakpointsFile, std::ios::binary};
+        out << std::hex;
+        for (uint32 address : breakpoints) {
+            out << address << "\n";
+        }
     }
 }
 

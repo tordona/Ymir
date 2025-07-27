@@ -52,6 +52,8 @@ private:
             ImVec4 pcIconColor{C(15, 189, 219)};
             ImVec4 prIconColor{C(17, 113, 237)};
             ImVec4 bkptIconColor{C(250, 52, 17)};
+            ImVec4 bkptHoveredIconColor{C(255, 97, 69)};
+            ImVec4 bkptActiveIconColor{C(209, 40, 10)};
             ImVec4 wtptIconColor{C(193, 37, 250)};
 
             ImVec4 cursorBgColor{C(34, 61, 2)};
