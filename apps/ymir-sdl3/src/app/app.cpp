@@ -1993,14 +1993,13 @@ void App::RunEmulator() {
 
             case EvtType::OpenBackupMemoryManager: m_bupMgrWindow.Open = true; break;
             case EvtType::OpenSettings: m_settingsWindow.OpenTab(std::get<ui::SettingsTab>(evt.value)); break;
-            case EvtType::OpenSH2BreakpointsWindow:
-                if (std::get<bool>(evt.value)) {
-                    m_masterSH2WindowSet.breakpoints.Open = true;
-                } else {
-                    m_slaveSH2WindowSet.breakpoints.Open = true;
-                }
+            case EvtType::OpenSH2BreakpointsWindow: //
+            {
+                auto &windowSet = std::get<bool>(evt.value) ? m_masterSH2WindowSet : m_slaveSH2WindowSet;
+                windowSet.breakpoints.Open = true;
+                windowSet.breakpoints.RequestFocus();
                 break;
-
+            }
             case EvtType::SetProcessPriority: util::BoostCurrentProcessPriority(std::get<bool>(evt.value)); break;
 
             case EvtType::FitWindowToScreen: fitWindowToScreenNow = true; break;
