@@ -80,13 +80,13 @@ jobs:
           pattern: ymir-*
           merge-multiple: true
 
-      - name: Delete existing release
-        uses: author/action-rollback@stable
-        with:
-          tag: ${{ env.NIGHTLY_TAG_NAME }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true  # in case this fails if the release doesn't exist
+      #- name: Delete existing release
+      #  uses: author/action-rollback@stable
+      #  with:
+      #    tag: ${{ env.NIGHTLY_TAG_NAME }}
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  continue-on-error: true  # in case this fails if the release doesn't exist
 
       - name: Release
         uses: softprops/action-gh-release@v2
