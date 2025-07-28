@@ -1464,9 +1464,6 @@ bool CDBlock::ConnectCDDevice(uint8 filterNumber) {
 }
 
 void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
-    if (m_cdDeviceConnection == filterNumber) {
-        m_cdDeviceConnection = Filter::kDisconnected;
-    }
     for (auto &filter : m_filters) {
         if (filter.failOutput == filterNumber) {
             filter.failOutput = Filter::kDisconnected;
@@ -3140,6 +3137,10 @@ uint8 CDBlock::Probe::GetCurrentIndex() const {
 
 uint8 CDBlock::Probe::GetReadSpeed() const {
     return m_cdblock.m_readSpeed;
+}
+
+uint8 CDBlock::Probe::GetCDDeviceConnection() const {
+    return m_cdblock.m_cdDeviceConnection;
 }
 
 std::span<const Filter, kNumFilters> CDBlock::Probe::GetFilters() const {

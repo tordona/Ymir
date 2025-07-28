@@ -1,5 +1,7 @@
 #include "cdblock_filters_window.hpp"
 
+using namespace ymir;
+
 namespace app::ui {
 
 CDBlockFiltersWindow::CDBlockFiltersWindow(SharedContext &context)
@@ -16,6 +18,14 @@ void CDBlockFiltersWindow::PrepareWindow() {
 }
 
 void CDBlockFiltersWindow::DrawContents() {
+    auto &probe = m_cdblock.GetProbe();
+    const uint8 cdDeviceConnection = probe.GetCDDeviceConnection();
+    if (cdDeviceConnection != cdblock::Filter::kDisconnected) {
+        ImGui::Text("CD device connected to output %u", cdDeviceConnection);
+    } else {
+        ImGui::Text("CD device disconnected");
+    }
+    ImGui::Separator();
     m_filtersView.Display();
 }
 

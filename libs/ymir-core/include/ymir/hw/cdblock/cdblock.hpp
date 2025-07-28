@@ -436,6 +436,8 @@ public:
 
         uint8 GetReadSpeed() const;
 
+        uint8 GetCDDeviceConnection() const;
+
         std::span<const Filter, kNumFilters> GetFilters() const;
 
     private:
