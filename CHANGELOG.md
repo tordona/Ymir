@@ -41,7 +41,7 @@
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
 - VDP2: RBG1 uses Rotation Parameter B, not A.
-
+- VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
 
 ## Version 0.1.6
 
