@@ -258,13 +258,14 @@ void AboutWindow::DrawAboutTab() {
             SDL_GetPointerProperty(rendererProps, SDL_PROP_RENDERER_GPU_DEVICE_POINTER, nullptr));
         if (gpuDevice) {
             const char *gpuDriver = SDL_GetGPUDeviceDriver(gpuDevice);
-            ImGui::Text("Using %s renderer.", RendererToHumanReadableString(gpuDriver));
+            ImGui::Text("GUI rendered with %s.", RendererToHumanReadableString(gpuDriver));
         } else {
-            ImGui::Text("Using SDL GPU renderer.");
+            ImGui::Text("GUI rendered with SDL GPU.");
         }
     } else {
-        ImGui::Text("Using %s renderer.", RendererToHumanReadableString(rendererName));
+        ImGui::Text("GUI rendered with %s.", RendererToHumanReadableString(rendererName));
     }
+    ImGui::TextUnformatted("Using software VDP1/VDP2 renderer.");
 
     const char *audioDriver = SDL_GetCurrentAudioDriver();
     ImGui::Text("Using %s audio driver.", AudioDriverToHumanReadableString(audioDriver));
