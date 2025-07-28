@@ -5216,7 +5216,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             }
         }
 
-        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y, altField) : RotParamA;
+        const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y, altField) : RotParamB;
 
         const RotationParams &rotParams = regs.rotParams[rotParamSelector];
         const RotationParamState &rotParamState = m_rotParamStates[rotParamSelector];
