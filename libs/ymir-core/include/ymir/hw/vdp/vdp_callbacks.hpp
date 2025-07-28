@@ -12,7 +12,10 @@
 namespace ymir::vdp {
 
 // Invoked when the VDP1 finishes drawing a frame.
-using CBVDP1FrameComplete = util::OptionalCallback<void()>;
+using CBVDP1DrawFinished = util::OptionalCallback<void()>;
+
+// Invoked when the VDP1 swaps framebuffers.
+using CBVDP1FramebufferSwap = util::OptionalCallback<void()>;
 
 // Invoked when the VDP2 renderer finishes rendering a frame.
 // Framebuffer data is in little-endian XRGB8888 format.

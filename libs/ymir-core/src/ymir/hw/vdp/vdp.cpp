@@ -953,7 +953,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             if (m_effectiveRenderVDP1InVDP2Thread && m_VDPRenderContext.vdp1Done) {
                 m_state.regs1.currFrameEnded = true;
                 m_cbTriggerSpriteDrawEnd();
-                m_cbVDP1FrameComplete();
+                m_cbVDP1DrawFinished();
                 m_VDPRenderContext.vdp1Done = false;
             }
 
@@ -1488,6 +1488,8 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
 
     m_state.displayFB ^= 1;
 
+    m_cbVDP1FramebufferSwap();
+
     if (bit::test<1>(m_state.regs1.plotTrigger)) {
         VDP1BeginFrame();
     }
@@ -1521,7 +1523,7 @@ void VDP::VDP1EndFrame() {
     } else {
         m_state.regs1.currFrameEnded = true;
         m_cbTriggerSpriteDrawEnd();
-        m_cbVDP1FrameComplete();
+        m_cbVDP1DrawFinished();
     }
 }
 

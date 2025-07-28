@@ -720,11 +720,17 @@ void App::RunEmulator() {
              }
          }});
 
-    m_context.saturn.VDP.SetVDP1Callback({&m_context, [](void *ctx) {
-                                              auto &sharedCtx = *static_cast<SharedContext *>(ctx);
-                                              auto &screen = sharedCtx.screen;
-                                              ++screen.VDP1Frames;
-                                          }});
+    m_context.saturn.VDP.SetVDP1DrawCallback({&m_context, [](void *ctx) {
+                                                  auto &sharedCtx = *static_cast<SharedContext *>(ctx);
+                                                  auto &screen = sharedCtx.screen;
+                                                  ++screen.VDP1DrawCalls;
+                                              }});
+
+    m_context.saturn.VDP.SetVDP1FramebufferSwapCallback({&m_context, [](void *ctx) {
+                                                             auto &sharedCtx = *static_cast<SharedContext *>(ctx);
+                                                             auto &screen = sharedCtx.screen;
+                                                             ++screen.VDP1Frames;
+                                                         }});
 
     // ---------------------------------
     // Initialize audio system
@@ -1961,29 +1967,35 @@ void App::RunEmulator() {
                 }
                 fullGameTitle = fmt::format("{}{}", productNumber, gameTitle);
             }
-            std::string speed = m_context.paused ? "paused"
-                                : m_context.emuSpeed.limitSpeed
-                                    ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
-                                                  m_context.emuSpeed.altSpeed ? " (alt)" : "")
-                                    : "unlimited";
+            std::string speedStr = m_context.paused ? "paused"
+                                   : m_context.emuSpeed.limitSpeed
+                                       ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
+                                                     m_context.emuSpeed.altSpeed ? " (alt)" : "")
+                                       : "unlimited";
 
             std::string title{};
             if (m_context.paused) {
                 title = fmt::format("Ymir " Ymir_FULL_VERSION
                                     " - {} | Speed: {} | VDP2: paused | VDP1: paused | GUI: {:.0f} fps",
-                                    fullGameTitle, speed, io.Framerate);
+                                    fullGameTitle, speedStr, io.Framerate);
             } else {
+                const double frameInterval = screen.frameInterval.count() * 0.000000001;
+                const double currSpeed = screen.lastVDP2Frames * frameInterval * 100.0;
+                std::string currSpeedStr = fmt::format("{:.0f}%", currSpeed);
                 title = fmt::format("Ymir " Ymir_FULL_VERSION
-                                    " - {} | Speed: {} | VDP2: {} fps | VDP1: {} fps | GUI: {:.0f} fps",
-                                    fullGameTitle, speed, screen.lastVDP2Frames, screen.lastVDP1Frames, io.Framerate);
+                                    " - {} | Speed: {} / {} | VDP2: {} fps | VDP1: {} fps, {} draws | GUI: {:.0f} fps",
+                                    fullGameTitle, currSpeedStr, speedStr, screen.lastVDP2Frames, screen.lastVDP1Frames,
+                                    screen.lastVDP1DrawCalls, io.Framerate);
             }
             SDL_SetWindowTitle(screen.window, title.c_str());
 
             if (now - t >= 1s) {
                 screen.lastVDP2Frames = screen.VDP2Frames;
                 screen.lastVDP1Frames = screen.VDP1Frames;
+                screen.lastVDP1DrawCalls = screen.VDP1DrawCalls;
                 screen.VDP2Frames = 0;
                 screen.VDP1Frames = 0;
+                screen.VDP1DrawCalls = 0;
                 t = now;
             }
         }
@@ -2803,18 +2815,23 @@ void App::RunEmulator() {
 
             // Draw frame rate counters
             if (m_context.settings.gui.showFrameRateOSD) {
-                std::string speed = m_context.paused ? "paused"
-                                    : m_context.emuSpeed.limitSpeed
-                                        ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
-                                                      m_context.emuSpeed.altSpeed ? " (alt)" : "")
-                                        : "unlimited";
+                std::string speedStr =
+                    m_context.paused ? "paused"
+                    : m_context.emuSpeed.limitSpeed
+                        ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
+                                      m_context.emuSpeed.altSpeed ? " (alt)" : "")
+                        : "unlimited";
                 std::string fpsText{};
                 if (m_context.paused) {
-                    fpsText =
-                        fmt::format("VDP2: paused\nVDP1: paused\nGUI: {:.0f} fps\nSpeed: {}", io.Framerate, speed);
+                    fpsText = fmt::format("VDP2: paused\nVDP1: paused\nVDP1: paused\nGUI: {:.0f} fps\nSpeed: {}",
+                                          io.Framerate, speedStr);
                 } else {
-                    fpsText = fmt::format("VDP2: {} fps\nVDP1: {} fps\nGUI: {:.0f} fps\nSpeed: {}",
-                                          screen.lastVDP2Frames, screen.lastVDP1Frames, io.Framerate, speed);
+                    const double frameInterval = screen.frameInterval.count() * 0.000000001;
+                    const double currSpeed = screen.lastVDP2Frames * frameInterval * 100.0;
+                    fpsText =
+                        fmt::format("VDP2: {} fps\nVDP1: {} fps\nVDP1: {} draws\nGUI: {:.0f} fps\nSpeed: {:.0f}% / {}",
+                                    screen.lastVDP2Frames, screen.lastVDP1Frames, screen.lastVDP1DrawCalls,
+                                    io.Framerate, currSpeed, speedStr);
                 }
 
                 auto *drawList = ImGui::GetBackgroundDrawList();

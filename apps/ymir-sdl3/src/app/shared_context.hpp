@@ -124,9 +124,11 @@ struct SharedContext {
 
         uint64 VDP2Frames = 0;
         uint64 VDP1Frames = 0;
+        uint64 VDP1DrawCalls = 0;
 
         uint64 lastVDP2Frames = 0;
         uint64 lastVDP1Frames = 0;
+        uint64 lastVDP1DrawCalls = 0;
     } screen;
 
     struct EmuSpeed {

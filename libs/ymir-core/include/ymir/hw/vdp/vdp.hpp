@@ -52,12 +52,16 @@ public:
 
     void MapMemory(sys::Bus &bus);
 
-    void SetRenderCallback(CBFrameComplete cbFrameComplete) {
-        m_cbFrameComplete = cbFrameComplete;
+    void SetRenderCallback(CBFrameComplete callback) {
+        m_cbFrameComplete = callback;
     }
 
-    void SetVDP1Callback(CBVDP1FrameComplete cbFrameComplete) {
-        m_cbVDP1FrameComplete = cbFrameComplete;
+    void SetVDP1DrawCallback(CBVDP1DrawFinished callback) {
+        m_cbVDP1DrawFinished = callback;
+    }
+
+    void SetVDP1FramebufferSwapCallback(CBVDP1FramebufferSwap callback) {
+        m_cbVDP1FramebufferSwap = callback;
     }
 
     // Enable or disable deinterlacing of double-density interlaced frames.
@@ -186,7 +190,10 @@ private:
     // Frontend callbacks
 
     // Invoked when the VDP1 finishes drawing a frame.
-    CBVDP1FrameComplete m_cbVDP1FrameComplete;
+    CBVDP1DrawFinished m_cbVDP1DrawFinished;
+
+    // Invoked when the VDP1 swaps framebuffers.
+    CBVDP1FramebufferSwap m_cbVDP1FramebufferSwap;
 
     // Invoked when the renderer finishes drawing a frame.
     CBFrameComplete m_cbFrameComplete;

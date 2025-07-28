@@ -7,6 +7,8 @@
 - App: Added a button to copy the version string from the About window.
 - App: Added option to automatically load most recently loaded game disc image on startup.
 - App: Auto-center About window whenever it is opened.
+- App: Show actual emulation speed in title bar and frame rate OSD.
+- App: Show actual VDP1 frame rate separated from VDP1 draw calls.
 - Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
