@@ -121,8 +121,8 @@ static const FontDesc fontDescs[] = {
 // clang-format on
 
 static const std::unordered_map<std::string_view, const char *> kRenderers = {
-    {"vulkan", "Vulkan"},          {"direct3d", "Direct3D 9"}, {"direct3d11", "Direct3D 11"},
-    {"direct3d12", "Direct3D 12"}, {"metal", "Metal"},
+    {"vulkan", "Vulkan"}, {"direct3d", "Direct3D 9"}, {"direct3d11", "Direct3D 11"}, {"direct3d12", "Direct3D 12"},
+    {"metal", "Metal"},   {"opengl", "OpenGL"},       {"opengles2", "OpenGL ES 2"},
 };
 
 const char *RendererToHumanReadableString(std::string_view driver) {
