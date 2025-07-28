@@ -1971,7 +1971,7 @@ void App::RunEmulator() {
                                    : m_context.emuSpeed.limitSpeed
                                        ? fmt::format("{:.0f}%{}", m_context.emuSpeed.GetCurrentSpeedFactor() * 100.0,
                                                      m_context.emuSpeed.altSpeed ? " (alt)" : "")
-                                       : "unlimited";
+                                       : "\u221E%";
 
             std::string title{};
             if (m_context.paused) {

@@ -27,3 +27,8 @@ Panzer Dragoon 2 Zwei
   The sound bank gets fixed when you play any other Episode music then go back to Episode 1.
   This issue does not happen if you start a new game. It only happens if you boot up the game, go straight to Options
   and attempt to play the Episode 1 song right away.
+
+
+Keriotosse
+----------
+  Displays garbage graphics for a few frames right before the title screen.
