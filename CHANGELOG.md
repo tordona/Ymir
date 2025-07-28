@@ -24,7 +24,6 @@
 - Video: Added option to reduce input lag by adjusting GUI frame rate to the largest multiple of the emulator's target frame rate that's not greater than the display's refresh rate.
 - Video: Avoid frame skipping on slow refresh rate monitors by disabling VSync if the target frame rate exceeds the display's refresh rate.
 - Video: Simplify frame rate control in full screen mode.
-- Video: Switch from SDL3 Renderer to SDL3 GPU API.
 
 ### Fixes
 

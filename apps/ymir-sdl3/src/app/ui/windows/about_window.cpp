@@ -120,17 +120,16 @@ static const FontDesc fontDescs[] = {
 };
 // clang-format on
 
-static const std::unordered_map<std::string_view, const char *> kVideoDrivers = {
-    {"vulkan", "Vulkan"},
-    {"direct3d12", "Direct3D 12"},
-    {"metal", "Metal"},
+static const std::unordered_map<std::string_view, const char *> kRenderers = {
+    {"vulkan", "Vulkan"},          {"direct3d", "Direct3D 9"}, {"direct3d11", "Direct3D 11"},
+    {"direct3d12", "Direct3D 12"}, {"metal", "Metal"},
 };
 
-const char *GPUDriverToHumanReadableString(std::string_view driver) {
-    if (kVideoDrivers.contains(driver)) {
-        return kVideoDrivers.at(driver);
+const char *RendererToHumanReadableString(std::string_view driver) {
+    if (kRenderers.contains(driver)) {
+        return kRenderers.at(driver);
     }
-    return "unknown";
+    return driver.data();
 }
 
 // If only SDL3 exposed the nice desc field they already have in the SDL_AudioDriver struct...
@@ -215,7 +214,7 @@ void AboutWindow::DrawContents() {
 void AboutWindow::DrawAboutTab() {
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
 
-    ImGui::Image((ImTextureID)&m_context.images.ymirLogo.binding,
+    ImGui::Image((ImTextureID)m_context.images.ymirLogo.texture,
                  ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale,
                         m_context.images.ymirLogo.size.y * m_context.displayScale));
 
@@ -251,9 +250,23 @@ void AboutWindow::DrawAboutTab() {
 #elif defined(__aarch64__) || defined(__arm64__)
     ImGui::Text("Using NEON instruction set.");
 #endif
-    const char *gpuDriver = SDL_GetGPUDeviceDriver(m_context.screen.gpuDevice);
+
+    SDL_PropertiesID rendererProps = SDL_GetRendererProperties(m_context.screen.renderer);
+    std::string_view rendererName = SDL_GetStringProperty(rendererProps, SDL_PROP_RENDERER_NAME_STRING, "unknown");
+    if (rendererName == "gpu") {
+        auto *gpuDevice = static_cast<SDL_GPUDevice *>(
+            SDL_GetPointerProperty(rendererProps, SDL_PROP_RENDERER_GPU_DEVICE_POINTER, nullptr));
+        if (gpuDevice) {
+            const char *gpuDriver = SDL_GetGPUDeviceDriver(gpuDevice);
+            ImGui::Text("Using %s renderer.", RendererToHumanReadableString(gpuDriver));
+        } else {
+            ImGui::Text("Using SDL GPU renderer.");
+        }
+    } else {
+        ImGui::Text("Using %s renderer.", RendererToHumanReadableString(rendererName));
+    }
+
     const char *audioDriver = SDL_GetCurrentAudioDriver();
-    ImGui::Text("Using %s renderer.", GPUDriverToHumanReadableString(gpuDriver));
     ImGui::Text("Using %s audio driver.", AudioDriverToHumanReadableString(audioDriver));
 
     ImGui::NewLine();
