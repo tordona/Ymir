@@ -958,11 +958,7 @@ FORCE_INLINE void VDP::IncrementVCounter() {
 void VDP::BeginHPhaseActiveDisplay() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_state.regs2.VCNT);
     if (m_state.VPhase == VerticalPhase::Active) {
-        if (m_state.regs2.VCNT == 0) {
-            devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
-
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2BeginFrame());
-        } else if (m_state.regs2.VCNT == 210) { // ~1ms before VBlank IN
+        if (m_state.regs2.VCNT == 210) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
 
@@ -1133,7 +1129,13 @@ void VDP::BeginVPhaseLastLine() {
 
     devlog::trace<grp::base>("## VBlank OUT");
 
-    VDP2InitFrame();
+    devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
+
+    if (m_threadedVDPRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2BeginFrame());
+    } else {
+        VDP2InitFrame();
+    }
 
     m_state.regs2.TVSTAT.VBLANK = 0;
     m_cbVBlankStateChange(false);
@@ -1189,7 +1191,7 @@ void VDP::VDPRenderThread() {
                     }
                     break;*/
 
-            case EvtType::VDP2BeginFrame: VDP2CalcAccessPatterns(rctx.vdp2.regs); break;
+            case EvtType::VDP2BeginFrame: VDP2InitFrame(); break;
             case EvtType::VDP2UpdateEnabledBGs: VDP2UpdateEnabledBGs(); break;
             case EvtType::VDP2DrawLine: //
             {
@@ -2633,7 +2635,8 @@ FORCE_INLINE std::array<uint8, kVDP2VRAMSize> &VDP::VDP2GetVRAM() {
 }
 
 void VDP::VDP2InitFrame() {
-    if (m_state.regs2.bgEnabled[5]) {
+    const VDP2Regs &regs2 = VDP2GetRegs();
+    if (regs2.bgEnabled[5]) {
         VDP2InitRotationBG<0>();
         VDP2InitRotationBG<1>();
     } else {
@@ -2643,23 +2646,25 @@ void VDP::VDP2InitFrame() {
         VDP2InitNormalBG<2>();
         VDP2InitNormalBG<3>();
     }
-    VDP2CalcAccessPatterns(m_state.regs2);
+    VDP2CalcAccessPatterns();
 }
 
 template <uint32 index>
 FORCE_INLINE void VDP::VDP2InitNormalBG() {
     static_assert(index < 4, "Invalid NBG index");
 
-    if (!m_state.regs2.bgEnabled[index]) {
+    const VDP2Regs &regs2 = VDP2GetRegs();
+
+    if (!regs2.bgEnabled[index]) {
         return;
     }
 
-    const BGParams &bgParams = m_state.regs2.bgParams[index + 1];
+    const BGParams &bgParams = regs2.bgParams[index + 1];
     NormBGLayerState &bgState = m_normBGLayerStates[index];
     bgState.fracScrollX = 0;
     bgState.fracScrollY = 0;
     bgState.scrollAmountV = bgParams.scrollAmountV;
-    if (!m_deinterlaceRender && m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && VDP2GetRegs().TVSTAT.ODD) {
+    if (!m_deinterlaceRender && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && regs2.TVSTAT.ODD) {
         bgState.fracScrollY += bgParams.scrollIncV;
     }
 
@@ -2674,16 +2679,18 @@ template <uint32 index>
 FORCE_INLINE void VDP::VDP2InitRotationBG() {
     static_assert(index < 2, "Invalid RBG index");
 
-    if (!m_state.regs2.bgEnabled[index + 4]) {
+    const VDP2Regs &regs2 = VDP2GetRegs();
+
+    if (!regs2.bgEnabled[index + 4]) {
         return;
     }
 
-    const BGParams &bgParams = m_state.regs2.bgParams[index];
+    const BGParams &bgParams = regs2.bgParams[index];
     const bool cellSizeShift = bgParams.cellSizeShift;
     const bool twoWordChar = bgParams.twoWordChar;
 
     for (int param = 0; param < 2; param++) {
-        const RotationParams &rotParam = m_state.regs2.rotParams[param];
+        const RotationParams &rotParam = regs2.rotParams[param];
         auto &pageBaseAddresses = m_rotParamStates[param].pageBaseAddresses;
         const uint16 plsz = rotParam.plsz;
         for (int plane = 0; plane < 16; plane++) {
@@ -3096,7 +3103,9 @@ FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWi
     }
 }
 
-FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
+FORCE_INLINE void VDP::VDP2CalcAccessPatterns() {
+    VDP2Regs &regs2 = VDP2GetRegs();
+
     if (!regs2.accessPatternsDirty) [[likely]] {
         return;
     }
@@ -3446,7 +3455,7 @@ FORCE_INLINE void VDP::VDP2FinishLine(uint32 y) {
 
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP2DrawLine(uint32 y, bool altField) {
-    devlog::trace<grp::vdp2_render>("Drawing line {}", y);
+    devlog::trace<grp::vdp2_render>("Drawing line {} {} field", y, (altField ? "alt" : "main"));
 
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
