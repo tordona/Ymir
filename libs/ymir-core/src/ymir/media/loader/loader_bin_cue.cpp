@@ -343,6 +343,7 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
                         // fmt::println("BIN/CUE: Track {} has pregap of {} frames; skipping", currTrackIndex, delta);
                         binFileOffset += delta * track.sectorSize;
                     }
+                    pregapLength = delta;
                 }
 
                 // Start new track

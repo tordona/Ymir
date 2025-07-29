@@ -35,6 +35,7 @@
 - CD Block: Read subheader data from CD-ROM Mode 2 tracks only and fix their addressing. Fixes missing intro FMV in NiGHTS into Dreams... (#46)
 - Media: Add support for CD-ROM Mode 2 tracks. Fixes Last Bronx not booting. (#238)
 - Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Hopefully fixes some Last Bronx dumps not booting.
+- Media: Compensate for INDEX 00 pregap in multi-indexed tracks in CUE sheets. Fixes partially skipped Minnesota Fats - Pool Legend voice lines. (#363)
 - Media: Realign data offset to hunks between tracks in CHDs. Fixes Last Bronx CHD dumps not booting.
 - Save states: Added CD Block file system state to save state data.
 - Scheduler: Ensure events are executed in chronological order.
