@@ -46,9 +46,10 @@ In development.
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
 - VDP1: Use SCU DMA bus notification to adjust VDP1 VRAM write timing penalty. Fixes hanging intro FMV in Sonic Jam without breaking Mega Man X3's sprites. (#83)
+- VDP2: Don't increment vertical scroll BG coordinate on complementary field lines when rendering deinterlaced RBG lines. Fixes jittery/interlaced Grandia FMVs when deinterlace is enabled.
+- VDP2: Fix race conditions with threaded deinterlacing causing some artifacts on RBGs in single-density interlaced mode.
 - VDP2: RBG1 uses Rotation Parameter B, not A.
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
-- VDP2: Don't increment vertical scroll BG coordinate on complementary field lines when rendering deinterlaced RBG lines. Fixes jittery/interlaced Grandia FMVs when deinterlace is enabled.
 
 
 ## Version 0.1.6

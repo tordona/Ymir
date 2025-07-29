@@ -3517,7 +3517,7 @@ void VDP::VDP2DrawLine(uint32 y, bool altField) {
     }
 
     // Compose image
-    VDP2ComposeLine<deinterlace, transparentMeshes>(y, doubleDensity && altField, altField);
+    VDP2ComposeLine<deinterlace, transparentMeshes>(y, altField, altField);
 }
 
 FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
@@ -3558,6 +3558,8 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
     const uint32 xSpriteShift = halfResH ? 1 : 0;
     const uint32 maxX = m_HRes >> xShift;
 
+    const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
+
     const SpriteParams &params = regs2.spriteParams;
     auto &layerState = m_layerStates[altField][0];
     auto &spriteLayerState = m_spriteLayerState[altField];
@@ -3566,7 +3568,7 @@ NO_INLINE void VDP::VDP2DrawSpriteLayer(uint32 y) {
         const uint32 xx = x << xShift;
 
         const uint8 fbIndex = VDP1GetDisplayFBIndex();
-        const auto &spriteFB = altField ? m_altSpriteFB[fbIndex] : m_state.spriteFB[fbIndex];
+        const auto &spriteFB = doubleDensity && altField ? m_altSpriteFB[fbIndex] : m_state.spriteFB[fbIndex];
         const uint32 spriteFBOffset = [&] {
             if constexpr (rotate) {
                 const auto &rotParamState = m_rotParamStates[0];
@@ -5326,12 +5328,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
 
     for (uint32 x = 0; x < maxX; x++) {
         const uint32 xx = x << xShift;
-        util::ScopeGuard sgDoublePixel{[&] {
-            if (doubleResH) {
-                const Pixel pixel = layerState.pixels.GetPixel(xx);
-                layerState.pixels.SetPixel(xx + 1, pixel);
-            }
-        }};
+
         const RotParamSelector rotParamSelector = selRotParam ? VDP2SelectRotationParameter(x, y, altField) : RotParamA;
 
         const RotationParams &rotParams = regs.rotParams[rotParamSelector];
@@ -5340,6 +5337,9 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
         // Handle transparent pixels in coefficient table
         if (rotParams.coeffTableEnable && rotParamState.transparent[x]) {
             layerState.pixels.transparent[xx] = true;
+            if (doubleResH) {
+                layerState.pixels.transparent[xx + 1] = true;
+            }
             continue;
         }
 
@@ -5359,14 +5359,23 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
         if (windowState[x]) {
             // Make pixel transparent if inside a window
             layerState.pixels.transparent[xx] = true;
+            if (doubleResH) {
+                layerState.pixels.transparent[xx + 1] = true;
+            }
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
             const Pixel pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(
                 bgParams, rotParams.bitmapBaseAddress, scrollCoord, m_vramFetchers[altField][rotParamSelector + 4]);
             layerState.pixels.SetPixel(xx, pixel);
+            if (doubleResH) {
+                layerState.pixels.SetPixel(xx + 1, pixel);
+            }
         } else {
             // Out of bounds and no repeat
             layerState.pixels.transparent[xx] = true;
+            if (doubleResH) {
+                layerState.pixels.transparent[xx + 1] = true;
+            }
         }
     }
 }
