@@ -2240,7 +2240,7 @@ void CDBlock::CmdSetFilterConnection() {
         }
         if (setFailConn) {
             devlog::debug<grp::base>("Filter {} fail output={:02X}", filterNumber, failConn);
-            DisconnectFilterInput(filterNumber);
+            DisconnectFilterInput(failConn);
             filter.failOutput = failConn;
         }
 
