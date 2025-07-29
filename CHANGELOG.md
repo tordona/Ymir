@@ -2,6 +2,8 @@
 
 ## Version 0.1.7
 
+In development.
+
 ### New features and improvements
 
 - App: Added a button to copy the version string from the About window.
@@ -45,7 +47,10 @@
 - VDP2: RBG1 uses Rotation Parameter B, not A.
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
 
+
 ## Version 0.1.6
+
+Released 2025-07-20.
 
 ### New features and improvements
 
@@ -144,6 +149,8 @@
 
 ## Version 0.1.5
 
+Released 2025-06-28.
+
 ### New features and improvements
 
 - App: Added command-line option `-P` to force emulator to start paused.
@@ -206,6 +213,8 @@
 
 ## Version 0.1.4+1
 
+Released 2025-06-02.
+
 ### New features and improvements
 
 - App: You can now drag and drop CCD, CHD, CUE, ISO or MDS files into the emulator window to load games.
@@ -216,6 +225,8 @@
 
 
 ## Version 0.1.4
+
+Released 2025-06-02.
 
 ### New features and improvements
 
@@ -273,6 +284,8 @@
 
 ## Version 0.1.3
 
+Released 2025-05-16.
+
 ### New features and improvements
 
 - Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95. (#71)
@@ -309,6 +322,8 @@
 
 ## Version 0.1.2
 
+Released 2025-05-04.
+
 ### New features and improvements
 
 - Input: Improved support for gamepads. You can now configure triggers as buttons, map analog sticks to the D-Pad, adjust deadzones, and more. (#36, #37, #54)
@@ -322,6 +337,8 @@
 
 
 ## Version 0.1.1
+
+Released 2025-05-03.
 
 ### New features and improvements
 
@@ -340,5 +357,7 @@
 
 
 ## Version 0.1.0
+
+Released 2025-05-01.
 
 Initial release.
