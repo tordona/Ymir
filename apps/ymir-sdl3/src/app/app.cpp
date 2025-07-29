@@ -2587,7 +2587,7 @@ void App::RunEmulator() {
                                          videoSettings.rotation == Settings::Video::DisplayRotation::_180;
 
                 double aspectRatio = videoSettings.forceAspectRatio
-                                         ? screen.scaleX / videoSettings.forcedAspect
+                                         ? 1.0 / videoSettings.forcedAspect
                                          : (double)screen.height / screen.width * screen.scaleY / screen.scaleX;
                 if (!horzDisplay) {
                     aspectRatio = 1.0 / aspectRatio;
