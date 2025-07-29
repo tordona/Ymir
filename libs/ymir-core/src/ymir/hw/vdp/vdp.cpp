@@ -2760,7 +2760,7 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScroll(uint32 y, const BGParams &bgPa
 
     const VDP2Regs &regs = VDP2GetRegs();
     size_t count = 1;
-    if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity && (y > 0 || regs.TVSTAT.ODD)) {
+    if (regs.TVMD.LSMDn == InterlaceMode::DoubleDensity && (y > 0 || (!m_deinterlaceRender && regs.TVSTAT.ODD))) {
         ++count;
     }
     for (size_t i = 0; i < count; ++i) {
@@ -5137,7 +5137,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
                                            std::span<const bool> windowState, bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
 
-    const bool altLine = deinterlace && altField && regs.TVMD.LSMDn == InterlaceMode::DoubleDensity;
+    const bool doubleDensity = regs.TVMD.LSMDn == InterlaceMode::DoubleDensity;
+    const bool altLine = deinterlace && altField && doubleDensity && !bgParams.lineScrollYEnable;
     uint32 fracScrollX = bgState.fracScrollX + bgParams.scrollAmountH;
     const uint32 fracScrollY = bgState.fracScrollY + bgState.scrollAmountV + (altLine ? bgParams.scrollIncV : 0);
 
