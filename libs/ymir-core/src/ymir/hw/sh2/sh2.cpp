@@ -329,9 +329,10 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
                 }
 
                 // Bail out if debug break was raised on watchpoints or other cases
-                if (m_debugBreakMgr->IsDebugBreakRaised()) {
+                // TODO: probably needs to be an internal signal instead, otherwise it breaks SSH2 cycle counting
+                /*if (m_debugBreakMgr->IsDebugBreakRaised()) {
                     break;
-                }
+                }*/
             }
         }
 
