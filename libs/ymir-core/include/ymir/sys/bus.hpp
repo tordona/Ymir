@@ -29,12 +29,16 @@ using FnWrite8 = void (*)(uint32 address, uint8 value, void *ctx);   ///< Functi
 using FnWrite16 = void (*)(uint32 address, uint16 value, void *ctx); ///< Function signature for 16-bit writes.
 using FnWrite32 = void (*)(uint32 address, uint32 value, void *ctx); ///< Function signature for 32-bit writes.
 
+using FnNotifySCUDMA = void (*)(uint32 address, bool active,
+                                void *ctx); ///< Function signature for SCU DMA notifications.
+
 /// @brief Specifies valid bus handler function types.
 /// @tparam T the type to check
 template <typename T>
 concept bus_handler_fn =
     fninfo::IsAssignable<FnRead8, T> || fninfo::IsAssignable<FnRead16, T> || fninfo::IsAssignable<FnRead32, T> ||
-    fninfo::IsAssignable<FnWrite8, T> || fninfo::IsAssignable<FnWrite16, T> || fninfo::IsAssignable<FnWrite32, T>;
+    fninfo::IsAssignable<FnWrite8, T> || fninfo::IsAssignable<FnWrite16, T> || fninfo::IsAssignable<FnWrite32, T> ||
+    fninfo::IsAssignable<FnNotifySCUDMA, T>;
 
 /// @brief Represents a memory bus interconnecting various components in the system.
 ///
@@ -60,6 +64,8 @@ public:
     ///
     /// Handler types must be unique.
     ///
+    /// Replaces arrays previously mapped to the region.
+    ///
     /// @tparam ...THandlers the types of the handlers; automatically deduced from function arguments.
     /// @param[in] start the lower bound of the address range to map the handlers into
     /// @param[in] end the upper bound of the address range to map the handlers into
@@ -78,6 +84,8 @@ public:
     ///
     /// Handler types must be unique.
     ///
+    /// Replaces arrays previously mapped to the region.
+    ///
     /// @tparam ...THandlers the types of the handlers; automatically deduced from function arguments.
     /// @param[in] start the lower bound of the address range to map the handlers into
     /// @param[in] end the upper bound of the address range to map the handlers into
@@ -89,22 +97,14 @@ public:
         Map<true, false, THandlers...>(start, end, context, std::forward<THandlers>(handlers)...);
     }
 
-    // Maps side-effect-free (peek/poke) handlers to the specified range.
-    // Only the handlers of the specified types are modified; all others (including normal versions) are left untouched.
-    // Handler types must be unique.
-    //
-    // `THandlers` specifies the types of the handlers; automatically deduced from function arguments.
-    //
-    // `start` and `end` specify the address range to map the handlers.
-    // `context` is a user pointer to any object that's passed as the context pointer to handlers.
-    // `handlers` are the handlers to map.
-
     /// @brief Maps side-effect-free (peek/poke) handlers to the specified range.
     ///
     /// Only the handlers of the specified types are modified; all others (including normal versions) are left
     /// untouched.
     ///
     /// Handler types must be unique.
+    ///
+    /// Replaces arrays previously mapped to the region.
     ///
     /// @tparam ...THandlers the types of the handlers; automatically deduced from function arguments.
     /// @param[in] start the lower bound of the address range to map the handlers into
@@ -116,10 +116,6 @@ public:
     void MapSideEffectFree(uint32 start, uint32 end, void *context, THandlers &&...handlers) {
         Map<false, true, THandlers...>(start, end, context, std::forward<THandlers>(handlers)...);
     }
-
-    // Unmaps all handlers from the specified range.
-    //
-    // `start` and `end` specify the address range to map the handlers.
 
     /// @brief Unmaps all handlers from the specified range.
     /// @param[in] start the lower bound of the address range to unmap the handlers from
@@ -134,7 +130,7 @@ public:
 
     /// @brief Convenience method that maps an array to the specified range.
     ///
-    /// Both normal and side-effect-free handlers are mapped.
+    /// The array is mapped to oth normal and side-effect-free accesses and replaces all function handlers.
     ///
     /// The array is mapped from the beginning at `start` and mirrored across the whole range until `end`.
     /// If the array is larger than the range, only the range `array[0]..array[end-start-1]` is mapped.
@@ -154,6 +150,7 @@ public:
         const uint32 endIndex = end >> kPageGranularityBits;
         uint32 offset = 0;
         for (uint32 i = startIndex; i <= endIndex; i++) {
+            m_pages[i] = {}; // clear all handlers
             m_pages[i].array = &array[offset & kMask];
             m_pages[i].arrayWritable = writable;
             offset += kPageSize;
@@ -216,6 +213,16 @@ public:
         }
     }
 
+    /// @brief Notifies the target component of the SCU DMA transfer state.
+    /// @param[in] address the address to notify, force-aligned to 32-bit
+    /// @param[in] active whether an SCU DMA transfer is in progress
+    FLATTEN FORCE_INLINE void NotifySCUDMA(uint32 address, bool active) {
+        address &= kAddressMask & ~3u;
+
+        const MemoryPage &entry = m_pages[address >> kPageGranularityBits];
+        entry.notifySCUDMA(address, active, entry.ctx);
+    }
+
     /// @brief Reads data from the bus using the side-effect-free handler assigned to the specified address.
     /// @tparam T the data type of the access
     /// @param[in] address the address to read
@@ -270,7 +277,7 @@ public:
     }
 
 private:
-    struct alignas(64) MemoryPage {
+    struct MemoryPage {
         // Fast path for simple arrays
 
         uint8 *array = nullptr;
@@ -295,9 +302,12 @@ private:
         FnWrite8 poke8 = [](uint32, uint8, void *) {};
         FnWrite16 poke16 = [](uint32, uint16, void *) {};
         FnWrite32 poke32 = [](uint32, uint32, void *) {};
-    };
 
-    std::array<MemoryPage, kPageCount> m_pages;
+        FnNotifySCUDMA notifySCUDMA = [](uint32, bool, void *) {};
+    };
+    static_assert(bit::is_power_of_two(sizeof(MemoryPage)));
+
+    alignas(64) std::array<MemoryPage, kPageCount> m_pages;
 
     template <bool normal, bool sideEffectFree, bus_handler_fn... THandlers>
         requires util::unique_types<THandlers...>
@@ -347,6 +357,8 @@ private:
                 page.write16 = handler;
             } else if constexpr (fninfo::IsAssignable<FnWrite32, THandler>) {
                 page.write32 = handler;
+            } else if constexpr (fninfo::IsAssignable<FnNotifySCUDMA, THandler>) {
+                page.notifySCUDMA = handler;
             }
         }
     }

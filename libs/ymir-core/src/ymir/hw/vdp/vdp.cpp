@@ -106,7 +106,8 @@ void VDP::Reset(bool hard) {
         m_CRAMCache.fill({});
     }
 
-    m_VDP1TimingPenalty = 0;
+    m_VDP1TimingPenaltyCycles = 0;
+    m_VDP1TimingPenaltyPerWrite = kVDP1TimingPenaltyPerWrite;
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::Reset());
@@ -157,12 +158,25 @@ void VDP::MapMemory(sys::Bus &bus) {
             uint32 value = cast(ctx).VDP1ReadVRAM<uint16>(address + 0) << 16u;
             value |= cast(ctx).VDP1ReadVRAM<uint16>(address + 2) << 0u;
             return value;
-        },
-        [](uint32 address, uint8 value, void *ctx) { cast(ctx).VDP1WriteVRAM<uint8>(address, value); },
-        [](uint32 address, uint16 value, void *ctx) { cast(ctx).VDP1WriteVRAM<uint16>(address, value); },
+        });
+    bus.MapNormal(
+        0x5C0'0000, 0x5C7'FFFF, this,
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).VDP1WriteVRAM<uint8, false>(address, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).VDP1WriteVRAM<uint16, false>(address, value); },
         [](uint32 address, uint32 value, void *ctx) {
-            cast(ctx).VDP1WriteVRAM<uint16>(address + 0, value >> 16u);
-            cast(ctx).VDP1WriteVRAM<uint16>(address + 2, value >> 0u);
+            cast(ctx).VDP1WriteVRAM<uint16, false>(address + 0, value >> 16u);
+            cast(ctx).VDP1WriteVRAM<uint16, false>(address + 2, value >> 0u);
+        },
+        [](uint32 address, bool SCUDMAactive, void *ctx) {
+            cast(ctx).m_VDP1TimingPenaltyPerWrite = SCUDMAactive ? 0 : kVDP1TimingPenaltyPerWrite;
+        });
+    bus.MapSideEffectFree(
+        0x5C0'0000, 0x5C7'FFFF, this,
+        [](uint32 address, uint8 value, void *ctx) { cast(ctx).VDP1WriteVRAM<uint8, true>(address, value); },
+        [](uint32 address, uint16 value, void *ctx) { cast(ctx).VDP1WriteVRAM<uint16, true>(address, value); },
+        [](uint32 address, uint32 value, void *ctx) {
+            cast(ctx).VDP1WriteVRAM<uint16, true>(address + 0, value >> 16u);
+            cast(ctx).VDP1WriteVRAM<uint16, true>(address + 2, value >> 0u);
         });
 
     // VDP1 framebuffer
@@ -327,8 +341,8 @@ template <bool debug>
 void VDP::Advance(uint64 cycles) {
     if (!m_effectiveRenderVDP1InVDP2Thread) {
         if (m_VDP1RenderContext.rendering) {
-            if (cycles <= m_VDP1TimingPenalty) {
-                m_VDP1TimingPenalty -= cycles;
+            if (cycles <= m_VDP1TimingPenaltyCycles) {
+                m_VDP1TimingPenaltyCycles -= cycles;
                 return;
             }
 
@@ -337,10 +351,10 @@ void VDP::Advance(uint64 cycles) {
             // TODO: proper cycle counting
             static constexpr uint64 kCyclesPerCommand = 500; // FIXME: pulled out of thin air
 
-            m_VDP1RenderContext.cycleCount += cycles - m_VDP1TimingPenalty;
+            m_VDP1RenderContext.cycleCount += cycles - m_VDP1TimingPenaltyCycles;
             const uint64 steps = m_VDP1RenderContext.cycleCount / kCyclesPerCommand;
             m_VDP1RenderContext.cycleCount %= kCyclesPerCommand;
-            m_VDP1TimingPenalty = 0;
+            m_VDP1TimingPenaltyCycles = 0;
 
             for (uint64 i = 0; i < steps; i++) {
                 (this->*m_fnVDP1ProcessCommand)();
@@ -602,16 +616,19 @@ FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) const {
     return util::ReadBE<T>(&m_state.VRAM1[address]);
 }
 
-template <mem_primitive T>
+template <mem_primitive T, bool poke>
 FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
     address &= 0x7FFFF;
     util::WriteBE<T>(&m_state.VRAM1[address], value);
     if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
     }
-    // HACK: Add a timing penalty to VDP1 command execution on every VRAM write
-    if (m_VDP1RenderContext.rendering) {
-        m_VDP1TimingPenalty += 22; // FIXME: pulled out of thin air
+
+    if constexpr (!poke) {
+        // HACK: Add a timing penalty to VDP1 command execution on every VRAM write coming from SH-2
+        if (m_VDP1RenderContext.rendering) {
+            m_VDP1TimingPenaltyCycles += m_VDP1TimingPenaltyPerWrite; // FIXME: pulled out of thin air
+        }
     }
 }
 
@@ -675,7 +692,7 @@ FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
     case 0x0C: // ENDR
         // TODO: schedule drawing termination after 30 cycles
         m_VDP1RenderContext.rendering = false;
-        m_VDP1TimingPenalty = 0;
+        m_VDP1TimingPenaltyCycles = 0;
         break;
     }
 }
@@ -1516,7 +1533,7 @@ void VDP::VDP1BeginFrame() {
 void VDP::VDP1EndFrame() {
     devlog::trace<grp::vdp1_render>("End VDP1 frame on framebuffer {}", VDP1GetDisplayFBIndex() ^ 1);
     m_VDP1RenderContext.rendering = false;
-    m_VDP1TimingPenalty = 0;
+    m_VDP1TimingPenaltyCycles = 0;
 
     if (m_effectiveRenderVDP1InVDP2Thread) {
         m_VDPRenderContext.vdp1Done = true;

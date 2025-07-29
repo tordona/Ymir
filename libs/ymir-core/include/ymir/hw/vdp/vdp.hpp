@@ -148,7 +148,7 @@ private:
     template <mem_primitive T>
     T VDP1ReadVRAM(uint32 address) const;
 
-    template <mem_primitive T>
+    template <mem_primitive T, bool poke>
     void VDP1WriteVRAM(uint32 address, T value);
 
     template <mem_primitive T>
@@ -163,7 +163,10 @@ private:
     void VDP1WriteReg(uint32 address, uint16 value);
 
     // Hacky VDP1 command execution timing penalty accrued from external writes to VRAM
-    uint64 m_VDP1TimingPenalty;
+    // TODO: count pulled out of thin air
+    static constexpr uint64 kVDP1TimingPenaltyPerWrite = 22;
+    uint64 m_VDP1TimingPenaltyCycles;   // accumulated cycle penalty
+    uint64 m_VDP1TimingPenaltyPerWrite; // penalty per write
 
     // -------------------------------------------------------------------------
     // VDP2 memory/register access

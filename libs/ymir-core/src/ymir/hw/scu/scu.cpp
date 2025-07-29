@@ -638,6 +638,11 @@ void SCU::RunDMA() {
         uint32 initialDstAlignment = currDstOffset;
         uint32 xferLength = ch.currXferCount;
 
+        const uint32 baseSrcAddr = ch.currSrcAddr;
+        const uint32 baseDstAddr = ch.currDstAddr;
+        m_bus.NotifySCUDMA(baseSrcAddr, true);
+        m_bus.NotifySCUDMA(baseDstAddr, true);
+
         buf = m_bus.Read<uint32>(ch.currSrcAddr & ~3u);
         devlog::trace<grp::dma>("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr & ~3u, buf);
 
@@ -894,6 +899,8 @@ void SCU::RunDMA() {
             ch.currDstAddr = currDstAddr;
             TriggerDMAEnd(level);
             RecalcDMAChannel();
+            m_bus.NotifySCUDMA(baseSrcAddr, false);
+            m_bus.NotifySCUDMA(baseDstAddr, false);
         }
     }
 }
