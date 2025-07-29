@@ -254,6 +254,8 @@ add_executable(ymir-sdl3
     src/util/ipl_rom_loader.cpp
     src/util/ipl_rom_loader.hpp
     src/util/math.hpp
+    src/util/os_exception_handler.cpp
+    src/util/os_exception_handler.hpp
     src/util/regions.cpp
     src/util/regions.hpp
     src/util/ring_buffer.hpp

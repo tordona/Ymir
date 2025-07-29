@@ -1,11 +1,15 @@
 #include "app/app.hpp"
 
+#include <util/os_exception_handler.hpp>
+
 #include <cxxopts.hpp>
 #include <fmt/format.h>
 
 #include <memory>
 
 int main(int argc, char **argv) {
+    util::RegisterExceptionHandler();
+
     bool showHelp = false;
 
     app::CommandLineOptions progOpts{};
@@ -39,5 +43,5 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    return EXIT_SUCCESS;
+    return 0;
 }

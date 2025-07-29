@@ -9,6 +9,7 @@ In development.
 - App: Added a button to copy the version string from the About window.
 - App: Added option to automatically load most recently loaded game disc image on startup.
 - App: Auto-center About window whenever it is opened.
+- App: Display error dialog on unhandled exceptions.
 - App: Show actual emulation speed in title bar and frame rate OSD.
 - App: Show actual VDP1 frame rate separated from VDP1 draw calls.
 - Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
