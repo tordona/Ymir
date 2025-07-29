@@ -152,7 +152,7 @@ void InputCaptureWidget::CaptureAxis1D(input::InputBind &bind, size_t elementInd
         if (event.element.IsBipolarAxis() != bipolar) {
             return false;
         }
-        if (abs(event.axis1DValue) < 0.5f) {
+        if (std::abs(event.axis1DValue) < 0.5f) {
             return false;
         }
 

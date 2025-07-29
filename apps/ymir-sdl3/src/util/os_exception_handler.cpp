@@ -87,7 +87,7 @@ void RegisterExceptionHandler() {
     action.sa_sigaction = [](int sig, siginfo_t *info, void *ucontext) -> void {
         const auto addr = reinterpret_cast<uintptr_t>(info->si_addr);
         auto *context = static_cast<ucontext_t *>(ucontext);
-        auto *mcontext = context->uc_mcontext;
+        auto &mcontext = context->uc_mcontext;
 
         fmt::memory_buffer buf{};
         auto out = std::back_inserter(buf);
