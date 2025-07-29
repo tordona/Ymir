@@ -234,6 +234,7 @@ add_library(ymir-core
     src/ymir/util/date_time.cpp
     src/ymir/util/event.cpp
     src/ymir/util/process.cpp
+    src/ymir/util/thread_name.cpp
 )
 add_library(ymir::ymir-core ALIAS ymir-core)
 set_target_properties(ymir-core PROPERTIES
