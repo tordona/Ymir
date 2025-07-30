@@ -649,6 +649,7 @@ private:
     // --- Power-down module ---
 
     RegSBYCR SBYCR; // 091  R/W  8        00        SBYCR   Standby Control Register
+    bool m_sleep;
 
     // --- DIVU module ---
 

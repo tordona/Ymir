@@ -105,6 +105,7 @@ struct SH2State {
     } cache;
 
     uint8 SBYCR;
+    bool sleep;
 };
 
 } // namespace ymir::state

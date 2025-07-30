@@ -49,6 +49,10 @@ void serialize(Archive &ar, SystemState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, SH2State &s, const uint32 version) {
+    // v6:
+    // - New fields
+    //   - bool sleep = false
+
     ar(s.R, s.PC, s.PR, s.MACL, s.MACH, s.SR, s.GBR, s.VBR);
     ar(s.delaySlot, s.delaySlotTarget);
     ar(s.bsc, s.dmac);
@@ -56,6 +60,11 @@ void serialize(Archive &ar, SH2State &s, const uint32 version) {
     serialize(ar, s.divu, version);
     serialize(ar, s.frt, version);
     ar(s.intc, s.cache, s.SBYCR);
+    if (version >= 8) {
+        ar(s.sleep);
+    } else {
+        s.sleep = false;
+    }
     if (version < 5) {
         s.divu.VCRDIV = s.intc.vectors[12]; // 12 == static_cast<size_t>(sh2::InterruptSource::DIVU_OVFI)
     }

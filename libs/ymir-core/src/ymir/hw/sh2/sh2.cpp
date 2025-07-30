@@ -250,6 +250,7 @@ void SH2::Reset(bool hard, bool watchdogInitiated) {
     WDT.Reset(watchdogInitiated);
 
     SBYCR.u8 = 0x00;
+    m_sleep = false;
 
     DIVU.Reset();
     FRT.Reset();
@@ -308,6 +309,16 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
         if (m_debugSuspend) {
             m_cyclesExecuted = cycles;
             return m_cyclesExecuted;
+        }
+    }
+    // Skip interpreting instructions if CPU is in sleep or standby mode.
+    // Wake up on interrupts.
+    if (m_sleep) [[unlikely]] {
+        if (m_intrPending) {
+            m_sleep = false;
+            PC += 2;
+        } else {
+            return cycles;
         }
     }
 
@@ -413,6 +424,7 @@ void SH2::SaveState(state::SH2State &state) const {
     INTC.SaveState(state.intc);
     m_cache.SaveState(state.cache);
     state.SBYCR = SBYCR.u8;
+    state.sleep = m_sleep;
 }
 
 bool SH2::ValidateState(const state::SH2State &state) const {
@@ -449,6 +461,7 @@ void SH2::LoadState(const state::SH2State &state) {
     INTC.LoadState(state.intc);
     m_cache.LoadState(state.cache);
     SBYCR.u8 = state.SBYCR;
+    m_sleep = state.sleep;
 
     m_intrPending = !m_delaySlot && INTC.pending.level > SR.ILevel;
 }
@@ -2149,22 +2162,25 @@ FORCE_INLINE uint64 SH2::NOP() {
 
 // sleep
 FORCE_INLINE uint64 SH2::SLEEP() {
-    if (SBYCR.SBY) {
-        devlog::trace<grp::exec>(m_logPrefix, "Entering standby");
+    if (!m_sleep) {
+        if (SBYCR.SBY) {
+            devlog::trace<grp::exec>(m_logPrefix, "Entering standby");
 
-        // Initialize DMAC, FRT, WDT and SCI
-        for (auto &ch : m_dmaChannels) {
-            ch.WriteCHCR<false>(0);
+            // Initialize DMAC, FRT, WDT and SCI
+            for (auto &ch : m_dmaChannels) {
+                ch.WriteCHCR<false>(0);
+            }
+            DMAOR.Reset();
+            FRT.Reset();
+            WDT.Reset(false);
+            // TODO: reset SCI
+
+            // TODO: enter standby state
+        } else {
+            devlog::trace<grp::exec>(m_logPrefix, "Entering sleep");
+            // TODO: enter sleep state
         }
-        DMAOR.Reset();
-        FRT.Reset();
-        WDT.Reset(false);
-        // TODO: reset SCI
-
-        // TODO: enter standby state
-    } else {
-        devlog::trace<grp::exec>(m_logPrefix, "Entering sleep");
-        // TODO: enter sleep state
+        m_sleep = true;
     }
 
     return 3;
