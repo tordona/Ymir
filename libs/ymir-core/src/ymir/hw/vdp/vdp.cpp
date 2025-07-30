@@ -1505,6 +1505,10 @@ FORCE_INLINE void VDP::VDP1SwapFramebuffer() {
         m_VDPRenderContext.framebufferSwapSignal.Reset();
     }
 
+    m_state.regs1.prevCommandAddress = m_state.regs1.currCommandAddress;
+    m_state.regs1.prevFrameEnded = m_state.regs1.currFrameEnded;
+    m_state.regs1.currFrameEnded = false;
+
     m_state.displayFB ^= 1;
 
     m_cbVDP1FramebufferSwap();
@@ -1520,10 +1524,8 @@ void VDP::VDP1BeginFrame() {
     // TODO: setup rendering
     // TODO: figure out VDP1 timings
 
-    m_state.regs1.prevCommandAddress = m_state.regs1.currCommandAddress;
-    m_state.regs1.currCommandAddress = 0;
     m_state.regs1.returnAddress = ~0;
-    m_state.regs1.prevFrameEnded = m_state.regs1.currFrameEnded;
+    m_state.regs1.currCommandAddress = 0;
     m_state.regs1.currFrameEnded = false;
 
     m_VDP1RenderContext.rendering = true;
