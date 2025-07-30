@@ -1380,6 +1380,9 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         m_dmaChannels[0].WriteCHCR<poke>(value);
         if constexpr (!poke) {
             RunDMAC<debug, enableCache>(0); // TODO: should be scheduled
+            if (!DMAOR.DME || !m_dmaChannels[0].xferEnded || !m_dmaChannels[0].irqEnable) {
+                LowerInterrupt(InterruptSource::DMAC0_XferEnd);
+            }
         }
         break;
 
@@ -1390,6 +1393,9 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         m_dmaChannels[1].WriteCHCR<poke>(value);
         if constexpr (!poke) {
             RunDMAC<debug, enableCache>(1); // TODO: should be scheduled
+            if (!DMAOR.DME || !m_dmaChannels[1].xferEnded || !m_dmaChannels[1].irqEnable) {
+                LowerInterrupt(InterruptSource::DMAC1_XferEnd);
+            }
         }
         break;
 
@@ -1401,6 +1407,10 @@ FORCE_INLINE void SH2::OnChipRegWriteLong(uint32 address, uint32 value) {
         if constexpr (!poke) {
             RunDMAC<debug, enableCache>(0); // TODO: should be scheduled
             RunDMAC<debug, enableCache>(1); // TODO: should be scheduled
+            if (!DMAOR.DME) {
+                LowerInterrupt(InterruptSource::DMAC0_XferEnd);
+                LowerInterrupt(InterruptSource::DMAC1_XferEnd);
+            }
         }
         break;
 
@@ -1695,11 +1705,11 @@ void SH2::RecalcInterrupts() {
     }
 
     // DMA channel transfer end
-    if (m_dmaChannels[0].xferEnded && m_dmaChannels[0].irqEnable) {
+    if (DMAOR.DME && m_dmaChannels[0].xferEnded && m_dmaChannels[0].irqEnable) {
         RaiseInterrupt(InterruptSource::DMAC0_XferEnd);
         return;
     }
-    if (m_dmaChannels[1].xferEnded && m_dmaChannels[1].irqEnable) {
+    if (DMAOR.DME && m_dmaChannels[1].xferEnded && m_dmaChannels[1].irqEnable) {
         RaiseInterrupt(InterruptSource::DMAC1_XferEnd);
         return;
     }

@@ -44,6 +44,7 @@ In development.
 - Scheduler: Ensure events are executed in chronological order.
 - SCU: Fix A-Bus external interrupt handling.
 - SCU: Notify bus of DMA transfers.
+- SH2: Fix CPU getting stuck handling DMAC interrupts forever. Fixes Shellshock not booting. (#344)
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
 - VDP1: Reorder LOPR, COPR, CEF and BEF updates. Fixes missing graphics in Virtual On - Cyber Troopers.
