@@ -1,5 +1,9 @@
 #include "sh2_debugger_window.hpp"
 
+#include <app/events/emu_debug_event_factory.hpp>
+#include <app/events/emu_event_factory.hpp>
+#include <app/events/gui_event_factory.hpp>
+
 #include <fstream>
 
 using namespace ymir;
@@ -97,6 +101,34 @@ void SH2DebuggerWindow::DrawContents() {
         }
 
         ImGui::EndTable();
+    }
+
+    // Handle shortcuts
+    // TODO: use InputContext + actions
+    const ImGuiInputFlags baseFlags = ImGuiInputFlags_Repeat;
+    if (ImGui::Shortcut(ImGuiKey_F9, baseFlags)) {
+        // TODO: Toggle breakpoint at cursor
+        // m_context.EnqueueEvent(events::emu::debug::ToggleSH2Breakpoint(m_sh2.IsMaster(),
+        // m_disasmView.GetCursorAddress()));
+    }
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F9, baseFlags)) {
+        // Open breakpoints
+        m_context.EnqueueEvent(events::gui::OpenSH2BreakpointsWindow(m_sh2.IsMaster()));
+    }
+    if (ImGui::Shortcut(ImGuiKey_F10, baseFlags)) {
+        // TODO: Step over
+    }
+    if (ImGui::Shortcut(ImGuiKey_F11, baseFlags) || ImGui::Shortcut(ImGuiKey_S, baseFlags)) {
+        // Step into
+        m_context.EnqueueEvent(m_sh2.IsMaster() ? events::emu::StepMSH2() : events::emu::StepSSH2());
+    }
+    if (ImGui::Shortcut(ImGuiKey_Space) || ImGui::Shortcut(ImGuiKey_R)) {
+        // Pause/Resume
+        m_context.EnqueueEvent(events::emu::SetPaused(!m_context.paused));
+    }
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_R)) {
+        // Reset
+        m_context.EnqueueEvent(events::emu::HardReset());
     }
 }
 

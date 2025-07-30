@@ -410,6 +410,8 @@ void App::RunEmulator() {
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
+    io.KeyRepeatDelay = 0.350f;
+    io.KeyRepeatRate = 0.030f;
 
     LoadFonts();
 

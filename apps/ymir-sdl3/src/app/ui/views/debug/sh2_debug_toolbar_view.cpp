@@ -36,7 +36,7 @@ void SH2DebugToolbarView::Display() {
             m_context.EnqueueEvent(master ? events::emu::StepMSH2() : events::emu::StepSSH2());
         }
         if (ImGui::BeginItemTooltip()) {
-            ImGui::TextUnformatted("Step");
+            ImGui::TextUnformatted("Step (F11, S)");
             ImGui::EndTooltip();
         }
 
@@ -48,7 +48,7 @@ void SH2DebugToolbarView::Display() {
         }
         ImGui::EndDisabled();
         if (ImGui::BeginItemTooltip()) {
-            ImGui::TextUnformatted("Pause");
+            ImGui::TextUnformatted("Pause (Space, R)");
             ImGui::EndTooltip();
         }
 
@@ -60,7 +60,17 @@ void SH2DebugToolbarView::Display() {
         }
         ImGui::EndDisabled();
         if (ImGui::BeginItemTooltip()) {
-            ImGui::TextUnformatted("Resume");
+            ImGui::TextUnformatted("Resume (Space, R)");
+            ImGui::EndTooltip();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(ICON_MS_REPLAY)) {
+            m_context.EnqueueEvent(events::emu::HardReset());
+        }
+        if (ImGui::BeginItemTooltip()) {
+            ImGui::TextUnformatted("Hard reset (Ctrl+R)");
             ImGui::EndTooltip();
         }
     }
@@ -70,7 +80,7 @@ void SH2DebugToolbarView::Display() {
         m_context.EnqueueEvent(events::gui::OpenSH2BreakpointsWindow(m_sh2.IsMaster()));
     }
     if (ImGui::BeginItemTooltip()) {
-        ImGui::TextUnformatted("Breakpoints");
+        ImGui::TextUnformatted("Breakpoints (Ctrl+F9)");
         ImGui::EndTooltip();
     }
 
