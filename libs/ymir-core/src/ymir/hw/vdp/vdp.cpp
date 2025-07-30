@@ -5508,9 +5508,9 @@ FORCE_INLINE Coefficient VDP::VDP2FetchRotationCoefficient(const RotationParams 
 
 // TODO: optimize - remove pageShiftH and pageShiftV params
 template <bool rot, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
-FORCE_INLINE VDP::Pixel VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses,
-                                                    uint32 pageShiftH, uint32 pageShiftV, CoordU32 scrollCoord,
-                                                    VRAMFetcher &vramFetcher) {
+FORCE_INLINE_EX VDP::Pixel
+VDP::VDP2FetchScrollBGPixel(const BGParams &bgParams, std::span<const uint32> pageBaseAddresses, uint32 pageShiftH,
+                            uint32 pageShiftV, CoordU32 scrollCoord, VRAMFetcher &vramFetcher) {
     //      Map (NBGs)              Map (RBGs)
     // +---------+---------+   +----+----+----+----+
     // |         |         |   | A  | B  | C  | D  |
