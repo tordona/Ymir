@@ -359,8 +359,10 @@ int App::Run(const CommandLineOptions &options) {
 }
 
 void App::RunEmulator() {
-    // TODO: setting the main thread name on Linux replaces the process name displayed on tools like `top`
-    // util::SetCurrentThreadName("Main thread");
+#if defined(_WIN32)
+    // NOTE: Setting the main thread name on Linux and macOS replaces the process name displayed on tools like `top`.
+    util::SetCurrentThreadName("Main thread");
+#endif
 
     using namespace std::chrono_literals;
     using namespace ymir;

@@ -4,7 +4,7 @@ namespace util {
 
 void ShowFatalErrorDialog(const char *msg);
 
-void RegisterExceptionHandler();
+void RegisterExceptionHandler(bool allExceptions);
 // void UnregisterExceptionHandler();
 
 } // namespace util

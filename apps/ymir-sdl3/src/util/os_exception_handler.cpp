@@ -9,6 +9,8 @@
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <Windows.h>
+
+    #include <set>
 #elif defined(__linux__)
     #include <signal.h>
 
@@ -25,28 +27,81 @@ void ShowFatalErrorDialog(const char *msg) {
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal error", msg, nullptr);
 }
 
+static void ShowExceptionDialog(const char *msg) {
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Exception", msg, nullptr);
+}
+
 // -----------------------------------------------------------------------------
 // Windows implementation
 
 #ifdef _WIN32
 
 static PVOID g_vehPtr = nullptr;
+bool g_allExcpt = false;
 
-void RegisterExceptionHandler() {
+static const std::set<DWORD> kFatalErrors = {
+    STATUS_ACCESS_VIOLATION,       STATUS_NO_MEMORY,      STATUS_ILLEGAL_INSTRUCTION, STATUS_ARRAY_BOUNDS_EXCEEDED,
+    STATUS_PRIVILEGED_INSTRUCTION, STATUS_STACK_OVERFLOW, STATUS_HEAP_CORRUPTION,     STATUS_STACK_BUFFER_OVERRUN,
+    // STATUS_NONCONTINUABLE_EXCEPTION, // usually means a bug in an exception handler
+    // STATUS_ASSERTION_FAILURE, // not always a problem
+    // STATUS_ENCLAVE_VIOLATION, // not used by Ymir
+};
+
+static const std::set<DWORD> kAllowedExceptions = {
+    // Old method of setting thread name
+    0x406D1388,
+
+    // Let C++ exceptions go through. They are handled by try-catch blocks in many places.
+    0xE06D7363,
+    0xE04D5343,
+};
+
+void RegisterExceptionHandler(bool allExceptions) {
+    g_allExcpt = allExceptions;
     g_vehPtr = AddVectoredExceptionHandler(1, [](_EXCEPTION_POINTERS *ExceptionInfo) -> LONG {
-        if (ExceptionInfo->ExceptionRecord->ExceptionCode == 0xE06D7363 ||
-            ExceptionInfo->ExceptionRecord->ExceptionCode == 0xE04D5343) {
-            // Let C++ exceptions go through. They are handled by try-catch blocks in many places.
-            return EXCEPTION_EXECUTE_HANDLER;
+        if (kAllowedExceptions.contains(ExceptionInfo->ExceptionRecord->ExceptionCode)) {
+            return EXCEPTION_CONTINUE_SEARCH;
+        }
+
+        const bool isFatal = kFatalErrors.contains(ExceptionInfo->ExceptionRecord->ExceptionCode);
+        if (!g_allExcpt && !isFatal) {
+            return EXCEPTION_CONTINUE_SEARCH;
         }
 
         fmt::memory_buffer buf{};
         auto out = std::back_inserter(buf);
 
-        fmt::format_to(out, "Ymir encountered a fatal error.\n\n");
-        fmt::format_to(out, "Exception code=0x{:X} address={} flags=0x{:X}\n\n",
+        if (isFatal) {
+            fmt::format_to(out, "Ymir encountered a fatal error.\n\n");
+        } else {
+            fmt::format_to(out, "Ymir encountered an exception.\n\n");
+        }
+
+        DWORD threadId = GetCurrentThreadId();
+        PWSTR threadDesc = nullptr;
+        HRESULT descOK = GetThreadDescription(GetCurrentThread(), &threadDesc);
+        fmt::format_to(out, "Exception code=0x{:X} address={} flags=0x{:X}\n",
                        ExceptionInfo->ExceptionRecord->ExceptionCode, ExceptionInfo->ExceptionRecord->ExceptionAddress,
-                       ExceptionInfo->ExceptionRecord->ExceptionFlags);
+                       ExceptionInfo->ExceptionRecord->ExceptionFlags, threadId);
+
+        fmt::format_to(out, "Thread ID: 0x{:X}", threadId);
+        if (SUCCEEDED(descOK)) {
+            int bufferSize = WideCharToMultiByte(CP_UTF8, 0, threadDesc, -1, NULL, 0, NULL, NULL);
+            if (bufferSize > 0) {
+                std::string threadDescBuf(bufferSize, '\0');
+                int result =
+                    WideCharToMultiByte(CP_UTF8, 0, threadDesc, -1, threadDescBuf.data(), bufferSize, NULL, NULL);
+                auto nullPos = threadDescBuf.find_first_of('\0');
+                if (nullPos != std::string::npos) {
+                    threadDescBuf.resize(nullPos);
+                }
+                if (result > 0) {
+                    fmt::format_to(out, ", name: {}", threadDescBuf);
+                }
+            }
+        }
+
+        fmt::format_to(out, "\n\n");
 
         auto *cr = ExceptionInfo->ContextRecord;
         fmt::format_to(out, "Content information:\n");
@@ -74,9 +129,13 @@ void RegisterExceptionHandler() {
 
         std::string errMsg = fmt::to_string(buf);
 
-        ShowFatalErrorDialog(errMsg.c_str());
+        if (isFatal) {
+            ShowFatalErrorDialog(errMsg.c_str());
+        } else {
+            ShowExceptionDialog(errMsg.c_str());
+        }
 
-        return EXCEPTION_EXECUTE_HANDLER;
+        return EXCEPTION_CONTINUE_SEARCH;
     });
 }
 
@@ -92,7 +151,7 @@ void RegisterExceptionHandler() {
 
 // static struct sigaction s_oldAction;
 
-void RegisterExceptionHandler() {
+void RegisterExceptionHandler(bool allExceptions) {
     struct sigaction action;
     action.sa_sigaction = [](int sig, siginfo_t *info, void *ucontext) -> void {
         const auto addr = reinterpret_cast<uintptr_t>(info->si_addr);
@@ -157,7 +216,7 @@ void RegisterExceptionHandler() {
     sigemptyset(&action.sa_mask);
     action.sa_flags = SA_SIGINFO;
     sigaction(SIGILL, &action, nullptr);
-    sigaction(SIGFPE, &action, nullptr);
+    // sigaction(SIGFPE, &action, nullptr);
     sigaction(SIGSEGV, &action, nullptr);
     sigaction(SIGBUS, &action, nullptr);
 }
@@ -167,7 +226,7 @@ void RegisterExceptionHandler() {
 // -----------------------------------------------------------------------------
 // macOS implementation
 
-void RegisterExceptionHandler() {
+void RegisterExceptionHandler(bool allExceptions) {
     // TODO: implement
 }
 

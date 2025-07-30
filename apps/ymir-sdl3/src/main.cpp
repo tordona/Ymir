@@ -8,9 +8,8 @@
 #include <memory>
 
 int main(int argc, char **argv) {
-    util::RegisterExceptionHandler();
-
     bool showHelp = false;
+    bool enableAllExceptions = false;
 
     app::CommandLineOptions progOpts{};
     cxxopts::Options options("Ymir", "Ymir - Sega Saturn emulator");
@@ -21,6 +20,8 @@ int main(int argc, char **argv) {
     options.add_options()("f,fullscreen", "Start in fullscreen mode",
                           cxxopts::value(progOpts.fullScreen)->default_value("false"));
     options.add_options()("P,paused", "Start paused", cxxopts::value(progOpts.startPaused)->default_value("false"));
+    options.add_options()("E,exceptions", "Capture all unhandled exceptions",
+                          cxxopts::value(enableAllExceptions)->default_value("false"));
     options.parse_positional({"disc"});
 
     try {
@@ -29,6 +30,8 @@ int main(int argc, char **argv) {
             fmt::println("{}", options.help());
             return 0;
         }
+
+        util::RegisterExceptionHandler(enableAllExceptions);
 
         auto app = std::make_unique<app::App>();
         return app->Run(progOpts);
