@@ -23,7 +23,7 @@ void SH2DebugToolbarView::Display() {
     if (!m_context.saturn.IsDebugTracingEnabled()) {
         ImGui::TextColored(m_context.colors.warn, "Debug tracing is disabled. Some features will not work.");
         ImGui::SameLine();
-        if (ImGui::SmallButton("Enable##debug_tracing")) {
+        if (ImGui::SmallButton("Enable (F11)##debug_tracing")) {
             m_context.EnqueueEvent(events::emu::SetDebugTrace(true));
         }
     }
@@ -36,7 +36,7 @@ void SH2DebugToolbarView::Display() {
             m_context.EnqueueEvent(master ? events::emu::StepMSH2() : events::emu::StepSSH2());
         }
         if (ImGui::BeginItemTooltip()) {
-            ImGui::TextUnformatted("Step (F11, S)");
+            ImGui::TextUnformatted("Step (F7, S)");
             ImGui::EndTooltip();
         }
 

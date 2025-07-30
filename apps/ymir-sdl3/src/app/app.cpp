@@ -1100,13 +1100,6 @@ void App::RunEmulator() {
         inputContext.SetTriggerHandler(actions::dbg::DumpMemory, [&](void *, const input::InputElement &) {
             m_context.EnqueueEvent(events::emu::DumpMemory());
         });
-
-        inputContext.SetTriggerHandler(actions::dbg::StepMSH2, [&](void *, const input::InputElement &) {
-            m_context.EnqueueEvent(events::emu::StepMSH2());
-        });
-        inputContext.SetTriggerHandler(actions::dbg::StepSSH2, [&](void *, const input::InputElement &) {
-            m_context.EnqueueEvent(events::emu::StepSSH2());
-        });
     }
 
     // Saturn Control Pad

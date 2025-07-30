@@ -106,6 +106,16 @@ void SH2DebuggerWindow::DrawContents() {
     // Handle shortcuts
     // TODO: use InputContext + actions
     const ImGuiInputFlags baseFlags = ImGuiInputFlags_Repeat;
+    if (ImGui::Shortcut(ImGuiKey_F6, baseFlags)) {
+        // TODO: Step over
+    }
+    if (ImGui::Shortcut(ImGuiKey_F7, baseFlags) || ImGui::Shortcut(ImGuiKey_S, baseFlags)) {
+        // Step into
+        m_context.EnqueueEvent(m_sh2.IsMaster() ? events::emu::StepMSH2() : events::emu::StepSSH2());
+    }
+    if (ImGui::Shortcut(ImGuiKey_F8, baseFlags) || ImGui::Shortcut(ImGuiKey_S, baseFlags)) {
+        // TODO: Step out
+    }
     if (ImGui::Shortcut(ImGuiKey_F9, baseFlags)) {
         // TODO: Toggle breakpoint at cursor
         // m_context.EnqueueEvent(events::emu::debug::ToggleSH2Breakpoint(m_sh2.IsMaster(),
@@ -115,12 +125,9 @@ void SH2DebuggerWindow::DrawContents() {
         // Open breakpoints
         m_context.EnqueueEvent(events::gui::OpenSH2BreakpointsWindow(m_sh2.IsMaster()));
     }
-    if (ImGui::Shortcut(ImGuiKey_F10, baseFlags)) {
-        // TODO: Step over
-    }
-    if (ImGui::Shortcut(ImGuiKey_F11, baseFlags) || ImGui::Shortcut(ImGuiKey_S, baseFlags)) {
-        // Step into
-        m_context.EnqueueEvent(m_sh2.IsMaster() ? events::emu::StepMSH2() : events::emu::StepSSH2());
+    if (ImGui::Shortcut(ImGuiKey_F11, baseFlags)) {
+        // Enable debug tracing
+        m_context.EnqueueEvent(events::emu::SetDebugTrace(true));
     }
     if (ImGui::Shortcut(ImGuiKey_Space) || ImGui::Shortcut(ImGuiKey_R)) {
         // Pause/Resume
