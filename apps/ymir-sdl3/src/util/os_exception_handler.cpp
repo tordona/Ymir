@@ -21,6 +21,10 @@
 
 namespace util {
 
+void ShowFatalErrorDialog(const char *msg) {
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal error", msg, nullptr);
+}
+
 // -----------------------------------------------------------------------------
 // Windows implementation
 
@@ -30,6 +34,12 @@ static PVOID g_vehPtr = nullptr;
 
 void RegisterExceptionHandler() {
     g_vehPtr = AddVectoredExceptionHandler(1, [](_EXCEPTION_POINTERS *ExceptionInfo) -> LONG {
+        if (ExceptionInfo->ExceptionRecord->ExceptionCode == 0xE06D7363 ||
+            ExceptionInfo->ExceptionRecord->ExceptionCode == 0xE04D5343) {
+            // Let C++ exceptions go through. They are handled by try-catch blocks in many places.
+            return EXCEPTION_EXECUTE_HANDLER;
+        }
+
         fmt::memory_buffer buf{};
         auto out = std::back_inserter(buf);
 
@@ -64,7 +74,7 @@ void RegisterExceptionHandler() {
 
         std::string errMsg = fmt::to_string(buf);
 
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal error", errMsg.c_str(), nullptr);
+        ShowFatalErrorDialog(errMsg.c_str());
 
         return EXCEPTION_EXECUTE_HANDLER;
     });
@@ -135,7 +145,7 @@ void RegisterExceptionHandler() {
 
         std::string errMsg = fmt::to_string(buf);
 
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal error", errMsg.c_str(), nullptr);
+        ShowFatalErrorDialog(errMsg.c_str());
 
         /*if (s_oldAction.sa_handler) {
             s_oldAction.sa_handler(sig);

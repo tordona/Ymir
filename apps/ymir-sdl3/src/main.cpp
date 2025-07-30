@@ -33,13 +33,24 @@ int main(int argc, char **argv) {
         auto app = std::make_unique<app::App>();
         return app->Run(progOpts);
     } catch (const cxxopts::exceptions::exception &e) {
-        fmt::println("Failed to parse arguments: {}", e.what());
+        std::string msg = fmt::format("Failed to parse arguments: {}", e.what());
+        fmt::println("{}", msg);
+        util::ShowFatalErrorDialog(msg.c_str());
         return -1;
     } catch (const std::system_error &e) {
-        fmt::println("System error: {}", e.what());
+        std::string msg = fmt::format("System error: {}", e.what());
+        fmt::println("{}", msg);
+        util::ShowFatalErrorDialog(msg.c_str());
         return e.code().value();
     } catch (const std::exception &e) {
-        fmt::println("Unhandled exception: {}", e.what());
+        std::string msg = fmt::format("Unhandled exception: {}", e.what());
+        fmt::println("{}", msg);
+        util::ShowFatalErrorDialog(msg.c_str());
+        return -1;
+    } catch (...) {
+        std::string msg = "Unspecified exception";
+        fmt::println("{}", msg);
+        util::ShowFatalErrorDialog(msg.c_str());
         return -1;
     }
 
