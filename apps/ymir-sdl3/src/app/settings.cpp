@@ -703,6 +703,7 @@ void Settings::ResetToDefaults() {
     video.rotation = Video::DisplayRotation::Normal;
     video.autoResizeWindow = false;
     video.displayVideoOutputInWindow = false;
+    video.syncInWindowedMode = true;
     video.fullScreen = false;
     video.doubleClickToFullScreen = false;
     video.useFullRefreshRateInFullScreen = false;
@@ -1051,6 +1052,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
 
         Parse(tblVideo, "AutoResizeWindow", video.autoResizeWindow);
         Parse(tblVideo, "DisplayVideoOutputInWindow", video.displayVideoOutputInWindow);
+        Parse(tblVideo, "SyncInWindowedMode", video.syncInWindowedMode);
         Parse(tblVideo, "FullScreen", video.fullScreen);
         Parse(tblVideo, "DoubleClickToFullScreen", video.doubleClickToFullScreen);
         Parse(tblVideo, "UseFullRefreshRateInFullScreen", video.useFullRefreshRateInFullScreen);
@@ -1461,6 +1463,7 @@ SettingsSaveResult Settings::Save() {
             {"Rotation", ToTOML(video.rotation)},
             {"AutoResizeWindow", video.autoResizeWindow},
             {"DisplayVideoOutputInWindow", video.displayVideoOutputInWindow},
+            {"SyncInWindowedMode", video.syncInWindowedMode},
             {"FullScreen", video.fullScreen.Get()},
             {"DoubleClickToFullScreen", video.doubleClickToFullScreen},
             {"UseFullRefreshRateInFullScreen", video.useFullRefreshRateInFullScreen},

@@ -374,7 +374,7 @@ void App::RunEmulator() {
     // Screen parameters
     auto &screen = m_context.screen;
 
-    screen.videoSync = m_context.settings.video.fullScreen;
+    screen.videoSync = m_context.settings.video.fullScreen || m_context.settings.video.syncInWindowedMode;
 
     m_context.saturn.configuration.system.videoStandard.ObserveAndNotify(
         [&](core::config::sys::VideoStandard standard) {
@@ -1526,7 +1526,8 @@ void App::RunEmulator() {
 
         // Use video sync if in full screen mode and not paused or fast-forwarding
         const bool fullScreen = m_context.settings.video.fullScreen;
-        screen.videoSync = fullScreen && !m_context.paused && m_context.emuSpeed.limitSpeed;
+        const bool videoSync = fullScreen || m_context.settings.video.syncInWindowedMode;
+        screen.videoSync = videoSync && !m_context.paused && m_context.emuSpeed.limitSpeed;
 
         const double frameIntervalAdjustFactor = 0.2; // how much adjustment is applied to the frame interval
 
@@ -1588,7 +1589,7 @@ void App::RunEmulator() {
 
             // Update VSync setting
             int newVSync;
-            if (fullScreen) {
+            if (videoSync) {
                 newVSync = baseFrameRate <= maxFrameRate ? 1 : SDL_RENDERER_VSYNC_DISABLED;
             } else {
                 newVSync = 1;
@@ -1619,7 +1620,7 @@ void App::RunEmulator() {
             }
 
             // Update next frame target
-            if (fullScreen) {
+            if (videoSync) {
                 auto now = clk::now();
                 if (now > screen.nextFrameTarget + frameInterval) {
                     // The frame was presented too late; set next frame target time relative to now

@@ -84,6 +84,12 @@ void VideoSettingsView::Display() {
         "Enabling this option can slightly reduce input latency on high refresh rate displays.",
         m_context.displayScale);
 
+    MakeDirty(ImGui::Checkbox("Synchronize video in windowed mode", &settings.syncInWindowedMode));
+    widgets::ExplanationTooltip(
+        "When enabled, synchronizes GUI updates with emulator rendering while in windowed mode.\n"
+        "This greatly improves frame pacing but may reduce GUI performance.",
+        m_context.displayScale);
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
