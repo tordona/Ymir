@@ -63,8 +63,7 @@ struct SharedContext {
     float displayScale = 1.0f;
 
     struct Screen {
-        Screen()
-            : framebuffer(ymir::vdp::kMaxResH * ymir::vdp::kMaxResV) {
+        Screen() {
             SetResolution(320, 224);
             prevWidth = width;
             prevHeight = height;
@@ -104,7 +103,9 @@ struct SharedContext {
             this->resolutionChanged = true;
         }
 
-        std::vector<uint32> framebuffer; // staging buffer
+        // Staging framebuffers -- emu renders to one, GUI swaps when done
+        std::array<std::array<uint32, ymir::vdp::kMaxResH * ymir::vdp::kMaxResV>, 2> framebuffers;
+        bool framebufferFlip = false;
         std::mutex mtxFramebuffer;
         bool updated = false;
         bool reduceLatency = false; // false = more performance; true = update frames more often
