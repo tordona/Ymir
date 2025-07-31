@@ -642,11 +642,9 @@ void CDBlock::PokeReg(uint32 address, T value) {
 
 bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 repeatParam) {
     // Handle "no change" parameters
+    const bool keepEndParam = endParam == 0xFFFFFF;
     if (startParam == 0xFFFFFF) {
         startParam = m_playStartParam;
-    }
-    if (endParam == 0xFFFFFF) {
-        endParam = m_playEndParam;
     }
     if (repeatParam == 0xFF) {
         repeatParam = m_playRepeatParam;
@@ -657,14 +655,16 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
     const bool resetPos = bit::test<15>(repeatParam);
 
     // Sanity check: both must be FADs or tracks, not a mix
-    if (isStartFAD != isEndFAD) {
+    if (!keepEndParam && isStartFAD != isEndFAD) {
         devlog::debug<grp::play_init>("Start/End FAD type mismatch: {:06X} {:06X}", startParam, endParam);
         return false; // reject
     }
 
     // Store playback parameters
     m_playStartParam = startParam;
-    m_playEndParam = endParam;
+    if (!keepEndParam) {
+        m_playEndParam = endParam;
+    }
     m_playRepeatParam = repeatParam;
     m_playMaxRepeat = m_playRepeatParam & 0xF;
     m_playFile = false;
@@ -683,7 +683,9 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         // Frame address range
         const bool prevEnded = (m_status.statusCode & 0xF) == kStatusCodePause && m_status.frameAddress > m_playEndPos;
         m_playStartPos = startParam & 0x7FFFFF;
-        m_playEndPos = m_playStartPos + (endParam & 0x7FFFFF) - 1;
+        if (!keepEndParam) {
+            m_playEndPos = m_playStartPos + (endParam & 0x7FFFFF) - 1;
+        }
 
         devlog::debug<grp::play_init>("FAD range {:06X} to {:06X}", m_playStartPos, m_playEndPos);
 
@@ -730,8 +732,18 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         // startParam and endParam contain the track number on the upper byte and index on the lower byte
         uint8 startTrack = bit::extract<8, 15>(startParam);
         uint8 startIndex = bit::extract<0, 7>(startParam);
-        uint8 endTrack = bit::extract<8, 15>(endParam);
-        uint8 endIndex = bit::extract<0, 7>(endParam);
+        uint8 endTrack, endIndex;
+        if (keepEndParam) {
+            const media::Track *track = session.FindTrack(m_playEndPos);
+            if (track == nullptr) {
+                track = &session.tracks[session.lastTrackIndex - 1];
+            }
+            endTrack = track->index;
+            endIndex = track->indices.size() - 1;
+        } else {
+            endTrack = bit::extract<8, 15>(endParam);
+            endIndex = bit::extract<0, 7>(endParam);
+        }
 
         // Handle default parameters - use first or last track and index in the disc
         if (startParam == 0) {
