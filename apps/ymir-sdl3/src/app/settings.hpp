@@ -161,6 +161,7 @@ public:
     } gui;
 
     struct System {
+        util::Observable<bool> emulateSH2Cache;
         std::filesystem::path internalBackupRAMImagePath;
         bool internalBackupRAMPerGame;
         struct IPL {

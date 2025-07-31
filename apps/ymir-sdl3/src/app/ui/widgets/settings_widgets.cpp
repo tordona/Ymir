@@ -4,15 +4,32 @@
 
 #include <app/events/emu_event_factory.hpp>
 
+#include <ymir/db/game_db.hpp>
+
 #include <fmt/format.h>
+
+using namespace ymir;
 
 namespace app::ui::widgets {
 
 namespace settings::system {
 
     void EmulateSH2Cache(SharedContext &ctx) {
+        const db::GameInfo *gameInfo = nullptr;
+        {
+            std::unique_lock lock{ctx.locks.disc};
+            const auto &disc = ctx.saturn.CDBlock.GetDisc();
+            if (!disc.sessions.empty()) {
+                gameInfo = db::GetGameInfo(disc.header.productNumber);
+            }
+        }
+        const bool forced = gameInfo != nullptr && gameInfo->sh2Cache;
+
         auto &sysConfig = ctx.saturn.configuration.system;
-        bool emulateSH2Cache = sysConfig.emulateSH2Cache;
+        bool emulateSH2Cache = sysConfig.emulateSH2Cache || forced;
+        if (forced) {
+            ImGui::BeginDisabled();
+        }
         if (ctx.settings.MakeDirty(ImGui::Checkbox("Emulate SH-2 cache", &emulateSH2Cache))) {
             ctx.EnqueueEvent(events::emu::SetEmulateSH2Cache(emulateSH2Cache));
         }
@@ -21,6 +38,11 @@ namespace settings::system {
                                     "Reduces emulation performance by about 10%.\n\n"
                                     "Upon enabling this option, both SH-2 CPUs' caches will be flushed.",
                                     ctx.displayScale);
+        if (forced) {
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            ImGui::TextColored(ctx.colors.notice, "Forced by the currently loaded game");
+        }
     }
 
 } // namespace settings::system

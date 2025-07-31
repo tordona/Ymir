@@ -16,7 +16,8 @@ enum class Cartridge { None, DRAM8Mbit, DRAM32Mbit, ROM_KOF95, ROM_Ultraman };
 
 /// @brief Information about a game in the database.
 struct GameInfo {
-    Cartridge cartridge; ///< Cartridge required for the game to work
+    Cartridge cartridge = Cartridge::None; ///< Cartridge required for the game to work
+    bool sh2Cache = false;                 ///< SH-2 cache emulation required for the game to work
 };
 
 /// @brief Retrieves information about a game image given its product code.

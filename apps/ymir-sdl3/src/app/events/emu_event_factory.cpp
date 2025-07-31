@@ -465,8 +465,11 @@ EmuEvent LoadInternalBackupMemory() {
 
 EmuEvent SetEmulateSH2Cache(bool enable) {
     return RunFunction([=](SharedContext &ctx) {
-        ctx.saturn.EnableSH2CacheEmulation(enable);
-        devlog::info<grp::base>("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
+        const bool currEnable = ctx.saturn.IsSH2CacheEmulationEnabled();
+        if (currEnable != enable) {
+            ctx.saturn.EnableSH2CacheEmulation(enable);
+            devlog::info<grp::base>("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
+        }
     });
 }
 

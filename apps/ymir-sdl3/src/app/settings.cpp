@@ -666,6 +666,8 @@ void Settings::ResetToDefaults() {
     system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
     system.internalBackupRAMPerGame = false;
 
+    system.emulateSH2Cache = false;
+
     system.ipl.overrideImage = false;
     system.ipl.path = "";
     system.ipl.variant = db::SystemVariant::Saturn;
@@ -813,7 +815,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblSystem, "VideoStandard", emuConfig.system.videoStandard);
         Parse(tblSystem, "AutoDetectRegion", emuConfig.system.autodetectRegion);
         Parse(tblSystem, "PreferredRegionOrder", emuConfig.system.preferredRegionOrder);
-        Parse(tblSystem, "EmulateSH2Cache", emuConfig.system.emulateSH2Cache);
+        Parse(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
         Parse(tblSystem, "InternalBackupRAMImagePath", system.internalBackupRAMImagePath);
         Parse(tblSystem, "InternalBackupRAMPerGame", system.internalBackupRAMPerGame);
         system.internalBackupRAMImagePath = Absolute(ProfilePath::PersistentState, system.internalBackupRAMImagePath);
@@ -1165,7 +1167,7 @@ SettingsSaveResult Settings::Save() {
             {"VideoStandard", ToTOML(emuConfig.system.videoStandard)},
             {"AutoDetectRegion", emuConfig.system.autodetectRegion},
             {"PreferredRegionOrder", ToTOML(emuConfig.system.preferredRegionOrder.Get())},
-            {"EmulateSH2Cache", emuConfig.system.emulateSH2Cache.Get()},
+            {"EmulateSH2Cache", system.emulateSH2Cache.Get()},
             {"InternalBackupRAMImagePath", Proximate(ProfilePath::PersistentState, system.internalBackupRAMImagePath).native()},
             {"InternalBackupRAMPerGame", system.internalBackupRAMPerGame},
         

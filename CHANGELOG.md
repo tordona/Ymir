@@ -15,6 +15,8 @@ In development.
 - Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
+- GameDB: Force SH-2 cache emulation for Astal and Dark Savior.
+- GameDB: Implemented flag to force SH-2 cache emulation to specific games.
 - Debugger: Added CD Block filters view.
 - Debugger: Added SH-2 exception vector list view.
 - Debugger: Added rudimentary SH-2 breakpoint management and per-game debugger state persistence. (#22)
