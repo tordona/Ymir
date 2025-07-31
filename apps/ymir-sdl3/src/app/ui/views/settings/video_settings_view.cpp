@@ -90,6 +90,17 @@ void VideoSettingsView::Display() {
         "This greatly improves frame pacing but may reduce GUI performance.",
         m_context.displayScale);
 
+    MakeDirty(ImGui::Checkbox("Reduce video latency on low refresh rate displays", &settings.reduceLatency));
+    widgets::ExplanationTooltip(
+        "This option affects which frame is presented if the emulator is producing more frames than your display is "
+        "capable of showing:\n"
+        "- When enabled, the latest rendered frame is displayed. Slightly reduces perceived input latency.\n"
+        "- When disabled, the first rendered frame since the last refresh is displayed. Slightly improves overall "
+        "emulation performance.\n"
+        "\n"
+        "This option has no effect if your display's refresh rate is higher than the emulator's target frame rate.",
+        m_context.displayScale);
+
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);

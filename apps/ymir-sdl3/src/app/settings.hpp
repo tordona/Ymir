@@ -370,7 +370,10 @@ public:
 
         bool autoResizeWindow;
         bool displayVideoOutputInWindow;
+
         bool syncInWindowedMode;
+        bool reduceLatency;
+
         util::Observable<bool> fullScreen;
         bool doubleClickToFullScreen;
         bool useFullRefreshRateInFullScreen;

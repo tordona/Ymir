@@ -34,7 +34,6 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
-#include <vector>
 
 using MidiPortType = app::Settings::Audio::MidiPort::Type;
 
@@ -108,7 +107,6 @@ struct SharedContext {
         bool framebufferFlip = false;
         std::mutex mtxFramebuffer;
         bool updated = false;
-        bool reduceLatency = false; // false = more performance; true = update frames more often
 
         // Video sync
         bool videoSync = false;

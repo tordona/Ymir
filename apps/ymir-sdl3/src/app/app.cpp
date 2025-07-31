@@ -693,7 +693,7 @@ void App::RunEmulator() {
                  screen.frameRequestEvent.Wait();
                  screen.frameRequestEvent.Reset();
              }
-             if (screen.reduceLatency || !screen.updated || screen.videoSync) {
+             if (sharedCtx.settings.video.reduceLatency || !screen.updated || screen.videoSync) {
                  std::unique_lock lock{screen.mtxFramebuffer};
                  std::copy_n(fb, width * height, screen.framebuffers[screen.framebufferFlip].data());
                  screen.updated = true;
