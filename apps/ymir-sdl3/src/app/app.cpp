@@ -1578,7 +1578,7 @@ void App::RunEmulator() {
             double maxFrameRate = baseFrameRate;
 
             // Use display refresh rate if requested
-            if (m_context.settings.video.useFullRefreshRateInFullScreen) {
+            if (m_context.settings.video.useFullRefreshRateWithVideoSync) {
                 const SDL_DisplayMode *dispMode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(screen.window));
                 if (dispMode != nullptr && dispMode->refresh_rate != 0.0f) {
                     maxFrameRate = dispMode->refresh_rate;

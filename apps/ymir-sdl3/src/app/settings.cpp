@@ -709,7 +709,7 @@ void Settings::ResetToDefaults() {
     video.reduceLatency = true;
     video.fullScreen = false;
     video.doubleClickToFullScreen = false;
-    video.useFullRefreshRateInFullScreen = false;
+    video.useFullRefreshRateWithVideoSync = false;
     video.deinterlace = false;
     video.transparentMeshes = false;
 
@@ -1059,7 +1059,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "ReduceLatency", video.reduceLatency);
         Parse(tblVideo, "FullScreen", video.fullScreen);
         Parse(tblVideo, "DoubleClickToFullScreen", video.doubleClickToFullScreen);
-        Parse(tblVideo, "UseFullRefreshRateInFullScreen", video.useFullRefreshRateInFullScreen);
+        Parse(tblVideo, "UseFullRefreshRateWithVideoSync", video.useFullRefreshRateWithVideoSync);
 
         Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
         Parse(tblVideo, "ThreadedDeinterlacer", emuConfig.video.threadedDeinterlacer);
@@ -1471,7 +1471,7 @@ SettingsSaveResult Settings::Save() {
             {"ReduceLatency", video.reduceLatency},
             {"FullScreen", video.fullScreen.Get()},
             {"DoubleClickToFullScreen", video.doubleClickToFullScreen},
-            {"UseFullRefreshRateInFullScreen", video.useFullRefreshRateInFullScreen},
+            {"UseFullRefreshRateWithVideoSync", video.useFullRefreshRateWithVideoSync},
             {"Deinterlace", video.deinterlace.Get()},
             {"TransparentMeshes", video.transparentMeshes.Get()},
             {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},

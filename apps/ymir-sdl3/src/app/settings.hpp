@@ -376,7 +376,7 @@ public:
 
         util::Observable<bool> fullScreen;
         bool doubleClickToFullScreen;
-        bool useFullRefreshRateInFullScreen;
+        bool useFullRefreshRateWithVideoSync;
 
         util::Observable<bool> deinterlace;
         util::Observable<bool> transparentMeshes;

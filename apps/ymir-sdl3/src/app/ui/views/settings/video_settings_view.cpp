@@ -76,18 +76,23 @@ void VideoSettingsView::Display() {
 
     MakeDirty(ImGui::Checkbox("Double-click to toggle full screen", &settings.doubleClickToFullScreen));
 
-    MakeDirty(ImGui::Checkbox("Use full refresh rate in full screen mode", &settings.useFullRefreshRateInFullScreen));
+    ImGui::Separator();
+
+    MakeDirty(ImGui::Checkbox("Synchronize video in windowed mode", &settings.syncInWindowedMode));
+    widgets::ExplanationTooltip(
+        "When enabled, synchronizes GUI updates with emulator rendering while in windowed mode.\n"
+        "This greatly improves frame pacing but may reduce GUI performance.\n"
+        "\n"
+        "The video is always synchronized in full screen mode.",
+        m_context.displayScale);
+
+    MakeDirty(
+        ImGui::Checkbox("Use full refresh rate when synchronizing video", &settings.useFullRefreshRateWithVideoSync));
     widgets::ExplanationTooltip(
         "When enabled, while in full screen, the GUI frame rate will be adjusted to the largest integer multiple of "
         "the emulator's target frame rate that's not greater than your display's refresh rate.\n"
         "When disabled, the GUI frame rate will be limited to the emulator's target frame rate.\n"
         "Enabling this option can slightly reduce input latency on high refresh rate displays.",
-        m_context.displayScale);
-
-    MakeDirty(ImGui::Checkbox("Synchronize video in windowed mode", &settings.syncInWindowedMode));
-    widgets::ExplanationTooltip(
-        "When enabled, synchronizes GUI updates with emulator rendering while in windowed mode.\n"
-        "This greatly improves frame pacing but may reduce GUI performance.",
         m_context.displayScale);
 
     MakeDirty(ImGui::Checkbox("Reduce video latency on low refresh rate displays", &settings.reduceLatency));
@@ -96,7 +101,7 @@ void VideoSettingsView::Display() {
         "capable of showing:\n"
         "- When enabled, the latest rendered frame is displayed. Slightly reduces perceived input latency.\n"
         "- When disabled, the first rendered frame since the last refresh is displayed. Slightly improves overall "
-        "emulation performance.\n"
+        "emulation performance by skipping some framebuffer copies.\n"
         "\n"
         "This option has no effect if your display's refresh rate is higher than the emulator's target frame rate.",
         m_context.displayScale);
