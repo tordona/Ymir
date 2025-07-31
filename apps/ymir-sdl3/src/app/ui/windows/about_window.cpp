@@ -253,18 +253,20 @@ void AboutWindow::DrawAboutTab() {
 
     SDL_PropertiesID rendererProps = SDL_GetRendererProperties(m_context.screen.renderer);
     std::string_view rendererName = SDL_GetStringProperty(rendererProps, SDL_PROP_RENDERER_NAME_STRING, "unknown");
+    const char *graphicsBackendName = "unknown";
     if (rendererName == "gpu") {
         auto *gpuDevice = static_cast<SDL_GPUDevice *>(
             SDL_GetPointerProperty(rendererProps, SDL_PROP_RENDERER_GPU_DEVICE_POINTER, nullptr));
         if (gpuDevice) {
             const char *gpuDriver = SDL_GetGPUDeviceDriver(gpuDevice);
-            ImGui::Text("GUI rendered with %s.", RendererToHumanReadableString(gpuDriver));
+            graphicsBackendName = RendererToHumanReadableString(gpuDriver);
         } else {
-            ImGui::Text("GUI rendered with SDL GPU.");
+            graphicsBackendName = "SDL GPU";
         }
     } else {
-        ImGui::Text("GUI rendered with %s.", RendererToHumanReadableString(rendererName));
+        graphicsBackendName = RendererToHumanReadableString(rendererName);
     }
+    ImGui::Text("Using %s graphics backend for GUI rendering.", graphicsBackendName);
     ImGui::TextUnformatted("Using software VDP1/VDP2 renderer.");
 
     const char *audioDriver = SDL_GetCurrentAudioDriver();
