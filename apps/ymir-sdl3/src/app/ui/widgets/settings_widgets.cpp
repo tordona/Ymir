@@ -25,8 +25,7 @@ namespace settings::system {
         }
         const bool forced = gameInfo != nullptr && gameInfo->sh2Cache;
 
-        auto &sysConfig = ctx.saturn.configuration.system;
-        bool emulateSH2Cache = sysConfig.emulateSH2Cache || forced;
+        bool emulateSH2Cache = ctx.settings.system.emulateSH2Cache || forced;
         if (forced) {
             ImGui::BeginDisabled();
         }
@@ -97,8 +96,7 @@ namespace settings::video {
     }
 
     void ThreadedVDP(SharedContext &ctx) {
-        auto &config = ctx.saturn.configuration.video;
-        bool threadedVDP = config.threadedVDP;
+        bool threadedVDP = ctx.settings.video.threadedVDP;
         if (ctx.settings.MakeDirty(ImGui::Checkbox("Threaded VDP2 renderer", &threadedVDP))) {
             ctx.EnqueueEvent(events::emu::EnableThreadedVDP(threadedVDP));
         }
@@ -116,7 +114,7 @@ namespace settings::video {
                 ImGui::BeginDisabled();
             }
 
-            bool threadedDeinterlacer = config.threadedDeinterlacer;
+            bool threadedDeinterlacer = ctx.settings.video.threadedDeinterlacer;
             if (ctx.settings.MakeDirty(
                     ImGui::Checkbox("Use dedicated thread for deinterlaced rendering", &threadedDeinterlacer))) {
                 ctx.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(threadedDeinterlacer));
@@ -130,7 +128,7 @@ namespace settings::video {
                 "It is HIGHLY recommended to leave this option enabled if your CPU meets the requirements.",
                 ctx.displayScale);
 
-            bool includeVDP1InRenderThread = config.includeVDP1InRenderThread;
+            bool includeVDP1InRenderThread = ctx.settings.video.includeVDP1InRenderThread;
             if (ctx.settings.MakeDirty(
                     ImGui::Checkbox("Include VDP1 rendering in VDP2 renderer thread", &includeVDP1InRenderThread))) {
                 ctx.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(includeVDP1InRenderThread));
@@ -157,7 +155,7 @@ namespace settings::video {
 namespace settings::audio {
 
     void InterpolationMode(SharedContext &ctx) {
-        auto &config = ctx.saturn.configuration.audio;
+        auto &config = ctx.settings.audio;
 
         using InterpMode = ymir::core::config::audio::SampleInterpolationMode;
 
@@ -274,7 +272,7 @@ namespace settings::audio {
 namespace settings::cdblock {
 
     void CDReadSpeed(SharedContext &ctx) {
-        auto &config = ctx.saturn.configuration.cdblock;
+        auto &config = ctx.settings.cdblock;
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("CD read speed");

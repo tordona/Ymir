@@ -106,8 +106,6 @@ struct Settings {
     void ResetToDefaults();
 
     SettingsLoadResult Load(const std::filesystem::path &path);
-
-public:
     SettingsSaveResult Save();
 
     // Auto-saves if the settings have been dirty for a while
@@ -161,14 +159,28 @@ public:
     } gui;
 
     struct System {
-        util::Observable<bool> emulateSH2Cache;
+        util::Observable<bool> autodetectRegion;
+        util::Observable<std::vector<ymir::core::config::sys::Region>> preferredRegionOrder;
+
+        util::Observable<ymir::core::config::sys::VideoStandard> videoStandard;
+
+        bool emulateSH2Cache;
+
         std::filesystem::path internalBackupRAMImagePath;
         bool internalBackupRAMPerGame;
+
         struct IPL {
             bool overrideImage;
             std::filesystem::path path;
             ymir::db::SystemVariant variant;
         } ipl;
+
+        struct RTC {
+            util::Observable<ymir::core::config::rtc::Mode> mode;
+
+            util::Observable<ymir::core::config::rtc::HardResetStrategy> virtHardResetStrategy;
+            util::Observable<sint64> virtHardResetTimestamp;
+        } rtc;
     } system;
 
     struct Hotkeys {
@@ -380,6 +392,10 @@ public:
 
         util::Observable<bool> deinterlace;
         util::Observable<bool> transparentMeshes;
+
+        util::Observable<bool> threadedVDP;
+        util::Observable<bool> threadedDeinterlacer;
+        util::Observable<bool> includeVDP1InRenderThread;
     } video;
 
     struct Audio {
@@ -391,6 +407,9 @@ public:
 
         util::Observable<float> volume;
         util::Observable<bool> mute;
+
+        util::Observable<ymir::core::config::audio::SampleInterpolationMode> interpolation;
+        util::Observable<bool> threadedSCSP;
 
         util::Observable<uint32> stepGranularity;
 
@@ -420,6 +439,10 @@ public:
 
         bool autoLoadGameCarts;
     } cartridge;
+
+    struct CDBlock {
+        util::Observable<uint8> readSpeedFactor;
+    } cdblock;
 
     // ---------------------------------------------------------------------------------------------
 

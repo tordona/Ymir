@@ -468,25 +468,26 @@ EmuEvent SetEmulateSH2Cache(bool enable) {
         const bool currEnable = ctx.saturn.IsSH2CacheEmulationEnabled();
         if (currEnable != enable) {
             ctx.saturn.EnableSH2CacheEmulation(enable);
+            ctx.settings.system.emulateSH2Cache = enable;
             devlog::info<grp::base>("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
         }
     });
 }
 
 EmuEvent EnableThreadedVDP(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedVDP = enable; });
+    return RunFunction([=](SharedContext &ctx) { ctx.settings.video.threadedVDP = enable; });
 }
 
 EmuEvent EnableThreadedDeinterlacer(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.threadedDeinterlacer = enable; });
+    return RunFunction([=](SharedContext &ctx) { ctx.settings.video.threadedDeinterlacer = enable; });
 }
 
 EmuEvent IncludeVDP1InVDPRenderThread(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.video.includeVDP1InRenderThread = enable; });
+    return RunFunction([=](SharedContext &ctx) { ctx.settings.video.includeVDP1InRenderThread = enable; });
 }
 
 EmuEvent EnableThreadedSCSP(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.configuration.audio.threadedSCSP = enable; });
+    return RunFunction([=](SharedContext &ctx) { ctx.settings.audio.threadedSCSP = enable; });
 }
 
 EmuEvent SetSCSPStepGranularity(uint32 granularity) {

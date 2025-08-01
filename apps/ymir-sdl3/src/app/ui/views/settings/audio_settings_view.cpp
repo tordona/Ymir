@@ -18,7 +18,6 @@ AudioSettingsView::AudioSettingsView(SharedContext &context)
 
 void AudioSettingsView::Display() {
     auto &settings = m_context.settings.audio;
-    auto &config = m_context.saturn.configuration.audio;
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -146,7 +145,7 @@ void AudioSettingsView::Display() {
         ImGui::SeparatorText("Performance");
         ImGui::PopFont();
 
-        bool threadedSCSP = config.threadedSCSP;
+        bool threadedSCSP = settings.threadedSCSP;
         if (MakeDirty(ImGui::Checkbox("Threaded SCSP and sound CPU", &threadedSCSP))) {
             m_context.EnqueueEvent(events::emu::EnableThreadedSCSP(threadedSCSP));
         }

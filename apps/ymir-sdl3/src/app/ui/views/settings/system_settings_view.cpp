@@ -31,8 +31,6 @@ SystemSettingsView::SystemSettingsView(SharedContext &context)
 
 void SystemSettingsView::Display() {
     auto &settings = m_context.settings.system;
-    auto &sysConfig = m_context.saturn.configuration.system;
-    auto &rtcConfig = m_context.saturn.configuration.rtc;
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
@@ -70,8 +68,10 @@ void SystemSettingsView::Display() {
         ImGui::EndTable();
     }
 
-    MakeDirty(ImGui::Checkbox("Autodetect region from loaded discs",
-                              &m_context.saturn.configuration.system.autodetectRegion));
+    bool autodetectRegion = settings.autodetectRegion.Get();
+    if (MakeDirty(ImGui::Checkbox("Autodetect region from loaded discs", &autodetectRegion))) {
+        settings.autodetectRegion = autodetectRegion;
+    }
     widgets::ExplanationTooltip(
         "Whenever a game disc is loaded, the emulator will automatically switch the system region to match one of the "
         "game's supported regions. The list below allows you to choose the preferred region order. If none of the "
@@ -90,7 +90,7 @@ void SystemSettingsView::Display() {
             core::config::sys::Region::AsiaNTSC, core::config::sys::Region::EuropePAL};
 
         // Build list of regions from setting using only valid options
-        for (auto &region : sysConfig.preferredRegionOrder.Get()) {
+        for (auto &region : settings.preferredRegionOrder.Get()) {
             if (validRegions.erase(region)) {
                 prefRgnOrder.push_back(region);
             }
@@ -120,7 +120,7 @@ void SystemSettingsView::Display() {
         ImGui::PopItemFlag();
 
         if (changed) {
-            sysConfig.preferredRegionOrder = prefRgnOrder;
+            settings.preferredRegionOrder = prefRgnOrder;
             MakeDirty();
         }
 
@@ -148,12 +148,12 @@ void SystemSettingsView::Display() {
                                 "For deterministic behavior, use a virtual RTC synced to a fixed time point on reset.",
                                 m_context.displayScale);
     ImGui::SameLine();
-    if (MakeDirty(ImGui::RadioButton("Host##rtc", rtcConfig.mode == core::config::rtc::Mode::Host))) {
-        rtcConfig.mode = core::config::rtc::Mode::Host;
+    if (MakeDirty(ImGui::RadioButton("Host##rtc", settings.rtc.mode == core::config::rtc::Mode::Host))) {
+        settings.rtc.mode = core::config::rtc::Mode::Host;
     }
     ImGui::SameLine();
-    if (MakeDirty(ImGui::RadioButton("Virtual##rtc", rtcConfig.mode == core::config::rtc::Mode::Virtual))) {
-        rtcConfig.mode = core::config::rtc::Mode::Virtual;
+    if (MakeDirty(ImGui::RadioButton("Virtual##rtc", settings.rtc.mode == core::config::rtc::Mode::Virtual))) {
+        settings.rtc.mode = core::config::rtc::Mode::Virtual;
     }
 
     auto &rtc = m_context.saturn.SMPC.GetRTC();
@@ -166,7 +166,7 @@ void SystemSettingsView::Display() {
         rtc.SetDateTime(dateTime);
     }
 
-    if (rtcConfig.mode == core::config::rtc::Mode::Host) {
+    if (settings.rtc.mode == core::config::rtc::Mode::Host) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Host time offset:");
         ImGui::SameLine();
@@ -178,7 +178,7 @@ void SystemSettingsView::Display() {
         if (ImGui::Button("Reset")) {
             rtc.HostTimeOffset() = 0;
         }
-    } else if (rtcConfig.mode == core::config::rtc::Mode::Virtual) {
+    } else if (settings.rtc.mode == core::config::rtc::Mode::Virtual) {
         // TODO: request emulator to update date/time so that it is updated in real time
         widgets::ExplanationTooltip(
             "This may occasionally stop updating because the virtual RTC is only updated when the game reads from it.",
@@ -189,15 +189,15 @@ void SystemSettingsView::Display() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Set to starting point##curr_time")) {
-            rtc.SetDateTime(util::datetime::from_timestamp(rtcConfig.virtHardResetTimestamp));
+            rtc.SetDateTime(util::datetime::from_timestamp(settings.rtc.virtHardResetTimestamp));
         }
 
         using HardResetStrategy = core::config::rtc::HardResetStrategy;
 
         auto hardResetOption = [&](const char *name, HardResetStrategy strategy, const char *explanation) {
             if (MakeDirty(ImGui::RadioButton(fmt::format("{}##virt_rtc_reset", name).c_str(),
-                                             rtcConfig.virtHardResetStrategy == strategy))) {
-                rtcConfig.virtHardResetStrategy = strategy;
+                                             settings.rtc.virtHardResetStrategy == strategy))) {
+                settings.rtc.virtHardResetStrategy = strategy;
             }
             widgets::ExplanationTooltip(explanation, m_context.displayScale);
         };
@@ -218,12 +218,12 @@ void SystemSettingsView::Display() {
 
         ImGui::Indent();
         {
-            auto dateTime = util::datetime::from_timestamp(rtcConfig.virtHardResetTimestamp);
+            auto dateTime = util::datetime::from_timestamp(settings.rtc.virtHardResetTimestamp);
             if (MakeDirty(widgets::DateTimeSelector("virt_base_time", dateTime))) {
-                rtcConfig.virtHardResetTimestamp = util::datetime::to_timestamp(dateTime);
+                settings.rtc.virtHardResetTimestamp = util::datetime::to_timestamp(dateTime);
             }
             if (MakeDirty(ImGui::Button("Set to host time##virt_base_time"))) {
-                rtcConfig.virtHardResetTimestamp = util::datetime::to_timestamp(util::datetime::host());
+                settings.rtc.virtHardResetTimestamp = util::datetime::to_timestamp(util::datetime::host());
             }
         }
         ImGui::Unindent();

@@ -640,10 +640,33 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapMissionStick(m_port1MissionStickInputs, input.port1.missionStick.binds);
     mapMissionStick(m_port2MissionStickInputs, input.port2.missionStick.binds);
 
+    {
+        auto &config = m_context.saturn.configuration;
+
+        system.autodetectRegion.Observe(config.system.autodetectRegion);
+        system.preferredRegionOrder.Observe([&](auto value) { config.system.preferredRegionOrder = value; });
+        system.videoStandard.Observe([&](auto value) { config.system.videoStandard = value; });
+
+        system.rtc.mode.Observe([&](auto value) { config.rtc.mode = value; });
+        system.rtc.virtHardResetStrategy.Observe([&](auto value) { config.rtc.virtHardResetStrategy = value; });
+        system.rtc.virtHardResetTimestamp.Observe([&](auto value) { config.rtc.virtHardResetTimestamp = value; });
+
+        video.threadedVDP.Observe([&](auto value) { config.video.threadedVDP = value; });
+        video.threadedDeinterlacer.Observe([&](auto value) { config.video.threadedDeinterlacer = value; });
+        video.includeVDP1InRenderThread.Observe([&](auto value) { config.video.includeVDP1InRenderThread = value; });
+
+        audio.interpolation.Observe([&](auto value) { config.audio.interpolation = value; });
+        audio.threadedSCSP.Observe([&](auto value) { config.audio.threadedSCSP = value; });
+
+        cdblock.readSpeedFactor.Observe([&](auto value) { config.cdblock.readSpeedFactor = value; });
+    }
+
     ResetToDefaults();
 }
 
 void Settings::ResetToDefaults() {
+    using namespace ymir::core;
+
     general.preloadDiscImagesToRAM = false;
     general.rememberLastLoadedDisc = true;
     general.boostEmuThreadPriority = true;
@@ -666,11 +689,22 @@ void Settings::ResetToDefaults() {
     system.internalBackupRAMImagePath = m_context.profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
     system.internalBackupRAMPerGame = false;
 
+    system.autodetectRegion = true;
+    system.preferredRegionOrder =
+        std::vector<config::sys::Region>{config::sys::Region::NorthAmerica, config::sys::Region::Japan};
+
+    system.videoStandard = config::sys::VideoStandard::NTSC;
+
     system.emulateSH2Cache = false;
 
     system.ipl.overrideImage = false;
     system.ipl.path = "";
     system.ipl.variant = db::SystemVariant::Saturn;
+
+    system.rtc.mode = config::rtc::Mode::Host;
+    system.rtc.virtHardResetStrategy = config::rtc::HardResetStrategy::Preserve;
+    system.rtc.virtHardResetTimestamp = util::datetime::to_timestamp(
+        util::datetime::DateTime{.year = 1994, .month = 1, .day = 1, .hour = 0, .minute = 0, .second = 0});
 
     {
         using PeriphType = peripheral::PeripheralType;
@@ -712,9 +746,16 @@ void Settings::ResetToDefaults() {
     video.useFullRefreshRateWithVideoSync = false;
     video.deinterlace = false;
     video.transparentMeshes = false;
+    video.threadedVDP = true;
+    video.threadedDeinterlacer = true;
+    video.includeVDP1InRenderThread = true;
 
     audio.volume = 0.8;
     audio.mute = false;
+
+    audio.interpolation = config::audio::SampleInterpolationMode::Linear;
+
+    audio.threadedSCSP = false;
 
     audio.stepGranularity = 0;
 
@@ -727,6 +768,8 @@ void Settings::ResetToDefaults() {
     cartridge.dram.capacity = Settings::Cartridge::DRAM::Capacity::_32Mbit;
     cartridge.rom.imagePath = "";
     cartridge.autoLoadGameCarts = true;
+
+    cdblock.readSpeedFactor = 2;
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
@@ -754,7 +797,6 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     if (configVersion > kConfigVersion) {
         return SettingsLoadResult::UnsupportedConfigVersion(configVersion);
     }
-    auto &emuConfig = m_context.saturn.configuration;
 
     auto parseUIScaleOptions = [&](auto &tbl) {
         Parse(tbl, "OverrideUIScale", gui.overrideUIScale);
@@ -813,9 +855,9 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     }
 
     if (auto tblSystem = data["System"]) {
-        Parse(tblSystem, "VideoStandard", emuConfig.system.videoStandard);
-        Parse(tblSystem, "AutoDetectRegion", emuConfig.system.autodetectRegion);
-        Parse(tblSystem, "PreferredRegionOrder", emuConfig.system.preferredRegionOrder);
+        Parse(tblSystem, "VideoStandard", system.videoStandard);
+        Parse(tblSystem, "AutoDetectRegion", system.autodetectRegion);
+        Parse(tblSystem, "PreferredRegionOrder", system.preferredRegionOrder);
         Parse(tblSystem, "EmulateSH2Cache", system.emulateSH2Cache);
         Parse(tblSystem, "InternalBackupRAMImagePath", system.internalBackupRAMImagePath);
         Parse(tblSystem, "InternalBackupRAMPerGame", system.internalBackupRAMPerGame);
@@ -829,7 +871,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
             ipl.path = Absolute(ProfilePath::IPLROMImages, ipl.path);
         }
 
-        auto &rtc = emuConfig.rtc;
+        auto &rtc = system.rtc;
         if (auto tblRTC = tblSystem["RTC"]) {
             Parse(tblRTC, "Mode", rtc.mode);
             if (auto tblVirtual = tblRTC["Virtual"]) {
@@ -1061,9 +1103,9 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblVideo, "DoubleClickToFullScreen", video.doubleClickToFullScreen);
         Parse(tblVideo, "UseFullRefreshRateWithVideoSync", video.useFullRefreshRateWithVideoSync);
 
-        Parse(tblVideo, "ThreadedVDP", emuConfig.video.threadedVDP);
-        Parse(tblVideo, "ThreadedDeinterlacer", emuConfig.video.threadedDeinterlacer);
-        Parse(tblVideo, "IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread);
+        Parse(tblVideo, "ThreadedVDP", video.threadedVDP);
+        Parse(tblVideo, "ThreadedDeinterlacer", video.threadedDeinterlacer);
+        Parse(tblVideo, "IncludeVDP1InRenderThread", video.includeVDP1InRenderThread);
         if (configVersion <= 2) {
             parseUIScaleOptions(tblVideo);
         }
@@ -1086,8 +1128,8 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblAudio, "MidiOutputPortId", outputPort.id);
         Parse(tblAudio, "MidiInputPortType", inputPort.type);
         Parse(tblAudio, "MidiOutputPortType", outputPort.type);
-        Parse(tblAudio, "InterpolationMode", emuConfig.audio.interpolation);
-        Parse(tblAudio, "ThreadedSCSP", emuConfig.audio.threadedSCSP);
+        Parse(tblAudio, "InterpolationMode", audio.interpolation);
+        Parse(tblAudio, "ThreadedSCSP", audio.threadedSCSP);
 
         audio.stepGranularity = std::min(stepGranularity, 5u);
 
@@ -1113,7 +1155,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
     }
 
     if (auto tblCDBlock = data["CDBlock"]) {
-        Parse(tblCDBlock, "ReadSpeed", emuConfig.cdblock.readSpeedFactor);
+        Parse(tblCDBlock, "ReadSpeed", cdblock.readSpeedFactor);
     }
 
     this->path = path;
@@ -1124,9 +1166,6 @@ SettingsSaveResult Settings::Save() {
     if (path.empty()) {
         path = "Ymir.toml";
     }
-
-    auto &emuConfig = m_context.saturn.configuration;
-    const auto &rtc = emuConfig.rtc;
 
     // clang-format off
     auto tbl = toml::table{{
@@ -1166,10 +1205,10 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"System", toml::table{{
-            {"VideoStandard", ToTOML(emuConfig.system.videoStandard)},
-            {"AutoDetectRegion", emuConfig.system.autodetectRegion},
-            {"PreferredRegionOrder", ToTOML(emuConfig.system.preferredRegionOrder.Get())},
-            {"EmulateSH2Cache", system.emulateSH2Cache.Get()},
+            {"VideoStandard", ToTOML(system.videoStandard)},
+            {"AutoDetectRegion", system.autodetectRegion.Get()},
+            {"PreferredRegionOrder", ToTOML(system.preferredRegionOrder.Get())},
+            {"EmulateSH2Cache", system.emulateSH2Cache},
             {"InternalBackupRAMImagePath", Proximate(ProfilePath::PersistentState, system.internalBackupRAMImagePath).native()},
             {"InternalBackupRAMPerGame", system.internalBackupRAMPerGame},
         
@@ -1180,10 +1219,10 @@ SettingsSaveResult Settings::Save() {
             }}},
 
             {"RTC", toml::table{{
-                {"Mode", ToTOML(rtc.mode)},
+                {"Mode", ToTOML(system.rtc.mode)},
                 {"Virtual", toml::table{{
-                    {"HardResetStrategy", ToTOML(rtc.virtHardResetStrategy)},
-                    {"HardResetTimestamp", rtc.virtHardResetTimestamp},
+                    {"HardResetStrategy", ToTOML(system.rtc.virtHardResetStrategy)},
+                    {"HardResetTimestamp", system.rtc.virtHardResetTimestamp.Get()},
                 }}},
             }}},
         }}},
@@ -1474,9 +1513,9 @@ SettingsSaveResult Settings::Save() {
             {"UseFullRefreshRateWithVideoSync", video.useFullRefreshRateWithVideoSync},
             {"Deinterlace", video.deinterlace.Get()},
             {"TransparentMeshes", video.transparentMeshes.Get()},
-            {"ThreadedVDP", emuConfig.video.threadedVDP.Get()},
-            {"ThreadedDeinterlacer", emuConfig.video.threadedDeinterlacer.Get()},
-            {"IncludeVDP1InRenderThread", emuConfig.video.includeVDP1InRenderThread.Get()},
+            {"ThreadedVDP", video.threadedVDP.Get()},
+            {"ThreadedDeinterlacer", video.threadedDeinterlacer.Get()},
+            {"IncludeVDP1InRenderThread", video.includeVDP1InRenderThread.Get()},
         }}},
 
         {"Audio", toml::table{{
@@ -1487,8 +1526,8 @@ SettingsSaveResult Settings::Save() {
             {"MidiOutputPortId", audio.midiOutputPort.Get().id},
             {"MidiInputPortType", ToTOML(audio.midiInputPort.Get().type)},
             {"MidiOutputPortType", ToTOML(audio.midiOutputPort.Get().type)},
-            {"InterpolationMode", ToTOML(emuConfig.audio.interpolation)},
-            {"ThreadedSCSP", emuConfig.audio.threadedSCSP.Get()},
+            {"InterpolationMode", ToTOML(audio.interpolation)},
+            {"ThreadedSCSP", audio.threadedSCSP.Get()},
         }}},
 
         {"Cartridge", toml::table{{
@@ -1507,7 +1546,7 @@ SettingsSaveResult Settings::Save() {
         }}},
 
         {"CDBlock", toml::table{{
-            {"ReadSpeed", emuConfig.cdblock.readSpeedFactor.Get()},
+            {"ReadSpeed", cdblock.readSpeedFactor.Get()},
         }}},
     }};
     // clang-format on

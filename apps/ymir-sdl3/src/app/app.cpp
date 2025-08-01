@@ -192,14 +192,6 @@ int App::Run(const CommandLineOptions &options) {
     }
 
     {
-        auto &systemSettings = m_context.settings.system;
-        auto &systemConfig = m_context.saturn.configuration.system;
-
-        systemSettings.emulateSH2Cache.ObserveAndNotify(
-            [&](bool value) { m_context.EnqueueEvent(events::emu::SetEmulateSH2Cache(value)); });
-    }
-
-    {
         auto &inputSettings = m_context.settings.input;
         auto &inputContext = m_context.inputContext;
 
@@ -384,16 +376,15 @@ void App::RunEmulator() {
 
     screen.videoSync = m_context.settings.video.fullScreen || m_context.settings.video.syncInWindowedMode;
 
-    m_context.saturn.configuration.system.videoStandard.ObserveAndNotify(
-        [&](core::config::sys::VideoStandard standard) {
-            if (standard == core::config::sys::VideoStandard::PAL) {
-                screen.frameInterval =
-                    std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(sys::kPALFrameInterval));
-            } else {
-                screen.frameInterval =
-                    std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(sys::kNTSCFrameInterval));
-            }
-        });
+    m_context.settings.system.videoStandard.ObserveAndNotify([&](core::config::sys::VideoStandard standard) {
+        if (standard == core::config::sys::VideoStandard::PAL) {
+            screen.frameInterval =
+                std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(sys::kPALFrameInterval));
+        } else {
+            screen.frameInterval =
+                std::chrono::duration_cast<clk::duration>(std::chrono::duration<double>(sys::kNTSCFrameInterval));
+        }
+    });
 
     // ---------------------------------
     // Initialize SDL subsystems

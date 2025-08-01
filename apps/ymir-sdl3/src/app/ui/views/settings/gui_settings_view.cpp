@@ -83,8 +83,7 @@ void GUISettingsView::Display() {
         "When enabled, notification messages are displayed on the top-left corner of the window.",
         m_context.displayScale);
 
-    const bool isPAL =
-        m_context.saturn.configuration.system.videoStandard.Get() == ymir::core::config::sys::VideoStandard::PAL;
+    const bool isPAL = m_context.settings.system.videoStandard.Get() == ymir::core::config::sys::VideoStandard::PAL;
 
     MakeDirty(ImGui::Checkbox("Show frame rate", &settings.showFrameRateOSD));
     widgets::ExplanationTooltip(

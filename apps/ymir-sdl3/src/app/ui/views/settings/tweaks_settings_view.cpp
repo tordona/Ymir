@@ -29,7 +29,6 @@ void TweaksSettingsView::Display() {
         auto checkbox = [](const char *name, bool value) { return fmt::format("[{}] {}", (value ? 'x' : ' '), name); };
 
         auto &settings = m_context.settings;
-        auto &config = m_context.saturn.configuration;
 
         fmt::memory_buffer buf{};
         auto inserter = std::back_inserter(buf);
@@ -53,19 +52,19 @@ void TweaksSettingsView::Display() {
         // System
 
         fmt::format_to(inserter, "### System\n");
-        fmt::format_to(inserter, "- {}\n", checkbox("Emulate SH-2 cache", config.system.emulateSH2Cache.Get()));
+        fmt::format_to(inserter, "- {}\n", checkbox("Emulate SH-2 cache", settings.system.emulateSH2Cache));
 
         // -------------------------------------------------------------------------------------------------------------
         // Video
 
         fmt::format_to(inserter, "### Video\n");
-        fmt::format_to(inserter, "- {}\n", checkbox("Threaded VDP2 rendering", config.video.threadedVDP.Get()));
+        fmt::format_to(inserter, "- {}\n", checkbox("Threaded VDP2 rendering", settings.video.threadedVDP.Get()));
         fmt::format_to(
             inserter, "  - {}\n",
-            checkbox("Use dedicated thread for deinterlaced rendering", config.video.threadedDeinterlacer.Get()));
+            checkbox("Use dedicated thread for deinterlaced rendering", settings.video.threadedDeinterlacer.Get()));
         fmt::format_to(
             inserter, "  - {}\n",
-            checkbox("Include VDP1 rendering in VDP2 renderer thread", config.video.includeVDP1InRenderThread.Get()));
+            checkbox("Include VDP1 rendering in VDP2 renderer thread", settings.video.includeVDP1InRenderThread.Get()));
 
         // -------------------------------------------------------------------------------------------------------------
         // Audio
@@ -80,7 +79,7 @@ void TweaksSettingsView::Display() {
         };
 
         fmt::format_to(inserter, "### Audio\n");
-        fmt::format_to(inserter, "- Interpolation mode: {}\n", interpMode(config.audio.interpolation.Get()));
+        fmt::format_to(inserter, "- Interpolation mode: {}\n", interpMode(settings.audio.interpolation.Get()));
         fmt::format_to(inserter, "- Emulation step granularity: {}\n",
                        widgets::settings::audio::StepGranularityToString(settings.audio.stepGranularity.Get()));
 
@@ -88,7 +87,7 @@ void TweaksSettingsView::Display() {
         // CD Block
 
         fmt::format_to(inserter, "### CD Block\n");
-        fmt::format_to(inserter, "- CD read speed: {}x\n", config.cdblock.readSpeedFactor.Get());
+        fmt::format_to(inserter, "- CD read speed: {}x\n", settings.cdblock.readSpeedFactor.Get());
 
         tweaksList = fmt::to_string(buf);
     }
@@ -157,7 +156,6 @@ void TweaksSettingsView::DisplayEnhancements() {
 
 void TweaksSettingsView::DisplayAccuracyOptions() {
     auto &settings = m_context.settings;
-    auto &config = m_context.saturn.configuration;
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.xlarge);
     ImGui::SeparatorText("Accuracy");
@@ -173,10 +171,10 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
         m_context.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(true));
         m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(false));
 
-        config.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
+        settings.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
         settings.audio.stepGranularity = 0;
 
-        config.cdblock.readSpeedFactor = 2;
+        settings.cdblock.readSpeedFactor = 2;
     }
     if (ImGui::BeginItemTooltip()) {
         ImGui::TextUnformatted(
@@ -192,10 +190,10 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
         m_context.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(true));
         m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(false));
 
-        config.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
+        settings.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
         settings.audio.stepGranularity = 5;
 
-        config.cdblock.readSpeedFactor = 2;
+        settings.cdblock.readSpeedFactor = 2;
     }
     if (ImGui::BeginItemTooltip()) {
         ImGui::TextUnformatted("Maximizes accuracy with no regard for performance.");
@@ -210,10 +208,10 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
         m_context.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(true));
         m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(true));
 
-        config.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
+        settings.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
         settings.audio.stepGranularity = 0;
 
-        config.cdblock.readSpeedFactor = 200;
+        settings.cdblock.readSpeedFactor = 200;
     }
     if (ImGui::BeginItemTooltip()) {
         ImGui::TextUnformatted("Maximizes performance with no regard for accuracy.\n"
