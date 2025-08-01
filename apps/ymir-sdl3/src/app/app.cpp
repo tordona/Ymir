@@ -1572,12 +1572,15 @@ void App::RunEmulator() {
 
             double maxFrameRate = baseFrameRate;
 
-            // Use display refresh rate if requested
             if (m_context.settings.video.useFullRefreshRateWithVideoSync) {
+                // Use display refresh rate if requested
                 const SDL_DisplayMode *dispMode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(screen.window));
                 if (dispMode != nullptr && dispMode->refresh_rate != 0.0f) {
                     maxFrameRate = dispMode->refresh_rate;
                 }
+            } else {
+                // Never go below 48 fps
+                maxFrameRate = std::max(maxFrameRate, 48.0);
             }
 
             // Compute GUI frame duplication
