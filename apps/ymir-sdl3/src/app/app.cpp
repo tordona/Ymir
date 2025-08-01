@@ -689,7 +689,7 @@ void App::RunEmulator() {
              }
              if (sharedCtx.settings.video.reduceLatency || !screen.updated || screen.videoSync) {
                  std::unique_lock lock{screen.mtxFramebuffer};
-                 std::copy_n(fb, width * height, screen.framebuffers[screen.framebufferFlip].data());
+                 std::copy_n(fb, width * height, screen.framebuffers[0].data());
                  screen.updated = true;
                  if (screen.videoSync) {
                      screen.frameReadyEvent.Set();
@@ -1935,14 +1935,14 @@ void App::RunEmulator() {
             screen.updated = false;
             {
                 std::unique_lock lock{screen.mtxFramebuffer};
-                screen.framebufferFlip ^= true;
+                screen.framebuffers[1] = screen.framebuffers[0];
             }
             uint32 *pixels = nullptr;
             int pitch = 0;
             SDL_Rect area{.x = 0, .y = 0, .w = (int)screen.width, .h = (int)screen.height};
             if (SDL_LockTexture(fbTexture, &area, (void **)&pixels, &pitch)) {
                 for (uint32 y = 0; y < screen.height; y++) {
-                    std::copy_n(&screen.framebuffers[screen.framebufferFlip ^ 1][y * screen.width], screen.width,
+                    std::copy_n(&screen.framebuffers[1][y * screen.width], screen.width,
                                 &pixels[y * pitch / sizeof(uint32)]);
                 }
                 // std::copy_n(framebuffer.begin(), screen.width * screen.height, pixels);

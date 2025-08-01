@@ -204,9 +204,8 @@ struct SharedContext {
             this->resolutionChanged = true;
         }
 
-        // Staging framebuffers -- emu renders to one, GUI swaps when done
+        // Staging framebuffers -- emu renders to one, GUI copies to other
         std::array<std::array<uint32, ymir::vdp::kMaxResH * ymir::vdp::kMaxResV>, 2> framebuffers;
-        bool framebufferFlip = false;
         std::mutex mtxFramebuffer;
         bool updated = false;
 
