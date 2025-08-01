@@ -1612,16 +1612,29 @@ void App::RunEmulator() {
             const auto frameInterval = std::chrono::duration_cast<std::chrono::nanoseconds>(baseFrameInterval);
 
             // Adjust frame presentation time
-            screen.nextFrameTarget -= std::chrono::duration_cast<std::chrono::nanoseconds>(
-                frameInterval * avgFrameDelay * frameIntervalAdjustFactor);
+            if (m_context.paused) {
+                screen.nextFrameTarget = clk::now();
+            } else {
+                screen.nextFrameTarget -= std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    frameInterval * avgFrameDelay * frameIntervalAdjustFactor);
+            }
 
             if (screen.videoSync) {
                 // Sleep until 1ms before the next frame presentation time, then spin wait for the deadline
+                bool skipDelay = false;
                 auto now = clk::now();
                 if (now < screen.nextFrameTarget - 1ms) {
-                    std::this_thread::sleep_until(screen.nextFrameTarget - 1ms);
+                    // Failsafe: Don't wait for longer than two frame intervals
+                    auto sleepTime = screen.nextFrameTarget - 1ms - now;
+                    if (sleepTime > frameInterval * 2) {
+                        sleepTime = frameInterval * 2;
+                        skipDelay = true;
+                    }
+                    std::this_thread::sleep_for(sleepTime);
                 }
-                while (clk::now() < screen.nextFrameTarget) {
+                if (!skipDelay) {
+                    while (clk::now() < screen.nextFrameTarget) {
+                    }
                 }
             }
 
@@ -1927,7 +1940,7 @@ void App::RunEmulator() {
 
         // Update display
         if (screen.updated || screen.videoSync) {
-            if (screen.videoSync && screen.expectFrame) {
+            if (screen.videoSync && screen.expectFrame && !m_context.paused) {
                 screen.frameReadyEvent.Wait();
                 screen.frameReadyEvent.Reset();
                 screen.expectFrame = false;
@@ -3156,6 +3169,10 @@ void App::EmulatorThread() {
                 stepAction = newPaused ? StepAction::Noop : StepAction::RunFrame;
                 m_context.paused = newPaused;
                 m_audioSystem.SetSilent(newPaused);
+                if (m_context.screen.videoSync) {
+                    // Avoid locking the GUI thread
+                    m_context.screen.frameReadyEvent.Set();
+                }
                 break;
             }
             case ForwardFrameStep:
