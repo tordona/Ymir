@@ -4929,10 +4929,17 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
             // Blend line color if top layer uses it
             Color888AverageMasked(std::span{layer1Pixels}.first(m_HRes), layer0LineColorEnabled, layer1Pixels,
                                   layer0LineColors);
-        } else {
+        } else if (regs.lineScreenParams.colorCalcEnable) {
             // Alpha composite
             Color888CompositeRatioMasked(std::span{layer1Pixels}.first(m_HRes), layer0LineColorEnabled, layer1Pixels,
                                          layer0LineColors, regs.lineScreenParams.colorCalcRatio);
+        } else {
+            // Replace layer 1 pixels with line color screen where applicable
+            for (uint32 x = 0; x < m_HRes; ++x) {
+                if (layer0LineColorEnabled[x]) {
+                    layer1Pixels[x] = layer0LineColors[x];
+                }
+            }
         }
 
         // Blend layer 1 with sprite mesh layer colors

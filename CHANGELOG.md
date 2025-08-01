@@ -58,6 +58,7 @@ In development.
 - VDP2: Don't increment vertical scroll BG coordinate on complementary field lines when rendering deinterlaced RBG lines. Fixes jittery/interlaced Grandia FMVs when deinterlace is enabled.
 - VDP2: Fix race conditions with threaded deinterlacing causing some artifacts on RBGs in single-density interlaced mode.
 - VDP2: RBG1 uses Rotation Parameter B, not A.
+- VDP2: Don't blend line screen with layer 1 if line screen color calculations are disabled. Fixes fog in battle backgrounds in Zanma Chou Ougi - Valhollian. (#352)
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
 
 
