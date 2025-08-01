@@ -171,6 +171,8 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
         m_context.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(true));
         m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(false));
 
+        settings.system.emulateSH2Cache = false;
+
         settings.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
         settings.audio.stepGranularity = 0;
 
@@ -190,6 +192,8 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
         m_context.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(true));
         m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(false));
 
+        settings.system.emulateSH2Cache = true;
+
         settings.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
         settings.audio.stepGranularity = 5;
 
@@ -207,6 +211,8 @@ void TweaksSettingsView::DisplayAccuracyOptions() {
         m_context.EnqueueEvent(events::emu::EnableThreadedVDP(true));
         m_context.EnqueueEvent(events::emu::EnableThreadedDeinterlacer(true));
         m_context.EnqueueEvent(events::emu::IncludeVDP1InVDPRenderThread(true));
+
+        settings.system.emulateSH2Cache = false;
 
         settings.audio.interpolation = ymir::core::config::audio::SampleInterpolationMode::Linear;
         settings.audio.stepGranularity = 0;

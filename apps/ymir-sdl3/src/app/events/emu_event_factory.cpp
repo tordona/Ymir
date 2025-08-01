@@ -471,7 +471,6 @@ EmuEvent SetEmulateSH2Cache(bool enable) {
         const bool currEnable = ctx.saturn.instance->IsSH2CacheEmulationEnabled();
         if (currEnable != enable) {
             ctx.saturn.instance->EnableSH2CacheEmulation(enable);
-            ctx.settings.system.emulateSH2Cache = enable;
             devlog::info<grp::base>("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
         }
     });

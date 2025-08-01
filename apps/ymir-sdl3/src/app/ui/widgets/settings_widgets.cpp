@@ -33,6 +33,7 @@ namespace settings::system {
         }
         if (ctx.settings.MakeDirty(ImGui::Checkbox("Emulate SH-2 cache", &emulateSH2Cache))) {
             ctx.EnqueueEvent(events::emu::SetEmulateSH2Cache(emulateSH2Cache));
+            ctx.settings.system.emulateSH2Cache = emulateSH2Cache;
         }
         widgets::ExplanationTooltip("Enables emulation of the SH-2 cache.\n"
                                     "A few games require this to work properly.\n"
