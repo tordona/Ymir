@@ -2,6 +2,8 @@
 
 #include <app/events/emu_event_factory.hpp>
 
+#include <ymir/hw/smpc/smpc.hpp>
+
 #include <util/regions.hpp>
 
 #include <imgui.h>
@@ -12,22 +14,24 @@ namespace app::ui::widgets {
 
 bool VideoStandardSelector(SharedContext &ctx) {
     bool changed = false;
-    core::config::sys::VideoStandard videoStandard = ctx.saturn.GetVideoStandard();
-    if (ImGui::RadioButton("NTSC", videoStandard == core::config::sys::VideoStandard::NTSC)) {
-        ctx.EnqueueEvent(events::emu::SetVideoStandard(core::config::sys::VideoStandard::NTSC));
-        changed = true;
-    }
+    core::config::sys::VideoStandard videoStandard = ctx.settings.system.videoStandard;
+    auto option = [&](const char *name, core::config::sys::VideoStandard value) {
+        if (ImGui::RadioButton(name, videoStandard == value)) {
+            ctx.EnqueueEvent(events::emu::SetVideoStandard(value));
+            ctx.settings.system.videoStandard = value;
+            ctx.settings.MakeDirty();
+            changed = true;
+        }
+    };
+    option("NTSC", core::config::sys::VideoStandard::NTSC);
     ImGui::SameLine();
-    if (ImGui::RadioButton("PAL", videoStandard == core::config::sys::VideoStandard::PAL)) {
-        ctx.EnqueueEvent(events::emu::SetVideoStandard(core::config::sys::VideoStandard::PAL));
-        changed = true;
-    }
+    option("PAL", core::config::sys::VideoStandard::PAL);
     return changed;
 }
 
 bool RegionSelector(SharedContext &ctx) {
     bool changed = false;
-    auto areaCode = static_cast<core::config::sys::Region>(ctx.saturn.SMPC.GetAreaCode());
+    auto areaCode = static_cast<core::config::sys::Region>(ctx.saturn.GetSMPC().GetAreaCode());
     if (ImGui::BeginCombo("##region", util::RegionToString(areaCode).c_str(),
                           ImGuiComboFlags_WidthFitPreview | ImGuiComboFlags_HeightLargest)) {
         for (auto rgn : {core::config::sys::Region::Japan, core::config::sys::Region::NorthAmerica,

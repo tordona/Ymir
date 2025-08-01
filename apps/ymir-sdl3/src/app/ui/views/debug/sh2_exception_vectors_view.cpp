@@ -1,5 +1,7 @@
 #include "sh2_exception_vectors_view.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <imgui.h>
 
 using namespace ymir;

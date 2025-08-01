@@ -2,8 +2,6 @@
 
 #include <app/shared_context.hpp>
 
-#include <ymir/hw/sh2/sh2.hpp>
-
 namespace app::ui {
 
 class SH2FreeRunningTimerView {

@@ -2,8 +2,6 @@
 
 #include <app/shared_context.hpp>
 
-#include <ymir/hw/scu/scu_dsp.hpp>
-
 namespace app::ui {
 
 class SCUDSPDisassemblyView {
@@ -14,7 +12,7 @@ public:
 
 private:
     SharedContext &m_context;
-    ymir::scu::SCUDSP &m_dsp;
+    ymir::scu::SCU &m_scu;
 
     struct Colors {
 #define C(r, g, b) (r / 255.0f), (g / 255.0f), (b / 255.0f), 1.0f

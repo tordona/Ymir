@@ -1,5 +1,7 @@
 #include "sh2_registers_view.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <imgui.h>
 
 using namespace ymir;
@@ -14,7 +16,7 @@ void SH2RegistersView::Display() {
     ImGui::BeginGroup();
 
     const bool master = m_sh2.IsMaster();
-    const bool enabled = master || m_context.saturn.slaveSH2Enabled;
+    const bool enabled = master || m_context.saturn.IsSlaveSH2Enabled();
 
     if (!enabled) {
         ImGui::BeginDisabled();

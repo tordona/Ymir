@@ -1,12 +1,14 @@
 #include "scu_dma_state_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
+
 using namespace ymir;
 
 namespace app::ui {
 
 SCUDMAStateView::SCUDMAStateView(SharedContext &context)
     : m_context(context)
-    , m_scu(context.saturn.SCU) {}
+    , m_scu(context.saturn.GetSCU()) {}
 
 void SCUDMAStateView::Display(uint8 channel) {
     if (channel >= 3) {

@@ -2,6 +2,8 @@
 
 #include <cinttypes>
 
+using namespace ymir;
+
 namespace app::ui {
 
 SH2DivisionUnitTraceView::SH2DivisionUnitTraceView(SharedContext &context, SH2Tracer &tracer)
@@ -9,8 +11,6 @@ SH2DivisionUnitTraceView::SH2DivisionUnitTraceView(SharedContext &context, SH2Tr
     , m_tracer(tracer) {}
 
 void SH2DivisionUnitTraceView::Display() {
-    using namespace ymir;
-
     ImGui::BeginGroup();
 
     ImGui::Checkbox("Enable", &m_tracer.traceDivisions);

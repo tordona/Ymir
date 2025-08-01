@@ -2,8 +2,6 @@
 
 #include <app/shared_context.hpp>
 
-#include <ymir/hw/scu/scu.hpp>
-
 namespace app::ui {
 
 class SCUTimersView {

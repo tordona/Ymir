@@ -2,8 +2,6 @@
 
 #include <app/shared_context.hpp>
 
-#include <ymir/hw/scu/scu_dsp.hpp>
-
 namespace app::ui {
 
 class SCUDSPRegistersView {
@@ -14,7 +12,7 @@ public:
 
 private:
     SharedContext &m_context;
-    ymir::scu::SCUDSP &m_dsp;
+    ymir::scu::SCU &m_scu;
 };
 
 } // namespace app::ui

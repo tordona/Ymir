@@ -4,8 +4,6 @@
 
 #include <app/debug/sh2_tracer.hpp>
 
-#include <ymir/hw/sh2/sh2.hpp>
-
 namespace app::ui {
 
 class SH2WindowBase : public WindowBase {

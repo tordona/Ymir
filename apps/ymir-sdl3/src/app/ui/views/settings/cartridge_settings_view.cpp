@@ -1,5 +1,7 @@
 #include "cartridge_settings_view.hpp"
 
+#include <ymir/hw/cart/cart.hpp>
+#include <ymir/hw/cdblock/cdblock.hpp>
 #include <ymir/sys/backup_ram.hpp>
 
 #include <ymir/db/game_db.hpp>
@@ -92,7 +94,7 @@ void CartridgeSettingsView::Display() {
     const db::GameInfo *gameInfo = nullptr;
     {
         std::unique_lock lock{m_context.locks.disc};
-        const auto &disc = m_context.saturn.CDBlock.GetDisc();
+        const auto &disc = m_context.saturn.GetCDBlock().GetDisc();
         if (!disc.sessions.empty()) {
             gameInfo = db::GetGameInfo(disc.header.productNumber);
         }

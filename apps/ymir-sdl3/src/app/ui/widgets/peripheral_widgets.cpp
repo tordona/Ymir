@@ -1,7 +1,8 @@
 #include "peripheral_widgets.hpp"
 
-#include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
+
+#include <ymir/hw/smpc/smpc.hpp>
 
 using namespace ymir;
 
@@ -11,7 +12,8 @@ bool PeripheralSelector(SharedContext &ctx, uint32 portIndex) {
     std::unique_lock lock{ctx.locks.peripherals};
 
     const bool isPort1 = portIndex == 1;
-    auto &port = isPort1 ? ctx.saturn.SMPC.GetPeripheralPort1() : ctx.saturn.SMPC.GetPeripheralPort2();
+    auto &smpc = ctx.saturn.GetSMPC();
+    auto &port = isPort1 ? smpc.GetPeripheralPort1() : smpc.GetPeripheralPort2();
     auto &periph = port.GetPeripheral();
     auto &settings = isPort1 ? ctx.settings.input.port1 : ctx.settings.input.port2;
     const bool isNone = periph.GetType() == peripheral::PeripheralType::None;

@@ -1,5 +1,7 @@
 #include "sh2_debug_toolbar_view.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
@@ -28,7 +30,7 @@ void SH2DebugToolbarView::Display() {
         }
     }
     const bool master = m_sh2.IsMaster();
-    const bool enabled = master || m_context.saturn.slaveSH2Enabled;
+    const bool enabled = master || m_context.saturn.IsSlaveSH2Enabled();
 
     ImGui::BeginDisabled(!enabled);
     {
@@ -86,7 +88,10 @@ void SH2DebugToolbarView::Display() {
 
     if (!master) {
         ImGui::SameLine();
-        ImGui::Checkbox("Enabled", &m_context.saturn.slaveSH2Enabled);
+        bool slaveSH2Enabled = m_context.saturn.IsSlaveSH2Enabled();
+        if (ImGui::Checkbox("Enabled", &slaveSH2Enabled)) {
+            m_context.saturn.SetSlaveSH2Enabled(slaveSH2Enabled);
+        }
     }
 
     ImGui::SameLine();

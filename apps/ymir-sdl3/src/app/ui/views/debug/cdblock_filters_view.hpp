@@ -12,7 +12,7 @@ public:
 
 private:
     SharedContext &m_context;
-    ymir::cdblock::CDBlock::Probe &m_probe;
+    ymir::cdblock::CDBlock &m_cdblock;
 };
 
 } // namespace app::ui

@@ -1,18 +1,22 @@
 #include "cdblock_filters_view.hpp"
 
+#include <ymir/hw/cdblock/cdblock.hpp>
+
 using namespace ymir;
 
 namespace app::ui {
 
 CDBlockFiltersView::CDBlockFiltersView(SharedContext &context)
     : m_context(context)
-    , m_probe(context.saturn.CDBlock.GetProbe()) {}
+    , m_cdblock(context.saturn.GetCDBlock()) {}
 
 void CDBlockFiltersView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
+
+    auto &probe = m_cdblock.GetProbe();
 
     ImGui::BeginGroup();
 
@@ -32,7 +36,7 @@ void CDBlockFiltersView::Display() {
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableHeadersRow();
 
-        for (const auto &filter : m_probe.GetFilters()) {
+        for (const auto &filter : probe.GetFilters()) {
             auto makeBitmask = [](uint8 mask, uint8 value) {
                 std::array<char, 8> bits;
                 bits.fill('.');

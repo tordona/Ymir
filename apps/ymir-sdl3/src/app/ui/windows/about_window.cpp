@@ -1,5 +1,7 @@
 #include "about_window.hpp"
 
+#include <ymir/version.hpp>
+
 #include <ymir/util/compiler_info.hpp>
 
 #include <app/ui/fonts/IconsMaterialSymbols.h>

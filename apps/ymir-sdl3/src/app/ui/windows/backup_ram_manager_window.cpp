@@ -1,8 +1,7 @@
 #include "backup_ram_manager_window.hpp"
 
 #include <ymir/hw/cart/cart.hpp>
-
-#include <app/events/emu_event_factory.hpp>
+#include <ymir/sys/memory.hpp>
 
 #include <imgui.h>
 
@@ -15,7 +14,7 @@ BackupMemoryManagerWindow::BackupMemoryManagerWindow(SharedContext &context)
     , m_sysBupView(context, "System memory", false)
     , m_cartBupView(context, "Cartridge memory", true) {
 
-    m_sysBupView.SetBackupMemory(&m_context.saturn.mem.GetInternalBackupRAM());
+    m_sysBupView.SetBackupMemory(&m_context.saturn.GetSystemMemory().GetInternalBackupRAM());
 
     m_windowConfig.name = "Backup memory manager";
 }

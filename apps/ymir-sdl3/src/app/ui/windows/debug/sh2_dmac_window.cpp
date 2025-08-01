@@ -1,5 +1,7 @@
 #include "sh2_dmac_window.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 using namespace ymir;
 
 namespace app::ui {

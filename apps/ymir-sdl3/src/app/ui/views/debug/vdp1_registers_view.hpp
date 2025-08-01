@@ -2,8 +2,6 @@
 
 #include <app/shared_context.hpp>
 
-#include <ymir/hw/vdp/vdp.hpp>
-
 namespace app::ui {
 
 class VDP1RegistersView {

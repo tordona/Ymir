@@ -1,5 +1,7 @@
 #include "peripheral_config_window.hpp"
 
+#include <ymir/hw/smpc/smpc.hpp>
+
 using namespace ymir;
 
 namespace app::ui {
@@ -18,8 +20,8 @@ void PeripheralConfigWindow::Open(uint32 portIndex, uint32 slotIndex) {
 }
 
 void PeripheralConfigWindow::PrepareWindow() {
-    auto &port =
-        m_portIndex == 0 ? m_context.saturn.SMPC.GetPeripheralPort1() : m_context.saturn.SMPC.GetPeripheralPort2();
+    auto &smpc = m_context.saturn.GetSMPC();
+    auto &port = m_portIndex == 0 ? smpc.GetPeripheralPort1() : smpc.GetPeripheralPort2();
     auto &periph = port.GetPeripheral(/* TODO: m_slotIndex */);
 
     m_windowConfig.name =
@@ -37,8 +39,8 @@ void PeripheralConfigWindow::PrepareWindow() {
 }
 
 void PeripheralConfigWindow::DrawContents() {
-    auto &port =
-        m_portIndex == 0 ? m_context.saturn.SMPC.GetPeripheralPort1() : m_context.saturn.SMPC.GetPeripheralPort2();
+    auto &smpc = m_context.saturn.GetSMPC();
+    auto &port = m_portIndex == 0 ? smpc.GetPeripheralPort1() : smpc.GetPeripheralPort2();
     auto &periph = port.GetPeripheral(/* TODO: m_slotIndex */);
 
     auto &settings = m_portIndex == 0 ? m_context.settings.input.port1 : m_context.settings.input.port2;

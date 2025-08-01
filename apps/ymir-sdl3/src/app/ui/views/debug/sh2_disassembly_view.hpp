@@ -2,8 +2,6 @@
 
 #include <app/shared_context.hpp>
 
-#include <ymir/hw/sh2/sh2.hpp>
-
 #include <imgui.h>
 
 namespace app::ui {

@@ -18,6 +18,8 @@
 #include "ui/windows/debug/sh2_window_set.hpp"
 #include "ui/windows/debug/vdp_window_set.hpp"
 
+#include <ymir/hw/smpc/peripheral/peripheral_report.hpp>
+
 #include <util/ipl_rom_loader.hpp>
 
 #include <ymir/util/dev_log.hpp>

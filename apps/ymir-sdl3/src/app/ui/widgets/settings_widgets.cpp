@@ -6,6 +6,8 @@
 
 #include <ymir/db/game_db.hpp>
 
+#include <ymir/hw/cdblock/cdblock.hpp>
+
 #include <fmt/format.h>
 
 using namespace ymir;
@@ -18,7 +20,7 @@ namespace settings::system {
         const db::GameInfo *gameInfo = nullptr;
         {
             std::unique_lock lock{ctx.locks.disc};
-            const auto &disc = ctx.saturn.CDBlock.GetDisc();
+            const auto &disc = ctx.saturn.GetCDBlock().GetDisc();
             if (!disc.sessions.empty()) {
                 gameInfo = db::GetGameInfo(disc.header.productNumber);
             }

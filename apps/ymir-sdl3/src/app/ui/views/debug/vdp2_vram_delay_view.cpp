@@ -1,5 +1,7 @@
 #include "vdp2_vram_delay_view.hpp"
 
+#include <ymir/hw/vdp/vdp.hpp>
+
 #include <imgui.h>
 
 using namespace ymir;

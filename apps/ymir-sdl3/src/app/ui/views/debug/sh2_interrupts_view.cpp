@@ -1,9 +1,13 @@
 #include "sh2_interrupts_view.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <imgui.h>
 
 #include <initializer_list>
 #include <utility>
+
+using namespace ymir;
 
 namespace app::ui {
 
@@ -12,8 +16,6 @@ SH2InterruptsView::SH2InterruptsView(SharedContext &context, ymir::sh2::SH2 &sh2
     , m_sh2(sh2) {}
 
 void SH2InterruptsView::Display() {
-    using namespace ymir;
-
     auto &probe = m_sh2.GetProbe();
     auto &intc = probe.INTC();
 

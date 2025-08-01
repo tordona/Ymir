@@ -4,7 +4,7 @@ namespace app::ui {
 
 CDBlockWindowBase::CDBlockWindowBase(SharedContext &context)
     : WindowBase(context)
-    , m_cdblock(context.saturn.CDBlock)
+    , m_cdblock(context.saturn.GetCDBlock())
     , m_tracer(context.tracers.CDBlock) {}
 
 } // namespace app::ui

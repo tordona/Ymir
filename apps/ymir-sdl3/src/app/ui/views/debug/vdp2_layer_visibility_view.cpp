@@ -1,5 +1,7 @@
 #include "vdp2_layer_visibility_view.hpp"
 
+#include <ymir/hw/vdp/vdp.hpp>
+
 #include <app/events/emu_debug_event_factory.hpp>
 
 #include <imgui.h>

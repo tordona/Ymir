@@ -1,5 +1,7 @@
 #include "system_state_window.hpp"
 
+#include <ymir/sys/saturn.hpp>
+
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
@@ -59,7 +61,7 @@ void SystemStateWindow::DrawContents() {
 }
 
 void SystemStateWindow::DrawSMPCParameters() {
-    sys::ClockSpeed clockSpeed = m_context.saturn.GetClockSpeed();
+    sys::ClockSpeed clockSpeed = m_context.saturn.instance->GetClockSpeed();
 
     if (ImGui::BeginTable("sys_params", 2, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableNextRow();
@@ -113,7 +115,7 @@ void SystemStateWindow::DrawSMPCParameters() {
 }
 
 void SystemStateWindow::DrawScreen() {
-    auto &probe = m_context.saturn.VDP.GetProbe();
+    auto &probe = m_context.saturn.instance->VDP.GetProbe();
     auto [width, height] = probe.GetResolution();
     auto interlaceMode = probe.GetInterlaceMode();
 
@@ -126,7 +128,7 @@ void SystemStateWindow::DrawScreen() {
 }
 
 void SystemStateWindow::DrawRealTimeClock() {
-    const auto dt = m_context.saturn.SMPC.GetProbe().GetRTCDateTime();
+    const auto dt = m_context.saturn.instance->SMPC.GetProbe().GetRTCDateTime();
 
     static constexpr const char *kWeekdays[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 
@@ -142,7 +144,7 @@ void SystemStateWindow::DrawClocks() {
         ImGui::TableSetupColumn("Ratio");
         ImGui::TableHeadersRow();
 
-        const sys::ClockRatios &clockRatios = m_context.saturn.GetClockRatios();
+        const sys::ClockRatios &clockRatios = m_context.saturn.instance->GetClockRatios();
 
         const double masterClock =
             (double)clockRatios.masterClock * clockRatios.masterClockNum / clockRatios.masterClockDen / 1000000.0;
@@ -169,7 +171,7 @@ void SystemStateWindow::DrawClocks() {
         }
 
         // Account for double-resolution
-        const bool doubleWidth = m_context.saturn.VDP.GetProbe().GetResolution().width >= 640;
+        const bool doubleWidth = m_context.saturn.instance->VDP.GetProbe().GetResolution().width >= 640;
         ImGui::TableNextRow();
         if (ImGui::TableNextColumn()) {
             ImGui::TextUnformatted("Pixel clock");
@@ -231,11 +233,11 @@ void SystemStateWindow::DrawClocks() {
 }
 
 void SystemStateWindow::DrawCDDrive() {
-    auto &probe = m_context.saturn.CDBlock.GetProbe();
+    auto &probe = m_context.saturn.instance->CDBlock.GetProbe();
 
     const uint8 status = probe.GetCurrentStatusCode();
 
-    if (ImGui::Button(m_context.saturn.CDBlock.IsTrayOpen() ? "Close tray" : "Open tray")) {
+    if (ImGui::Button(m_context.saturn.instance->CDBlock.IsTrayOpen() ? "Close tray" : "Open tray")) {
         m_context.EnqueueEvent(events::emu::OpenCloseTray());
     }
     ImGui::SameLine();
@@ -255,7 +257,7 @@ void SystemStateWindow::DrawCDDrive() {
         std::string hash{};
         {
             std::unique_lock lock{m_context.locks.disc};
-            hash = ToString(m_context.saturn.CDBlock.GetDiscHash());
+            hash = ToString(m_context.saturn.instance->CDBlock.GetDiscHash());
         }
 
         ImGui::Text("Hash: %s", hash.c_str());
@@ -427,10 +429,10 @@ void SystemStateWindow::DrawBackupMemory() {
             }
         };
 
-        drawBup("Internal", &m_context.saturn.mem.GetInternalBackupRAM());
+        drawBup("Internal", &m_context.saturn.instance->mem.GetInternalBackupRAM());
         {
             std::unique_lock lock{m_context.locks.cart};
-            if (auto *bupCart = m_context.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
+            if (auto *bupCart = m_context.saturn.instance->GetCartridge().As<cart::CartType::BackupMemory>()) {
                 drawBup("External", &bupCart->GetBackupMemory());
             } else {
                 drawBup("External", nullptr);
@@ -467,7 +469,7 @@ void SystemStateWindow::DrawCartridge() {
     uint8 cartID;
     {
         std::unique_lock lock{m_context.locks.cart};
-        auto &cart = m_context.saturn.GetCartridge();
+        auto &cart = m_context.saturn.instance->GetCartridge();
         cartID = cart.GetID();
     }
 
@@ -483,7 +485,7 @@ void SystemStateWindow::DrawPeripherals() {
     }
 
     if (ImGui::BeginTable("sys_peripherals", 2, ImGuiTableFlags_SizingFixedFit)) {
-        auto &port1 = m_context.saturn.SMPC.GetPeripheralPort1();
+        auto &port1 = m_context.saturn.instance->SMPC.GetPeripheralPort1();
         auto type1 = port1.GetPeripheral().GetType();
 
         ImGui::TableNextRow();
@@ -501,7 +503,7 @@ void SystemStateWindow::DrawPeripherals() {
             }
         }*/
 
-        auto &port2 = m_context.saturn.SMPC.GetPeripheralPort2();
+        auto &port2 = m_context.saturn.instance->SMPC.GetPeripheralPort2();
         auto type2 = port2.GetPeripheral().GetType();
 
         ImGui::TableNextRow();

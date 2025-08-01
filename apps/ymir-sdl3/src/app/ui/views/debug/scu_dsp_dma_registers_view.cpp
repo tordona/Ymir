@@ -1,10 +1,12 @@
 #include "scu_dsp_dma_registers_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
+
 namespace app::ui {
 
 SCUDSPDMARegistersView::SCUDSPDMARegistersView(SharedContext &context)
     : m_context(context)
-    , m_dsp(context.saturn.SCU.GetDSP()) {}
+    , m_scu(context.saturn.GetSCU()) {}
 
 void SCUDSPDMARegistersView::Display() {
     ImGui::BeginGroup();
@@ -12,6 +14,8 @@ void SCUDSPDMARegistersView::Display() {
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
+
+    auto &dsp = m_scu.GetDSP();
 
     auto fmtRAMOp = [&](uint8 value, bool allowProgramRAM) {
         switch (value) {
@@ -28,15 +32,15 @@ void SCUDSPDMARegistersView::Display() {
     };
 
     {
-        if (m_dsp.dmaToD0) {
+        if (dsp.dmaToD0) {
             ImGui::BeginGroup();
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("From");
             ImGui::SameLine();
-            if (ImGui::BeginCombo("##src", fmtRAMOp(m_dsp.dmaSrc, false), ImGuiComboFlags_WidthFitPreview)) {
+            if (ImGui::BeginCombo("##src", fmtRAMOp(dsp.dmaSrc, false), ImGuiComboFlags_WidthFitPreview)) {
                 for (uint32 i = 0; i < 4; i++) {
-                    if (ImGui::Selectable(fmtRAMOp(i, false), m_dsp.dmaSrc == i)) {
-                        m_dsp.dmaSrc = i;
+                    if (ImGui::Selectable(fmtRAMOp(i, false), dsp.dmaSrc == i)) {
+                        dsp.dmaSrc = i;
                     }
                 }
                 ImGui::EndCombo();
@@ -50,9 +54,9 @@ void SCUDSPDMARegistersView::Display() {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 7);
             ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
-            if (ImGui::InputScalar("##dst", ImGuiDataType_U32, &m_dsp.dmaWriteAddr, nullptr, nullptr, "%07X",
+            if (ImGui::InputScalar("##dst", ImGuiDataType_U32, &dsp.dmaWriteAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
-                m_dsp.dmaWriteAddr &= 0x7FF'FFFC;
+                dsp.dmaWriteAddr &= 0x7FF'FFFC;
             }
             ImGui::PopFont();
             ImGui::EndGroup();
@@ -63,9 +67,9 @@ void SCUDSPDMARegistersView::Display() {
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 7);
             ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
-            if (ImGui::InputScalar("##src", ImGuiDataType_U32, &m_dsp.dmaReadAddr, nullptr, nullptr, "%07X",
+            if (ImGui::InputScalar("##src", ImGuiDataType_U32, &dsp.dmaReadAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
-                m_dsp.dmaReadAddr &= 0x7FF'FFFC;
+                dsp.dmaReadAddr &= 0x7FF'FFFC;
             }
             ImGui::PopFont();
             ImGui::EndGroup();
@@ -75,10 +79,10 @@ void SCUDSPDMARegistersView::Display() {
             ImGui::BeginGroup();
             ImGui::TextUnformatted("to");
             ImGui::SameLine();
-            if (ImGui::BeginCombo("##dst", fmtRAMOp(m_dsp.dmaDst, true), ImGuiComboFlags_WidthFitPreview)) {
+            if (ImGui::BeginCombo("##dst", fmtRAMOp(dsp.dmaDst, true), ImGuiComboFlags_WidthFitPreview)) {
                 for (uint32 i = 0; i < 5; i++) {
-                    if (ImGui::Selectable(fmtRAMOp(i, true), m_dsp.dmaDst == i)) {
-                        m_dsp.dmaDst = i;
+                    if (ImGui::Selectable(fmtRAMOp(i, true), dsp.dmaDst == i)) {
+                        dsp.dmaDst = i;
                     }
                 }
                 ImGui::EndCombo();
@@ -87,9 +91,9 @@ void SCUDSPDMARegistersView::Display() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Swap")) {
-            m_dsp.dmaToD0 = !m_dsp.dmaToD0;
-            if (!m_dsp.dmaToD0) {
-                m_dsp.dmaAddrInc = std::min(m_dsp.dmaAddrInc, 4u);
+            dsp.dmaToD0 = !dsp.dmaToD0;
+            if (!dsp.dmaToD0) {
+                dsp.dmaAddrInc = std::min(dsp.dmaAddrInc, 4u);
             }
         }
     }
@@ -99,20 +103,20 @@ void SCUDSPDMARegistersView::Display() {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Increment address by");
         ImGui::SameLine();
-        if (ImGui::BeginCombo("##addr_inc", fmt::format("{}", m_dsp.dmaAddrInc).c_str(),
+        if (ImGui::BeginCombo("##addr_inc", fmt::format("{}", dsp.dmaAddrInc).c_str(),
                               ImGuiComboFlags_WidthFitPreview)) {
-            if (m_dsp.dmaToD0) {
+            if (dsp.dmaToD0) {
                 for (uint32 i = 0; i < 8; i++) {
                     const uint32 inc = (1u << i) >> 1u;
-                    if (ImGui::Selectable(fmt::format("{}", inc).c_str(), m_dsp.dmaAddrInc == inc)) {
-                        m_dsp.dmaAddrInc = inc;
+                    if (ImGui::Selectable(fmt::format("{}", inc).c_str(), dsp.dmaAddrInc == inc)) {
+                        dsp.dmaAddrInc = inc;
                     }
                 }
             } else {
                 for (uint32 i = 0; i < 2; i++) {
                     const uint32 inc = (1u << (i * 2u)) & ~1u;
-                    if (ImGui::Selectable(fmt::format("{}", inc).c_str(), m_dsp.dmaAddrInc == inc)) {
-                        m_dsp.dmaAddrInc = inc;
+                    if (ImGui::Selectable(fmt::format("{}", inc).c_str(), dsp.dmaAddrInc == inc)) {
+                        dsp.dmaAddrInc = inc;
                     }
                 }
             }
@@ -120,7 +124,7 @@ void SCUDSPDMARegistersView::Display() {
         }
         ImGui::EndGroup();
         ImGui::SameLine();
-        ImGui::Checkbox("Hold", &m_dsp.dmaHold);
+        ImGui::Checkbox("Hold", &dsp.dmaHold);
     }
 
     {
@@ -130,7 +134,7 @@ void SCUDSPDMARegistersView::Display() {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
         ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
-        ImGui::InputScalar("##count", ImGuiDataType_U8, &m_dsp.dmaCount, nullptr, nullptr, "%02X",
+        ImGui::InputScalar("##count", ImGuiDataType_U8, &dsp.dmaCount, nullptr, nullptr, "%02X",
                            ImGuiInputTextFlags_CharsHexadecimal);
         ImGui::PopFont();
         ImGui::SameLine();
@@ -138,7 +142,7 @@ void SCUDSPDMARegistersView::Display() {
         ImGui::EndGroup();
         ImGui::SameLine();
         if (ImGui::Button("Run transfer")) {
-            m_dsp.dmaRun = true;
+            dsp.dmaRun = true;
         }
     }
 

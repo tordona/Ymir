@@ -1,5 +1,6 @@
 #include "scu_dsp_disassembly_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
 #include <ymir/hw/scu/scu_dsp_disasm.hpp>
 
 #include <string_view>
@@ -10,13 +11,15 @@ namespace app::ui {
 
 SCUDSPDisassemblyView::SCUDSPDisassemblyView(SharedContext &context)
     : m_context(context)
-    , m_dsp(context.saturn.SCU.GetDSP()) {}
+    , m_scu(context.saturn.GetSCU()) {}
 
 void SCUDSPDisassemblyView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
+
+    auto &dsp = m_scu.GetDSP();
 
     ImGui::BeginGroup();
 
@@ -34,7 +37,7 @@ void SCUDSPDisassemblyView::Display() {
         ImGui::TableHeadersRow();
 
         for (uint32 pc = 0; pc <= 0xFF; pc++) {
-            const uint32 opcode = m_dsp.programRAM[pc].u32;
+            const uint32 opcode = dsp.programRAM[pc].u32;
             const auto disasm = scu::Disassemble(opcode);
 
             ImGui::TableNextRow();
@@ -91,16 +94,16 @@ void SCUDSPDisassemblyView::Display() {
                     using enum scu::SCUDSPInstruction::Cond;
                     switch (cond) {
                     case None: return true;
-                    case NZ: return m_dsp.CondCheck(0b000001);
-                    case NS: return m_dsp.CondCheck(0b000010);
-                    case NZS: return m_dsp.CondCheck(0b000011);
-                    case NC: return m_dsp.CondCheck(0b000100);
-                    case NT0: return m_dsp.CondCheck(0b001000);
-                    case Z: return m_dsp.CondCheck(0b100001);
-                    case S: return m_dsp.CondCheck(0b100010);
-                    case ZS: return m_dsp.CondCheck(0b100011);
-                    case C: return m_dsp.CondCheck(0b100100);
-                    case T0: return m_dsp.CondCheck(0b101000);
+                    case NZ: return dsp.CondCheck(0b000001);
+                    case NS: return dsp.CondCheck(0b000010);
+                    case NZS: return dsp.CondCheck(0b000011);
+                    case NC: return dsp.CondCheck(0b000100);
+                    case NT0: return dsp.CondCheck(0b001000);
+                    case Z: return dsp.CondCheck(0b100001);
+                    case S: return dsp.CondCheck(0b100010);
+                    case ZS: return dsp.CondCheck(0b100011);
+                    case C: return dsp.CondCheck(0b100100);
+                    case T0: return dsp.CondCheck(0b101000);
                     default: return false;
                     }
                 };

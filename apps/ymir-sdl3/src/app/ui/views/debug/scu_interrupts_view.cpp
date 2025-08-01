@@ -1,10 +1,12 @@
 #include "scu_interrupts_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
+
 namespace app::ui {
 
 SCUInterruptsView::SCUInterruptsView(SharedContext &context)
     : m_context(context)
-    , m_scu(context.saturn.SCU) {}
+    , m_scu(context.saturn.GetSCU()) {}
 
 void SCUInterruptsView::Display() {
     if (ImGui::BeginTable("main", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {

@@ -1,9 +1,11 @@
 #include "scu_registers_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
+
 namespace app::ui {
 
 SCURegistersView::SCURegistersView(SharedContext &context)
-    : m_scu(context.saturn.SCU) {}
+    : m_scu(context.saturn.GetSCU()) {}
 
 void SCURegistersView::Display() {
     auto &probe = m_scu.GetProbe();

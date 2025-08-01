@@ -2,6 +2,8 @@
 
 #include <cinttypes>
 
+using namespace ymir;
+
 namespace app::ui {
 
 SH2DivisionUnitStatisticsView::SH2DivisionUnitStatisticsView(SharedContext &context, SH2Tracer &tracer)
@@ -9,8 +11,6 @@ SH2DivisionUnitStatisticsView::SH2DivisionUnitStatisticsView(SharedContext &cont
     , m_tracer(tracer) {}
 
 void SH2DivisionUnitStatisticsView::Display() {
-    using namespace ymir;
-
     ImGui::BeginGroup();
 
     ImGui::PushStyleVarX(ImGuiStyleVar_CellPadding, 8.0f);

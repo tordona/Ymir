@@ -81,6 +81,8 @@
 
 #include <ymir/ymir.hpp>
 
+#include <ymir/sys/saturn.hpp>
+
 #include <ymir/db/game_db.hpp>
 
 #include <ymir/util/process.hpp>
@@ -298,7 +300,7 @@ int App::Run(const CommandLineOptions &options) {
 
     devlog::debug<grp::base>("Profile directory: {}", m_context.profile.GetPath(ProfilePath::Root));
 
-    m_context.saturn.UsePreferredRegion();
+    m_context.saturn.instance->UsePreferredRegion();
 
     m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
 
@@ -338,13 +340,14 @@ int App::Run(const CommandLineOptions &options) {
 
     // Load SMPC persistent data and set up the path
     std::error_code error{};
-    m_context.saturn.SMPC.LoadPersistentDataFrom(m_context.profile.GetPath(ProfilePath::PersistentState) / "smpc.bin",
-                                                 error);
+    m_context.saturn.instance->SMPC.LoadPersistentDataFrom(
+        m_context.profile.GetPath(ProfilePath::PersistentState) / "smpc.bin", error);
     if (error) {
         devlog::warn<grp::base>("Failed to load SMPC settings from {}: {}",
-                                m_context.saturn.SMPC.GetPersistentDataPath(), error.message());
+                                m_context.saturn.instance->SMPC.GetPersistentDataPath(), error.message());
     } else {
-        devlog::info<grp::base>("Loaded SMPC settings from {}", m_context.saturn.SMPC.GetPersistentDataPath());
+        devlog::info<grp::base>("Loaded SMPC settings from {}",
+                                m_context.saturn.instance->SMPC.GetPersistentDataPath());
     }
 
     LoadSaveStates();
@@ -671,7 +674,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Setup framebuffer and render callbacks
 
-    m_context.saturn.VDP.SetRenderCallback(
+    m_context.saturn.instance->VDP.SetRenderCallback(
         {&m_context, [](uint32 *fb, uint32 width, uint32 height, void *ctx) {
              auto &sharedCtx = *static_cast<SharedContext *>(ctx);
              auto &screen = sharedCtx.screen;
@@ -723,17 +726,18 @@ void App::RunEmulator() {
              }
          }});
 
-    m_context.saturn.VDP.SetVDP1DrawCallback({&m_context, [](void *ctx) {
-                                                  auto &sharedCtx = *static_cast<SharedContext *>(ctx);
-                                                  auto &screen = sharedCtx.screen;
-                                                  ++screen.VDP1DrawCalls;
-                                              }});
+    m_context.saturn.instance->VDP.SetVDP1DrawCallback({&m_context, [](void *ctx) {
+                                                            auto &sharedCtx = *static_cast<SharedContext *>(ctx);
+                                                            auto &screen = sharedCtx.screen;
+                                                            ++screen.VDP1DrawCalls;
+                                                        }});
 
-    m_context.saturn.VDP.SetVDP1FramebufferSwapCallback({&m_context, [](void *ctx) {
-                                                             auto &sharedCtx = *static_cast<SharedContext *>(ctx);
-                                                             auto &screen = sharedCtx.screen;
-                                                             ++screen.VDP1Frames;
-                                                         }});
+    m_context.saturn.instance->VDP.SetVDP1FramebufferSwapCallback({&m_context, [](void *ctx) {
+                                                                       auto &sharedCtx =
+                                                                           *static_cast<SharedContext *>(ctx);
+                                                                       auto &screen = sharedCtx.screen;
+                                                                       ++screen.VDP1Frames;
+                                                                   }});
 
     // ---------------------------------
     // Initialize audio system
@@ -789,11 +793,11 @@ void App::RunEmulator() {
         devlog::error<grp::base>("Unable to start audio stream: {}", SDL_GetError());
     }
 
-    m_context.saturn.SCSP.SetSampleCallback({&m_audioSystem, [](sint16 left, sint16 right, void *ctx) {
-                                                 static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right);
-                                             }});
+    m_context.saturn.instance->SCSP.SetSampleCallback({&m_audioSystem, [](sint16 left, sint16 right, void *ctx) {
+                                                           static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right);
+                                                       }});
 
-    m_context.saturn.SCSP.SetSendMidiOutputCallback(
+    m_context.saturn.instance->SCSP.SetSendMidiOutputCallback(
         {&m_context.midi.midiOutput, [](std::span<uint8> payload, void *ctx) {
              try {
                  auto &ptr = *static_cast<std::unique_ptr<RtMidiOut> *>(ctx);
@@ -826,9 +830,9 @@ void App::RunEmulator() {
     // ---------------------------------
     // Input action handlers
 
-    m_context.saturn.SMPC.GetPeripheralPort1().SetPeripheralReportCallback(
+    m_context.saturn.instance->SMPC.GetPeripheralPort1().SetPeripheralReportCallback(
         util::MakeClassMemberOptionalCallback<&App::ReadPeripheral<1>>(this));
-    m_context.saturn.SMPC.GetPeripheralPort2().SetPeripheralReportCallback(
+    m_context.saturn.instance->SMPC.GetPeripheralPort2().SetPeripheralReportCallback(
         util::MakeClassMemberOptionalCallback<&App::ReadPeripheral<2>>(this));
 
     auto &inputContext = m_context.inputContext;
@@ -1094,7 +1098,7 @@ void App::RunEmulator() {
     // Debugger
     {
         inputContext.SetTriggerHandler(actions::dbg::ToggleDebugTrace, [&](void *, const input::InputElement &) {
-            m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.IsDebugTracingEnabled()));
+            m_context.EnqueueEvent(events::emu::SetDebugTrace(!m_context.saturn.instance->IsDebugTracingEnabled()));
         });
         inputContext.SetTriggerHandler(actions::dbg::DumpMemory, [&](void *, const input::InputElement &) {
             m_context.EnqueueEvent(events::emu::DumpMemory());
@@ -1436,7 +1440,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Debugger
 
-    m_context.saturn.SetDebugBreakRaisedCallback(
+    m_context.saturn.instance->SetDebugBreakRaisedCallback(
         {&m_context, [](const debug::DebugBreakInfo &info, void *ctx) {
              auto &sharedCtx = *static_cast<SharedContext *>(ctx);
              sharedCtx.EnqueueEvent(events::emu::SetPaused(true));
@@ -1455,7 +1459,7 @@ void App::RunEmulator() {
     // ---------------------------------
     // Main emulator loop
 
-    m_context.saturn.Reset(true);
+    m_context.saturn.instance->Reset(true);
 
     auto t = clk::now();
     m_mouseHideTime = t;
@@ -1886,7 +1890,7 @@ void App::RunEmulator() {
             case EvtType::TryLoadIPLROM: //
             {
                 auto path = std::get<std::filesystem::path>(evt.value);
-                auto result = util::LoadIPLROM(path, m_context.saturn);
+                auto result = util::LoadIPLROM(path, *m_context.saturn.instance);
                 if (result.succeeded) {
                     if (m_context.settings.system.ipl.path != path) {
                         m_context.settings.system.ipl.path = path;
@@ -1948,7 +1952,7 @@ void App::RunEmulator() {
             std::string fullGameTitle;
             {
                 std::unique_lock lock{m_context.locks.disc};
-                const media::Disc &disc = m_context.saturn.CDBlock.GetDisc();
+                const media::Disc &disc = m_context.saturn.instance->CDBlock.GetDisc();
                 const media::SaturnHeader &header = disc.header;
                 std::string productNumber = "";
                 std::string gameTitle{};
@@ -2182,7 +2186,7 @@ void App::RunEmulator() {
                         if (ImGui::MenuItem("Open save states directory", nullptr, nullptr,
                                             !m_context.state.loadedDiscImagePath.empty())) {
                             auto path = m_context.profile.GetPath(ProfilePath::SaveStates) /
-                                        ToString(m_context.saturn.GetDiscHash());
+                                        ToString(m_context.saturn.instance->GetDiscHash());
 
                             SDL_OpenURL(fmt::format("file:///{}", path).c_str());
                         }
@@ -2441,7 +2445,7 @@ void App::RunEmulator() {
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Debug")) {
-                    bool debugTrace = m_context.saturn.IsDebugTracingEnabled();
+                    bool debugTrace = m_context.saturn.instance->IsDebugTracingEnabled();
                     if (ImGui::MenuItem("Enable tracing",
                                         input::ToShortcut(inputContext, actions::dbg::ToggleDebugTrace).c_str(),
                                         &debugTrace)) {
@@ -2496,7 +2500,7 @@ void App::RunEmulator() {
                     }
 
                     if (ImGui::BeginMenu("VDP")) {
-                        auto &vdp = m_context.saturn.VDP;
+                        auto &vdp = m_context.saturn.instance->VDP;
                         auto layerMenuItem = [&](const char *name, vdp::Layer layer) {
                             const bool enabled = vdp.IsLayerEnabled(layer);
                             if (ImGui::MenuItem(name, nullptr, enabled)) {
@@ -3137,10 +3141,10 @@ void App::EmulatorThread() {
             EmuEvent &evt = evts[i];
             using enum EmuEvent::Type;
             switch (evt.type) {
-            case FactoryReset: m_context.saturn.FactoryReset(); break;
-            case HardReset: m_context.saturn.Reset(true); break;
-            case SoftReset: m_context.saturn.Reset(false); break;
-            case SetResetButton: m_context.saturn.SMPC.SetResetButtonState(std::get<bool>(evt.value)); break;
+            case FactoryReset: m_context.saturn.instance->FactoryReset(); break;
+            case HardReset: m_context.saturn.instance->Reset(true); break;
+            case SoftReset: m_context.saturn.instance->Reset(false); break;
+            case SetResetButton: m_context.saturn.instance->SMPC.SetResetButtonState(std::get<bool>(evt.value)); break;
 
             case SetPaused: //
             {
@@ -3179,11 +3183,11 @@ void App::EmulatorThread() {
                 break;
 
             case OpenCloseTray:
-                if (m_context.saturn.IsTrayOpen()) {
-                    m_context.saturn.CloseTray();
+                if (m_context.saturn.instance->IsTrayOpen()) {
+                    m_context.saturn.instance->CloseTray();
                     m_context.DisplayMessage("Disc tray closed");
                 } else {
-                    m_context.saturn.OpenTray();
+                    m_context.saturn.instance->OpenTray();
                     m_context.DisplayMessage("Disc tray opened");
                 }
                 break;
@@ -3209,7 +3213,7 @@ void App::EmulatorThread() {
             case EjectDisc: //
             {
                 std::unique_lock lock{m_context.locks.disc};
-                m_context.saturn.EjectDisc();
+                m_context.saturn.instance->EjectDisc();
                 m_context.state.loadedDiscImagePath.clear();
                 if (m_context.settings.system.internalBackupRAMPerGame) {
                     m_context.EnqueueEvent(events::emu::LoadInternalBackupMemory());
@@ -3220,18 +3224,19 @@ void App::EmulatorThread() {
             case RemoveCartridge: //
             {
                 std::unique_lock lock{m_context.locks.cart};
-                m_context.saturn.RemoveCartridge();
+                m_context.saturn.instance->RemoveCartridge();
                 break;
             }
 
             case ReplaceInternalBackupMemory: //
             {
                 std::unique_lock lock{m_context.locks.backupRAM};
-                m_context.saturn.mem.GetInternalBackupRAM().CopyFrom(std::get<ymir::bup::BackupMemory>(evt.value));
+                m_context.saturn.instance->mem.GetInternalBackupRAM().CopyFrom(
+                    std::get<ymir::bup::BackupMemory>(evt.value));
                 break;
             }
             case ReplaceExternalBackupMemory:
-                if (auto *cart = m_context.saturn.GetCartridge().As<ymir::cart::CartType::BackupMemory>()) {
+                if (auto *cart = m_context.saturn.instance->GetCartridge().As<ymir::cart::CartType::BackupMemory>()) {
                     std::unique_lock lock{m_context.locks.backupRAM};
                     cart->CopyBackupMemoryFrom(std::get<ymir::bup::BackupMemory>(evt.value));
                 }
@@ -3240,7 +3245,7 @@ void App::EmulatorThread() {
             case RunFunction: std::get<std::function<void(SharedContext &)>>(evt.value)(m_context); break;
 
             case ReceiveMidiInput:
-                m_context.saturn.SCSP.ReceiveMidiInput(std::get<ymir::scsp::MidiMessage>(evt.value));
+                m_context.saturn.instance->SCSP.ReceiveMidiInput(std::get<ymir::scsp::MidiMessage>(evt.value));
                 break;
 
             case SetThreadPriority: util::BoostCurrentThreadPriority(std::get<bool>(evt.value)); break;
@@ -3265,7 +3270,7 @@ void App::EmulatorThread() {
             bool doRunFrame = true;
             if (rewindEnabled && m_context.rewinding) {
                 if (m_context.rewindBuffer.PopState()) {
-                    if (!m_context.saturn.LoadState(m_context.rewindBuffer.NextState)) {
+                    if (!m_context.saturn.instance->LoadState(m_context.rewindBuffer.NextState)) {
                         doRunFrame = false;
                     }
                 } else {
@@ -3274,11 +3279,11 @@ void App::EmulatorThread() {
             }
 
             if (doRunFrame) [[likely]] {
-                m_context.saturn.RunFrame();
+                m_context.saturn.instance->RunFrame();
             }
 
             if (rewindEnabled && !m_context.rewinding) {
-                m_context.saturn.SaveState(m_context.rewindBuffer.NextState);
+                m_context.saturn.instance->SaveState(m_context.rewindBuffer.NextState);
                 m_context.rewindBuffer.ProcessState();
             }
 
@@ -3290,13 +3295,13 @@ void App::EmulatorThread() {
         }
         case StepAction::StepMSH2: //
         {
-            const uint64 cycles = m_context.saturn.StepMasterSH2();
+            const uint64 cycles = m_context.saturn.instance->StepMasterSH2();
             devlog::debug<grp::base>("SH2-M stepped for {} cycles", cycles);
             break;
         }
         case StepAction::StepSSH2: //
         {
-            const uint64 cycles = m_context.saturn.StepSlaveSH2();
+            const uint64 cycles = m_context.saturn.instance->StepSlaveSH2();
             devlog::debug<grp::base>("SH2-S stepped for {} cycles", cycles);
             break;
         }
@@ -3426,7 +3431,7 @@ void App::OpenWelcomeModal(bool scanIPLROMs) {
         if (romSelectResult.fileSelected) {
             romSelectResult.fileSelected = false;
             romSelectResult.hasResult = true;
-            romSelectResult.result = util::LoadIPLROM(romSelectResult.path, m_context.saturn);
+            romSelectResult.result = util::LoadIPLROM(romSelectResult.path, *m_context.saturn.instance);
             if (romSelectResult.result.succeeded) {
                 m_context.settings.system.ipl.overrideImage = true;
                 m_context.settings.system.ipl.path = romSelectResult.path;
@@ -3763,7 +3768,7 @@ util::IPLROMLoadResult App::LoadIPLROM() {
     }
 
     devlog::info<grp::base>("Loading IPL ROM from {}...", iplPath);
-    util::IPLROMLoadResult result = util::LoadIPLROM(iplPath, m_context.saturn);
+    util::IPLROMLoadResult result = util::LoadIPLROM(iplPath, *m_context.saturn.instance);
     if (result.succeeded) {
         m_context.iplRomPath = iplPath;
         devlog::info<grp::base>("IPL ROM loaded successfully");
@@ -3798,7 +3803,7 @@ std::filesystem::path App::GetIPLROMPath() {
     // For all others, use region-free ROMs if available.
 
     ymir::db::SystemRegion preferredRegion;
-    switch (m_context.saturn.SMPC.GetAreaCode()) {
+    switch (m_context.saturn.instance->SMPC.GetAreaCode()) {
     case 0x1: [[fallthrough]];
     case 0x2: [[fallthrough]];
     case 0x6: preferredRegion = ymir::db::SystemRegion::JP; break;
@@ -3872,7 +3877,7 @@ void App::LoadRecommendedCartridge() {
     const ymir::db::GameInfo *info;
     {
         std::unique_lock lock{m_context.locks.disc};
-        const auto &disc = m_context.saturn.CDBlock.GetDisc();
+        const auto &disc = m_context.saturn.instance->CDBlock.GetDisc();
         info = ymir::db::GetGameInfo(disc.header.productNumber);
     }
     if (info == nullptr) {
@@ -3911,7 +3916,7 @@ void App::ApplyGameSpecificConfiguration() {
     const ymir::db::GameInfo *info;
     {
         std::unique_lock lock{m_context.locks.disc};
-        const auto &disc = m_context.saturn.CDBlock.GetDisc();
+        const auto &disc = m_context.saturn.instance->CDBlock.GetDisc();
         info = ymir::db::GetGameInfo(disc.header.productNumber);
     }
 
@@ -3928,7 +3933,7 @@ void App::LoadSaveStates() {
     WriteSaveStateMeta();
 
     auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
-    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.GetDiscHash());
+    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.instance->GetDiscHash());
 
     for (uint32 slot = 0; slot < m_context.saveStates.size(); slot++) {
         std::unique_lock lock{m_context.locks.saveStates[slot]};
@@ -3966,7 +3971,7 @@ void App::LoadSaveStates() {
 
 void App::ClearSaveStates() {
     auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
-    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.GetDiscHash());
+    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.instance->GetDiscHash());
 
     for (uint32 slot = 0; slot < m_context.saveStates.size(); slot++) {
         std::unique_lock lock{m_context.locks.saveStates[slot]};
@@ -4022,7 +4027,7 @@ void App::PersistSaveState(size_t slot) {
 
 void App::WriteSaveStateMeta() {
     auto basePath = m_context.profile.GetPath(ProfilePath::SaveStates);
-    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.GetDiscHash());
+    auto gameStatesPath = basePath / ymir::ToString(m_context.saturn.instance->GetDiscHash());
     auto gameMetaPath = gameStatesPath / "meta.txt";
 
     // No need to write the meta file if it exists and is recent enough
@@ -4038,10 +4043,10 @@ void App::WriteSaveStateMeta() {
     std::ofstream out{gameMetaPath};
     if (out) {
         std::unique_lock lock{m_context.locks.disc};
-        const auto &disc = m_context.saturn.CDBlock.GetDisc();
+        const auto &disc = m_context.saturn.instance->CDBlock.GetDisc();
 
         auto iter = std::ostream_iterator<char>(out);
-        fmt::format_to(iter, "IPL ROM hash: {}\n", ymir::ToString(m_context.saturn.GetIPLHash()));
+        fmt::format_to(iter, "IPL ROM hash: {}\n", ymir::ToString(m_context.saturn.instance->GetIPLHash()));
         fmt::format_to(iter, "Title: {}\n", disc.header.gameTitle);
         fmt::format_to(iter, "Product Number: {}\n", disc.header.productNumber);
         fmt::format_to(iter, "Version: {}\n", disc.header.version);
@@ -4139,7 +4144,7 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     // Insert disc into the Saturn drive
     {
         std::unique_lock lock{m_context.locks.disc};
-        m_context.saturn.LoadDisc(std::move(disc));
+        m_context.saturn.instance->LoadDisc(std::move(disc));
     }
 
     // Load new internal backup memory image if using per-game images
@@ -4210,7 +4215,7 @@ void App::OpenBackupMemoryCartFileDialog() {
     std::filesystem::path defaultPath = "";
     {
         std::unique_lock lock{m_context.locks.cart};
-        if (auto *cart = m_context.saturn.GetCartridge().As<ymir::cart::CartType::BackupMemory>()) {
+        if (auto *cart = m_context.saturn.instance->GetCartridge().As<ymir::cart::CartType::BackupMemory>()) {
             defaultPath = cart->GetBackupMemory().GetPath();
         }
     }

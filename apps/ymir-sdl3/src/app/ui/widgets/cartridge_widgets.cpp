@@ -1,5 +1,7 @@
 #include "cartridge_widgets.hpp"
 
+#include <ymir/hw/cart/cart.hpp>
+
 #include <imgui.h>
 
 namespace app::ui::widgets {

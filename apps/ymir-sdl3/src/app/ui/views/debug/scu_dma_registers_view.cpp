@@ -1,12 +1,14 @@
 #include "scu_dma_registers_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
+
 using namespace ymir;
 
 namespace app::ui {
 
 SCUDMARegistersView::SCUDMARegistersView(SharedContext &context)
     : m_context(context)
-    , m_scu(context.saturn.SCU) {}
+    , m_scu(context.saturn.GetSCU()) {}
 
 void SCUDMARegistersView::Display(uint8 channel) {
     if (channel >= 3) {

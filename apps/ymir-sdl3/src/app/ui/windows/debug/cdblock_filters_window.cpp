@@ -2,6 +2,8 @@
 
 using namespace ymir;
 
+#include <ymir/hw/cdblock/cdblock.hpp>
+
 namespace app::ui {
 
 CDBlockFiltersWindow::CDBlockFiltersWindow(SharedContext &context)

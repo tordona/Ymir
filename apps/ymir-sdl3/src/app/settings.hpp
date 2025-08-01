@@ -105,6 +105,8 @@ struct Settings {
 
     void ResetToDefaults();
 
+    void BindConfiguration(ymir::core::Configuration &config);
+
     SettingsLoadResult Load(const std::filesystem::path &path);
     SettingsSaveResult Save();
 

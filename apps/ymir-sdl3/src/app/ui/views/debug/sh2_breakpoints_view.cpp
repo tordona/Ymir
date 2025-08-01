@@ -1,5 +1,7 @@
 #include "sh2_breakpoints_view.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <app/events/emu_event_factory.hpp>
 
 #include <imgui.h>

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ymir/ymir.hpp>
-
 #include <app/message.hpp>
 #include <app/profile.hpp>
 #include <app/rewind_buffer.hpp>
@@ -18,6 +16,9 @@
 #include <app/events/emu_event.hpp>
 #include <app/events/gui_event.hpp>
 
+#include <ymir/hw/smpc/peripheral/peripheral_state_common.hpp>
+
+#include <ymir/util/dev_log.hpp>
 #include <ymir/util/event.hpp>
 
 #include <imgui.h>
@@ -37,11 +38,56 @@
 
 using MidiPortType = app::Settings::Audio::MidiPort::Type;
 
+// -----------------------------------------------------------------------------
+// Forward declarations
+
+namespace ymir {
+
+struct Saturn;
+
+namespace sys {
+    struct SystemMemory;
+    class Bus;
+} // namespace sys
+
+namespace sh2 {
+    class SH2;
+} // namespace sh2
+
+namespace scu {
+    class SCU;
+} // namespace scu
+
+namespace vdp {
+    class VDP;
+} // namespace vdp
+
+namespace smpc {
+    class SMPC;
+} // namespace smpc
+
+namespace scsp {
+    class SCSP;
+} // namespace scsp
+
+namespace cdblock {
+    class CDBlock;
+} // namespace cdblock
+
+namespace cart {
+    class BaseCartridge;
+} // namespace cart
+
+} // namespace ymir
+
+// -----------------------------------------------------------------------------
+// Implementation
+
 namespace app {
 
 namespace grp {
 
-    // -----------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // Dev log groups
 
     // Hierarchy:
@@ -57,7 +103,63 @@ namespace grp {
 } // namespace grp
 
 struct SharedContext {
-    ymir::Saturn saturn;
+    struct SaturnContainer {
+        std::unique_ptr<ymir::Saturn> instance;
+
+        ymir::sys::SystemMemory &GetSystemMemory();
+        ymir::sys::Bus &GetMainBus();
+        ymir::sh2::SH2 &GetMasterSH2();
+        ymir::sh2::SH2 &GetSlaveSH2();
+        ymir::sh2::SH2 &GetSH2(bool master) {
+            return master ? GetMasterSH2() : GetSlaveSH2();
+        }
+        ymir::scu::SCU &GetSCU();
+        ymir::vdp::VDP &GetVDP();
+        ymir::smpc::SMPC &GetSMPC();
+        ymir::scsp::SCSP &GetSCSP();
+        ymir::cdblock::CDBlock &GetCDBlock();
+        ymir::cart::BaseCartridge &GetCartridge();
+
+        const ymir::sys::Bus &GetMainBus() const {
+            return const_cast<SaturnContainer *>(this)->GetMainBus();
+        }
+        const ymir::sh2::SH2 &GetMasterSH2() const {
+            return const_cast<SaturnContainer *>(this)->GetMasterSH2();
+        }
+        const ymir::sh2::SH2 &GetSlaveSH2() const {
+            return const_cast<SaturnContainer *>(this)->GetSlaveSH2();
+        }
+        const ymir::sh2::SH2 &GetSH2(bool master) const {
+            return const_cast<SaturnContainer *>(this)->GetSH2(master);
+        }
+        const ymir::scu::SCU &GetSCU() const {
+            return const_cast<SaturnContainer *>(this)->GetSCU();
+        }
+        const ymir::vdp::VDP &GetVDP() const {
+            return const_cast<SaturnContainer *>(this)->GetVDP();
+        }
+        const ymir::smpc::SMPC &GetSMPC() const {
+            return const_cast<SaturnContainer *>(this)->GetSMPC();
+        }
+        const ymir::scsp::SCSP &GetSCSP() const {
+            return const_cast<SaturnContainer *>(this)->GetSCSP();
+        }
+        const ymir::cdblock::CDBlock &GetCDBlock() const {
+            return const_cast<SaturnContainer *>(this)->GetCDBlock();
+        }
+
+        bool IsSlaveSH2Enabled() const;
+        void SetSlaveSH2Enabled(bool enabled);
+        bool IsDebugTracingEnabled() const;
+
+        ymir::XXH128Hash GetIPLHash() const;
+        ymir::XXH128Hash GetDiscHash() const;
+
+        ymir::core::Configuration &GetConfiguration();
+        const ymir::core::Configuration &GetConfiguration() const {
+            return const_cast<SaturnContainer *>(this)->GetConfiguration();
+        }
+    } saturn;
 
     float displayScale = 1.0f;
 
@@ -473,6 +575,9 @@ struct SharedContext {
     // -----------------------------------------------------------------------------------------------------------------
     // Convenience methods
 
+    SharedContext();
+    ~SharedContext();
+
     void DisplayMessage(std::string message) {
         std::unique_lock lock{locks.messages};
         devlog::info<grp::base>("{}", message);
@@ -487,50 +592,7 @@ struct SharedContext {
         eventQueues.gui.enqueue(std::move(event));
     }
 
-    std::filesystem::path GetInternalBackupRAMPath() const {
-        if (settings.system.internalBackupRAMPerGame) {
-            const std::filesystem::path basePath = profile.GetPath(ProfilePath::BackupMemory) / "games";
-            std::filesystem::path bupName = "";
-
-            // Use serial number + disc title if available
-            {
-                std::unique_lock lock{locks.disc};
-                const auto &disc = saturn.CDBlock.GetDisc();
-                if (!disc.sessions.empty() && !disc.header.productNumber.empty()) {
-                    if (!disc.header.gameTitle.empty()) {
-                        std::string title = disc.header.gameTitle;
-                        // Clean up invalid characters
-                        std::transform(title.begin(), title.end(), title.begin(), [](char ch) {
-                            if (ch == ':' || ch == '|' || ch == '<' || ch == '>' || ch == '/' || ch == '\\' ||
-                                ch == '*' || ch == '?') {
-                                return '_';
-                            } else {
-                                return ch;
-                            }
-                        });
-                        bupName = fmt::format("[{}] {}", disc.header.productNumber, title);
-                    } else {
-                        bupName = fmt::format("[{}]", disc.header.productNumber);
-                    }
-                }
-            }
-
-            // Fall back to the disc file name if the serial number isn't available
-            if (bupName.empty()) {
-                bupName = state.loadedDiscImagePath.filename().replace_extension("");
-                if (bupName.empty()) {
-                    bupName = "nodisc";
-                }
-            }
-
-            std::filesystem::create_directories(basePath);
-            return basePath / fmt::format("bup-int-{}.bin", bupName);
-        } else if (!settings.system.internalBackupRAMImagePath.empty()) {
-            return settings.system.internalBackupRAMImagePath;
-        } else {
-            return profile.GetPath(ProfilePath::PersistentState) / "bup-int.bin";
-        }
-    }
+    std::filesystem::path GetInternalBackupRAMPath() const;
 
     std::string GetMidiVirtualInputPortName() {
         return "Ymir Virtual MIDI Input";
@@ -592,13 +654,6 @@ struct SharedContext {
         }
 
         return -1;
-    }
-
-    SharedContext() {
-        static constexpr auto api = RtMidi::Api::UNSPECIFIED;
-        midi.midiInput = std::make_unique<RtMidiIn>(api, "Ymir MIDI input client");
-        midi.midiOutput = std::make_unique<RtMidiOut>(api, "Ymir MIDI output client");
-        midi.midiInput->ignoreTypes(false, false, false);
     }
 };
 

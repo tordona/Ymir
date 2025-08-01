@@ -1,5 +1,7 @@
 #include "sh2_divu_registers_view.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <app/events/emu_debug_event_factory.hpp>
 
 using namespace ymir;

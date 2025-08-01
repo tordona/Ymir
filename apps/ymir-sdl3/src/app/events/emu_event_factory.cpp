@@ -4,6 +4,8 @@
 
 #include <app/shared_context.hpp>
 
+#include <ymir/sys/saturn.hpp>
+
 #include <util/ipl_rom_loader.hpp>
 #include <ymir/util/dev_log.hpp>
 #include <ymir/util/scope_guard.hpp>
@@ -37,33 +39,33 @@ namespace grp {
 } // namespace grp
 
 EmuEvent SetClockSpeed(sys::ClockSpeed clockSpeed) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.SetClockSpeed(clockSpeed); });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.instance->SetClockSpeed(clockSpeed); });
 }
 
 EmuEvent SetVideoStandard(core::config::sys::VideoStandard videoStandard) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.SetVideoStandard(videoStandard); });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.instance->SetVideoStandard(videoStandard); });
 }
 
 EmuEvent SetAreaCode(uint8 areaCode) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.SMPC.SetAreaCode(areaCode); });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.instance->SMPC.SetAreaCode(areaCode); });
 }
 
 EmuEvent SetDeinterlace(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.VDP.SetDeinterlaceRender(enable); });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.instance->VDP.SetDeinterlaceRender(enable); });
 }
 
 EmuEvent SetTransparentMeshes(bool enable) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.VDP.SetTransparentMeshes(enable); });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.instance->VDP.SetTransparentMeshes(enable); });
 }
 
 EmuEvent SetDebugTrace(bool enable) {
     return RunFunction([=](SharedContext &ctx) {
-        ctx.saturn.EnableDebugTracing(enable);
+        ctx.saturn.instance->EnableDebugTracing(enable);
         if (enable) {
-            ctx.saturn.masterSH2.UseTracer(&ctx.tracers.masterSH2);
-            ctx.saturn.slaveSH2.UseTracer(&ctx.tracers.slaveSH2);
-            ctx.saturn.SCU.UseTracer(&ctx.tracers.SCU);
-            ctx.saturn.CDBlock.UseTracer(&ctx.tracers.CDBlock);
+            ctx.saturn.instance->masterSH2.UseTracer(&ctx.tracers.masterSH2);
+            ctx.saturn.instance->slaveSH2.UseTracer(&ctx.tracers.slaveSH2);
+            ctx.saturn.instance->SCU.UseTracer(&ctx.tracers.SCU);
+            ctx.saturn.instance->CDBlock.UseTracer(&ctx.tracers.CDBlock);
         }
         ctx.DisplayMessage(fmt::format("Debug tracing {}", (enable ? "enabled" : "disabled")));
     });
@@ -82,95 +84,95 @@ EmuEvent DumpMemory() {
         devlog::info<grp::base>("Dumping all memory to {}...", dumpPath);
         {
             std::ofstream out{dumpPath / "msh2-cache-data.bin", std::ios::binary};
-            ctx.saturn.masterSH2.DumpCacheData(out);
+            ctx.saturn.instance->masterSH2.DumpCacheData(out);
         }
         {
             std::ofstream out{dumpPath / "msh2-cache-addrtag.bin", std::ios::binary};
-            ctx.saturn.masterSH2.DumpCacheAddressTag(out);
+            ctx.saturn.instance->masterSH2.DumpCacheAddressTag(out);
         }
         {
             std::ofstream out{dumpPath / "ssh2-cache-data.bin", std::ios::binary};
-            ctx.saturn.slaveSH2.DumpCacheData(out);
+            ctx.saturn.instance->slaveSH2.DumpCacheData(out);
         }
         {
             std::ofstream out{dumpPath / "ssh2-cache-addrtag.bin", std::ios::binary};
-            ctx.saturn.slaveSH2.DumpCacheAddressTag(out);
+            ctx.saturn.instance->slaveSH2.DumpCacheAddressTag(out);
         }
         {
             std::ofstream out{dumpPath / "wram-lo.bin", std::ios::binary};
-            ctx.saturn.mem.DumpWRAMLow(out);
+            ctx.saturn.instance->mem.DumpWRAMLow(out);
         }
         {
             std::ofstream out{dumpPath / "wram-hi.bin", std::ios::binary};
-            ctx.saturn.mem.DumpWRAMHigh(out);
+            ctx.saturn.instance->mem.DumpWRAMHigh(out);
         }
         {
             std::ofstream out{dumpPath / "vdp1-vram.bin", std::ios::binary};
-            ctx.saturn.VDP.DumpVDP1VRAM(out);
+            ctx.saturn.instance->VDP.DumpVDP1VRAM(out);
         }
         {
             std::ofstream out{dumpPath / "vdp1-fbs.bin", std::ios::binary};
-            ctx.saturn.VDP.DumpVDP1Framebuffers(out);
+            ctx.saturn.instance->VDP.DumpVDP1Framebuffers(out);
         }
         {
             std::ofstream out{dumpPath / "vdp2-vram.bin", std::ios::binary};
-            ctx.saturn.VDP.DumpVDP2VRAM(out);
+            ctx.saturn.instance->VDP.DumpVDP2VRAM(out);
         }
         {
             std::ofstream out{dumpPath / "vdp2-cram.bin", std::ios::binary};
-            ctx.saturn.VDP.DumpVDP2CRAM(out);
+            ctx.saturn.instance->VDP.DumpVDP2CRAM(out);
         }
         {
             std::ofstream out{dumpPath / "scu-dsp-prog.bin", std::ios::binary};
-            ctx.saturn.SCU.DumpDSPProgramRAM(out);
+            ctx.saturn.instance->SCU.DumpDSPProgramRAM(out);
         }
         {
             std::ofstream out{dumpPath / "scu-dsp-data.bin", std::ios::binary};
-            ctx.saturn.SCU.DumpDSPDataRAM(out);
+            ctx.saturn.instance->SCU.DumpDSPDataRAM(out);
         }
         {
             std::ofstream out{dumpPath / "scu-dsp-regs.bin", std::ios::binary};
-            ctx.saturn.SCU.DumpDSPRegs(out);
+            ctx.saturn.instance->SCU.DumpDSPRegs(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-wram.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpWRAM(out);
+            ctx.saturn.instance->SCSP.DumpWRAM(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-mpro.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_MPRO(out);
+            ctx.saturn.instance->SCSP.DumpDSP_MPRO(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-temp.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_TEMP(out);
+            ctx.saturn.instance->SCSP.DumpDSP_TEMP(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-mems.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_MEMS(out);
+            ctx.saturn.instance->SCSP.DumpDSP_MEMS(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-coef.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_COEF(out);
+            ctx.saturn.instance->SCSP.DumpDSP_COEF(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-madrs.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_MADRS(out);
+            ctx.saturn.instance->SCSP.DumpDSP_MADRS(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-mixs.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_MIXS(out);
+            ctx.saturn.instance->SCSP.DumpDSP_MIXS(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-efreg.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_EFREG(out);
+            ctx.saturn.instance->SCSP.DumpDSP_EFREG(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-exts.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSP_EXTS(out);
+            ctx.saturn.instance->SCSP.DumpDSP_EXTS(out);
         }
         {
             std::ofstream out{dumpPath / "scsp-dsp-regs.bin", std::ios::binary};
-            ctx.saturn.SCSP.DumpDSPRegs(out);
+            ctx.saturn.instance->SCSP.DumpDSPRegs(out);
         }
         devlog::info<grp::base>("Dump complete");
     });
@@ -189,14 +191,14 @@ static void InsertPeripheral(peripheral::PeripheralType type, peripheral::Periph
 EmuEvent InsertPort1Peripheral(peripheral::PeripheralType type) {
     return RunFunction([=](SharedContext &ctx) {
         std::unique_lock lock{ctx.locks.peripherals};
-        InsertPeripheral(type, ctx.saturn.SMPC.GetPeripheralPort1());
+        InsertPeripheral(type, ctx.saturn.instance->SMPC.GetPeripheralPort1());
     });
 }
 
 EmuEvent InsertPort2Peripheral(peripheral::PeripheralType type) {
     return RunFunction([=](SharedContext &ctx) {
         std::unique_lock lock{ctx.locks.peripherals};
-        InsertPeripheral(type, ctx.saturn.SMPC.GetPeripheralPort2());
+        InsertPeripheral(type, ctx.saturn.instance->SMPC.GetPeripheralPort2());
     });
 }
 
@@ -216,7 +218,7 @@ EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
         switch (result) {
         case bup::BackupMemoryImageLoadResult::Success: //
         {
-            auto *cart = ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+            auto *cart = ctx.saturn.instance->InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
             ctx.settings.cartridge.backupRAM.capacity = SizeToCapacity(cart->GetBackupMemory().Size());
             ctx.settings.cartridge.backupRAM.imagePath = path;
             devlog::info<grp::base>("External backup memory cartridge loaded from {}", path);
@@ -242,11 +244,11 @@ EmuEvent InsertBackupMemoryCartridge(std::filesystem::path path) {
 }
 
 EmuEvent Insert8MbitDRAMCartridge() {
-    return RunFunction([](SharedContext &ctx) { ctx.saturn.InsertCartridge<cart::DRAM8MbitCartridge>(); });
+    return RunFunction([](SharedContext &ctx) { ctx.saturn.instance->InsertCartridge<cart::DRAM8MbitCartridge>(); });
 }
 
 EmuEvent Insert32MbitDRAMCartridge() {
-    return RunFunction([](SharedContext &ctx) { ctx.saturn.InsertCartridge<cart::DRAM32MbitCartridge>(); });
+    return RunFunction([](SharedContext &ctx) { ctx.saturn.instance->InsertCartridge<cart::DRAM32MbitCartridge>(); });
 }
 
 EmuEvent InsertROMCartridge(std::filesystem::path path) {
@@ -285,7 +287,7 @@ EmuEvent InsertROMCartridge(std::filesystem::path path) {
         // TODO: Check that the image is a proper Sega Saturn cartridge (headers)
 
         // Insert cartridge
-        cart::ROMCartridge *cart = ctx.saturn.InsertCartridge<cart::ROMCartridge>();
+        cart::ROMCartridge *cart = ctx.saturn.instance->InsertCartridge<cart::ROMCartridge>();
         if (cart != nullptr) {
             devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}", path);
             cart->LoadROM(rom);
@@ -301,7 +303,7 @@ EmuEvent InsertCartridgeFromSettings() {
 
         switch (settings.type) {
         case Settings::Cartridge::Type::None:
-            ctx.saturn.RemoveCartridge();
+            ctx.saturn.instance->RemoveCartridge();
             devlog::info<grp::base>("Cartridge removed");
             break;
 
@@ -334,13 +336,13 @@ EmuEvent InsertCartridgeFromSettings() {
                 bup::BackupMemory bupMem{};
                 auto result = bupMem.LoadFrom(prevPath, error);
                 if (result == bup::BackupMemoryImageLoadResult::Success) {
-                    ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+                    ctx.saturn.instance->InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
                 }
             }};
-            if (auto *cart = ctx.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
+            if (auto *cart = ctx.saturn.instance->GetCartridge().As<cart::CartType::BackupMemory>()) {
                 prevPath = cart->GetBackupMemory().GetPath();
                 if (prevPath == settings.backupRAM.imagePath) {
-                    ctx.saturn.RemoveCartridge();
+                    ctx.saturn.instance->RemoveCartridge();
                 } else {
                     sgReinsertOnFailure.Cancel();
                 }
@@ -359,7 +361,7 @@ EmuEvent InsertCartridgeFromSettings() {
                 devlog::info<grp::base>("{} backup RAM cartridge inserted with image from {}",
                                         BupCapacityShortName(settings.backupRAM.capacity),
                                         settings.backupRAM.imagePath);
-                ctx.saturn.InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
+                ctx.saturn.instance->InsertCartridge<cart::BackupMemoryCartridge>(std::move(bupMem));
 
                 // If the cartridge was successfully inserted, we don't need to reinsert the previous cartridge
                 sgReinsertOnFailure.Cancel();
@@ -369,11 +371,11 @@ EmuEvent InsertCartridgeFromSettings() {
         case Settings::Cartridge::Type::DRAM:
             switch (settings.dram.capacity) {
             case Settings::Cartridge::DRAM::Capacity::_32Mbit:
-                ctx.saturn.InsertCartridge<cart::DRAM32MbitCartridge>();
+                ctx.saturn.instance->InsertCartridge<cart::DRAM32MbitCartridge>();
                 devlog::info<grp::base>("32 Mbit DRAM cartridge inserted");
                 break;
             case Settings::Cartridge::DRAM::Capacity::_8Mbit:
-                ctx.saturn.InsertCartridge<cart::DRAM8MbitCartridge>();
+                ctx.saturn.instance->InsertCartridge<cart::DRAM8MbitCartridge>();
                 devlog::info<grp::base>("8 Mbit DRAM cartridge inserted");
                 break;
             }
@@ -415,7 +417,7 @@ EmuEvent InsertCartridgeFromSettings() {
             // TODO: Check that the image is a proper Sega Saturn cartridge (headers)
 
             // Insert cartridge
-            cart::ROMCartridge *cart = ctx.saturn.InsertCartridge<cart::ROMCartridge>();
+            cart::ROMCartridge *cart = ctx.saturn.instance->InsertCartridge<cart::ROMCartridge>();
             if (cart != nullptr) {
                 devlog::info<grp::base>("16 Mbit ROM cartridge inserted with image from {}", settings.rom.imagePath);
                 cart->LoadROM(rom);
@@ -429,24 +431,25 @@ EmuEvent InsertCartridgeFromSettings() {
 EmuEvent DeleteBackupFile(std::string filename, bool external) {
     if (external) {
         return RunFunction([=](SharedContext &ctx) {
-            if (auto *cart = ctx.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
+            if (auto *cart = ctx.saturn.instance->GetCartridge().As<cart::CartType::BackupMemory>()) {
                 cart->GetBackupMemory().Delete(filename);
             }
         });
     } else {
-        return RunFunction([=](SharedContext &ctx) { ctx.saturn.mem.GetInternalBackupRAM().Delete(filename); });
+        return RunFunction(
+            [=](SharedContext &ctx) { ctx.saturn.instance->mem.GetInternalBackupRAM().Delete(filename); });
     }
 }
 
 EmuEvent FormatBackupMemory(bool external) {
     if (external) {
         return RunFunction([](SharedContext &ctx) {
-            if (auto *cart = ctx.saturn.GetCartridge().As<cart::CartType::BackupMemory>()) {
+            if (auto *cart = ctx.saturn.instance->GetCartridge().As<cart::CartType::BackupMemory>()) {
                 cart->GetBackupMemory().Format();
             }
         });
     } else {
-        return RunFunction([](SharedContext &ctx) { ctx.saturn.mem.GetInternalBackupRAM().Format(); });
+        return RunFunction([](SharedContext &ctx) { ctx.saturn.instance->mem.GetInternalBackupRAM().Format(); });
     }
 }
 
@@ -455,7 +458,7 @@ EmuEvent LoadInternalBackupMemory() {
         std::filesystem::path path = ctx.GetInternalBackupRAMPath();
 
         std::error_code error{};
-        if (ctx.saturn.LoadInternalBackupMemoryImage(path, error); error) {
+        if (ctx.saturn.instance->LoadInternalBackupMemoryImage(path, error); error) {
             devlog::warn<grp::base>("Failed to load internal backup memory from {}: {}", path, error.message());
         } else {
             devlog::info<grp::base>("Internal backup memory image loaded from {}", path);
@@ -465,9 +468,9 @@ EmuEvent LoadInternalBackupMemory() {
 
 EmuEvent SetEmulateSH2Cache(bool enable) {
     return RunFunction([=](SharedContext &ctx) {
-        const bool currEnable = ctx.saturn.IsSH2CacheEmulationEnabled();
+        const bool currEnable = ctx.saturn.instance->IsSH2CacheEmulationEnabled();
         if (currEnable != enable) {
-            ctx.saturn.EnableSH2CacheEmulation(enable);
+            ctx.saturn.instance->EnableSH2CacheEmulation(enable);
             ctx.settings.system.emulateSH2Cache = enable;
             devlog::info<grp::base>("SH2 cache emulation {}", (enable ? "enabled" : "disabled"));
         }
@@ -491,7 +494,7 @@ EmuEvent EnableThreadedSCSP(bool enable) {
 }
 
 EmuEvent SetSCSPStepGranularity(uint32 granularity) {
-    return RunFunction([=](SharedContext &ctx) { ctx.saturn.SCSP.SetStepGranularity(granularity); });
+    return RunFunction([=](SharedContext &ctx) { ctx.saturn.instance->SCSP.SetStepGranularity(granularity); });
 }
 
 EmuEvent LoadState(uint32 slot) {
@@ -499,14 +502,14 @@ EmuEvent LoadState(uint32 slot) {
         if (slot < ctx.saveStates.size() && ctx.saveStates[slot].state) {
             auto &state = *ctx.saveStates[slot].state;
             // If the IPL ROM is mismatched, load it if possible
-            if (state.system.iplRomHash != ctx.saturn.GetIPLHash()) {
+            if (state.system.iplRomHash != ctx.saturn.instance->GetIPLHash()) {
                 devlog::warn<grp::base>("Save state IPL ROM hash mismatch; attempting to load IPL ROM with hash {}",
                                         ToString(state.system.iplRomHash));
 
                 std::unique_lock lock{ctx.locks.romManager};
                 for (auto &[path, info] : ctx.romManager.GetIPLROMs()) {
                     if (info.hash == state.system.iplRomHash) {
-                        auto result = util::LoadIPLROM(path, ctx.saturn);
+                        auto result = util::LoadIPLROM(path, *ctx.saturn.instance);
                         if (result.succeeded) {
                             devlog::info<grp::base>("IPL ROM matching save state loaded successfully from {}", path);
                             ctx.iplRomPath = path;
@@ -533,7 +536,7 @@ EmuEvent LoadState(uint32 slot) {
                 }
             }
 
-            if (ctx.saturn.LoadState(state)) {
+            if (ctx.saturn.instance->LoadState(state)) {
                 ctx.EnqueueEvent(events::gui::StateLoaded(slot));
             } else {
                 devlog::warn<grp::base>("Failed to load save state");
@@ -550,7 +553,7 @@ EmuEvent SaveState(uint32 slot) {
                 if (!ctx.saveStates[slot].state) {
                     ctx.saveStates[slot].state = std::make_unique<state::State>();
                 }
-                ctx.saturn.SaveState(*ctx.saveStates[slot].state);
+                ctx.saturn.instance->SaveState(*ctx.saveStates[slot].state);
                 ctx.saveStates[slot].timestamp = std::chrono::system_clock::now();
             }
             ctx.EnqueueEvent(events::gui::StateSaved(slot));

@@ -1,5 +1,7 @@
 #include "sh2_interrupt_trace_view.hpp"
 
+using namespace ymir;
+
 namespace app::ui {
 
 SH2InterruptTraceView::SH2InterruptTraceView(SharedContext &context, SH2Tracer &tracer)
@@ -7,8 +9,6 @@ SH2InterruptTraceView::SH2InterruptTraceView(SharedContext &context, SH2Tracer &
     , m_tracer(tracer) {}
 
 void SH2InterruptTraceView::Display() {
-    using namespace ymir;
-
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;

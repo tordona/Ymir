@@ -1,5 +1,7 @@
 #include "sh2_debugger_window.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <app/events/emu_debug_event_factory.hpp>
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>

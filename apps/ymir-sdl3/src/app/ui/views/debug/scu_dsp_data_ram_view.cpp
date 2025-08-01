@@ -1,16 +1,20 @@
 #include "scu_dsp_data_ram_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
+
 namespace app::ui {
 
 SCUDSPDataRAMView::SCUDSPDataRAMView(SharedContext &context)
     : m_context(context)
-    , m_dsp(context.saturn.SCU.GetDSP()) {}
+    , m_scu(context.saturn.GetSCU()) {}
 
 void SCUDSPDataRAMView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
+
+    auto &dsp = m_scu.GetDSP();
 
     ImGui::BeginGroup();
 
@@ -36,7 +40,7 @@ void SCUDSPDataRAMView::Display() {
                     ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
                     ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 8);
                     ImGui::InputScalar(fmt::format("##data_{}_{}", bank, i).c_str(), ImGuiDataType_U32,
-                                       &m_dsp.dataRAM[bank][i], nullptr, nullptr, "%08X",
+                                       &dsp.dataRAM[bank][i], nullptr, nullptr, "%08X",
                                        ImGuiInputTextFlags_CharsHexadecimal);
                     ImGui::PopFont();
                 }

@@ -1,5 +1,7 @@
 #include "system_settings_view.hpp"
 
+#include <ymir/hw/smpc/smpc.hpp>
+
 #include <app/events/emu_event_factory.hpp>
 #include <app/events/gui_event_factory.hpp>
 
@@ -11,9 +13,9 @@
 #include <util/regions.hpp>
 #include <util/sdl_file_dialog.hpp>
 
-#include <misc/cpp/imgui_stdlib.h>
-
 #include <ymir/util/size_ops.hpp>
+
+#include <misc/cpp/imgui_stdlib.h>
 
 #include <fmt/format.h>
 #include <fmt/std.h>
@@ -156,7 +158,7 @@ void SystemSettingsView::Display() {
         settings.rtc.mode = core::config::rtc::Mode::Virtual;
     }
 
-    auto &rtc = m_context.saturn.SMPC.GetRTC();
+    auto &rtc = m_context.saturn.GetSMPC().GetRTC();
 
     ImGui::AlignTextToFramePadding();
     ImGui::Text("Current date/time:");

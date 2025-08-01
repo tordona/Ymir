@@ -4,6 +4,8 @@
 
 #include <app/events/emu_debug_event_factory.hpp>
 
+#include <ymir/hw/sh2/sh2.hpp>
+
 #include <imgui_memory_editor.h>
 
 namespace app::ui::mem_view {
@@ -109,7 +111,7 @@ namespace regions {
     inline ImU8 MainBusRead(const ImU8 *mem, size_t off, void *user_data) {
         auto &state = *static_cast<const MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
-        return state.sharedCtx.saturn.mainBus.Peek<uint8>(off);
+        return state.sharedCtx.saturn.GetMainBus().Peek<uint8>(off);
     }
 
     inline void MainBusWrite(ImU8 *mem, size_t off, ImU8 d, void *user_data) {
@@ -129,7 +131,7 @@ namespace regions {
     inline ImU8 SH2BusRead(const ImU8 *mem, size_t off, void *user_data) {
         auto &state = *static_cast<const MemoryViewerState *>(user_data);
         off += state.selectedRegion->baseAddress;
-        auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
+        auto &sh2 = state.sharedCtx.saturn.GetSH2(master);
         return sh2.GetProbe().MemPeekByte(off, state.bypassSH2Cache);
     }
 
@@ -145,7 +147,7 @@ namespace regions {
     inline ImU32 SH2BusBgColor(const ImU8 *mem, size_t off, void *user_data) {
         // auto &state = *static_cast<MemoryViewerState *>(user_data);
         // off += state.selectedRegion->baseAddress;
-        // auto &sh2 = master ? state.sharedCtx.saturn.masterSH2 : state.sharedCtx.saturn.slaveSH2;
+        // auto &sh2 = state.sharedCtx.saturn.GetSH2(master);
         // TODO: use this to colorize fields/regions
         return 0;
     }
@@ -177,7 +179,7 @@ namespace regions {
     }
 
     inline void SH2CachedAreaParams(MemoryViewerState *state) {
-        const bool emulateSH2Cache = state->sharedCtx.saturn.IsSH2CacheEmulationEnabled();
+        const bool emulateSH2Cache = state->sharedCtx.settings.system.emulateSH2Cache;
         ImGui::SameLine();
         if (!emulateSH2Cache) {
             ImGui::BeginDisabled();

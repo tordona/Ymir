@@ -640,27 +640,6 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapMissionStick(m_port1MissionStickInputs, input.port1.missionStick.binds);
     mapMissionStick(m_port2MissionStickInputs, input.port2.missionStick.binds);
 
-    {
-        auto &config = m_context.saturn.configuration;
-
-        system.autodetectRegion.Observe(config.system.autodetectRegion);
-        system.preferredRegionOrder.Observe([&](auto value) { config.system.preferredRegionOrder = value; });
-        system.videoStandard.Observe([&](auto value) { config.system.videoStandard = value; });
-
-        system.rtc.mode.Observe([&](auto value) { config.rtc.mode = value; });
-        system.rtc.virtHardResetStrategy.Observe([&](auto value) { config.rtc.virtHardResetStrategy = value; });
-        system.rtc.virtHardResetTimestamp.Observe([&](auto value) { config.rtc.virtHardResetTimestamp = value; });
-
-        video.threadedVDP.Observe([&](auto value) { config.video.threadedVDP = value; });
-        video.threadedDeinterlacer.Observe([&](auto value) { config.video.threadedDeinterlacer = value; });
-        video.includeVDP1InRenderThread.Observe([&](auto value) { config.video.includeVDP1InRenderThread = value; });
-
-        audio.interpolation.Observe([&](auto value) { config.audio.interpolation = value; });
-        audio.threadedSCSP.Observe([&](auto value) { config.audio.threadedSCSP = value; });
-
-        cdblock.readSpeedFactor.Observe([&](auto value) { config.cdblock.readSpeedFactor = value; });
-    }
-
     ResetToDefaults();
 }
 
@@ -770,6 +749,25 @@ void Settings::ResetToDefaults() {
     cartridge.autoLoadGameCarts = true;
 
     cdblock.readSpeedFactor = 2;
+}
+
+void Settings::BindConfiguration(ymir::core::Configuration &config) {
+    system.autodetectRegion.Observe(config.system.autodetectRegion);
+    system.preferredRegionOrder.Observe([&](auto value) { config.system.preferredRegionOrder = value; });
+    system.videoStandard.Observe([&](auto value) { config.system.videoStandard = value; });
+
+    system.rtc.mode.Observe([&](auto value) { config.rtc.mode = value; });
+    system.rtc.virtHardResetStrategy.Observe([&](auto value) { config.rtc.virtHardResetStrategy = value; });
+    system.rtc.virtHardResetTimestamp.Observe([&](auto value) { config.rtc.virtHardResetTimestamp = value; });
+
+    video.threadedVDP.Observe([&](auto value) { config.video.threadedVDP = value; });
+    video.threadedDeinterlacer.Observe([&](auto value) { config.video.threadedDeinterlacer = value; });
+    video.includeVDP1InRenderThread.Observe([&](auto value) { config.video.includeVDP1InRenderThread = value; });
+
+    audio.interpolation.Observe([&](auto value) { config.audio.interpolation = value; });
+    audio.threadedSCSP.Observe([&](auto value) { config.audio.threadedSCSP = value; });
+
+    cdblock.readSpeedFactor.Observe([&](auto value) { config.cdblock.readSpeedFactor = value; });
 }
 
 SettingsLoadResult Settings::Load(const std::filesystem::path &path) {

@@ -1,8 +1,11 @@
 #include "sh2_disassembly_view.hpp"
 
+#include <ymir/hw/sh2/sh2.hpp>
 #include <ymir/hw/sh2/sh2_disasm.hpp>
 
 #include <imgui.h>
+
+using namespace ymir;
 
 namespace app::ui {
 
@@ -11,8 +14,6 @@ SH2DisassemblyView::SH2DisassemblyView(SharedContext &context, ymir::sh2::SH2 &s
     , m_sh2(sh2) {}
 
 void SH2DisassemblyView::Display() {
-    using namespace ymir;
-
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("View")) {
             ImGui::MenuItem("Display opcode bytes", nullptr, &m_settings.displayOpcodeBytes);
@@ -57,8 +58,8 @@ void SH2DisassemblyView::Display() {
         const uint32 baseAddress = (pc - lines + 2) & ~1;
         for (uint32 i = 0; i < lines; i++) {
             const uint32 address = baseAddress + i * sizeof(uint16);
-            const uint16 prevOpcode = m_context.saturn.mainBus.Peek<uint16>(address - 2);
-            const uint16 opcode = m_context.saturn.mainBus.Peek<uint16>(address);
+            const uint16 prevOpcode = m_context.saturn.GetMainBus().Peek<uint16>(address - 2);
+            const uint16 opcode = m_context.saturn.GetMainBus().Peek<uint16>(address);
             const sh2::DisassembledInstruction &prevDisasm = sh2::Disassemble(prevOpcode);
             const sh2::DisassembledInstruction &disasm = sh2::Disassemble(opcode);
 

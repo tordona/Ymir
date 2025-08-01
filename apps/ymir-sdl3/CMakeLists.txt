@@ -17,6 +17,7 @@ add_executable(ymir-sdl3
     src/app/rom_manager.hpp
     src/app/settings.cpp
     src/app/settings.hpp
+    src/app/shared_context.cpp
     src/app/shared_context.hpp
     src/app/stb_implementations.cpp
 

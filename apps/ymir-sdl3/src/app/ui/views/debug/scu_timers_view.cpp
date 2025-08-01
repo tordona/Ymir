@@ -1,10 +1,12 @@
 #include "scu_timers_view.hpp"
 
+#include <ymir/hw/scu/scu.hpp>
+
 namespace app::ui {
 
 SCUTimersView::SCUTimersView(SharedContext &context)
     : m_context(context)
-    , m_scu(context.saturn.SCU) {}
+    , m_scu(context.saturn.GetSCU()) {}
 
 void SCUTimersView::Display() {
     auto &probe = m_scu.GetProbe();
