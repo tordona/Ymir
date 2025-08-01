@@ -1806,6 +1806,7 @@ void App::RunEmulator() {
                 if (evt.window.windowID == SDL_GetWindowID(screen.window)) {
                     goto end_loop;
                 }
+                break;
 
             case SDL_EVENT_WINDOW_FOCUS_GAINED:
                 if (m_context.settings.general.pauseWhenUnfocused) {
