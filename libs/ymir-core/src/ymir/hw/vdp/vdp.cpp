@@ -971,6 +971,7 @@ void VDP::BeginHPhaseActiveDisplay() {
             }
 
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_state.regs2.VCNT));
+            VDP2CalcAccessPatterns(m_state.regs2);
         } else {
             const bool interlaced = m_state.regs2.TVMD.IsInterlaced();
             const uint32 y = m_state.regs2.VCNT;
@@ -1133,7 +1134,6 @@ void VDP::BeginVPhaseLastLine() {
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2BeginFrame());
-        VDP2CalcAccessPatterns(m_state.regs2);
     } else {
         VDP2InitFrame();
     }
@@ -2638,7 +2638,7 @@ FORCE_INLINE std::array<uint8, kVDP2VRAMSize> &VDP::VDP2GetVRAM() {
 }
 
 void VDP::VDP2InitFrame() {
-    VDP2Regs &regs2 = VDP2GetRegs();
+    const VDP2Regs &regs2 = VDP2GetRegs();
     if (regs2.bgEnabled[5]) {
         VDP2InitRotationBG<0>();
         VDP2InitRotationBG<1>();
@@ -2649,7 +2649,6 @@ void VDP::VDP2InitFrame() {
         VDP2InitNormalBG<2>();
         VDP2InitNormalBG<3>();
     }
-    VDP2CalcAccessPatterns(regs2);
 }
 
 template <uint32 index>
@@ -3452,19 +3451,20 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
 }
 
 FORCE_INLINE void VDP::VDP2PrepareLine(uint32 y) {
-    const VDP2Regs &regs2 = VDP2GetRegs();
+    VDP2Regs &regs2 = VDP2GetRegs();
 
     // Don't process anything if the display is disabled
     if (!regs2.TVMD.DISP) [[unlikely]] {
         return;
     }
 
+    VDP2CalcAccessPatterns(regs2);
+
     // Load rotation parameters if any of the RBG layers is enabled
     if (regs2.bgEnabled[4] || regs2.bgEnabled[5]) {
         VDP2CalcRotationParameterTables(y);
     }
 
-    // Draw line color and back screen layers
     VDP2DrawLineColorAndBackScreens(y);
 
     VDP2UpdateLineScreenScrollParams(y);
