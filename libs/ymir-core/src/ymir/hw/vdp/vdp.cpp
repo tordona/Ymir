@@ -3688,18 +3688,6 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     }
     const uint32 colorIndex = params.colorDataOffset + spriteData.colorData;
     const Color888 color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
-    if (spriteData.special == SpriteData::Special::Transparent) {
-        // Transparent pixel, don't bother plotting it
-        if constexpr (!applyMesh) {
-            layerState.pixels.transparent[x] = true;
-            attr.shadowOrWindow = false;
-            attr.normalShadow = false;
-            if constexpr (transparentMeshes) {
-                attr.transparentMesh = false;
-            }
-        }
-        return;
-    }
     if constexpr (applyMesh) {
         // If the pixel in the sprite layer is transparent, write the mesh color as is and mark the pixel as
         // "transparent mesh" to be handled in VDP2ComposeLine, otherwise blend with the existing pixel.
@@ -3713,16 +3701,16 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
             layerColor.b = (color.b + layerColor.b) >> 1u;
             layerColor.msb = color.msb;
         }
+        layerState.pixels.transparent[x] = false;
     } else {
-        layerState.pixels.color[x] = color;
+        layerState.pixels.transparent[x] = spriteData.special == SpriteData::Special::Transparent;
     }
-    layerState.pixels.transparent[x] = false;
+    layerState.pixels.color[x] = color;
     layerState.pixels.priority[x] = params.priorities[spriteData.priority];
-
     attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
     attr.shadowOrWindow = spriteData.shadowOrWindow;
     attr.normalShadow = spriteData.special == SpriteData::Special::Shadow;
-    if constexpr (transparentMeshes && !applyMesh) {
+    if constexpr (transparentMeshes) {
         attr.transparentMesh = false;
     }
 }
