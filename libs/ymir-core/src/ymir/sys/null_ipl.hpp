@@ -37,8 +37,24 @@ inline const auto kNullIPL = [] {
         util::WriteBE<uint16>(&ipl[pc], opcode);
         pc += sizeof(uint16);
     };
-    write(0xAFFE); // bra <self>
-    write(0x0009); // nop
+
+    // Infinite loop version
+    // write(0x9001); // mov.w @(pc+2), r0   (= 0x00F0)
+    // write(0x8BFE); // bf <self>
+    // write(0x00F0); // data.w #0x00F0
+
+    // Sleep forever version
+    write(0x9006); //   mov.w @(<srval>), r0  ; get value of SR (=0x00F0)
+    write(0x400E); //   ldc   r0, sr          ; set SR -> disable interrupts, clear T
+    write(0xE091); //   mov #0x91, r0         ; address of SBYCR
+    write(0xE11F); //   mov #0x1F, r1         ; value of SBYCR: sleep mode, halt all modules
+    write(0x2100); //   mov r1, @r0           ; set SBYCR
+                   // loop:
+    write(0x001B); //   sleep                 ; good night!
+    write(0xAFFD); //   bra <loop>            ; in case you have NMIghtmares,
+    write(0x0009); //   > nop                 ;   do nothing and go back to sleep
+                   // srval:
+    write(0x00F0); //   data.w #0x00F0        ; M=0, Q=0, T=0, I3-0=0xF
 
     pc = kIntrHandlerPC;
     write(0x000B); // rte

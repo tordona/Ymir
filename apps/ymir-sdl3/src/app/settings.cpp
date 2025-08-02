@@ -724,7 +724,7 @@ void Settings::ResetToDefaults() {
     video.reduceLatency = true;
     video.fullScreen = false;
     video.doubleClickToFullScreen = false;
-    video.useFullRefreshRateWithVideoSync = false;
+    video.useFullRefreshRateWithVideoSync = true;
     video.deinterlace = false;
     video.transparentMeshes = false;
     video.threadedVDP = true;
