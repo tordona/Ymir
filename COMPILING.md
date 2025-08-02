@@ -75,7 +75,8 @@ cmake --build build --parallel
 To build Ymir on FreeBSD, first you will need to install SDL3's required dependencies:
 
 ```sh
-pkg install libX11 libXext libXrandr libXrender libglvnd
+pkg install evdev-proto libX11 libXcursor libXext libXfixes libXi libXrandr libXrender \
+    libXScrnSaver libglvnd libinotify pkgconf vulkan-loader
 ```
 
 The compiler of choice for this platform is Clang. Although a Clang compiler toolchain
@@ -83,7 +84,7 @@ is provided with a base install of FreeBSD, it lacks the required `clang-scan-de
 binary. It is required to install a complete LLVM toolchain:
 
 ```sh
-pkg install llvm
+pkg install llvm19
 ```
 
 Finally, install CMake. Compiling with Ninja is generally recommended:
@@ -93,13 +94,17 @@ pkg install cmake ninja
 ```
 
 Use CMake to generate a Makefile or (preferably) a Ninja build script. It is necessary
-to tell CMake to use the correct compiler from the previous LLVM installation. The
-`llvm` package is a meta-package which installs a specific version. For example, if
-it installs `llvm19`, then use `clang19` and `clang++19`. It is also recommended to
-add the paths `/usr/local/include` and `/usr/local/lib` to the build environment:
+to tell CMake to use the correct compiler from the previous LLVM installation. It
+is also recommended to add the paths `/usr/local/include` and `/usr/local/lib` to
+the build environment:
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="clang19" -DCMAKE_CXX_COMPILER="clang++19" -DCMAKE_C_FLAGS="/usr/local/include" -DCMAKE_CXX_FLAGS="/usr/local/include" -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/lib"
+cmake -S . -B build -G Ninja \
+    -DCMAKE_CXX_COMPILER=clang++19 \
+    -DCMAKE_CXX_FLAGS=-I/usr/local/include \
+    -DCMAKE_C_COMPILER=clang19 \
+    -DCMAKE_C_FLAGS=-I/usr/local/include \
+    -DCMAKE_EXE_LINKER_FLAGS=-L/usr/local/lib
 ```
 
 Pass additional `-D<option>=<value>` parameters to tune the build. See the [Build configuration](#build-configuration) section above for details.
