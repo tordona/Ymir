@@ -78,6 +78,9 @@ Ymir can load game disc images from MAME CHD, BIN+CUE, IMG+CCD, MDF+MDS or ISO f
 
 See [COMPILING.md](COMPILING.md).
 
+Please note that the author (@StrikerX3) works primarily with Windows and Linux systems and only provides support for other platforms on a best-effort basis.
+For Linux specifically, only the .tar.xz package is officially supported by the author. The project relies on community support for other packages and platforms.
+
 
 ## Support my work
 
