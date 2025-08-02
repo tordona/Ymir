@@ -53,7 +53,7 @@ In development.
 - SCU: Notify bus of DMA transfers.
 - SH2: Fix CPU getting stuck handling DMAC interrupts forever. Fixes Shellshock not booting. (#344)
 - SH2: Handle sleep/standby mode and wake up on interrupts. Fixes Culdcept getting stuck on intro FMV and boosts overall performance on games that make use of the SLEEP instruction. (#346)
-- SMPC: Fixed TH control mode reports on SH-2 direct mode. Fixes input response in World Heroes Perfect, Chaos Control Remix, and Father Christmas. (#297, #348, #374)
+- SMPC: Fixed TH control mode reports on SH-2 direct mode. Fixes input response in World Heroes Perfect, Touge King the Spirits, Chaos Control Remix, and Father Christmas. (#297, #322, #348, #374)
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
 - VDP1: Reorder LOPR, COPR, CEF and BEF updates. Fixes missing graphics in Virtual On - Cyber Troopers and Sega Touring CARS. (#112, #246)
