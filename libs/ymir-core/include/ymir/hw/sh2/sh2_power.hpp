@@ -15,7 +15,7 @@ namespace ymir::sh2 {
 //      3   R/W  MSTP3  Module Stop 3 - MULT (0=multiplication unit runs, 1=halt)
 //      2   R/W  MSTP2  Module Stop 2 - DIVU (0=DIVU runs, 1=halt)
 //      1   R/W  MSTP1  Module Stop 1 - FRT (0=FRT runs, 1=halt and reset)
-//      0   R/W  MSTP0  Module Stop 0 - SCU (0=FRT runs, 1=halt and reset)
+//      0   R/W  MSTP0  Module Stop 0 - SCI (0=SCI runs, 1=halt and reset)
 union RegSBYCR {
     uint8 u8;
     struct {

@@ -9,6 +9,7 @@
 #include "sh2_exception_vectors_window.hpp"
 #include "sh2_interrupt_trace_window.hpp"
 #include "sh2_interrupts_window.hpp"
+#include "sh2_power_window.hpp"
 #include "sh2_timers_window.hpp"
 
 namespace app::ui {
@@ -23,6 +24,7 @@ struct SH2WindowSet {
         , cache(context, master)
         , divisionUnit(context, master)
         , timers(context, master)
+        , power(context, master)
         , dmaController(context, master)
         , dmaControllerTrace(context, master) {}
 
@@ -35,6 +37,7 @@ struct SH2WindowSet {
         cache.Display();
         divisionUnit.Display();
         timers.Display();
+        power.Display();
         dmaController.Display();
         dmaControllerTrace.Display();
     }
@@ -47,6 +50,7 @@ struct SH2WindowSet {
     SH2CacheWindow cache;
     SH2DivisionUnitWindow divisionUnit;
     SH2TimersWindow timers;
+    SH2PowerWindow power;
     SH2DMAControllerWindow dmaController;
     SH2DMAControllerTraceWindow dmaControllerTrace;
 };

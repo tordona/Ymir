@@ -306,6 +306,14 @@ public:
             return m_sh2.WDT;
         }
 
+        FORCE_INLINE RegSBYCR &SBYCR() {
+            return m_sh2.SBYCR;
+        }
+
+        FORCE_INLINE const RegSBYCR &SBYCR() const {
+            return m_sh2.SBYCR;
+        }
+
         FORCE_INLINE DMAChannel &DMAC0() {
             return m_sh2.m_dmaChannels[0];
         }

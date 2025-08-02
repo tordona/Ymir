@@ -118,6 +118,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/debug/sh2_interrupt_trace_view.hpp
     src/app/ui/views/debug/sh2_interrupts_view.cpp
     src/app/ui/views/debug/sh2_interrupts_view.hpp
+    src/app/ui/views/debug/sh2_power_view.cpp
+    src/app/ui/views/debug/sh2_power_view.hpp
     src/app/ui/views/debug/sh2_registers_view.cpp
     src/app/ui/views/debug/sh2_registers_view.hpp
     src/app/ui/views/debug/sh2_wdt_view.cpp
@@ -232,6 +234,8 @@ add_executable(ymir-sdl3
     src/app/ui/windows/debug/sh2_interrupt_trace_window.hpp
     src/app/ui/windows/debug/sh2_interrupts_window.cpp
     src/app/ui/windows/debug/sh2_interrupts_window.hpp
+    src/app/ui/windows/debug/sh2_power_window.cpp
+    src/app/ui/windows/debug/sh2_power_window.hpp
     src/app/ui/windows/debug/sh2_timers_window.cpp
     src/app/ui/windows/debug/sh2_timers_window.hpp
     src/app/ui/windows/debug/sh2_window_base.cpp
