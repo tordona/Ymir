@@ -44,17 +44,18 @@ inline const auto kNullIPL = [] {
     // write(0x00F0); // data.w #0x00F0
 
     // Sleep forever version
-    write(0x9006); //   mov.w @(<srval>), r0  ; get value of SR (=0x00F0)
-    write(0x400E); //   ldc   r0, sr          ; set SR -> disable interrupts, clear T
-    write(0xE091); //   mov #0x91, r0         ; address of SBYCR
-    write(0xE11F); //   mov #0x1F, r1         ; value of SBYCR: sleep mode, halt all modules
-    write(0x2100); //   mov r1, @r0           ; set SBYCR
+    write(0x9006); //   mov.w @(<srval>), r0     ; get value of SR (=0x00F0)
+    write(0x400E); //   ldc   r0, sr             ; set SR -> disable interrupts, clear T
+    write(0x9005); //   mov.w @(<sbycrval>), r0  ; get address of SBYCR
+    write(0xE19F); //   mov #0x9F, r1            ; value of SBYCR: standby mode, halt all modules
+    write(0x2010); //   mov r1, @r0              ; set SBYCR
                    // loop:
-    write(0x001B); //   sleep                 ; good night!
-    write(0xAFFD); //   bra <loop>            ; in case you have NMIghtmares,
-    write(0x0009); //   > nop                 ;   do nothing and go back to sleep
+    write(0x001B); //   sleep                    ; good night!
+    write(0xAFFD); //   bra <loop>               ; in case you have NMIghtmares,
+    write(0x0009); //   > nop                    ;   do nothing and go back to sleep
                    // srval:
-    write(0x00F0); //   data.w #0x00F0        ; M=0, Q=0, T=0, I3-0=0xF
+    write(0x00F0); //   data.w #0x00F0           ; M=0, Q=0, T=0, I3-0=0xF
+    write(0xFE91); //   data.w #0xFE91           ; address of SBYCR
 
     pc = kIntrHandlerPC;
     write(0x000B); // rte
