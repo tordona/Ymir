@@ -189,6 +189,8 @@ struct Settings {
         input::InputBind openSettings{actions::general::OpenSettings};
         input::InputBind toggleWindowedVideoOutput{actions::general::ToggleWindowedVideoOutput};
         input::InputBind toggleFullScreen{actions::general::ToggleFullScreen};
+        input::InputBind takeScreenshot{actions::general::TakeScreenshot};
+
         input::InputBind toggleFrameRateOSD{actions::view::ToggleFrameRateOSD};
         input::InputBind nextFrameRateOSDPos{actions::view::NextFrameRateOSDPos};
         input::InputBind prevFrameRateOSDPos{actions::view::PrevFrameRateOSDPos};

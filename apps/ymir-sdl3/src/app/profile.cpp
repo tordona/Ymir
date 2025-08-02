@@ -16,6 +16,7 @@ const std::filesystem::path kPathSuffixes[] = {
     "state",                                      // PersistentState
     "savestates",                                 // SaveStates
     "dumps",                                      // Dumps
+    "screenshots",                                // Screenshots
 };
 
 Profile::Profile() {

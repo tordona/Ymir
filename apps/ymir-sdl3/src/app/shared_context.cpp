@@ -18,44 +18,44 @@ SharedContext::SharedContext() {
 
 SharedContext::~SharedContext() = default;
 
+std::filesystem::path SharedContext::GetGameFileName() const {
+    // Use serial number + disc title if available
+    {
+        std::unique_lock lock{locks.disc};
+        const auto &disc = saturn.instance->CDBlock.GetDisc();
+        if (!disc.sessions.empty() && !disc.header.productNumber.empty()) {
+            if (!disc.header.gameTitle.empty()) {
+                std::string title = disc.header.gameTitle;
+                // Clean up invalid characters
+                std::transform(title.begin(), title.end(), title.begin(), [](char ch) {
+                    if (ch == ':' || ch == '|' || ch == '<' || ch == '>' || ch == '/' || ch == '\\' || ch == '*' ||
+                        ch == '?') {
+                        return '_';
+                    } else {
+                        return ch;
+                    }
+                });
+                return fmt::format("[{}] {}", disc.header.productNumber, title);
+            } else {
+                return fmt::format("[{}]", disc.header.productNumber);
+            }
+        }
+    }
+
+    // Fall back to the disc file name if the serial number isn't available
+    std::filesystem::path fileName = state.loadedDiscImagePath.filename().replace_extension("");
+    if (fileName.empty()) {
+        fileName = "nodisc";
+    }
+
+    return fileName;
+}
+
 std::filesystem::path SharedContext::GetInternalBackupRAMPath() const {
     if (settings.system.internalBackupRAMPerGame) {
         const std::filesystem::path basePath = profile.GetPath(ProfilePath::BackupMemory) / "games";
-        std::filesystem::path bupName = "";
-
-        // Use serial number + disc title if available
-        {
-            std::unique_lock lock{locks.disc};
-            const auto &disc = saturn.instance->CDBlock.GetDisc();
-            if (!disc.sessions.empty() && !disc.header.productNumber.empty()) {
-                if (!disc.header.gameTitle.empty()) {
-                    std::string title = disc.header.gameTitle;
-                    // Clean up invalid characters
-                    std::transform(title.begin(), title.end(), title.begin(), [](char ch) {
-                        if (ch == ':' || ch == '|' || ch == '<' || ch == '>' || ch == '/' || ch == '\\' || ch == '*' ||
-                            ch == '?') {
-                            return '_';
-                        } else {
-                            return ch;
-                        }
-                    });
-                    bupName = fmt::format("[{}] {}", disc.header.productNumber, title);
-                } else {
-                    bupName = fmt::format("[{}]", disc.header.productNumber);
-                }
-            }
-        }
-
-        // Fall back to the disc file name if the serial number isn't available
-        if (bupName.empty()) {
-            bupName = state.loadedDiscImagePath.filename().replace_extension("");
-            if (bupName.empty()) {
-                bupName = "nodisc";
-            }
-        }
-
         std::filesystem::create_directories(basePath);
-        return basePath / fmt::format("bup-int-{}.bin", bupName);
+        return basePath / fmt::format("bup-int-{}.bin", GetGameFileName());
     } else if (!settings.system.internalBackupRAMImagePath.empty()) {
         return settings.system.internalBackupRAMImagePath;
     } else {

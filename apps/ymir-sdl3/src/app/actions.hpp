@@ -10,6 +10,7 @@ namespace general {
     inline constexpr auto ToggleWindowedVideoOutput =
         input::Action::Trigger(0x001001, "General", "Toggle windowed video output");
     inline constexpr auto ToggleFullScreen = input::Action::Trigger(0x001002, "General", "Toggle full screen");
+    inline constexpr auto TakeScreenshot = input::Action::Trigger(0x001003, "General", "Take screenshot");
 
 } // namespace general
 

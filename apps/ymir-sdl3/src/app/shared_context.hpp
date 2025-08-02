@@ -591,6 +591,8 @@ struct SharedContext {
         eventQueues.gui.enqueue(std::move(event));
     }
 
+    std::filesystem::path GetGameFileName() const;
+
     std::filesystem::path GetInternalBackupRAMPath() const;
 
     std::string GetMidiVirtualInputPortName() {

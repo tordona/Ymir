@@ -75,6 +75,8 @@ struct GUIEvent {
         TryLoadIPLROM,
         ReloadIPLROM,
 
+        TakeScreenshot,
+
         // Emulator notifications
 
         StateLoaded, // A save state slot was just loaded

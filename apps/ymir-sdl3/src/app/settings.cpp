@@ -467,6 +467,8 @@ Settings::Settings(SharedContext &sharedCtx) noexcept
     mapInput(m_actionInputs, hotkeys.openSettings);
     mapInput(m_actionInputs, hotkeys.toggleWindowedVideoOutput);
     mapInput(m_actionInputs, hotkeys.toggleFullScreen);
+    mapInput(m_actionInputs, hotkeys.takeScreenshot);
+
     mapInput(m_actionInputs, hotkeys.toggleFrameRateOSD);
     mapInput(m_actionInputs, hotkeys.nextFrameRateOSDPos);
     mapInput(m_actionInputs, hotkeys.prevFrameRateOSDPos);
@@ -883,6 +885,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblHotkeys, "OpenSettings", hotkeys.openSettings);
         Parse(tblHotkeys, "ToggleWindowedVideoOutput", hotkeys.toggleWindowedVideoOutput);
         Parse(tblHotkeys, "ToggleFullScreen", hotkeys.toggleFullScreen);
+        Parse(tblHotkeys, "TakeScreenshot", hotkeys.takeScreenshot);
         Parse(tblHotkeys, "ToggleFrameRateOSD", hotkeys.toggleFrameRateOSD);
         Parse(tblHotkeys, "NextFrameRateOSDPosition", hotkeys.nextFrameRateOSDPos);
         Parse(tblHotkeys, "PreviousFrameRateOSDPosition", hotkeys.prevFrameRateOSDPos);
@@ -1229,6 +1232,7 @@ SettingsSaveResult Settings::Save() {
             {"OpenSettings", ToTOML(hotkeys.openSettings)},
             {"ToggleWindowedVideoOutput", ToTOML(hotkeys.toggleWindowedVideoOutput)},
             {"ToggleFullScreen", ToTOML(hotkeys.toggleFullScreen)},
+            {"TakeScreenshot", ToTOML(hotkeys.takeScreenshot)},
             {"ToggleFrameRateOSD", ToTOML(hotkeys.toggleFrameRateOSD)},
             {"NextFrameRateOSDPosition", ToTOML(hotkeys.nextFrameRateOSDPos)},
             {"PreviousFrameRateOSDPosition", ToTOML(hotkeys.prevFrameRateOSDPos)},
@@ -1758,6 +1762,8 @@ std::unordered_set<input::MappedAction> Settings::ResetHotkeys() {
     rebindCtx.Rebind(hotkeys.openSettings, {KeyCombo{Mod::None, Key::F10}});
     rebindCtx.Rebind(hotkeys.toggleWindowedVideoOutput, {KeyCombo{Mod::None, Key::F9}});
     rebindCtx.Rebind(hotkeys.toggleFullScreen, {KeyCombo{Mod::Alt, Key::Return}});
+    rebindCtx.Rebind(hotkeys.takeScreenshot, {KeyCombo{Key::F12}});
+
     rebindCtx.Rebind(hotkeys.toggleFrameRateOSD, {KeyCombo{Mod::Shift, Key::F1}});
     rebindCtx.Rebind(hotkeys.nextFrameRateOSDPos, {KeyCombo{Mod::Control, Key::F1}});
     rebindCtx.Rebind(hotkeys.prevFrameRateOSDPos, {KeyCombo{Mod::Control | Mod::Shift, Key::F1}});

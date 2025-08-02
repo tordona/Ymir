@@ -22,25 +22,9 @@ inline GUIEvent OpenROMCartFileDialog() {
     return {.type = GUIEvent::Type::OpenROMCartFileDialog};
 }
 
-inline GUIEvent OpenBackupMemoryManager() {
-    return {.type = GUIEvent::Type::OpenBackupMemoryManager};
-}
-
 inline GUIEvent OpenPeripheralBindsEditor(uint32 portIndex, uint32 slotIndex) {
     return {.type = GUIEvent::Type::OpenPeripheralBindsEditor,
             .value = PeripheralBindsParams{.portIndex = portIndex, .slotIndex = slotIndex}};
-}
-
-inline GUIEvent OpenSettings(ui::SettingsTab tab) {
-    return {.type = GUIEvent::Type::OpenSettings, .value = tab};
-}
-
-inline GUIEvent OpenSH2DebuggerWindow(bool master) {
-    return {.type = GUIEvent::Type::OpenSH2DebuggerWindow, .value = master};
-}
-
-inline GUIEvent OpenSH2BreakpointsWindow(bool master) {
-    return {.type = GUIEvent::Type::OpenSH2BreakpointsWindow, .value = master};
 }
 
 inline GUIEvent OpenFile(FileDialogParams &&params) {
@@ -59,6 +43,22 @@ inline GUIEvent SelectFolder(FolderDialogParams &&params) {
     return {.type = GUIEvent::Type::SelectFolder, .value = std::move(params)};
 }
 
+inline GUIEvent OpenBackupMemoryManager() {
+    return {.type = GUIEvent::Type::OpenBackupMemoryManager};
+}
+
+inline GUIEvent OpenSettings(ui::SettingsTab tab) {
+    return {.type = GUIEvent::Type::OpenSettings, .value = tab};
+}
+
+inline GUIEvent OpenSH2DebuggerWindow(bool master) {
+    return {.type = GUIEvent::Type::OpenSH2DebuggerWindow, .value = master};
+}
+
+inline GUIEvent OpenSH2BreakpointsWindow(bool master) {
+    return {.type = GUIEvent::Type::OpenSH2BreakpointsWindow, .value = master};
+}
+
 inline GUIEvent SetProcessPriority(bool boost) {
     return {.type = GUIEvent::Type::SetProcessPriority, .value = boost};
 }
@@ -75,14 +75,6 @@ inline GUIEvent ShowError(std::string message) {
     return {.type = GUIEvent::Type::ShowErrorMessage, .value = message};
 }
 
-inline GUIEvent StateLoaded(uint32 slot) {
-    return {.type = GUIEvent::Type::StateLoaded, .value = slot};
-}
-
-inline GUIEvent StateSaved(uint32 slot) {
-    return {.type = GUIEvent::Type::StateSaved, .value = slot};
-}
-
 inline GUIEvent EnableRewindBuffer(bool enable) {
     return {.type = GUIEvent::Type::EnableRewindBuffer, .value = enable};
 }
@@ -93,6 +85,18 @@ inline GUIEvent TryLoadIPLROM(std::filesystem::path path) {
 
 inline GUIEvent ReloadIPLROM() {
     return {.type = GUIEvent::Type::ReloadIPLROM};
+}
+
+inline GUIEvent TakeScreenshot() {
+    return {.type = GUIEvent::Type::TakeScreenshot};
+}
+
+inline GUIEvent StateLoaded(uint32 slot) {
+    return {.type = GUIEvent::Type::StateLoaded, .value = slot};
+}
+
+inline GUIEvent StateSaved(uint32 slot) {
+    return {.type = GUIEvent::Type::StateSaved, .value = slot};
 }
 
 } // namespace app::events::gui

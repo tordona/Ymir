@@ -124,7 +124,9 @@
 #include <cmrc/cmrc.hpp>
 
 #include <stb_image.h>
+#include <stb_image_write.h>
 
+#include <fmt/chrono.h>
 #include <fmt/std.h>
 
 #include <RtMidi.h>
@@ -855,6 +857,13 @@ void App::RunEmulator() {
             m_context.settings.video.fullScreen = !m_context.settings.video.fullScreen;
             m_context.settings.MakeDirty();
         });
+        inputContext.SetTriggerHandler(actions::general::TakeScreenshot, [&](void *, const input::InputElement &) {
+            m_context.EnqueueEvent(events::gui::TakeScreenshot());
+        });
+    }
+
+    // View
+    {
         inputContext.SetTriggerHandler(actions::view::ToggleFrameRateOSD, [&](void *, const input::InputElement &) {
             m_context.settings.gui.showFrameRateOSD = !m_context.settings.gui.showFrameRateOSD;
             m_context.settings.MakeDirty();
@@ -1920,7 +1929,8 @@ void App::RunEmulator() {
                 }
                 break;
             }
-            case EvtType::ReloadIPLROM: {
+            case EvtType::ReloadIPLROM: //
+            {
                 util::IPLROMLoadResult result = LoadIPLROM();
                 if (result.succeeded) {
                     m_context.EnqueueEvent(events::emu::HardReset());
@@ -1928,6 +1938,17 @@ void App::RunEmulator() {
                     OpenSimpleErrorModal(fmt::format("Failed to reload IPL ROM from \"{}\": {}", m_context.iplRomPath,
                                                      result.errorMessage));
                 }
+                break;
+            }
+
+            case EvtType::TakeScreenshot: //
+            {
+                auto now = std::chrono::system_clock::now();
+                auto screenshotPath = m_context.profile.GetPath(ProfilePath::Screenshots) /
+                                      fmt::format("{}-{:%Y%m%d-%H%M%S}.png", m_context.GetGameFileName(), now);
+                stbi_write_png(fmt::format("{}", screenshotPath).c_str(), screen.width, screen.height, 4,
+                               screen.framebuffers[1].data(), screen.width * sizeof(uint32));
+                m_context.DisplayMessage(fmt::format("Screenshot saved to {}", screenshotPath));
                 break;
             }
 

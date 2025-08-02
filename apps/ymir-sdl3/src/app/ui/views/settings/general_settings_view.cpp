@@ -204,6 +204,7 @@ void GeneralSettingsView::Display() {
         drawRow("Persistent state", ProfilePath::PersistentState);
         drawRow("Save states", ProfilePath::SaveStates);
         drawRow("Dumps", ProfilePath::Dumps);
+        drawRow("Screenshots", ProfilePath::Screenshots);
 
         ImGui::EndTable();
     }

@@ -14,6 +14,7 @@ enum class ProfilePath {
     PersistentState, // Persistent app state   <profile>/state/
     SaveStates,      // Save states            <profile>/savestates/
     Dumps,           // Memory dumps           <profile>/dumps/
+    Screenshots,     // Screenshots            <profile>/screenshots/
 
     _Count,
 };

@@ -7,6 +7,7 @@ In development.
 ### New features and improvements
 
 - App: Added a button to copy the version string from the About window.
+- App: Added hotkey to take screenshots (bound to F12 by default). (#350)
 - App: Added option to automatically load most recently loaded game disc image on startup.
 - App: Auto-center About window whenever it is opened.
 - App: Display error dialog on unhandled exceptions.
@@ -61,6 +62,7 @@ In development.
 - VDP2: Fix race conditions with threaded deinterlacing causing some artifacts on RBGs in single-density interlaced mode.
 - VDP2: RBG1 uses Rotation Parameter B, not A.
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
+
 
 ## Version 0.1.6
 
