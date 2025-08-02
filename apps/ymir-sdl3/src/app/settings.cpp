@@ -649,7 +649,7 @@ void Settings::ResetToDefaults() {
     using namespace ymir::core;
 
     general.preloadDiscImagesToRAM = false;
-    general.rememberLastLoadedDisc = true;
+    general.rememberLastLoadedDisc = false;
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
     general.enableRewindBuffer = false;
