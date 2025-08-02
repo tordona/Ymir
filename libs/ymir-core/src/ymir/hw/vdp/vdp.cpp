@@ -5968,6 +5968,11 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
 
     auto fetchBitmapData = [&](uint32 address) {
         const uint32 bank = (address >> 17u) & 3u;
+        if (!bgParams.charPatAccess[bank]) {
+            vramFetcher.bitmapData.fill(0);
+            return;
+        }
+
         const uint32 offset = bgParams.bitmapDataOffset[bank];
 
         if (vramFetcher.UpdateBitmapDataAddress(address)) {
