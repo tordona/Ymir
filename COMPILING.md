@@ -12,9 +12,10 @@ Ymir has been successfully compiled with the following toolchains:
 - Clang 18.1.3 on WSL Ubuntu 24.04.5 LTS (`clang` / `clang++`)
 - Clang 19.1.1 on Ubuntu 24.04.2 LTS (`clang-19` / `clang++-19`)
 - GCC 14.2.0 on Ubuntu 24.04.2 LTS (`gcc-14` / `g++-14`)
+- Clang 19.1.7 on FreeBSD 14.3-RELEASE (`clang19` / `clang++19`)
 - Apple Clang 17 on macOS 15 Sequoia
 
-The project has been compiled for x86_64 and ARM64 Windows, Linux and macOS platforms.
+The project has been compiled for x86_64 and ARM64 Windows, Linux, FreeBSD and macOS platforms.
 
 Clang is the preferred compiler for it's multiplatform support and excellent code generation. Ymir requires Clang 15 or later.
 
@@ -66,6 +67,63 @@ You can use CMake to build the project, regardless of generator:
 
 ```sh
 cmake --build build --parallel
+```
+
+
+## Building on FreeBSD
+
+To build Ymir on FreeBSD, first you will need to install SDL3's required dependencies:
+
+```sh
+pkg install libX11 libXext libXrandr libXrender libglvnd
+```
+
+The compiler of choice for this platform is Clang. Although a Clang compiler toolchain
+is provided with a base install of FreeBSD, it lacks the required `clang-scan-deps`
+binary. It is required to install a complete LLVM toolchain:
+
+```sh
+pkg install llvm
+```
+
+Finally, install CMake. Compiling with Ninja is generally recommended:
+
+```sh
+pkg install cmake ninja
+```
+
+Use CMake to generate a Makefile or (preferably) a Ninja build script. It is necessary
+to tell CMake to use the correct compiler from the previous LLVM installation. The
+`llvm` package is a meta-package which installs a specific version. For example, if
+it installs `llvm19`, then use `clang19` and `clang++19`. It is also recommended to
+add the paths `/usr/local/include` and `/usr/local/lib` to the build environment:
+
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER="clang19" -DCMAKE_CXX_COMPILER="clang++19" -DCMAKE_C_FLAGS="/usr/local/include" -DCMAKE_CXX_FLAGS="/usr/local/include" -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/lib"
+```
+
+Pass additional `-D<option>=<value>` parameters to tune the build. See the [Build configuration](#build-configuration) section above for details.
+
+You can use CMake to build the project, regardless of generator:
+
+```sh
+cmake --build build --parallel
+```
+
+If you have ALSA libraries installed during compilation (`alsa-libs` package is
+installed), the vendored dependency RtMidi will be build with ALSA support. Ymir
+will fail to start because RtMidi tries to access `/dev/snd/seq`, which isn't available
+on FreeBSD out-of-the box. There are three ways to circumvent this problem:
+
+- deinstall `alsa-libs` prior to compiling
+- include the `-DRTMIDI_API_ALSA=off` parameter during CMake generation
+- install `alsa-seq-server` on the system and start its service
+
+Ymir uses SDL3's Dialog API. This requires an installed dialog driver in order for
+the file dialogs to work in Ymir. Install Zenity:
+
+```sh
+pkg install zenity
 ```
 
 
