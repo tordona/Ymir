@@ -1944,8 +1944,12 @@ void App::RunEmulator() {
             case EvtType::TakeScreenshot: //
             {
                 auto now = std::chrono::system_clock::now();
-                auto screenshotPath = m_context.profile.GetPath(ProfilePath::Screenshots) /
-                                      fmt::format("{}-{:%Y%m%d-%H%M%S}.png", m_context.GetGameFileName(), now);
+                auto localNow = util::to_local_time(now);
+                auto fracTime =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
+                auto screenshotPath =
+                    m_context.profile.GetPath(ProfilePath::Screenshots) /
+                    fmt::format("{}-{:%Y%m%d-%H%M%S}_{}.png", m_context.GetGameFileName(), localNow, fracTime);
                 stbi_write_png(fmt::format("{}", screenshotPath).c_str(), screen.width, screen.height, 4,
                                screen.framebuffers[1].data(), screen.width * sizeof(uint32));
                 m_context.DisplayMessage(fmt::format("Screenshot saved to {}", screenshotPath));
