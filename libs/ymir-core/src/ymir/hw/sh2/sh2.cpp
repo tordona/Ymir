@@ -3652,6 +3652,14 @@ uint32 SH2::Probe::DelaySlotTarget() const {
     return m_sh2.m_delaySlotTarget;
 }
 
+bool SH2::Probe::GetSleepState() const {
+    return m_sh2.m_sleep;
+}
+
+void SH2::Probe::SetSleepState(bool sleep) {
+    m_sh2.m_sleep = sleep;
+}
+
 void SH2::Probe::ExecuteDiv32() {
     m_sh2.ExecuteDiv32<true>();
 }

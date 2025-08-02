@@ -31,6 +31,7 @@ void SH2DebugToolbarView::Display() {
     }
     const bool master = m_sh2.IsMaster();
     const bool enabled = master || m_context.saturn.IsSlaveSH2Enabled();
+    auto &probe = m_sh2.GetProbe();
 
     ImGui::BeginDisabled(!enabled);
     {
@@ -106,6 +107,13 @@ void SH2DebugToolbarView::Display() {
     if (!m_context.saturn.IsDebugTracingEnabled()) {
         ImGui::EndDisabled();
     }
+    ImGui::SameLine();
+    bool asleep = probe.GetSleepState();
+    if (ImGui::Checkbox("Asleep", &asleep)) {
+        probe.SetSleepState(asleep);
+    }
+    widgets::ExplanationTooltip("Whether the CPU is in standby or sleep mode due to executing the SLEEP instruction.",
+                                m_context.displayScale);
 
     ImGui::EndGroup();
 }

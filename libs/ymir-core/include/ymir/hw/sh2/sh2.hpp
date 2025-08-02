@@ -268,6 +268,9 @@ public:
         bool IsInDelaySlot() const;
         uint32 DelaySlotTarget() const;
 
+        bool GetSleepState() const;
+        void SetSleepState(bool sleep);
+
         // ---------------------------------------------------------------------
         // On-chip peripheral registers
 
