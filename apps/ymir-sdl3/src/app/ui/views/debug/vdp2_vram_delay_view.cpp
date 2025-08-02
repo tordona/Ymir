@@ -287,25 +287,25 @@ void VDP2VRAMDelayView::Display() {
                         std::vector<const char *> delayedBanks{};
 
                         if (regs2.vramControl.partitionVRAMA) {
-                            if (bgParams.bitmapDelay[0] && bgParams.bitmapDelay[1]) {
+                            if (bgParams.bitmapDataOffset[0] > 0 && bgParams.bitmapDataOffset[1] > 0) {
                                 delayedBanks.push_back("A0/1");
-                            } else if (bgParams.bitmapDelay[0]) {
+                            } else if (bgParams.bitmapDataOffset[0] > 0) {
                                 delayedBanks.push_back("A0");
-                            } else if (bgParams.bitmapDelay[1]) {
+                            } else if (bgParams.bitmapDataOffset[1] > 0) {
                                 delayedBanks.push_back("A1");
                             }
-                        } else if (bgParams.bitmapDelay[0]) {
+                        } else if (bgParams.bitmapDataOffset[0] > 0) {
                             delayedBanks.push_back("A");
                         }
                         if (regs2.vramControl.partitionVRAMB) {
-                            if (bgParams.bitmapDelay[2] && bgParams.bitmapDelay[3]) {
+                            if (bgParams.bitmapDataOffset[2] > 0 && bgParams.bitmapDataOffset[3] > 0) {
                                 delayedBanks.push_back("B0/1");
-                            } else if (bgParams.bitmapDelay[2]) {
+                            } else if (bgParams.bitmapDataOffset[2] > 0) {
                                 delayedBanks.push_back("B0");
-                            } else if (bgParams.bitmapDelay[3]) {
+                            } else if (bgParams.bitmapDataOffset[3] > 0) {
                                 delayedBanks.push_back("B1");
                             }
-                        } else if (bgParams.bitmapDelay[2]) {
+                        } else if (bgParams.bitmapDataOffset[2] > 0) {
                             delayedBanks.push_back("B");
                         }
 

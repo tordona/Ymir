@@ -1133,6 +1133,7 @@ void VDP::BeginVPhaseLastLine() {
 
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2BeginFrame());
+        VDP2CalcAccessPatterns(m_state.regs2);
     } else {
         VDP2InitFrame();
     }
@@ -2637,7 +2638,7 @@ FORCE_INLINE std::array<uint8, kVDP2VRAMSize> &VDP::VDP2GetVRAM() {
 }
 
 void VDP::VDP2InitFrame() {
-    const VDP2Regs &regs2 = VDP2GetRegs();
+    VDP2Regs &regs2 = VDP2GetRegs();
     if (regs2.bgEnabled[5]) {
         VDP2InitRotationBG<0>();
         VDP2InitRotationBG<1>();
@@ -2648,7 +2649,7 @@ void VDP::VDP2InitFrame() {
         VDP2InitNormalBG<2>();
         VDP2InitNormalBG<3>();
     }
-    VDP2CalcAccessPatterns();
+    VDP2CalcAccessPatterns(regs2);
 }
 
 template <uint32 index>
@@ -3105,9 +3106,7 @@ FORCE_INLINE void VDP::VDP2CalcWindowLogic(uint32 y, const WindowSet<hasSpriteWi
     }
 }
 
-FORCE_INLINE void VDP::VDP2CalcAccessPatterns() {
-    VDP2Regs &regs2 = VDP2GetRegs();
-
+FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
     if (!regs2.accessPatternsDirty) [[likely]] {
         return;
     }
@@ -3119,7 +3118,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns() {
 
     // Clear bitmap delay flags
     for (uint32 bgIndex = 0; bgIndex < 4; ++bgIndex) {
-        regs2.bgParams[bgIndex + 1].bitmapDelay.fill(false);
+        regs2.bgParams[bgIndex + 1].bitmapDataOffset.fill(0);
     }
 
     // Build access pattern masks for NBG0-3 PNs and CPs.
@@ -3127,11 +3126,47 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns() {
     std::array<uint8, 4> pn = {0, 0, 0, 0}; // pattern name access masks
     std::array<uint8, 4> cp = {0, 0, 0, 0}; // character pattern access masks
 
-    // Whether there have been character pattern accesses for bitmap BGs on each VRAM bank
-    std::array<std::array<bool, 4>, 4> bmCP{};
+    // TODO: this should probably be extended to scroll NBGs too
 
-    for (uint8 bankIndex = 0; const auto &bank : regs2.cyclePatterns.timings) {
-        for (uint8 i = 0; auto timing : bank) {
+    // How many bitmap CP accesses there have been so far per NBG
+    std::array<uint8, 4> bmAccesses = {0, 0, 0, 0};
+
+    // How many bitmap CP accesses are required for each bitmap NBG (in log base 2)
+    std::array<uint8, 4> bmRequiredAccessShift = {0, 0, 0, 0};
+    for (uint32 nbg = 0; nbg < 4; ++nbg) {
+        auto &bgParams = regs2.bgParams[nbg + 1];
+        if (!bgParams.bitmap) {
+            continue;
+        }
+
+        uint8 &expectedCount = bmRequiredAccessShift[nbg];
+
+        // Start with a base count of 1 (2**0)
+        expectedCount = 0;
+
+        // Apply ZMCTL modifiers
+        if ((nbg == 0 && regs2.ZMCTL.N0ZMQT) || (nbg == 1 && regs2.ZMCTL.N1ZMQT)) {
+            expectedCount += 2;
+        } else if ((nbg == 0 && regs2.ZMCTL.N0ZMHF) || (nbg == 1 && regs2.ZMCTL.N1ZMHF)) {
+            expectedCount += 1;
+        }
+
+        // Apply color format modifiers
+        switch (bgParams.colorFormat) {
+        case ColorFormat::Palette16: break;
+        case ColorFormat::Palette256: expectedCount += 1; break;
+        case ColorFormat::Palette2048: expectedCount += 2; break;
+        case ColorFormat::RGB555: expectedCount += 2; break;
+        case ColorFormat::RGB888: expectedCount += 3; break;
+        }
+    }
+
+    for (uint8 i = 0; i < 8; ++i) {
+        // Whether a bitmap CP access has been found in this timing slot per NBG
+        std::array<bool, 4> bmHasAccess = {false, false, false, false};
+
+        for (uint8 bankIndex = 0; const auto &bank : regs2.cyclePatterns.timings) {
+            const auto timing = bank[i];
             switch (timing) {
             case CyclePatterns::PatNameNBG0: [[fallthrough]];
             case CyclePatterns::PatNameNBG1: [[fallthrough]];
@@ -3155,44 +3190,52 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns() {
                 //
                 // Test cases
                 //
-                // Res  ZM  Color   CP mapping  Delay?  Game screen
-                // hi   1x  pal256  CP T0-T1     no     Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
-                // hi   1x  pal256  CP T2-T3     yes    Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
-                // hi   1x  pal256  CP T0-T1     no     Duke Nukem 3D, Netlink pages
-                // hi   1x  pal256  CP T0-T3     no     Sonic Jam, art gallery
-                // hi   1x  rgb555  CP T0-T3     no     Steam Heart's, title screen
-                // lo   1x  pal16   CP T0-T3     no     Groove on Fight, scrolling background in Options screen
-                // lo   1x  pal256  CP T0-T1     no     Mr. Bones, in-game graphics
-                // lo   1x  pal256  CP T0-T1     no     DoDonPachi, title screen background
-                // lo   1x  pal256  CP T0-T1     no     Jung Rhythm, title screen
-                // lo   1x  pal256  CP T0-T1     no     The Need for Speed, menus
-                // lo   1x  pal256  CP T2-T3     no     The Legend of Oasis, in-game HUD
-                // lo   1x  rgb555  CP T0-T3     no     Jung Rhythm, title screen
-                // lo   1x  rgb888  CP T0-T7     no     Street Fighter Zero 3, Capcom logo FMV
+                //  # Res  ZM  Color   CP mapping    Delay?  Game screen
+                //  1 hi   1x  pal256  CP0 01..      no      Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
+                //  2 hi   1x  pal256  CP0 ..23      yes     Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
+                //  3 hi   1x  pal256  CP0 01..      no      Doukyuusei - if, title screen
+                //  4 hi   1x  pal256  CP1 ..23      no      Doukyuusei - if, title screen
+                //  5 hi   1x  pal256  CP? 01..      no      Duke Nukem 3D, Netlink pages
+                //  6 hi   1x  pal256  CP? 0123      no      Sonic Jam, art gallery
+                //  7 hi   1x  rgb555  CP? 0123      no      Steam Heart's, title screen
+                //  8 lo   1x  pal16   CP? 0123....  no      Groove on Fight, scrolling background in Options screen
+                //  9 lo   1x  pal256  CP? 01......  no      Mr. Bones, in-game graphics
+                // 10 lo   1x  pal256  CP? 01......  no      DoDonPachi, title screen background
+                // 11 lo   1x  pal256  CP? 01......  no      Jung Rhythm, title screen
+                // 12 lo   1x  pal256  CP? 01......  no      The Need for Speed, menus
+                // 13 lo   1x  pal256  CP? ..23....  no      The Legend of Oasis, in-game HUD
+                // 14 lo   1x  rgb555  CP? 0123....  no      Jung Rhythm, title screen
+                // 15 lo   1x  rgb888  CP? 01234567  no      Street Fighter Zero 3, Capcom logo FMV
                 //
-                // So far none of the lo-res games have bitmap delays.
-                // The only case of delay seems to imply that the bitmap data is only delayed if read too late.
-                // It might be the case that setting up T5-T8 on lo-res causes a delay too.
-                if (regs2.bgParams[bgIndex + 1].bitmap) {
-                    if (hires && i >= 2 && !bmCP[bgIndex][bankIndex]) {
-                        regs2.bgParams[bgIndex + 1].bitmapDelay[bankIndex] = true;
+                // Seems like the "delay" is caused by configuring multiple reads to the same NBG in a single cycle.
+                // In cases #1 and #2, CP0 needs two cycles, but is assigned 2x2 cycles to read data.
+                // Data from VRAM bank A is read fine, but VRAM bank B seems to be "pushed ahead" by 8 bytes, as if the
+                // address counter gets confused. Seems to be very similar to what happens to VC reads.
+                // In cases #3 and #4 we have the same display settings but CP0 gets two cycles and CP1 gets two cycles.
+                // These cause no "delay".
+
+                auto &bgParams = regs2.bgParams[bgIndex + 1];
+                if (bgParams.bitmap) {
+                    if (!bmHasAccess[bgIndex]) {
+                        bmHasAccess[bgIndex] = true;
+                        ++bmAccesses[bgIndex];
                     }
-                    bmCP[bgIndex][bankIndex] = true;
+                    const uint32 numAccesses = bmAccesses[bgIndex];
+                    const uint32 accessShift = bmRequiredAccessShift[bgIndex];
+                    bgParams.bitmapDataOffset[bankIndex] = ((numAccesses - 1u) >> accessShift) * 8u;
                 }
                 break;
             }
 
             default: break;
             }
-
-            // Stop at T3 if in hi-res mode
-            if (hires && i == 3) {
-                break;
-            }
-
-            ++i;
+            ++bankIndex;
         }
-        ++bankIndex;
+
+        // Stop at T3 if in hi-res mode
+        if (hires && i == 3) {
+            break;
+        }
     }
 
     // Apply delays to the NBGs
@@ -3357,14 +3400,14 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns() {
         for (uint32 i = 0; i < 5; i++) {
             regs2.bgParams[i].charPatAccess[1] = regs2.bgParams[i].charPatAccess[0];
             regs2.bgParams[i].patNameAccess[1] = regs2.bgParams[i].patNameAccess[0];
-            regs2.bgParams[i].bitmapDelay[1] = regs2.bgParams[i].bitmapDelay[0];
+            regs2.bgParams[i].bitmapDataOffset[1] = regs2.bgParams[i].bitmapDataOffset[0];
         }
     }
     if (!regs2.vramControl.partitionVRAMB) {
         for (uint32 i = 0; i < 5; i++) {
             regs2.bgParams[i].charPatAccess[3] = regs2.bgParams[i].charPatAccess[2];
             regs2.bgParams[i].patNameAccess[3] = regs2.bgParams[i].patNameAccess[2];
-            regs2.bgParams[i].bitmapDelay[3] = regs2.bgParams[i].bitmapDelay[2];
+            regs2.bgParams[i].bitmapDataOffset[3] = regs2.bgParams[i].bitmapDataOffset[2];
         }
     }
 
@@ -5925,12 +5968,10 @@ FORCE_INLINE VDP::Pixel VDP::VDP2FetchBitmapPixel(const BGParams &bgParams, uint
 
     auto fetchBitmapData = [&](uint32 address) {
         const uint32 bank = (address >> 17u) & 3u;
-        const bool delayed = bgParams.bitmapDelay[bank];
+        const uint32 offset = bgParams.bitmapDataOffset[bank];
 
         if (vramFetcher.UpdateBitmapDataAddress(address)) {
-            if (delayed) {
-                address += 8; // TODO: not quite correct, but it should work in most cases
-            }
+            address += offset;
 
             // TODO: handle VRSIZE.VRAMSZ
             auto &vram = VDP2GetRendererVRAM();

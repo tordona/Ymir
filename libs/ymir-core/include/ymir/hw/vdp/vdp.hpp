@@ -1204,7 +1204,9 @@ private:
                              const std::array<WindowParams, 2> &windowParams, std::span<bool> windowState);
 
     // Computes the access patterns for NBGs and RBGs.
-    void VDP2CalcAccessPatterns();
+    //
+    // regs2 is a reference to the set of VDP2 registers to use as reference
+    void VDP2CalcAccessPatterns(VDP2Regs &regs2);
 
     // Prepares the specified VDP2 scanline for rendering.
     //

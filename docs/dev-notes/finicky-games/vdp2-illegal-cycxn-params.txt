@@ -15,8 +15,11 @@ Rayman
   Sets up illegal vertical cell scroll fetch timing for NBG1, causing it to be delayed.
 
 Capcom Generation - Dai-5-shuu Kakutouka-tachi 
-  Sets up illegal character pattern read cycles for NBG0 bitmap data in VRAM bank B in the image gallery, causing the
+  Sets up multiple character pattern read cycles for NBG0 bitmap data in VRAM bank B in the image gallery, causing the
   bottom portion of the image (starting at Y=256) to be shifted left. The game compensates for that in VRAM.
+  This is in contrast with Doukyuusei - if, which sets up NBG0 and NBG1 with very similar parameters but sets up one
+  pair of CP0s in VRAM A and one pair of CP1s in VRAM B, meaning each NBG reads only one bitmap chunk instead of two
+  per cycle.
 
 Battle Arena Toshinden Remix
   Sets up multiple PN accesses for NBG2 in-game to display UI elements.

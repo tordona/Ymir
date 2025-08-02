@@ -112,13 +112,40 @@ cycles must be assigned to each bank.
 Character pattern accesses for bitmap BGs
 -----------------------------------------
 
-Bitmap data reads also follow timing restrictions on CP cycles, although they don't need PN cycles. Since bitmaps may
-span multiple VRAM banks, the access restrictions apply to each VRAM bank separately. Setting up invalid timings in one
-bank and correct timings in another will cause the bitmap BG to be sliced and shifted where the picture switches banks.
+Bitmap data is read in chunks of 8 bytes. The same rules for CP access cycle count based on ZMCTL reduction and color
+depth applies here. If multiple reads are done for a particular NBG, only the latest chunk is used; all other chunks are
+discarded.
 
-Bitmap data is read in chunks of 8 bytes.
+For example, if you set up NBG0 as a bitmap image with 256-color palette and no reduction, the total number of cycles
+required to fetch the data is 1*2*1 = 2 cycles. Suppose you use a high-resolution mode and set up the following access
+cycles (seen in Capcom Generation - Dai-5-shuu Kakutouka-tachi):
 
-(TODO: bitmap access restrictions table; currently unknown)
+   Bank  T0  T1  T2  T3
+   A     CP0 CP0
+   B             CP0 CP0
+
+The two CP0 reads from VRAM bank A will occur normally and the internal address is incremented by 8. Then the two CP0
+reads from VRAM bank B will follow using the updated address which causes the second part of the bitmap image to be
+shifted left.
+
+If you set up the following access patterns instead:
+
+   Bank  T0  T1  T2  T3
+   A     CP0 CP0 CP0 CP0
+   B
+
+then bitmap data can only be read from VRAM bank A and will always be advanced by +8 bytes, because the first block read
+on T0-T1 will be discarded in favor of the second block read at T2-T3.
+
+If you also set up NBG1 with the same parameters as NBG0 and use the following timings (seen in Doukyuusei - if):
+
+   Bank  T0  T1  T2  T3
+   A     CP0 CP0
+   B             CP1 CP1
+
+then both NBG0 and NBG1 will read exactly one chunk of bitmap data each without interfering with the address, since each
+NBG has its own address counter.
+
 
 
 Vertical cell scroll accesses
