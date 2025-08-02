@@ -36,7 +36,7 @@ jobs:
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
           -DYmir_ENABLE_YMDASM=ON
-          -DYmir_ENABLE_LTO=OFF
+          -DYmir_ENABLE_IPO=OFF
           -S ${{ github.workspace }}
           -G Ninja
 
@@ -73,7 +73,7 @@ jobs:
   #         -DYmir_ENABLE_IMGUI_DEMO=OFF
   #         -DYmir_ENABLE_SANDBOX=OFF
   #         -DYmir_ENABLE_YMDASM=ON
-  #         -DYmir_ENABLE_LTO=OFF
+  #         -DYmir_ENABLE_IPO=OFF
   #         -S ${{ github.workspace }}
   #         -G Ninja
 
@@ -120,7 +120,7 @@ jobs:
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
           -DYmir_ENABLE_YMDASM=ON
-          -DYmir_ENABLE_LTO=OFF
+          -DYmir_ENABLE_IPO=OFF
           -S ${{ github.workspace }}
           -G Ninja
 
@@ -167,7 +167,7 @@ jobs:
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
           -DYmir_ENABLE_YMDASM=ON
-          -DYmir_ENABLE_LTO=OFF
+          -DYmir_ENABLE_IPO=OFF
           -S ${{ github.workspace }}
           -G Ninja
 
@@ -255,7 +255,7 @@ jobs:
           -DYmir_ENABLE_IMGUI_DEMO=OFF
           -DYmir_ENABLE_SANDBOX=OFF
           -DYmir_ENABLE_YMDASM=ON
-          -DYmir_ENABLE_LTO=OFF
+          -DYmir_ENABLE_IPO=OFF
           -S ${{ github.workspace }}
           -G Ninja
 
