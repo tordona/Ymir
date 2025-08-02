@@ -121,11 +121,15 @@ void RegisterExceptionHandler(bool allExceptions) {
 
     #elif defined(_M_ARM64) || defined(__aarch64__)
 
-    fmt::format_to(out, "R0={:016X} R1={:016X} R2={:016X} R3={:016X}\n", cr->R0, cr->R1, cr->R2, cr->R3);
-    fmt::format_to(out, "R4={:016X} R5={:016X} R6={:016X} R7={:016X}\n", cr->R4, cr->R5, cr->R6, cr->R7);
-    fmt::format_to(out, "R8={:016X} R9={:016X} R10={:016X} R11={:016X}\n", cr->R8, cr->R9, cr->R10, cr->R11);
-    fmt::format_to(out, "R12={:016X}\n", cr->R12);
-    fmt::format_to(out, "SP={:X} LR={:X} PC={:X} CPSR={:X}", cr->Sp, cr->Lr, cr->Pc, cr->Cpsr);
+        fmt::format_to(out, " X0={:016X}  X1={:016X}  X2={:016X}  X3={:016X}\n", cr->X0, cr->X1, cr->X2, cr->X3);
+        fmt::format_to(out, " X4={:016X}  X5={:016X}  X6={:016X}  X7={:016X}\n", cr->X4, cr->X5, cr->X6, cr->X7);
+        fmt::format_to(out, " X8={:016X}  X9={:016X} X10={:016X} X11={:016X}\n", cr->X8, cr->X9, cr->X10, cr->X11);
+        fmt::format_to(out, "X12={:016X} X13={:016X} X14={:016X} X15={:016X}\n", cr->X12, cr->X13, cr->X14, cr->X15);
+        fmt::format_to(out, "X16={:016X} X17={:016X} X18={:016X} X19={:016X}\n", cr->X16, cr->X17, cr->X18, cr->X19);
+        fmt::format_to(out, "X20={:016X} X21={:016X} X22={:016X} X23={:016X}\n", cr->X20, cr->X21, cr->X22, cr->X23);
+        fmt::format_to(out, "X24={:016X} X25={:016X} X26={:016X} X27={:016X}\n", cr->X24, cr->X25, cr->X26, cr->X27);
+        fmt::format_to(out, "X28={:016X}  FP={:016X}  LR={:016X}  SP={:016X}\n", cr->X28, cr->Fp, cr->Lr, cr->Sp);
+        fmt::format_to(out, "PC={:X} CPSR={:X}", cr->Pc, cr->Cpsr);
 
     #endif
 
@@ -171,9 +175,9 @@ void RegisterExceptionHandler(bool allExceptions) {
 
         fmt::format_to(out, "Content information:\n");
 
-#if defined(__linux__)
+    #if defined(__linux__)
 
-    #if defined(_M_X64) || defined(__x86_64__)
+        #if defined(_M_X64) || defined(__x86_64__)
 
         auto *gregs = mcontext.gregs;
         fmt::format_to(out, "RAX={:016X} RBX={:016X} RCX={:016X} RDX={:016X}\n", gregs[REG_RAX], gregs[REG_RBX],
@@ -187,7 +191,7 @@ void RegisterExceptionHandler(bool allExceptions) {
         fmt::format_to(out, "CSFSGS={:016X} RIP={:016X} EFlags={:08X}", gregs[REG_CSGSFS], gregs[REG_RIP],
                        gregs[REG_EFL]);
 
-    #elif defined(_M_ARM64) || defined(__aarch64__)
+        #elif defined(_M_ARM64) || defined(__aarch64__)
 
         auto *regs = mcontext.regs;
         fmt::format_to(out, "R0={:016X} R1={:016X} R2={:016X} R3={:016X}\n", regs[0], regs[1], regs[2], regs[3]);
@@ -204,11 +208,11 @@ void RegisterExceptionHandler(bool allExceptions) {
         fmt::format_to(out, "R28={:016X} R29={:016X} R30={:016X}\n", regs[28], regs[29], regs[30]);
         fmt::format_to(out, "SP={:X} PC={:X} pstate={:X}", mcontext.sp, mcontext.pc, mcontext.pstate);
 
-    #endif
+        #endif
 
-#else // __FreeBSD__
+    #else // __FreeBSD__
 
-    #if defined(_M_X64) || defined(__x86_64__)
+        #if defined(_M_X64) || defined(__x86_64__)
 
         fmt::format_to(out, "RAX={:016X} RBX={:016X} RCX={:016X} RDX={:016X}\n", mcontext.mc_rax, mcontext.mc_rbx,
                        mcontext.mc_rcx, mcontext.mc_rdx);
@@ -222,13 +226,13 @@ void RegisterExceptionHandler(bool allExceptions) {
                        mcontext.mc_ds, mcontext.mc_es, mcontext.mc_fs, mcontext.mc_gs, mcontext.mc_ss);
         fmt::format_to(out, "RIP={:016X} RFlags={:016X}", mcontext.mc_rip, mcontext.mc_rflags);
 
-    #elif defined(_M_ARM64) || defined(__aarch64__)
+        #elif defined(_M_ARM64) || defined(__aarch64__)
 
-        // TODO: implement
+                // TODO: implement
+
+        #endif
 
     #endif
-
-#endif
 
         std::string errMsg = fmt::to_string(buf);
 
