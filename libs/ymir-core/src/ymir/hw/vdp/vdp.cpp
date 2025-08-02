@@ -3688,13 +3688,18 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     }
     const uint32 colorIndex = params.colorDataOffset + spriteData.colorData;
     const Color888 color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
-    /*if (color.msb == 0) {
+    if (spriteData.special == SpriteData::Special::Transparent) {
         // Transparent pixel, don't bother plotting it
         if constexpr (!applyMesh) {
             layerState.pixels.transparent[x] = true;
+            attr.shadowOrWindow = false;
+            attr.normalShadow = false;
+            if constexpr (transparentMeshes) {
+                attr.transparentMesh = false;
+            }
         }
         return;
-    }*/
+    }
     if constexpr (applyMesh) {
         // If the pixel in the sprite layer is transparent, write the mesh color as is and mark the pixel as
         // "transparent mesh" to be handled in VDP2ComposeLine, otherwise blend with the existing pixel.
@@ -3708,11 +3713,10 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
             layerColor.b = (color.b + layerColor.b) >> 1u;
             layerColor.msb = color.msb;
         }
-        layerState.pixels.transparent[x] = false;
     } else {
         layerState.pixels.color[x] = color;
-        layerState.pixels.transparent[x] = spriteData.special == SpriteData::Special::Transparent;
     }
+    layerState.pixels.transparent[x] = false;
     layerState.pixels.priority[x] = params.priorities[spriteData.priority];
 
     attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
@@ -4986,8 +4990,13 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     // Gather shadow data
     alignas(16) std::array<bool, kMaxResH> layer0ShadowEnabled;
     for (uint32 x = 0; x < m_HRes; x++) {
-        const LayerIndex layer = scanline_layers[x][0];
+        // Sprite layer is beneath top layer
+        if (m_layerStates[altFieldSrc][0].pixels.priority[x] < scanline_layerPrios[x][0]) {
+            layer0ShadowEnabled[x] = false;
+            continue;
+        }
 
+        // Sprite layer doesn't have shadow
         const bool isNormalShadow = m_spriteLayerState[altFieldSrc].attrs[x].normalShadow;
         const bool isMSBShadow =
             !regs.spriteParams.spriteWindowEnable && m_spriteLayerState[altFieldSrc].attrs[x].shadowOrWindow;
@@ -4996,6 +5005,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
             continue;
         }
 
+        const LayerIndex layer = scanline_layers[x][0];
         switch (layer) {
         case LYR_Sprite: layer0ShadowEnabled[x] = m_spriteLayerState[altFieldSrc].attrs[x].shadowOrWindow; break;
         case LYR_Back: layer0ShadowEnabled[x] = regs.backScreenParams.shadowEnable; break;

@@ -55,12 +55,12 @@ In development.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
 - VDP1: Reorder LOPR, COPR, CEF and BEF updates. Fixes missing graphics in Virtual On - Cyber Troopers and Sega Touring CARS. (#112, #246)
 - VDP1: Use SCU DMA bus notification to adjust VDP1 VRAM write timing penalty. Fixes hanging intro FMV in Sonic Jam without breaking Mega Man X3's sprites. (#83)
+- VDP2: Don't apply sprite shadow if sprite priority is lower than the top layer. Fixes shadows drawing on top of objects in Blue Seed - Kushinada Hirokuden. (#349)
+- VDP2: Don't blend line screen with layer 1 if line screen color calculations are disabled. Fixes fog in battle backgrounds in Zanma Chou Ougi - Valhollian. (#352)
 - VDP2: Don't increment vertical scroll BG coordinate on complementary field lines when rendering deinterlaced RBG lines. Fixes jittery/interlaced Grandia FMVs when deinterlace is enabled.
 - VDP2: Fix race conditions with threaded deinterlacing causing some artifacts on RBGs in single-density interlaced mode.
 - VDP2: RBG1 uses Rotation Parameter B, not A.
-- VDP2: Don't blend line screen with layer 1 if line screen color calculations are disabled. Fixes fog in battle backgrounds in Zanma Chou Ougi - Valhollian. (#352)
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
-
 
 ## Version 0.1.6
 
