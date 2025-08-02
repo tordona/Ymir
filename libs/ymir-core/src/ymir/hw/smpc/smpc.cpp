@@ -537,6 +537,7 @@ FORCE_INLINE void SMPC::WritePDR1(uint8 value) {
         PDR1 = value;
     } else {
         const uint8 prevPDR1 = PDR1;
+        m_port1.UpdateInputs();
         PDR1 = m_port1.WritePDR(DDR1, value);
         if (m_extLatchEnable1 && bit::test<6>((prevPDR1 ^ PDR1) & DDR1)) {
             m_cbPadInterruptCallback();
@@ -550,6 +551,7 @@ FORCE_INLINE void SMPC::WritePDR2(uint8 value) {
         PDR2 = value;
     } else {
         const uint8 prevPDR2 = PDR2;
+        m_port2.UpdateInputs();
         PDR2 = m_port2.WritePDR(DDR2, value);
         if (m_extLatchEnable2 && bit::test<6>((prevPDR2 ^ PDR2) & DDR2)) {
             m_cbPadInterruptCallback();

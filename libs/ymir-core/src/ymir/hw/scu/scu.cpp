@@ -627,7 +627,7 @@ void SCU::RunDMA() {
 
         // NOTE: These assignments as well as the first buffer read should be done at the start of every transfer.
         // This only works as is because we're running full transfers at once.
-        // If at some point this code is refactored to run individual transfers, these values must be move to the
+        // If at some point this code is refactored to run individual transfers, these values must be moved to the
         // DMAChannel struct and be set at the start of every transfer.
         //
         // These values are only needed for B-Bus writes because they're completely illogical.

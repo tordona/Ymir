@@ -35,9 +35,9 @@ uint8 ControlPad::WritePDR(uint8 ddr, uint8 value) {
     switch (ddr & 0x7F) {
     case 0x40: // TH control mode
         if (value & 0x40) {
-            return 0x70 | bit::extract<0, 3>(btnValue);
+            return 0x70 | 0b0100;
         } else {
-            return 0x30 | bit::extract<12, 15>(btnValue);
+            return 0x30 | 0b0101;
         }
         break;
     case 0x60: // TH/TR control mode

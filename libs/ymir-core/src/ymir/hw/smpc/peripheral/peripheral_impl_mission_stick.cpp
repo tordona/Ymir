@@ -92,7 +92,6 @@ uint8 MissionStick::WritePDR(uint8 ddr, uint8 value) {
     switch (ddr & 0x7F) {
     case 0x40: // TH control mode
         // Mega Drive peripheral ID acquisition sequence
-        // TODO: check correctness
         if (value & 0x40) {
             return 0x70 | 0b0001;
         } else {

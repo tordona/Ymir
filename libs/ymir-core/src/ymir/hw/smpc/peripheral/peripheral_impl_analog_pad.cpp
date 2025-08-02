@@ -84,9 +84,9 @@ uint8 AnalogPad::WritePDR(uint8 ddr, uint8 value) {
             }
         } else {
             if (value & 0x40) {
-                return 0x70 | (bit::extract<3>(btnValue) << 3) | 0b100;
+                return 0x70 | 0b0100;
             } else {
-                return 0x30 | bit::extract<12, 15>(btnValue);
+                return 0x30 | 0b0101;
             }
         }
         break;
