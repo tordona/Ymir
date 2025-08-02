@@ -174,6 +174,54 @@ jobs:
       - name: Build
         run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel
 
+  build-freebsd-x64:
+    name: freebsd-x64
+    runs-on: ubuntu-latest
+    # strategy:
+    #   matrix:
+    #     architecture: [ arm64, x86-64 ]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set reusable strings
+        id: strings
+        shell: bash
+        run: |
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+      - uses: cross-platform-actions/action@v0.29.0
+        with:
+          operating_system: freebsd
+          # architecture: ${{ matrix.architecture }}
+          architecture: x86-64
+          version: '14.3'
+          run: |
+            sudo pkg upgrade -y
+            sudo pkg install -y cmake evdev-proto libX11 libXcursor libXext libXfixes \
+              libXi libXrandr libXrender libXScrnSaver libglvnd libinotify llvm19 \
+              ninja pkgconf vulkan-loader
+
+            cmake -B ${{ steps.strings.outputs.build-output-dir }} \
+              -DCMAKE_CXX_COMPILER=clang++19 \
+              -DCMAKE_CXX_FLAGS=-I/usr/local/include \
+              -DCMAKE_C_COMPILER=clang19 \
+              -DCMAKE_C_FLAGS=-I/usr/local/include \
+              -DCMAKE_EXE_LINKER_FLAGS=-L/usr/local/lib \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DYmir_ENABLE_DEVLOG=OFF \
+              -DYmir_ENABLE_IMGUI_DEMO=OFF \
+              -DYmir_ENABLE_SANDBOX=OFF \
+              -DYmir_ENABLE_YMDASM=ON \
+              -DYmir_ENABLE_IPO=OFF \
+              -S ${{ github.workspace }} \
+              -G Ninja
+
+            cmake --build ${{ steps.strings.outputs.build-output-dir }} --parallel
+
   build-macos:
     name: macos-${{ matrix.arch.name }}
     runs-on: macos-latest
