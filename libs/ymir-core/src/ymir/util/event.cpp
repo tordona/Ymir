@@ -17,6 +17,8 @@
     #include <sys/syscall.h>
     #include <sys/time.h>
     #include <unistd.h>
+#elif defined(__FreeBSD__)
+    #include <sys/umtx.h>
 #endif
 
 namespace util {
@@ -104,6 +106,44 @@ void Event::Set() {
 
 void Event::Reset() {
     m_value.store(0, std::memory_order_relaxed);
+}
+
+#elif defined(__FreeBSD__)
+
+// Mirror the Linux implementation by replacing the Linux-specific futex(2)
+// syscall with the equivalent FreeBSD-specific _umtx_op(2) libc interface.
+// Intra-process futexes are only available for unsigned integers.
+
+Event::Event(bool set) noexcept
+    : m_value(set ? 1u : 0u) {}
+
+void Event::Wait() {
+    uint32 oldValue = m_value.load(std::memory_order_acquire);
+    while (oldValue == 0u) {
+        int result = _umtx_op(reinterpret_cast<uint32 *>(&m_value), UMTX_OP_WAIT_UINT_PRIVATE, oldValue, nullptr, nullptr);
+        if (result == -1) {
+            if (errno == EAGAIN) {
+                return;
+            }
+        }
+
+        oldValue = m_value.load(std::memory_order_acquire);
+    }
+}
+
+void Event::Set() {
+    m_value.store(1u, std::memory_order_release);
+
+    constexpr int numberOfWaitersToWakeUp = INT_MAX;
+
+    [[maybe_unused]] int numberOfWaitersWokenUp = _umtx_op(reinterpret_cast<uint32 *>(&m_value), UMTX_OP_WAKE_PRIVATE,
+                                                               numberOfWaitersToWakeUp, nullptr, nullptr);
+
+    assert(numberOfWaitersWokenUp != -1);
+}
+
+void Event::Reset() {
+    m_value.store(0u, std::memory_order_relaxed);
 }
 
 #else

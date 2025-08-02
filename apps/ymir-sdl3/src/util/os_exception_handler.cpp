@@ -15,6 +15,8 @@
     #include <signal.h>
 
     #include <bits/types/siginfo_t.h>
+#elif defined(__FreeBSD__)
+    #include <signal.h>
 #elif defined(__APPLE__)
 // TODO: exception handling
 #endif
@@ -144,10 +146,10 @@ void RegisterExceptionHandler(bool allExceptions) {
     g_vehPtr = nullptr;
 }*/
 
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__FreeBSD__)
 
 // -----------------------------------------------------------------------------
-// Linux implementation
+// Linux and FreeBSD implementation
 
 // static struct sigaction s_oldAction;
 
@@ -168,6 +170,8 @@ void RegisterExceptionHandler(bool allExceptions) {
         fmt::format_to(out, "\n");
 
         fmt::format_to(out, "Content information:\n");
+
+#if defined(__linux__)
 
     #if defined(_M_X64) || defined(__x86_64__)
 
@@ -201,6 +205,30 @@ void RegisterExceptionHandler(bool allExceptions) {
         fmt::format_to(out, "SP={:X} PC={:X} pstate={:X}", mcontext.sp, mcontext.pc, mcontext.pstate);
 
     #endif
+
+#else // __FreeBSD__
+
+    #if defined(_M_X64) || defined(__x86_64__)
+
+        fmt::format_to(out, "RAX={:016X} RBX={:016X} RCX={:016X} RDX={:016X}\n", mcontext.mc_rax, mcontext.mc_rbx,
+                       mcontext.mc_rcx, mcontext.mc_rdx);
+        fmt::format_to(out, "RSP={:016X} RBP={:016X} RSI={:016X} RDI={:016X}\n", mcontext.mc_rsp, mcontext.mc_rbp,
+                       mcontext.mc_rsi, mcontext.mc_rdi);
+        fmt::format_to(out, "R8={:016X} R9={:016X} R10={:016X} R11={:016X}\n", mcontext.mc_r8, mcontext.mc_r9,
+                       mcontext.mc_r10, mcontext.mc_r11);
+        fmt::format_to(out, "R12={:016X} R13={:016X} R14={:016X} R15={:016X}\n", mcontext.mc_r12, mcontext.mc_r13,
+                       mcontext.mc_r14, mcontext.mc_r15);
+        fmt::format_to(out, "CS={:02X} DS={:02X} ES={:02X} FS={:02X} GS={:02X} SS={:02X}\n", mcontext.mc_cs,
+                       mcontext.mc_ds, mcontext.mc_es, mcontext.mc_fs, mcontext.mc_gs, mcontext.mc_ss);
+        fmt::format_to(out, "RIP={:016X} RFlags={:016X}", mcontext.mc_rip, mcontext.mc_rflags);
+
+    #elif defined(_M_ARM64) || defined(__aarch64__)
+
+        // TODO: implement
+
+    #endif
+
+#endif
 
         std::string errMsg = fmt::to_string(buf);
 

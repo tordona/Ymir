@@ -40,6 +40,10 @@ static struct ThreadDynamicLink {
 
     #include <pthread.h>
 
+#elif defined(__FreeBSD__)
+
+    #include <pthread.h>
+
 #elif defined(__APPLE__)
 
     #include <pthread.h>
@@ -64,6 +68,10 @@ void SetCurrentThreadName(const char *threadName) {
     }
 
 #elif defined(__linux__)
+
+    pthread_setname_np(pthread_self(), threadName);
+
+#elif defined(__FreeBSD__)
 
     pthread_setname_np(pthread_self(), threadName);
 

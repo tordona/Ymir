@@ -11,6 +11,10 @@
     #include <atomic>
 #elif defined(__linux__)
     #include <atomic>
+#elif defined(__FreeBSD__)
+    #include <ymir/core/types.hpp>
+
+    #include <atomic>
 #else
     #include <condition_variable>
     #include <mutex>
@@ -65,8 +69,8 @@ namespace util {
 ///
 /// ```
 class Event {
-#if defined(_WIN32) || defined(__linux__)
-    // Windows- and Linux-specific implementation
+#if defined(_WIN32) || defined(__linux__) || defined(__FreeBSD__)
+    // Windows-, Linux- and FreeBSD-specific implementation
 
 public:
     /// @brief Constructs a new event with an initial signal state.
@@ -85,8 +89,10 @@ public:
 private:
     #ifdef _WIN32
     std::atomic<uint8> m_value;
-    #else // __linux__
+    #elif defined(__linux__)
     std::atomic<int> m_value;
+    #else // __FreeBSD__
+    std::atomic<uint32> m_value;
     #endif
 
 #else
