@@ -49,6 +49,7 @@ In development.
 - Save states: Added CD Block file system state to save state data.
 - Scheduler: Ensure events are executed in chronological order.
 - SCU: Fix A-Bus external interrupt handling.
+- SCU: Fix DMA source address updates when source address increment is zero. Fixes background priority issue regression in Street Fighter - Real Battle on Film. (#168)
 - SCU: Notify bus of DMA transfers.
 - SH2: Fix CPU getting stuck handling DMAC interrupts forever. Fixes Shellshock not booting. (#344)
 - SH2: Handle sleep/standby mode and wake up on interrupts. Fixes Culdcept getting stuck on intro FMV and boosts overall performance on games that make use of the SLEEP instruction. (#346)

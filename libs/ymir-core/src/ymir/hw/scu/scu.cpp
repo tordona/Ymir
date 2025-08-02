@@ -884,7 +884,7 @@ void SCU::RunDMA() {
             devlog::trace<grp::dma>("SCU DMA{}: Finished transfer", level);
             ch.active = false;
             if (ch.updateSrcAddr) {
-                ch.srcAddr = ch.currSrcAddr;
+                ch.srcAddr = (ch.currSrcAddr & ~3u) + bufPos;
             }
             if (ch.updateDstAddr) {
                 if (ch.indirect) {
