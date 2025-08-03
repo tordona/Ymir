@@ -83,7 +83,10 @@ namespace settings::video {
             "Noticeably impacts performance in those modes when enabled.\n"
             "It is highly recommended to enable the \"Threaded VDP2 renderer\" and \"Use dedicated thread for "
             "deinterlaced rendering\" options alongside this to lessen the performance impact.\n"
-            "A quad-core CPU or better is recommended to use this option.",
+            "A quad-core CPU or better is recommended to use this option.\n"
+            "\n"
+            "Very few games may exhibit graphics artifacts when this option is enabled. The only known case so far is "
+            "True Pinball.",
             ctx.displayScale);
     }
 
