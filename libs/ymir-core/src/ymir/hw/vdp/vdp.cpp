@@ -3187,8 +3187,9 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
 
                 // TODO: find the correct rules for bitmap accesses
                 //
-                // Test cases
+                // Test cases:
                 //
+                // clang-format off
                 //  # Res  ZM  Color   CP mapping    Delay?  Game screen
                 //  1 hi   1x  pal256  CP0 01..      no      Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
                 //  2 hi   1x  pal256  CP0 ..23      yes     Capcom Generation - Dai-5-shuu Kakutouka-tachi, art screens
@@ -3205,6 +3206,7 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
                 // 13 lo   1x  pal256  CP? ..23....  no      The Legend of Oasis, in-game HUD
                 // 14 lo   1x  rgb555  CP? 0123....  no      Jung Rhythm, title screen
                 // 15 lo   1x  rgb888  CP? 01234567  no      Street Fighter Zero 3, Capcom logo FMV
+                // clang-format on
                 //
                 // Seems like the "delay" is caused by configuring multiple reads to the same NBG in a single cycle.
                 // In cases #1 and #2, CP0 needs two cycles, but is assigned 2x2 cycles to read data.
@@ -3213,15 +3215,18 @@ FORCE_INLINE void VDP::VDP2CalcAccessPatterns(VDP2Regs &regs2) {
                 // In cases #3 and #4 we have the same display settings but CP0 gets two cycles and CP1 gets two cycles.
                 // These cause no "delay".
 
-                auto &bgParams = regs2.bgParams[bgIndex + 1];
-                if (bgParams.bitmap) {
-                    if (!bmHasAccess[bgIndex]) {
-                        bmHasAccess[bgIndex] = true;
-                        ++bmAccesses[bgIndex];
+                // TODO: seems to only apply to hi-res modes
+                if (hires) {
+                    auto &bgParams = regs2.bgParams[bgIndex + 1];
+                    if (bgParams.bitmap) {
+                        if (!bmHasAccess[bgIndex]) {
+                            bmHasAccess[bgIndex] = true;
+                            ++bmAccesses[bgIndex];
+                        }
+                        const uint32 numAccesses = bmAccesses[bgIndex];
+                        const uint32 accessShift = bmRequiredAccessShift[bgIndex];
+                        bgParams.bitmapDataOffset[bankIndex] = ((numAccesses - 1u) >> accessShift) * 8u;
                     }
-                    const uint32 numAccesses = bmAccesses[bgIndex];
-                    const uint32 accessShift = bmRequiredAccessShift[bgIndex];
-                    bgParams.bitmapDataOffset[bankIndex] = ((numAccesses - 1u) >> accessShift) * 8u;
                 }
                 break;
             }
