@@ -89,8 +89,8 @@ void VideoSettingsView::Display() {
     MakeDirty(
         ImGui::Checkbox("Use full refresh rate when synchronizing video", &settings.useFullRefreshRateWithVideoSync));
     widgets::ExplanationTooltip(
-        "When enabled, while in full screen, the GUI frame rate will be adjusted to the largest integer multiple of "
-        "the emulator's target frame rate that's not greater than your display's refresh rate.\n"
+        "When enabled, while synchronizing video, the GUI frame rate will be adjusted to the largest integer multiple "
+        "of the emulator's target frame rate that's not greater than your display's refresh rate.\n"
         "When disabled, the GUI frame rate will be limited to the emulator's target frame rate.\n"
         "Enabling this option can slightly reduce input latency on high refresh rate displays.",
         m_context.displayScale);
