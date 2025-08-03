@@ -1779,7 +1779,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
     const bool altFB = deinterlace && doubleDensity && (y & 1);
     if (doubleDensity) {
-        if (!deinterlace && regs1.dblInterlaceEnable && (y & 1) == regs1.dblInterlaceDrawLine) {
+        if (!deinterlace && regs1.dblInterlaceEnable && (y & 1) != regs1.dblInterlaceDrawLine) {
             return;
         }
     }
