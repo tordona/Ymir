@@ -640,8 +640,6 @@ void SCU::RunDMA() {
 
         const uint32 baseSrcAddr = ch.currSrcAddr;
         const uint32 baseDstAddr = ch.currDstAddr;
-        m_bus.NotifySCUDMA(baseSrcAddr, true);
-        m_bus.NotifySCUDMA(baseDstAddr, true);
 
         buf = m_bus.Read<uint32>(ch.currSrcAddr & ~3u);
         devlog::trace<grp::dma>("SCU DMA{}: Read from {:08X} -> {:08X}", level, ch.currSrcAddr & ~3u, buf);
@@ -688,8 +686,13 @@ void SCU::RunDMA() {
             ch.active = false;
             TriggerDMAIllegal();
             RecalcDMAChannel();
+            m_bus.NotifySCUDMA(baseSrcAddr, false);
+            m_bus.NotifySCUDMA(baseDstAddr, false);
             continue;
         }
+
+        m_bus.NotifySCUDMA(baseSrcAddr, true);
+        m_bus.NotifySCUDMA(baseDstAddr, true);
 
         // Increment the write address
         auto incDst = [&] {
