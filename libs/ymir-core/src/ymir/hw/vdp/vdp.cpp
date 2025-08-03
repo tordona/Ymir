@@ -1011,6 +1011,22 @@ void VDP::BeginHPhaseRightBorder() {
                 VDP1EraseFramebuffer();
             }
         }
+
+        // If we just entered the bottom blanking vertical phase, switch fields
+        if (m_state.regs2.TVMD.LSMDn != InterlaceMode::None) {
+            m_state.regs2.TVSTAT.ODD ^= 1;
+            devlog::trace<grp::base>("Switched to {} field", (m_state.regs2.TVSTAT.ODD ? "odd" : "even"));
+            if (m_threadedVDPRendering) {
+                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
+            }
+        } else {
+            if (m_state.regs2.TVSTAT.ODD != 1) {
+                m_state.regs2.TVSTAT.ODD = 1;
+                if (m_threadedVDPRendering) {
+                    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
+                }
+            }
+        }
     }
 
     // TODO: draw border
@@ -1067,24 +1083,6 @@ void VDP::BeginHPhaseLeftBorder() {
 
 void VDP::BeginHPhaseLastDot() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering last dot phase", m_state.regs2.VCNT);
-
-    // If we just entered the bottom blanking vertical phase, switch fields
-    if (m_state.regs2.VCNT == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
-        if (m_state.regs2.TVMD.LSMDn != InterlaceMode::None) {
-            m_state.regs2.TVSTAT.ODD ^= 1;
-            devlog::trace<grp::base>("Switched to {} field", (m_state.regs2.TVSTAT.ODD ? "odd" : "even"));
-            if (m_threadedVDPRendering) {
-                m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
-            }
-        } else {
-            if (m_state.regs2.TVSTAT.ODD != 1) {
-                m_state.regs2.TVSTAT.ODD = 1;
-                if (m_threadedVDPRendering) {
-                    m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
-                }
-            }
-        }
-    }
 }
 
 // ----
