@@ -840,6 +840,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
             parse("PersistentState", ProfilePath::PersistentState);
             parse("SaveStates", ProfilePath::SaveStates);
             parse("Dumps", ProfilePath::Dumps);
+            parse("Screenshots", ProfilePath::Screenshots);
         }
     }
 
@@ -1192,6 +1193,7 @@ SettingsSaveResult Settings::Save() {
                 {"PersistentState", m_context.profile.GetPathOverride(ProfilePath::PersistentState).native()},
                 {"SaveStates", m_context.profile.GetPathOverride(ProfilePath::SaveStates).native()},
                 {"Dumps", m_context.profile.GetPathOverride(ProfilePath::Dumps).native()},
+                {"Screenshots", m_context.profile.GetPathOverride(ProfilePath::Screenshots).native()},
             }}},
         }}},
 
