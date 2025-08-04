@@ -1062,12 +1062,12 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
                         }
                     }
                     if (auto tblAnalogPad = tblPort["AnalogPad"]) {
-                        if (auto tblBinds = tblPort["Binds"]) {
+                        if (auto tblBinds = tblAnalogPad["Binds"]) {
                             parseAnalogPadBinds(tblBinds);
                         }
                     }
                     if (auto tblArcadeRacer = tblPort["ArcadeRacer"]) {
-                        if (auto tblBinds = tblPort["Binds"]) {
+                        if (auto tblBinds = tblArcadeRacer["Binds"]) {
                             parseArcadeRacerBinds(tblBinds);
                         }
                         float sensitivity;
@@ -1076,7 +1076,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
                         portSettings.arcadeRacer.sensitivity = sensitivity;
                     }
                     if (auto tblMissionStick = tblPort["MissionStick"]) {
-                        if (auto tblBinds = tblPort["Binds"]) {
+                        if (auto tblBinds = tblMissionStick["Binds"]) {
                             parseMissionStickBinds(tblBinds);
                         }
                     }
