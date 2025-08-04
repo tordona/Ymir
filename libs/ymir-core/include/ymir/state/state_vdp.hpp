@@ -217,7 +217,7 @@ struct VDPState {
 
         struct RotationParamState {
             std::array<uint32, 16> pageBaseAddresses;
-            sint32 scrX, scrY;
+            sint32 Xst, Yst;
             uint32 KA;
         };
 

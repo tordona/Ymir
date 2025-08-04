@@ -496,9 +496,23 @@ void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, con
 }
 
 template <class Archive>
-void serialize(Archive &ar, VDPState::VDPRendererState::RotationParamState &s) {
+void serialize(Archive &ar, VDPState::VDPRendererState::RotationParamState &s, const uint32 version) {
+    // v8:
+    // - New fields
+    //   - Xst = 0
+    //   - Yst = 0
+    // - Removed fields
+    //   - sint32 scrX
+    //   - sint32 scrY
     ar(s.pageBaseAddresses);
-    ar(s.scrX, s.scrY);
+    if (version >= 8) {
+        ar(s.Xst, s.Yst);
+    } else {
+        sint32 scrX, scrY;
+        ar(scrX, scrY);
+        s.Xst = 0;
+        s.Yst = 0;
+    }
     ar(s.KA);
 }
 

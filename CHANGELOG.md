@@ -70,6 +70,7 @@ In development.
 - VDP2: Fix race conditions with threaded deinterlacing causing some artifacts on RBGs in single-density interlaced mode.
 - VDP2: Invert TVSTAT.ODD reads. Fixes garbled graphics on the top half of the screen in True Pinball. (#320)
 - VDP2: RBG1 uses Rotation Parameter B, not A.
+- VDP2: Rework rotation table calculations. Fixes warped ground on player two's screen in Sonic R multiplayer mode. (#401)
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
 - VDP2: Swap even/odd field when entering VBlank.
 

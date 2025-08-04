@@ -932,7 +932,7 @@ private:
             screenCoords.fill({});
             lineColor.fill({.u32 = 0});
             transparent.fill(false);
-            scrX = scrY = 0;
+            Xst = Yst = 0;
             KA = 0;
         }
 
@@ -956,7 +956,7 @@ private:
         alignas(16) std::array<bool, kMaxResH> transparent;
 
         // Current base screen coordinates, updated every scanline.
-        sint32 scrX, scrY;
+        sint32 Xst, Yst;
 
         // Current base coefficient address, updated every scanline.
         uint32 KA;

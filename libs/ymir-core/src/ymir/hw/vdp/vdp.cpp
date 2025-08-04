@@ -423,8 +423,8 @@ void VDP::SaveState(state::VDPState &state) const {
 
     for (size_t i = 0; i < 2; i++) {
         state.renderer.rotParamStates[i].pageBaseAddresses = m_rotParamStates[i].pageBaseAddresses;
-        state.renderer.rotParamStates[i].scrX = m_rotParamStates[i].scrX;
-        state.renderer.rotParamStates[i].scrY = m_rotParamStates[i].scrY;
+        state.renderer.rotParamStates[i].Xst = m_rotParamStates[i].Xst;
+        state.renderer.rotParamStates[i].Yst = m_rotParamStates[i].Yst;
         state.renderer.rotParamStates[i].KA = m_rotParamStates[i].KA;
     }
 
@@ -503,8 +503,8 @@ void VDP::LoadState(const state::VDPState &state) {
 
     for (size_t i = 0; i < 2; i++) {
         m_rotParamStates[i].pageBaseAddresses = state.renderer.rotParamStates[i].pageBaseAddresses;
-        m_rotParamStates[i].scrX = state.renderer.rotParamStates[i].scrX;
-        m_rotParamStates[i].scrY = state.renderer.rotParamStates[i].scrY;
+        m_rotParamStates[i].Xst = state.renderer.rotParamStates[i].Xst;
+        m_rotParamStates[i].Yst = state.renderer.rotParamStates[i].Yst;
         m_rotParamStates[i].KA = state.renderer.rotParamStates[i].KA;
     }
 
@@ -2800,23 +2800,36 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
 
         // Calculate parameters
 
+        if (readXst) {
+            state.Xst = t.Xst;
+            params.readXst = false;
+        } else {
+            state.Xst += t.deltaXst;
+        }
+        if (readYst) {
+            state.Yst = t.Yst;
+            params.readYst = false;
+        } else {
+            state.Yst += t.deltaYst;
+        }
+        if (readKAst) {
+            state.KA = t.KAst;
+            params.readKAst = false;
+        } else {
+            state.KA += t.dKAst;
+        }
+
         // Transformed starting screen coordinates
         // 16*(16-16) + 16*(16-16) + 16*(16-16) = 32 frac bits
         // reduce to 16 frac bits
-        const sint64 Xsp = (t.A * (t.Xst - t.Px) + t.B * (t.Yst - t.Py) + t.C * (t.Zst - t.Pz)) >> 16ll;
-        const sint64 Ysp = (t.D * (t.Xst - t.Px) + t.E * (t.Yst - t.Py) + t.F * (t.Zst - t.Pz)) >> 16ll;
+        const sint64 Xsp = (t.A * (state.Xst - t.Px) + t.B * (state.Yst - t.Py) + t.C * (t.Zst - t.Pz)) >> 16ll;
+        const sint64 Ysp = (t.D * (state.Xst - t.Px) + t.E * (state.Yst - t.Py) + t.F * (t.Zst - t.Pz)) >> 16ll;
 
         // Transformed view coordinates
         // 16*(16-16) + 16*(16-16) + 16*(16-16) + 16 + 16 = 32+32+32 + 16+16
         // reduce 32 to 16 frac bits, result is 16 frac bits
         /***/ sint64 Xp = ((t.A * (t.Px - t.Cx) + t.B * (t.Py - t.Cy) + t.C * (t.Pz - t.Cz)) >> 16ll) + t.Cx + t.Mx;
         const sint64 Yp = ((t.D * (t.Px - t.Cx) + t.E * (t.Py - t.Cy) + t.F * (t.Pz - t.Cz)) >> 16ll) + t.Cy + t.My;
-
-        // Screen coordinate increments per Vcnt
-        // 16*16 + 16*16 = 32
-        // reduce to 16 frac bits
-        const sint64 scrXIncV = (t.A * t.deltaXst + t.B * t.deltaYst) >> 16ll;
-        const sint64 scrYIncV = (t.D * t.deltaXst + t.E * t.deltaYst) >> 16ll;
 
         // Screen coordinate increments per Hcnt
         // 16*16 + 16*16 = 32 frac bits
@@ -2829,19 +2842,9 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
         sint64 kx = t.kx;
         sint64 ky = t.ky;
 
-        if (readXst) {
-            state.scrX = Xsp;
-        }
-        if (readYst) {
-            state.scrY = Ysp;
-        }
-        if (readKAst) {
-            state.KA = t.KAst;
-        }
-
         // Current screen coordinates (16 frac bits) and coefficient address (10 frac bits)
-        sint32 scrX = state.scrX;
-        sint32 scrY = state.scrY;
+        sint32 scrX = Xsp;
+        sint32 scrY = Ysp;
         uint32 KA = state.KA;
 
         // Current sprite coordinates (16 frac bits)
@@ -2926,16 +2929,6 @@ FORCE_INLINE void VDP::VDP2CalcRotationParameterTables(uint32 y) {
                 sprY += t.deltaY;
             }
         }
-
-        // Increment screen coordinates and coefficient table address by Vcnt for the next iteration
-        state.scrX += scrXIncV;
-        state.scrY += scrYIncV;
-        state.KA += t.dKAst;
-
-        // Disable read flags now that we've dealt with them
-        params.readXst = false;
-        params.readYst = false;
-        params.readKAst = false;
     }
 }
 
