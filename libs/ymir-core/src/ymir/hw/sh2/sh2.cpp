@@ -327,9 +327,9 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
         m_cyclesExecuted += InterpretNext<debug, enableCache>();
 
         // If PC is not in any of these places, something went horribly wrong
-        util::dev_assert((PC & 1) == 0);
-        util::dev_assert((PC >> 29u) == 0b000 || (PC >> 29u) == 0b001 || (PC >> 29u) == 0b100 || (PC >> 29u) == 0b101 ||
-                         (PC >> 29u) == 0b110);
+        YMIR_DEV_ASSERT((PC & 1) == 0);
+        YMIR_DEV_ASSERT((PC >> 29u) == 0b000 || (PC >> 29u) == 0b001 || (PC >> 29u) == 0b100 || (PC >> 29u) == 0b101 ||
+                        (PC >> 29u) == 0b110);
 
         // Check for breakpoints in debug tracing mode
         if constexpr (debug) {

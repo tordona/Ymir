@@ -4,23 +4,34 @@
 @file
 @brief Development-time assertions.
 
-Defines the `util::dev_assert(bool)` function which checks for a precondition, breaking into the debugger if it fails.
-Useful to check for unexpected or unimplemented cases.
+Defines the following macros:
+- `YMIR_DEV_ASSERT(bool)`: checks for a precondition, breaking into the debugger if it fails.
+- `YMIR_DEV_CHECK()`: breaks into the debugger immediately.
+
+These macros are useful to check for unexpected or unimplemented cases.
 
 Development assertions must be enabled by defining the `Ymir_DEV_ASSERTIONS` macro with a truthy value.
 */
-#include "inline.hpp"
 
-namespace util {
+/**
+@def YMIR_DEV_ASSERT
+@brief Performs a development-time assertion, breaking into the debugger if the condition fails.
+@param[in] condition the condition to check
+*/
 
-/// @brief Performs a development-time assertion, breaking into the debugger if the condition fails.
-/// @param[in] condition the condition to check
-FORCE_INLINE void dev_assert(bool condition) {
 #if Ymir_DEV_ASSERTIONS
-    if (!condition) {
-        __debugbreak();
-    }
-#endif
-}
+    #define YMIR_DEV_ASSERT(cond) \
+        do {                      \
+            if (!(cond)) {        \
+                __debugbreak();   \
+            }                     \
+        } while (false)
 
-} // namespace util
+    #define YMIR_DEV_CHECK() \
+        do {                 \
+            __debugbreak();  \
+        } while (false)
+#else
+    #define YMIR_DEV_ASSERT(cond)
+    #define YMIR_DEV_CHECK(cond)
+#endif

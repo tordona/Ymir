@@ -1,5 +1,6 @@
 #include <ymir/media/filesystem.hpp>
 
+#include <ymir/util/dev_assert.hpp>
 #include <ymir/util/scope_guard.hpp>
 
 #include <xxh3.h>
@@ -58,6 +59,7 @@ bool Filesystem::Read(const Disc &disc) {
     for (uint32 sectorIndex = 150; sectorIndex < 166; sectorIndex++) {
         // Fail if we can't read the sector
         if (!track.ReadSectorUserData(sectorIndex, buf)) {
+            YMIR_DEV_CHECK();
             return false;
         }
         XXH3_128bits_update(xxh3State, buf.data(), buf.size());
@@ -68,6 +70,7 @@ bool Filesystem::Read(const Disc &disc) {
     for (uint32 sectorIndex = volumeDescAddress;; sectorIndex++) {
         // Fail if we can't read the sector
         if (!track.ReadSectorUserData(sectorIndex, buf)) {
+            YMIR_DEV_CHECK();
             return false;
         }
         XXH3_128bits_update(xxh3State, buf.data(), buf.size());
@@ -75,6 +78,7 @@ bool Filesystem::Read(const Disc &disc) {
         // Try reading volume descriptor; fail if invalid
         VolumeDescriptorHeader volDescHeader{};
         if (!volDescHeader.Read(buf)) {
+            YMIR_DEV_CHECK();
             return false;
         }
 
@@ -82,6 +86,7 @@ bool Filesystem::Read(const Disc &disc) {
         if (volDescHeader.type == VolumeDescriptorType::Terminator) {
             sgInvalidate.Cancel();
             if (!IsValid()) {
+                YMIR_DEV_CHECK();
                 return false;
             } else {
                 m_currDirectory = 0;
@@ -99,17 +104,20 @@ bool Filesystem::Read(const Disc &disc) {
         if (volDescHeader.type == VolumeDescriptorType::Primary) {
             VolumeDescriptor volDesc{};
             if (!volDesc.Read(buf)) {
+                YMIR_DEV_CHECK();
                 return false;
             }
 
             // Try reading the path table records from the disc; fail on error
             if (!ReadPathTableRecords(track, volDesc)) {
+                YMIR_DEV_CHECK();
                 return false;
             }
         }
     }
 
     // Fail if we somehow get here without finding a terminator
+    YMIR_DEV_CHECK();
     return false;
 }
 
