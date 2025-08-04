@@ -270,9 +270,11 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
 
     // Buffer for path table sector data
     std::array<uint8, 2048> pathTableBuf{};
+    std::vector<uint8> pathTableTempBuf{};
 
     // Buffer for directory record sector data
     std::array<uint8, 2048> dirRecBuf{};
+    std::vector<uint8> dirRecTempBuf{};
 
     // Read all path table records
     const uint32 pathSectorCount = (volDesc.pathTableSize + 2047) / 2048;
@@ -284,9 +286,34 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
         PathTableRecord pathTableRecord{};
         for (uint32 pathRecIndex = 0;; pathRecIndex += pathTableRecord.recordSize) {
             // Try reading the path table record
-            if (!pathTableRecord.Read({pathTableBuf.begin() + pathRecIndex, pathTableBuf.end()})) {
-                return false;
+            const std::span<uint8> pathRecBufData{pathTableBuf.begin() + pathRecIndex, pathTableBuf.end()};
+
+            if (!pathTableTempBuf.empty()) {
+                // Use leftover buffer to read a complete entry
+                const uint32 pathRecSize = PathTableRecord::ReadSize(pathTableTempBuf);
+                pathRecIndex -= pathTableTempBuf.size();
+                pathTableTempBuf.insert(pathTableTempBuf.end(), pathRecBufData.begin(),
+                                        pathRecBufData.begin() + pathRecSize - pathTableTempBuf.size());
+                if (!pathTableRecord.Read(pathTableTempBuf)) {
+                    return false;
+                }
+
+                pathTableTempBuf.clear();
+            } else {
+                const uint32 pathRecSize = PathTableRecord::ReadSize(pathRecBufData);
+                if (pathRecSize <= pathRecBufData.size()) {
+                    // Read directly from buffer if the record fits
+                    if (!pathTableRecord.Read(pathRecBufData)) {
+                        return false;
+                    }
+                } else {
+                    // Make a temporary buffer with whatever data we have so far
+                    pathTableTempBuf.clear();
+                    pathTableTempBuf.insert(pathTableTempBuf.end(), pathRecBufData.begin(), pathRecBufData.end());
+                    break;
+                }
             }
+
             // Bail out if this is the last record in the current sector
             if (pathTableRecord.recordSize == 0) {
                 break;
@@ -326,8 +353,32 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
                 DirectoryRecord subdirRecord{};
                 for (;;) {
                     // Try reading the directory record
-                    if (!subdirRecord.Read({dirRecBuf.begin() + dirRecOffset, dirRecBuf.end()})) {
-                        break;
+                    const std::span<uint8> dirRecBufData{dirRecBuf.begin() + dirRecOffset, dirRecBuf.end()};
+
+                    if (!dirRecTempBuf.empty()) {
+                        // Use leftover buffer to read a complete entry
+                        const uint32 dirRecSize = DirectoryRecord::ReadSize(dirRecTempBuf);
+                        dirRecOffset -= dirRecTempBuf.size();
+                        dirRecTempBuf.insert(dirRecTempBuf.end(), dirRecBufData.begin(),
+                                             dirRecBufData.begin() + dirRecSize - dirRecTempBuf.size());
+                        if (!subdirRecord.Read(dirRecTempBuf)) {
+                            return false;
+                        }
+
+                        dirRecTempBuf.clear();
+                    } else {
+                        const uint32 dirRecSize = DirectoryRecord::ReadSize(dirRecBufData);
+                        if (dirRecSize <= dirRecBufData.size()) {
+                            // Read directly from buffer if the record fits
+                            if (!subdirRecord.Read(dirRecBufData)) {
+                                return false;
+                            }
+                        } else {
+                            // Make a temporary buffer with whatever data we have so far
+                            dirRecTempBuf.clear();
+                            dirRecTempBuf.insert(dirRecTempBuf.end(), dirRecBufData.begin(), dirRecBufData.end());
+                            break;
+                        }
                     }
                     // Bail out if this is the end of the list
                     if (subdirRecord.recordSize == 0) {

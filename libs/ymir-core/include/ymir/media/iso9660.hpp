@@ -138,6 +138,17 @@ struct DirectoryRecord {
     std::string fileID;
     uint16 fileVersion;
 
+    // Retrieves the directory record size at the start of the given input span.
+    // 0 indicates the directory table record list terminator.
+    // 0xFFFFFFFF means the size could not be read because the input span is empty.
+    static uint32 ReadSize(std::span<uint8> input) {
+        // Ensure there's enough data to read the static fields
+        if (input.empty()) {
+            return 0xFFFFFFFF;
+        }
+        return input[0];
+    }
+
     // Fills in this record with data from the start of the given span.
     // Returns true if the record has been fully read.
     // If false, the record may have been partially updated or not modified.
@@ -213,6 +224,23 @@ struct PathTableRecord {
     uint16 parentDirNumber;
 
     std::string directoryID;
+
+    // Retrieves the path record size at the start of the given input span.
+    // 0 indicates a path table record list terminator.
+    // 0xFFFFFFFF means the size could not be read because the input span is empty.
+    static uint32 ReadSize(std::span<uint8> input) {
+        // Ensure there's enough data to read the static fields
+        if (input.empty()) {
+            return 0xFFFFFFFF;
+        }
+
+        const uint8 dirIDLength = input[0];
+        if (dirIDLength == 0) {
+            // Blank record (reading past the end of the list)
+            return 0;
+        }
+        return (dirIDLength + 1 + 8) & ~1;
+    }
 
     // Fills in this record with data from the start of the given span.
     // Returns true if the record has been fully read.

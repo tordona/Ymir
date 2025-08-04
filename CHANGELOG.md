@@ -41,6 +41,7 @@ In development.
 - CD Block: Don't disconnect CD device from when setting the fail output of filter. Fixes Digital Dance Mix Vol. 1 - Namie Amuro playback.
 - CD Block: Fix directory indexing for ReadDirectory and ChangeDirectory commands. Fixes Sega Rally Championship Plus (Japan) not booting.
 - CD Block: Fix handling of "no change" playback end parameter. Fixes Astal taking a long time to load the first stage.
+- CD Block: Properly read path table and directory records that cross the boundary between two CD sectors. Fixes Mizuki Shigeru no Youkai Zukan Soushuuhen booting back to BIOS. (#391)
 - CD Block: Read subheader data from CD-ROM Mode 2 tracks only and fix their addressing. Fixes missing intro FMV in NiGHTS into Dreams... (#46)
 - Media: Add support for CD-ROM Mode 2 tracks. Fixes Last Bronx not booting. (#238)
 - Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Hopefully fixes some Last Bronx dumps not booting.
