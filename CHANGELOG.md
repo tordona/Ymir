@@ -52,6 +52,7 @@ In development.
 - SCU: Fix A-Bus external interrupt handling.
 - SCU: Fix DMA source address updates when source address increment is zero. Fixes background priority issue regression in Street Fighter - Real Battle on Film. (#168)
 - SCU: Notify bus of DMA transfers.
+- Settings: Disable "Include VDP1 rendering in VDP2 renderer thread" by default and don't enable it in presets.
 - SH2: Fix CPU getting stuck handling DMAC interrupts forever. Fixes Shellshock not booting. (#344)
 - SH2: Handle sleep/standby mode and wake up on interrupts. Fixes Culdcept getting stuck on intro FMV and boosts overall performance on games that make use of the SLEEP instruction. (#346)
 - SMPC: Fixed TH control mode reports on SH-2 direct mode. Fixes input response in World Heroes Perfect, Touge King the Spirits, Chaos Control Remix, and Father Christmas. (#297, #322, #348, #374)

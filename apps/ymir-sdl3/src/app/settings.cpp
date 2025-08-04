@@ -729,7 +729,7 @@ void Settings::ResetToDefaults() {
     video.transparentMeshes = false;
     video.threadedVDP = true;
     video.threadedDeinterlacer = true;
-    video.includeVDP1InRenderThread = true;
+    video.includeVDP1InRenderThread = false;
 
     audio.volume = 0.8;
     audio.mute = false;
