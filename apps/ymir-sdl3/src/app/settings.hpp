@@ -31,6 +31,8 @@
 
 namespace app {
 
+inline constexpr std::string_view kSettingsFile = "Ymir.toml";
+
 struct SettingsLoadResult {
     enum class Type { Success, TOMLParseError, UnsupportedConfigVersion };
 
