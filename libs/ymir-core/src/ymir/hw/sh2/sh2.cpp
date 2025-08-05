@@ -323,11 +323,19 @@ FLATTEN uint64 SH2::Advance(uint64 cycles, uint64 spilloverCycles) {
     }
 
     while (m_cyclesExecuted < cycles) {
+        // [[maybe_unused]] uint32 prevPC = PC; // debug aid
+
         // TODO: choose between interpreter (cached or uncached) and JIT recompiler
         m_cyclesExecuted += InterpretNext<debug, enableCache>();
 
         // If PC is not in any of these places, something went horribly wrong
-        YMIR_DEV_ASSERT((PC & 1) == 0);
+
+        // Address bits 28 and 27 are disconnected and games generally don't use these mirrors.
+        // Might not always be horribly wrong, but is highly likely to be a bad jump.
+        // Unaligned addresses (bit 0 set) are a sign of potential memory corruption.
+        YMIR_DEV_ASSERT((PC & 0x18000000) == 0);
+        // PC should be in the cached and uncached spaces or the cache data array areas.
+        // Anywhere else is highly suspicious or outright forbidden by the CPU.
         YMIR_DEV_ASSERT((PC >> 29u) == 0b000 || (PC >> 29u) == 0b001 || (PC >> 29u) == 0b100 || (PC >> 29u) == 0b101 ||
                         (PC >> 29u) == 0b110);
 
@@ -365,9 +373,10 @@ template uint64 SH2::Advance<true, true>(uint64, uint64);
 
 template <bool debug, bool enableCache>
 FLATTEN uint64 SH2::Step() {
-    m_cyclesExecuted = InterpretNext<debug, enableCache>();
+    m_cyclesExecuted = 0; // so that AdvanceWDT/FRT sync to the scheduler time
     AdvanceWDT<false>();
     AdvanceFRT<false>();
+    m_cyclesExecuted = InterpretNext<debug, enableCache>();
     return m_cyclesExecuted;
 }
 

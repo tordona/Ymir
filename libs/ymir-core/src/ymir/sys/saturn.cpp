@@ -375,7 +375,16 @@ bool Saturn::Run() {
                 }
             }
         } while (execCycles < cycles);
-        m_ssh2SpilloverCycles = slaveCycles - execCycles;
+        if constexpr (debug) {
+            // If the SSH2 hits a breakpoint early, the cycle count may be shorter than the total executed cycles.
+            if (slaveCycles > execCycles) {
+                m_ssh2SpilloverCycles = slaveCycles - execCycles;
+            } else {
+                m_msh2SpilloverCycles = execCycles - slaveCycles;
+            }
+        } else {
+            m_ssh2SpilloverCycles = slaveCycles - execCycles;
+        }
     } else {
         do {
             const uint64 prevExecCycles = execCycles;
