@@ -66,19 +66,21 @@ void SH2DebugToolbarView::Display() {
             ImGui::TextUnformatted("Resume (Space, R)");
             ImGui::EndTooltip();
         }
-
-        ImGui::SameLine();
-
-        if (ImGui::Button(ICON_MS_REPLAY)) {
-            m_context.EnqueueEvent(events::emu::HardReset());
-        }
-        if (ImGui::BeginItemTooltip()) {
-            ImGui::TextUnformatted("Hard reset (Ctrl+R)");
-            ImGui::EndTooltip();
-        }
     }
     ImGui::EndDisabled();
+
     ImGui::SameLine();
+
+    if (ImGui::Button(ICON_MS_REPLAY)) {
+        m_context.EnqueueEvent(events::emu::HardReset());
+    }
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::TextUnformatted("Hard reset (Ctrl+R)");
+        ImGui::EndTooltip();
+    }
+
+    ImGui::SameLine();
+
     if (ImGui::Button(ICON_MS_MASKED_TRANSITIONS)) {
         m_context.EnqueueEvent(events::gui::OpenSH2BreakpointsWindow(m_sh2.IsMaster()));
     }
