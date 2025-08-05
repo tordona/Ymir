@@ -683,9 +683,13 @@ void SCU::RunDMA() {
             } else if (dstBus == BusID::None) {
                 devlog::trace<grp::dma>("SCU DMA{}: Invalid destination bus; transfer ignored", level);
             }
-            ch.active = false;
-            TriggerDMAIllegal();
-            RecalcDMAChannel();
+            if (ch.indirect && !ch.endIndirect) {
+                DMAReadIndirectTransfer(level);
+            } else {
+                ch.active = false;
+                TriggerDMAIllegal();
+                RecalcDMAChannel();
+            }
             m_bus.NotifySCUDMA(baseSrcAddr, false);
             m_bus.NotifySCUDMA(baseDstAddr, false);
             continue;
