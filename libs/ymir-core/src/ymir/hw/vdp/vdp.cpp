@@ -2085,6 +2085,10 @@ FORCE_INLINE void VDP::VDP1ClearMeshPixel(bool altFB, uint32 fbIndex, uint32 off
 
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control control) {
+    if (!m_layerEnabled[0]) {
+        return;
+    }
+
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x06);
@@ -2164,6 +2168,10 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
 
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control) {
+    if (!m_layerEnabled[0]) {
+        return;
+    }
+
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x06);
@@ -2328,6 +2336,10 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
 
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control) {
+    if (!m_layerEnabled[0]) {
+        return;
+    }
+
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
     const uint16 color = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x06);
@@ -2410,6 +2422,10 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
 
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
+    if (!m_layerEnabled[0]) {
+        return;
+    }
+
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
 
@@ -2476,6 +2492,10 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
 
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
+    if (!m_layerEnabled[0]) {
+        return;
+    }
+
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
 
@@ -2539,6 +2559,10 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
 
 template <bool deinterlace, bool transparentMeshes>
 void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
+    if (!m_layerEnabled[0]) {
+        return;
+    }
+
     auto &ctx = m_VDP1RenderContext;
     const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
 
@@ -5321,7 +5345,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
         const uint32 maxScrollX = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftH);
         const uint32 maxScrollY = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftV);
 
-        if (windowState[x]) {
+        if (windowState[xx]) {
             // Make pixel transparent if inside a window
             layerState.pixels.transparent[xx] = true;
             if (doubleResH) {
@@ -5402,7 +5426,7 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
         const uint32 maxScrollX = usingFixed512 ? 512 : bgParams.bitmapSizeH;
         const uint32 maxScrollY = usingFixed512 ? 512 : bgParams.bitmapSizeV;
 
-        if (windowState[x]) {
+        if (windowState[xx]) {
             // Make pixel transparent if inside a window
             layerState.pixels.transparent[xx] = true;
             if (doubleResH) {
