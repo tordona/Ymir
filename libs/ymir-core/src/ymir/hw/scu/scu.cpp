@@ -266,7 +266,6 @@ void SCU::TriggerDMAIllegal() {
     if (m_intrStatus.SCU_DMAIllegal != 1) {
         m_intrStatus.SCU_DMAIllegal = 1;
         UpdateMasterInterruptLevel();
-        TriggerDMATransfer(DMATrigger::SpriteDrawEnd);
     }
 }
 
