@@ -114,23 +114,23 @@ private:
 
     // Reads a value from memory.
     // 32-bit reads are be split into two 16-bit reads in ascending address order.
-    // instrFetch determines if this is an program (true) or data (false) read.
+    // instrFetch determines if this is a program (true) or data (false) read.
     template <mem_primitive T, bool instrFetch>
     T MemRead(uint32 address);
 
     // Reads a value from memory.
     // 32-bit reads are be split into two 16-bit reads in descending address order.
-    // instrFetch determines if this is an program (true) or data (false) read.
+    // instrFetch determines if this is a program (true) or data (false) read.
     template <mem_primitive T, bool instrFetch>
     T MemReadDesc(uint32 address);
 
     // Writes a value to memory.
-    // 32-bit write are be split into two 16-bit reads in descending address order.
+    // 32-bit write are be split into two 16-bit writes in descending address order.
     template <mem_primitive T>
     void MemWrite(uint32 address, T value);
 
     // Writes a value to memory.
-    // 32-bit write are be split into two 16-bit reads in ascending address order.
+    // 32-bit write are be split into two 16-bit writes in ascending address order.
     template <mem_primitive T>
     void MemWriteAsc(uint32 address, T value);
 
