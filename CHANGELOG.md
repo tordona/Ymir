@@ -52,6 +52,7 @@ In development.
 - Scheduler: Ensure events are executed in chronological order.
 - SCU: Fix A-Bus external interrupt handling.
 - SCU: Fix DMA source address updates when source address increment is zero. Fixes background priority issue regression in Street Fighter - Real Battle on Film. (#168)
+- SCU: Fix Timer 1 not triggering when the reload counter is larger than 0x1AA or 0x1C6 depending on horizontal resolution.
 - SCU: Ignore/skip illegal DMA transfers in indirect transfer lists. Partially fixes corrupted or missing sprites in Fighting Vipers.
 - SCU: Illegal DMA interrupts should not trigger VDP1 Sprite Draw End DMA transfers.
 - SCU: Notify bus of DMA transfers.

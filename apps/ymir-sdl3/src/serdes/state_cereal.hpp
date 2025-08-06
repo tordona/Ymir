@@ -158,6 +158,7 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
     // v8:
     // - New fields
     //   - abusIntrsPendingAck = intrStatus >> 16  (or 0 if abusIntrAck == true in versions 7 and below)
+    //   - timer1Triggered = true
     // - Removed fields
     //   - bool abusIntrAck
     // v5:
@@ -226,7 +227,13 @@ void serialize(Archive &ar, SCUState &s, const uint32 version) {
         s.pendingIntrIndex = 0;
     }
     ar(s.timer0Counter, s.timer0Compare);
-    ar(s.timer1Reload, s.timerEnable, s.timer1Mode);
+    ar(s.timer1Reload);
+    if (version >= 8) {
+        ar(s.timer1Triggered);
+    } else {
+        s.timer1Triggered = true;
+    }
+    ar(s.timerEnable, s.timer1Mode);
     ar(s.wramSizeSelect);
 }
 

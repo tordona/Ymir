@@ -211,12 +211,13 @@ private:
     uint16 m_timer0Compare;
 
     // Timer 1 reloads at HBlank IN
-    // Counts down every 7 MHz (4 cycles) when enabled
+    // Counts down every 4 cycles (at 7 MHz) when enabled
     // Raises interrupt when counter == 0 depending on mode:
     // - false: every line
     // - true: only if Timer 0 counter matched on previous line
     uint16 m_timer1Reload; // 2 fractional bits
     bool m_timer1Mode;
+    bool m_timer1Triggered;
     bool m_timerEnable; // Enables both timers
 
     FORCE_INLINE uint16 ReadTimer0Counter() const {
