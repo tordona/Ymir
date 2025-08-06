@@ -56,6 +56,7 @@ In development.
 - SCU: Illegal DMA interrupts should not trigger VDP1 Sprite Draw End DMA transfers.
 - SCU: Notify bus of DMA transfers.
 - SCU: Prevent indirect DMA transfers from starting if the first entry is illegal. Stops Tennis Arena from destroying all memory.
+- SCU: Use the source address increment for indirect DMA transfer data.
 - Settings: Disable "Include VDP1 rendering in VDP2 renderer thread" by default and don't enable it in presets.
 - Settings: Persist custom Screenshots profile path. (#398)
 - Settings: Properly restore controller binds for controllers other than the Saturn Control Pad. (#397)

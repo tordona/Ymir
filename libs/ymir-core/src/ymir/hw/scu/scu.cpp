@@ -587,11 +587,18 @@ FORCE_INLINE void SCU::UpdateMasterInterruptLevel() {
 
 void SCU::DMAReadIndirectTransfer(uint8 level) {
     auto &ch = m_dmaChannels[level];
-    const uint32 currIndirectSrc = ch.currIndirectSrc;
-    ch.currXferCount = m_bus.Read<uint32>(currIndirectSrc + 0);
-    ch.currDstAddr = m_bus.Read<uint32>(currIndirectSrc + 4);
-    ch.currSrcAddr = m_bus.Read<uint32>(currIndirectSrc + 8);
-    ch.currIndirectSrc += 3 * sizeof(uint32);
+    const uint32 baseIndirectSrc = ch.currIndirectSrc;
+    uint32 currIndirectSrc = baseIndirectSrc;
+    auto read = [&] {
+        const uint32 value = m_bus.Read<uint32>(currIndirectSrc);
+        currIndirectSrc += ch.srcAddrInc;
+        return value;
+    };
+
+    ch.currXferCount = ((read() - 1u) & 0xFFFFF) + 1u;
+    ch.currDstAddr = read();
+    ch.currSrcAddr = read();
+    ch.currIndirectSrc = currIndirectSrc;
     ch.endIndirect = bit::test<31>(ch.currSrcAddr);
     ch.currSrcAddr &= 0x7FF'FFFF;
     ch.currDstAddr &= 0x7FF'FFFF;
@@ -600,8 +607,8 @@ void SCU::DMAReadIndirectTransfer(uint8 level) {
 
     devlog::trace<grp::dma>(
         "SCU DMA{}: Starting indirect transfer at {:08X} - {:06X} bytes from {:08X} (+{:02X}) to {:08X} (+{:02X}){}",
-        level, ch.currIndirectSrc - 3 * sizeof(uint32), ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc,
-        ch.currDstAddr, ch.currDstAddrInc, (ch.endIndirect ? " (final)" : ""));
+        level, baseIndirectSrc, ch.currXferCount, ch.currSrcAddr, ch.currSrcAddrInc, ch.currDstAddr, ch.currDstAddrInc,
+        (ch.endIndirect ? " (final)" : ""));
 
     if (ch.currSrcAddr & 1) {
         devlog::debug<grp::dma>("SCU DMA{}: Unaligned indirect transfer read from {:08X}", level, ch.currSrcAddr);
@@ -611,7 +618,7 @@ void SCU::DMAReadIndirectTransfer(uint8 level) {
     }
 
     TraceDMA(m_tracer, level, ch.currSrcAddr, ch.currDstAddr, ch.currXferCount, ch.currSrcAddrInc, ch.currDstAddrInc,
-             true, currIndirectSrc);
+             true, baseIndirectSrc);
 }
 
 void SCU::RunDMA() {
