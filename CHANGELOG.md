@@ -54,6 +54,7 @@ In development.
 - SCU: Fix DMA source address updates when source address increment is zero. Fixes background priority issue regression in Street Fighter - Real Battle on Film. (#168)
 - SCU: Ignore/skip illegal DMA transfers in indirect transfer lists. Partially fixes corrupted or missing sprites in Fighting Vipers.
 - SCU: Notify bus of DMA transfers.
+- SCU: Prevent indirect DMA transfers from starting if the first entry is illegal. Stops Tennis Arena from destroying all memory.
 - Settings: Disable "Include VDP1 rendering in VDP2 renderer thread" by default and don't enable it in presets.
 - Settings: Persist custom Screenshots profile path. (#398)
 - Settings: Properly restore controller binds for controllers other than the Saturn Control Pad. (#397)

@@ -939,6 +939,22 @@ void SCU::RecalcDMAChannel() {
             if (ch.indirect) {
                 ch.currIndirectSrc = ch.dstAddr;
                 DMAReadIndirectTransfer(level);
+
+                const BusID srcBus = GetBusID(ch.currSrcAddr);
+                const BusID dstBus = GetBusID(ch.currDstAddr);
+                if (srcBus == dstBus || srcBus == BusID::None || dstBus == BusID::None) [[unlikely]] {
+                    if (srcBus == dstBus) {
+                        devlog::trace<grp::dma>("SCU DMA{}: Invalid same-bus transfer; ignored", level);
+                    } else if (srcBus == BusID::None) {
+                        devlog::trace<grp::dma>("SCU DMA{}: Invalid source bus; transfer ignored", level);
+                    } else if (dstBus == BusID::None) {
+                        devlog::trace<grp::dma>("SCU DMA{}: Invalid destination bus; transfer ignored", level);
+                    }
+                    ch.active = false;
+                    TriggerDMAIllegal();
+                    RecalcDMAChannel();
+                    continue;
+                }
             } else {
                 ch.currSrcAddr = ch.srcAddr & 0x7FF'FFFF;
                 ch.currDstAddr = ch.dstAddr & 0x7FF'FFFF;
