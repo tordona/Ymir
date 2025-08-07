@@ -61,9 +61,9 @@ In development.
 - Settings: Disable "Include VDP1 rendering in VDP2 renderer thread" by default and don't enable it in presets.
 - Settings: Persist custom Screenshots profile path. (#398)
 - Settings: Properly restore controller binds for controllers other than the Saturn Control Pad. (#397)
-- SH2: Don't reset internal FRT write clear bitmask on FTCSR writes. Fixes random lockups in Daytona USA. (#209)
 - SH2: Fix CPU getting stuck handling DMAC interrupts forever. Fixes Shellshock not booting. (#344)
 - SH2: Handle sleep/standby mode and wake up on interrupts. Fixes Culdcept getting stuck on intro FMV and boosts overall performance on games that make use of the SLEEP instruction. (#346)
+- SH2: Only clear zeroed out bits from write clear bitmask on FRT FTCSR writes. Fixes random lockups in Daytona USA. (#209) (thanks to @celeriyacon)
 - SMPC: Fixed TH control mode reports on SH-2 direct mode. Fixes input response in World Heroes Perfect, Touge King the Spirits, Chaos Control Remix, and Father Christmas. (#297, #322, #348, #374)
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
