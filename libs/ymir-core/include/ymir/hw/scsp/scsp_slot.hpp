@@ -231,19 +231,19 @@ struct alignas(128) Slot {
             attackRate = bit::extract<0, 4>(value);
             egHold = bit::test<5>(value);
             CheckAttackBug();
-            if (egState == EGState::Release) {
+            if (egState == EGState::Attack) {
                 currEGRate = attackRate;
             }
         }
 
         util::SplitWriteWord<lowerByte, upperByte, 6, 10>(decay1Rate, value);
-        if (egState == EGState::Release) {
+        if (egState == EGState::Decay1) {
             currEGRate = decay1Rate;
         }
 
         if constexpr (upperByte) {
             decay2Rate = bit::extract<11, 15>(value);
-            if (egState == EGState::Release) {
+            if (egState == EGState::Decay2) {
                 currEGRate = decay2Rate;
             }
         }
