@@ -3,12 +3,36 @@
 #include <ymir/hw/scsp/scsp.hpp> // because M68kBus *is* SCSP
 
 #include <ymir/util/bit_ops.hpp>
+#include <ymir/util/dev_log.hpp>
 #include <ymir/util/unreachable.hpp>
 
 #include <cassert>
 #include <cstdlib>
+#include <type_traits>
 
 namespace ymir::m68k {
+
+namespace grp {
+
+    // -----------------------------------------------------------------------------
+    // Dev log groups
+
+    // Hierarchy:
+    //
+    // base
+    //   exec
+
+    struct base {
+        static constexpr bool enabled = true;
+        static constexpr devlog::Level level = devlog::level::debug;
+        static constexpr std::string_view name = "M68K";
+    };
+
+    struct exec : public base {
+        static constexpr std::string_view name = "M68K-Exec";
+    };
+
+} // namespace grp
 
 MC68EC000::MC68EC000(M68kBus &bus)
     : m_bus(bus) {
@@ -179,7 +203,10 @@ FORCE_INLINE bool MC68EC000::CheckInterrupt() {
         if (vector == ExceptionVector::AutoVectorRequest) {
             vector = static_cast<ExceptionVector>(static_cast<uint32>(ExceptionVector::BaseAutovector) + level);
         }
+        devlog::trace<grp::exec>("Entering interrupt handler for vector {:X}, level {:X}, PC {:X}",
+                                 static_cast<uint32>(vector), level, PC);
         HandleInterrupt(vector, level);
+        devlog::trace<grp::exec>("Interrupt handler PC: {:X}", PC);
         return true;
     }
     return false;
@@ -3090,6 +3117,7 @@ FORCE_INLINE void MC68EC000::Instr_RTE(uint16 instr) {
         FullPrefetch();
         SP += 4;
         SetSSP(SP);
+        devlog::trace<grp::exec>("Returning from interrupt handler, PC = {:X}", PC);
     }
 }
 
