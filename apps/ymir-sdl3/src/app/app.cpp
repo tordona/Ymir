@@ -295,8 +295,8 @@ int App::Run(const CommandLineOptions &options) {
         }
 
         if (!hasSettingsFile) {
-            char *userpath = SDL_GetPrefPath(Ymir_ORGANIZATION_NAME, Ymir_APP_NAME);
-            char *cwdpath = SDL_GetCurrentDirectory();
+            auto userPath = Profile::GetUserProfilePath();
+            auto portablePath = Profile::GetPortableProfilePath();
 
             std::string message = fmt::format("No existing profile found.\n"
                                               "Looks like this is the first time you're launching Ymir.\n"
@@ -304,10 +304,7 @@ int App::Run(const CommandLineOptions &options) {
                                               "\n"
                                               "Installed: User's home directory - {}\n"
                                               "Portable: Current working directory - {}",
-                                              userpath, cwdpath);
-
-            SDL_free(userpath);
-            SDL_free(cwdpath);
+                                              userPath, portablePath);
 
             constexpr int bIDInstalled = 0;
             constexpr int bIDPortable = 1;

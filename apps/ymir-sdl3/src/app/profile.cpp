@@ -23,20 +23,26 @@ Profile::Profile() {
     UsePortableProfilePath();
 }
 
-void Profile::UseUserProfilePath() {
+std::filesystem::path Profile::GetUserProfilePath() {
     char *cpath = SDL_GetPrefPath(Ymir_ORGANIZATION_NAME, Ymir_APP_NAME);
     std::string path = cpath;
-    std::u8string u8Path{path.begin(), path.end()};
-    m_profilePath = path;
     SDL_free(cpath);
+    return std::u8string{path.begin(), path.end()};
+}
+
+std::filesystem::path Profile::GetPortableProfilePath() {
+    char *cpath = SDL_GetCurrentDirectory();
+    std::string path = cpath;
+    SDL_free(cpath);
+    return std::u8string{path.begin(), path.end()};
+}
+
+void Profile::UseUserProfilePath() {
+    m_profilePath = GetUserProfilePath();
 }
 
 void Profile::UsePortableProfilePath() {
-    char *cpath = SDL_GetCurrentDirectory();
-    std::string path = cpath;
-    std::u8string u8Path{path.begin(), path.end()};
-    m_profilePath = u8Path;
-    SDL_free(cpath);
+    m_profilePath = GetPortableProfilePath();
 }
 
 void Profile::UseProfilePath(std::filesystem::path path) {

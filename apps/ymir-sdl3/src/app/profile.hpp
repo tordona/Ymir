@@ -24,6 +24,12 @@ public:
     // Creates the folder manager pointing to the current working directory.
     Profile();
 
+    // Retrieves the OS's standard user profile path.
+    static std::filesystem::path GetUserProfilePath();
+
+    // Retrieves the current working directory (aka "portable profile path").
+    static std::filesystem::path GetPortableProfilePath();
+
     // Uses the OS's standard user profile path.
     void UseUserProfilePath();
 
