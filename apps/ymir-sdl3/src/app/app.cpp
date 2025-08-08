@@ -272,15 +272,15 @@ int App::Run(const CommandLineOptions &options) {
         [&](bool value) { m_context.EnqueueEvent(events::emu::SetTransparentMeshes(value)); });
 
     // Profile priority:
-    // 1. -u option: force user profile, e.g. ${HOME}/.local/share/StrikerX3/Ymir on unix
-    // 2. -p option: force custom profile
+    // 1. -p option: force custom profile
+    // 2. -u option: force user profile, e.g. ${HOME}/.local/share/StrikerX3/Ymir on Unix
     // 3. portable profile (=current dir), if it contains the settings file
     // 4. user profile, if it contains the settings file
     // 5. show dialog to choose "installed" or "portable" mode
-    if (options.forceUserProfile) {
-        m_context.profile.UseUserProfilePath();
-    } else if (!options.profilePath.empty()) {
+    if (!options.profilePath.empty()) {
         m_context.profile.UseProfilePath(options.profilePath);
+    } else if (options.forceUserProfile) {
+        m_context.profile.UseUserProfilePath();
     } else {
         bool hasSettingsFile;
 
@@ -295,23 +295,38 @@ int App::Run(const CommandLineOptions &options) {
         }
 
         if (!hasSettingsFile) {
-            const char message[] = "No existing profile found.\n"
-                                   "Select the mode where to place settings and data:\n"
-                                   "\n"
-                                   "Installed: User's home directory\n"
-                                   "Portable:  Current working directory";
+            char *userpath = SDL_GetPrefPath(Ymir_ORGANIZATION_NAME, Ymir_APP_NAME);
+            char *cwdpath = SDL_GetCurrentDirectory();
+
+            std::string message = fmt::format("No existing profile found.\n"
+                                              "Looks like this is the first time you're launching Ymir.\n"
+                                              "Choose where to place settings and data:\n"
+                                              "\n"
+                                              "Installed: User's home directory - {}\n"
+                                              "Portable: Current working directory - {}",
+                                              userpath, cwdpath);
+
+            SDL_free(userpath);
+            SDL_free(cwdpath);
 
             constexpr int bIDInstalled = 0;
             constexpr int bIDPortable = 1;
+            constexpr int bIDCancel = 2;
 
-            SDL_MessageBoxButtonData buttons[] = {{.flags = 0, .buttonID = bIDInstalled, .text = "Installed"},
-                                                  {.flags = 0, .buttonID = bIDPortable, .text = "Portable"}};
+            SDL_MessageBoxButtonData buttons[] = {
+                {.flags = 0, .buttonID = bIDInstalled, .text = "Installed"},
+                {.flags = 0, .buttonID = bIDPortable, .text = "Portable"},
+                {.flags = SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, .buttonID = bIDCancel, .text = "Cancel"},
+            };
+#ifdef WIN32
+            std::reverse(std::begin(buttons), std::end(buttons));
+#endif
 
             SDL_MessageBoxData messageboxdata = {.flags = SDL_MESSAGEBOX_INFORMATION,
                                                  .window = nullptr,
-                                                 .title = "Profile mode selection",
-                                                 .message = message,
-                                                 .numbuttons = sizeof(buttons) / sizeof(buttons[0]),
+                                                 .title = "Ymir first time run - profile mode selection",
+                                                 .message = message.c_str(),
+                                                 .numbuttons = std::size(buttons),
                                                  .buttons = &buttons[0],
                                                  .colorScheme = nullptr};
 
@@ -319,7 +334,10 @@ int App::Run(const CommandLineOptions &options) {
 
             SDL_ShowMessageBox(&messageboxdata, &buttonid);
 
-            if (buttonid == bIDInstalled) {
+            if (buttonid == bIDCancel) {
+                devlog::info<grp::base>("User cancelled profile path selection. Quitting.");
+                return 0;
+            } else if (buttonid == bIDInstalled) {
                 m_context.profile.UseUserProfilePath();
             } else {
                 m_context.profile.UsePortableProfilePath();

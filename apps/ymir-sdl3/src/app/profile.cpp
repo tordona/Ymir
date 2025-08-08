@@ -24,9 +24,11 @@ Profile::Profile() {
 }
 
 void Profile::UseUserProfilePath() {
-    char *path = SDL_GetPrefPath(Ymir_ORGANIZATION_NAME, Ymir_APP_NAME);
+    char *cpath = SDL_GetPrefPath(Ymir_ORGANIZATION_NAME, Ymir_APP_NAME);
+    std::string path = cpath;
+    std::u8string u8Path{path.begin(), path.end()};
     m_profilePath = path;
-    SDL_free(path);
+    SDL_free(cpath);
 }
 
 void Profile::UsePortableProfilePath() {

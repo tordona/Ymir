@@ -10,6 +10,7 @@ In development.
 - App: Added hotkey to take screenshots (bound to F12 by default). (#350)
 - App: Added option to automatically load most recently loaded game disc image on startup.
 - App: Auto-center About window whenever it is opened.
+- App: Automatically detect profile path and allow using the user profile path from the OS. (#411, #17; @bsdcode)
 - App: Display error dialog on unhandled exceptions.
 - App: Show actual emulation speed in title bar and frame rate OSD.
 - App: Show actual VDP1 frame rate separated from VDP1 draw calls.
