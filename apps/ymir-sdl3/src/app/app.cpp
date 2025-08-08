@@ -111,6 +111,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_filesystem.h>
+#include <SDL3/SDL_messagebox.h>
 #include <SDL3/SDL_misc.h>
 
 #include <backends/imgui_impl_sdl3.h>
@@ -168,15 +169,6 @@ int App::Run(const CommandLineOptions &options) {
     devlog::info<grp::base>("{} {}", Ymir_APP_NAME, ymir::version::fullstring);
 
     m_options = options;
-
-    // TODO: check portable path first, then OS's user profile
-    // - override with options.profilePath if not empty (user specified custom profile path with "-p")
-    // - if neither are available, ask user where to create files
-    if (!options.profilePath.empty()) {
-        m_context.profile.UseProfilePath(options.profilePath);
-    } else {
-        m_context.profile.UsePortableProfilePath();
-    }
 
     {
         auto &generalSettings = m_context.settings.general;
@@ -279,8 +271,64 @@ int App::Run(const CommandLineOptions &options) {
     m_context.settings.video.transparentMeshes.Observe(
         [&](bool value) { m_context.EnqueueEvent(events::emu::SetTransparentMeshes(value)); });
 
+    // Profile priority:
+    // 1. -u option: force user profile, e.g. ${HOME}/.local/share/StrikerX3/Ymir on unix
+    // 2. -p option: force custom profile
+    // 3. portable profile (=current dir), if it contains the settings file
+    // 4. user profile, if it contains the settings file
+    // 5. show dialog to choose "installed" or "portable" mode
+    if (options.forceUserProfile) {
+        m_context.profile.UseUserProfilePath();
+    } else if (!options.profilePath.empty()) {
+        m_context.profile.UseProfilePath(options.profilePath);
+    } else {
+        bool hasSettingsFile;
+
+        m_context.profile.UsePortableProfilePath();
+        hasSettingsFile =
+            std::filesystem::is_regular_file(m_context.profile.GetPath(ProfilePath::Root) / kSettingsFile);
+
+        if (!hasSettingsFile) {
+            m_context.profile.UseUserProfilePath();
+            hasSettingsFile =
+                std::filesystem::is_regular_file(m_context.profile.GetPath(ProfilePath::Root) / kSettingsFile);
+        }
+
+        if (!hasSettingsFile) {
+            const char message[] = "No existing profile found.\n"
+                                   "Select the mode where to place settings and data:\n"
+                                   "\n"
+                                   "Installed: User's home directory\n"
+                                   "Portable:  Current working directory";
+
+            constexpr int bIDInstalled = 0;
+            constexpr int bIDPortable = 1;
+
+            SDL_MessageBoxButtonData buttons[] = {{.flags = 0, .buttonID = bIDInstalled, .text = "Installed"},
+                                                  {.flags = 0, .buttonID = bIDPortable, .text = "Portable"}};
+
+            SDL_MessageBoxData messageboxdata = {.flags = SDL_MESSAGEBOX_INFORMATION,
+                                                 .window = nullptr,
+                                                 .title = "Profile mode selection",
+                                                 .message = message,
+                                                 .numbuttons = sizeof(buttons) / sizeof(buttons[0]),
+                                                 .buttons = &buttons[0],
+                                                 .colorScheme = nullptr};
+
+            int buttonid;
+
+            SDL_ShowMessageBox(&messageboxdata, &buttonid);
+
+            if (buttonid == bIDInstalled) {
+                m_context.profile.UseUserProfilePath();
+            } else {
+                m_context.profile.UsePortableProfilePath();
+            }
+        }
+    }
+
     {
-        auto result = m_context.settings.Load(m_context.profile.GetPath(ProfilePath::Root) / "Ymir.toml");
+        auto result = m_context.settings.Load(m_context.profile.GetPath(ProfilePath::Root) / kSettingsFile);
         if (!result) {
             devlog::warn<grp::base>("Failed to load settings: {}", result.string());
         }

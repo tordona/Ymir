@@ -1166,7 +1166,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
 
 SettingsSaveResult Settings::Save() {
     if (path.empty()) {
-        path = "Ymir.toml";
+        path = kSettingsFile;
     }
 
     // clang-format off
@@ -1214,7 +1214,7 @@ SettingsSaveResult Settings::Save() {
             {"EmulateSH2Cache", system.emulateSH2Cache},
             {"InternalBackupRAMImagePath", Proximate(ProfilePath::PersistentState, system.internalBackupRAMImagePath).native()},
             {"InternalBackupRAMPerGame", system.internalBackupRAMPerGame},
-        
+
             {"IPL", toml::table{{
                 {"Override", system.ipl.overrideImage},
                 {"Path", Proximate(ProfilePath::IPLROMImages, system.ipl.path).native()},
@@ -1240,7 +1240,7 @@ SettingsSaveResult Settings::Save() {
             {"PreviousFrameRateOSDPosition", ToTOML(hotkeys.prevFrameRateOSDPos)},
             {"RotateScreenClockwise", ToTOML(hotkeys.rotateScreenCW)},
             {"RotateScreenCounterclockwise", ToTOML(hotkeys.rotateScreenCCW)},
-            
+
             {"ToggleMute", ToTOML(hotkeys.toggleMute)},
             {"IncreaseVolume", ToTOML(hotkeys.increaseVolume)},
             {"DecreaseVolume", ToTOML(hotkeys.decreaseVolume)},

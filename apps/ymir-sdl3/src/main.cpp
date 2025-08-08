@@ -16,6 +16,7 @@ int main(int argc, char **argv) {
     options.add_options()("d,disc", "Path to Saturn disc image (.ccd, .chd, .cue, .iso, .mds)",
                           cxxopts::value(progOpts.gameDiscPath));
     options.add_options()("p,profile", "Path to profile directory", cxxopts::value(progOpts.profilePath));
+    options.add_options()("u,user", "Force user profile", cxxopts::value(progOpts.forceUserProfile)->default_value("false"));
     options.add_options()("h,help", "Display help text", cxxopts::value(showHelp)->default_value("false"));
     options.add_options()("f,fullscreen", "Start in fullscreen mode",
                           cxxopts::value(progOpts.fullScreen)->default_value("false"));
