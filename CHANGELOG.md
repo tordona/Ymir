@@ -75,6 +75,7 @@ In development.
 - VDP2: Don't apply sprite shadow if sprite priority is lower than the top layer. Fixes shadows drawing on top of objects in Blue Seed - Kushinada Hirokuden. (#349)
 - VDP2: Don't blend line screen with layer 1 if line screen color calculations are disabled. Fixes fog in battle backgrounds in Zanma Chou Ougi - Valhollian. (#352)
 - VDP2: Don't increment vertical scroll BG coordinate on complementary field lines when rendering deinterlaced RBG lines. Fixes jittery/interlaced Grandia FMVs when deinterlace is enabled.
+- VDP2: Fix layer enable flags calculation when only RBG1 is enabled. Fixes missing background in MechWarrior 2's menus. (#413)
 - VDP2: Fix race conditions with threaded deinterlacing causing some artifacts on RBGs in single-density interlaced mode.
 - VDP2: Fix window indexing for RBGs in high resolution modes. Fixes stretched shadows in Last Bronx. (#395)
 - VDP2: Invert TVSTAT.ODD reads. Fixes garbled graphics on the top half of the screen in True Pinball. (#320)

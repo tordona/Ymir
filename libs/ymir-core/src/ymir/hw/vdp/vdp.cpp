@@ -2730,12 +2730,12 @@ void VDP::VDP2UpdateEnabledBGs() {
     // Sprite layer is always enabled, unless forcibly disabled
     m_layerEnabled[0] = m_layerRendered[0];
 
-    if (regs2.bgEnabled[4] && regs2.bgEnabled[5]) {
-        m_layerEnabled[1] = m_layerRendered[1]; // RBG0
-        m_layerEnabled[2] = m_layerRendered[2]; // RBG1
-        m_layerEnabled[3] = false;              // EXBG
-        m_layerEnabled[4] = false;              // not used
-        m_layerEnabled[5] = false;              // not used
+    if (regs2.bgEnabled[5]) {
+        m_layerEnabled[1] = m_layerRendered[1] && regs2.bgEnabled[4]; // RBG0
+        m_layerEnabled[2] = m_layerRendered[2];                       // RBG1
+        m_layerEnabled[3] = false;                                    // EXBG
+        m_layerEnabled[4] = false;                                    // not used
+        m_layerEnabled[5] = false;                                    // not used
     } else {
         // Certain color format settings on NBG0 and NBG1 restrict which BG layers can be enabled
         // - NBG1 is disabled when NBG0 uses 8:8:8 RGB
