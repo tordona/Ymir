@@ -2678,11 +2678,6 @@ FORCE_INLINE void VDP::VDP2InitNormalBG() {
     static_assert(index < 4, "Invalid NBG index");
 
     const VDP2Regs &regs2 = VDP2GetRegs();
-
-    if (!regs2.bgEnabled[index]) {
-        return;
-    }
-
     const BGParams &bgParams = regs2.bgParams[index + 1];
     NormBGLayerState &bgState = m_normBGLayerStates[index];
     bgState.fracScrollX = 0;
@@ -2704,11 +2699,6 @@ FORCE_INLINE void VDP::VDP2InitRotationBG() {
     static_assert(index < 2, "Invalid RBG index");
 
     const VDP2Regs &regs2 = VDP2GetRegs();
-
-    if (!regs2.bgEnabled[index + 4]) {
-        return;
-    }
-
     const BGParams &bgParams = regs2.bgParams[index];
     const bool cellSizeShift = bgParams.cellSizeShift;
     const bool twoWordChar = bgParams.twoWordChar;
@@ -3496,9 +3486,6 @@ FORCE_INLINE void VDP::VDP2FinishLine(uint32 y) {
 
     // Update NBG coordinates
     for (uint32 i = 0; i < 4; ++i) {
-        if (!m_layerEnabled[i + 2]) {
-            continue;
-        }
         const BGParams &bgParams = regs2.bgParams[i + 1];
         NormBGLayerState &bgState = m_normBGLayerStates[i];
         bgState.fracScrollY += bgParams.scrollIncV;
