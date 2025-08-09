@@ -85,6 +85,7 @@ In development.
 - VDP2: Handle RBG window pixels in high resolution modes. Fixes extra column of garbage in Athlete Kings. (#299)
 - VDP2: Invert TVSTAT.ODD reads. Fixes garbled graphics on the top half of the screen in True Pinball. (#320)
 - VDP2: RBG1 uses Rotation Parameter B, not A.
+- VDP2: Reset NBG2/3 base vertical scroll counters when writing to SCYN2/3. Fixes garbles graphics in Marvel Super Heroes vs. Street Fighter during Shuma Gorath's Chaos Dimension move. (#72)
 - VDP2: Rework rotation table calculations. Fixes warped ground on player two's screen in Sonic R multiplayer mode. (#401)
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
 - VDP2: Swap even/odd field when entering VBlank.

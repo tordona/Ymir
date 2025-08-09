@@ -816,11 +816,13 @@ FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
     case 0x092: // SCYN2
         if (!m_threadedVDPRendering) {
             m_normBGLayerStates[2].scrollAmountV = m_state.regs2.bgParams[3].scrollAmountV;
+            m_normBGLayerStates[2].fracScrollY = 0;
         }
         break;
     case 0x096: // SCYN3
         if (!m_threadedVDPRendering) {
             m_normBGLayerStates[3].scrollAmountV = m_state.regs2.bgParams[4].scrollAmountV;
+            m_normBGLayerStates[3].fracScrollY = 0;
         }
         break;
     }
@@ -1288,9 +1290,11 @@ void VDP::VDPRenderThread() {
                         break;
                     case 0x092: // SCYN2
                         m_normBGLayerStates[2].scrollAmountV = rctx.vdp2.regs.bgParams[3].scrollAmountV;
+                        m_normBGLayerStates[2].fracScrollY = 0;
                         break;
                     case 0x096: // SCYN3
                         m_normBGLayerStates[3].scrollAmountV = rctx.vdp2.regs.bgParams[4].scrollAmountV;
+                        m_normBGLayerStates[3].fracScrollY = 0;
                         break;
                     }
                 }
