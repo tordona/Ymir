@@ -69,6 +69,7 @@ In development.
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 - VDP1: Disable "antialiasing" for lines and polylines.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
+- VDP1: Process framebuffer swap slightly later in the VBlank OUT line. Fixes flickering graphics in PhantasM, Soviet Strike, Virtua Cop 2 and Yellow Brick Road, and corrupted sprites in Marvel Super Heroes (Shuma Gorath's Chaos Dimension move). (#72, #303, #335, #336)
 - VDP1: Reorder LOPR, COPR, CEF and BEF updates. Fixes missing graphics in Virtual On - Cyber Troopers and Sega Touring CARS. (#112, #246)
 - VDP1: Use SCU DMA bus notification to adjust VDP1 VRAM write timing penalty. Fixes hanging intro FMV in Sonic Jam without breaking Mega Man X3's sprites. (#83)
 - VDP2: Always initialize and update background counters even for disabled layers. Fixes rolling screen in F-1 Challenge. (#300)

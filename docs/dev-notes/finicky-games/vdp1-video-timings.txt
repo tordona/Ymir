@@ -2,15 +2,28 @@
 Games that are sensitive to VDP1 and video signal timings
 =========================================================
 
-What to test to verify VDP1 framebuffer erase timing:
-  Boot animation                3D graphics flicker
+What to test to verify VDP1 framebuffer erase and swap timings:
+  IPL boot animation            3D graphics flicker
   I Love Donald Duck            sprites linger on items menu
+  Marvel Super Heroes           sprites get corrupted (e.g Shuma Gorath's Chaos Dimension move)
   Panzer Dragoon 1              3D graphics flicker in-game
+  PhantasM                      FMVs flicker
   Powerslave/Exhumed            intro video flicker, menus and in-game graphics not rendered/erased every frame
   Sega Ages: After Burner II    VDP2 tiles missing/erased
   Sega Ages: OutRun             VDP2 tiles missing/erased
   Sonic R                       3D graphics garbled on title screen
+  Soviet Strike                 3D graphics flicker
   Virtua Fighter 1              3D graphics flicker
+  Virtua Cop 2                  3D graphics flicker
+  Yellow Brick Road             FMVs flicker
+
+
+-----
+
+Marvel Super Heroes
+  The game requests framebuffer swaps during VBlank OUT, which must be honored on the same line.
+  If the swap is delayed, the game may occasionally run SCU DMA transfers while the VDP1 is drawing a frame, resulting
+  in corrupted sprites.
 
 -----
 

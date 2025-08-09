@@ -1041,9 +1041,13 @@ void VDP::BeginHPhaseSync() {
 
 void VDP::BeginHPhaseVBlankOut() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_state.regs2.VCNT);
+}
+
+void VDP::BeginHPhaseLeftBorder() {
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.regs2.VCNT);
 
     if (m_state.VPhase == VerticalPhase::LastLine) {
-        devlog::trace<grp::base>("## HBlank half + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
+        devlog::trace<grp::base>("## HBlank end + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
                                  m_state.regs1.fbSwapMode, m_state.regs1.fbSwapTrigger, m_state.regs1.fbManualSwap,
                                  m_state.regs1.plotTrigger);
 
@@ -1070,10 +1074,6 @@ void VDP::BeginHPhaseVBlankOut() {
             VDP1SwapFramebuffer();
         }
     }
-}
-
-void VDP::BeginHPhaseLeftBorder() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.regs2.VCNT);
 
     m_state.regs2.TVSTAT.HBLANK = 0;
     if (m_state.VPhase == VerticalPhase::Active) {
@@ -1128,7 +1128,7 @@ void VDP::BeginVPhaseTopBorder() {
 void VDP::BeginVPhaseLastLine() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_state.regs2.VCNT);
 
-    devlog::trace<grp::base>("## VBlank OUT");
+    devlog::debug<grp::base>("## VBlank OUT");
 
     devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
 
