@@ -1919,7 +1919,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
     }
 }
 
-template <bool deinterlace, bool transparentMeshes>
+template <bool antiAlias, bool deinterlace, bool transparentMeshes>
 FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
                                     VDP1GouraudParams &gouraudParams) {
     const VDP1Regs &regs1 = VDP1GetRegs();
@@ -1932,8 +1932,10 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
     for (; line.CanStep(); line.Step()) {
         gouraudParams.U = line.FracPos();
         VDP1PlotPixel<deinterlace, transparentMeshes>(line.Coord(), pixelParams, gouraudParams);
-        if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel<deinterlace, transparentMeshes>(line.AACoord(), pixelParams, gouraudParams);
+        if constexpr (antiAlias) {
+            if (line.NeedsAntiAliasing()) {
+                VDP1PlotPixel<deinterlace, transparentMeshes>(line.AACoord(), pixelParams, gouraudParams);
+            }
         }
     }
 }
@@ -2476,7 +2478,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
         gouraudParams.V = edge.FracPos();
 
         // Plot lines between the interpolated points
-        VDP1PlotLine<deinterlace, transparentMeshes>(coordL, coordR, pixelParams, gouraudParams);
+        VDP1PlotLine<true, deinterlace, transparentMeshes>(coordL, coordR, pixelParams, gouraudParams);
     }
 
     if constexpr (transparentMeshes) {
@@ -2541,10 +2543,10 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     VDP1GouraudParams gouraudParamsCD{.colorA = C, .colorB = D, .V = 0};
     VDP1GouraudParams gouraudParamsDA{.colorA = D, .colorB = A, .V = 0};
 
-    VDP1PlotLine<deinterlace, transparentMeshes>(coordA, coordB, pixelParams, gouraudParamsAB);
-    VDP1PlotLine<deinterlace, transparentMeshes>(coordB, coordC, pixelParams, gouraudParamsBC);
-    VDP1PlotLine<deinterlace, transparentMeshes>(coordC, coordD, pixelParams, gouraudParamsCD);
-    VDP1PlotLine<deinterlace, transparentMeshes>(coordD, coordA, pixelParams, gouraudParamsDA);
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordA, coordB, pixelParams, gouraudParamsAB);
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordB, coordC, pixelParams, gouraudParamsBC);
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordC, coordD, pixelParams, gouraudParamsCD);
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordD, coordA, pixelParams, gouraudParamsDA);
 
     if constexpr (transparentMeshes) {
         if (mode.meshEnable) {
@@ -2597,7 +2599,7 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
         .V = 0,
     };
 
-    VDP1PlotLine<deinterlace, transparentMeshes>(coordA, coordB, pixelParams, gouraudParams);
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordA, coordB, pixelParams, gouraudParams);
 
     if constexpr (transparentMeshes) {
         if (mode.meshEnable) {

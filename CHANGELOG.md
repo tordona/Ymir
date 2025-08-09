@@ -67,6 +67,7 @@ In development.
 - SH2: Only clear zeroed out bits from write clear bitmask on FRT FTCSR writes. Fixes random lockups in Daytona USA. (#209) (thanks to @celeriyacon)
 - SMPC: Fixed TH control mode reports on SH-2 direct mode. Fixes input response in World Heroes Perfect, Touge King the Spirits, Chaos Control Remix, and Father Christmas. (#297, #322, #348, #374)
 - SMPC: Fixed TL reporting on SH-2 direct mode.
+- VDP1: Disable "antialiasing" for lines and polylines.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
 - VDP1: Reorder LOPR, COPR, CEF and BEF updates. Fixes missing graphics in Virtual On - Cyber Troopers and Sega Touring CARS. (#112, #246)
 - VDP1: Use SCU DMA bus notification to adjust VDP1 VRAM write timing penalty. Fixes hanging intro FMV in Sonic Jam without breaking Mega Man X3's sprites. (#83)

@@ -1086,6 +1086,7 @@ private:
     void VDP1EndFrame();
 
 #define TPL_TRAITS template <bool deinterlace, bool transparentMeshes>
+#define TPL_LINE_TRAITS template <bool antiAlias, bool deinterlace, bool transparentMeshes>
 #define TPL_DEINTERLACE template <bool deinterlace>
 
     // Processes a single commmand from the VDP1 command table.
@@ -1104,8 +1105,8 @@ private:
 
     TPL_TRAITS void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
                                   const VDP1GouraudParams &gouraudParams);
-    TPL_TRAITS void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
-                                 VDP1GouraudParams &gouraudParams);
+    TPL_LINE_TRAITS void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
+                                      VDP1GouraudParams &gouraudParams);
     TPL_TRAITS void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
                                          VDP1GouraudParams &gouraudParams);
 
