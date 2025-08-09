@@ -82,6 +82,7 @@ In development.
 - VDP2: Fix priority calculations for bitmap BGs. Fixes character sprites being drawn behind the background layer in Mr. Bones. (#247)
 - VDP2: Fix race conditions with threaded deinterlacing causing some artifacts on RBGs in single-density interlaced mode.
 - VDP2: Fix window indexing for RBGs in high resolution modes. Fixes stretched shadows in Last Bronx. (#395)
+- VDP2: Handle RBG window pixels in high resolution modes. Fixes extra column of garbage in Athlete Kings. (#299)
 - VDP2: Invert TVSTAT.ODD reads. Fixes garbled graphics on the top half of the screen in True Pinball. (#320)
 - VDP2: RBG1 uses Rotation Parameter B, not A.
 - VDP2: Rework rotation table calculations. Fixes warped ground on player two's screen in Sonic R multiplayer mode. (#401)

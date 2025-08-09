@@ -5404,7 +5404,9 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
         const uint32 maxScrollX = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftH);
         const uint32 maxScrollY = usingFixed512 ? 512 : ((512 * 4) << rotParams.pageShiftV);
 
-        if (windowState[xx]) {
+        // TODO: optimize doubleResH vs. window handling
+
+        if (windowState[xx] && (!doubleResH || windowState[xx + 1])) {
             // Make pixel transparent if inside a window
             layerState.pixels.transparent[xx] = true;
             if (doubleResH) {
@@ -5415,8 +5417,10 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             const Pixel pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH, rotParams.pageShiftV, scrollCoord,
                 m_vramFetchers[altField][rotParamSelector]);
-            layerState.pixels.SetPixel(xx, pixel);
-            if (doubleResH) {
+            if (!doubleResH || !windowState[xx]) {
+                layerState.pixels.SetPixel(xx, pixel);
+            }
+            if (doubleResH && !windowState[xx + 1]) {
                 layerState.pixels.SetPixel(xx + 1, pixel);
             }
         } else if (rotParams.screenOverProcess == ScreenOverProcess::RepeatChar) {
@@ -5432,8 +5436,10 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             const CoordU32 dotCoord{dotX, dotY};
 
             const Pixel pixel = VDP2FetchCharacterPixel<colorFormat, colorMode>(bgParams, ch, dotCoord, 0);
-            layerState.pixels.SetPixel(xx, pixel);
-            if (doubleResH) {
+            if (!doubleResH || !windowState[xx]) {
+                layerState.pixels.SetPixel(xx, pixel);
+            }
+            if (doubleResH && !windowState[xx + 1]) {
                 layerState.pixels.SetPixel(xx + 1, pixel);
             }
         } else {
@@ -5485,7 +5491,9 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
         const uint32 maxScrollX = usingFixed512 ? 512 : bgParams.bitmapSizeH;
         const uint32 maxScrollY = usingFixed512 ? 512 : bgParams.bitmapSizeV;
 
-        if (windowState[xx]) {
+        // TODO: optimize doubleResH vs. window handling
+
+        if (windowState[xx] && (!doubleResH || windowState[xx + 1])) {
             // Make pixel transparent if inside a window
             layerState.pixels.transparent[xx] = true;
             if (doubleResH) {
@@ -5495,8 +5503,10 @@ NO_INLINE void VDP::VDP2DrawRotationBitmapBG(uint32 y, const BGParams &bgParams,
             // Plot pixel
             const Pixel pixel = VDP2FetchBitmapPixel<colorFormat, colorMode>(
                 bgParams, rotParams.bitmapBaseAddress, scrollCoord, m_vramFetchers[altField][rotParamSelector + 4]);
-            layerState.pixels.SetPixel(xx, pixel);
-            if (doubleResH) {
+            if (!doubleResH || !windowState[xx]) {
+                layerState.pixels.SetPixel(xx, pixel);
+            }
+            if (doubleResH && !windowState[xx + 1]) {
                 layerState.pixels.SetPixel(xx + 1, pixel);
             }
         } else {
