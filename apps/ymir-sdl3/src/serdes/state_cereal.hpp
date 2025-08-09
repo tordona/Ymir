@@ -373,11 +373,21 @@ void serialize(Archive &ar, VDPState::VDPRendererState &s, const uint32 version)
     for (auto &state : s.normBGLayerStates) {
         serialize(ar, state, version);
     }
-    ar(s.rotParamStates);
+    for (auto &state : s.rotParamStates) {
+        serialize(ar, state, version);
+    }
     ar(s.lineBackLayerState);
-    for (auto &fieldFetchers : s.vramFetchers) {
-        for (auto &fetcher : fieldFetchers) {
-            serialize(ar, fetcher, version);
+    if (version >= 7) {
+        for (auto &fieldFetchers : s.vramFetchers) {
+            for (auto &fetcher : fieldFetchers) {
+                serialize(ar, fetcher, version);
+            }
+        }
+    } else {
+        for (auto &fieldFetchers : s.vramFetchers) {
+            for (auto &fetcher : fieldFetchers) {
+                fetcher = {};
+            }
         }
     }
     if (version >= 4) {
