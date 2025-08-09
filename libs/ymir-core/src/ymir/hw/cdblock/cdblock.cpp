@@ -7,6 +7,7 @@
 #include <ymir/util/arith_ops.hpp>
 #include <ymir/util/dev_assert.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <utility>
 

@@ -5,6 +5,7 @@
 
 #include <ymir/hw/vdp/vdp_defs.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <utility>

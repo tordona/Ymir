@@ -6,8 +6,10 @@
 #include <ymir/util/dev_log.hpp>
 #include <ymir/util/inline.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
+#include <fstream>
 
 namespace ymir::smpc {
 
