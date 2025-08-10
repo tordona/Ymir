@@ -69,7 +69,11 @@ In development.
 - SMPC: Fixed TL reporting on SH-2 direct mode.
 - VDP1: Disable "antialiasing" for lines and polylines.
 - VDP1: Fix bad transparency caused by "illegal" RGB 5:5:5 color data (0x0001..0x7FFE). Fixes transparency in Sonic X-treme.
-- VDP1: Process framebuffer swap slightly later in the VBlank OUT line. Fixes flickering graphics in DragonHeart - Fire & Steel, PhantasM, Soviet Strike, Virtua Cop 2 and Yellow Brick Road, and corrupted sprites in Marvel Super Heroes (Shuma Gorath's Chaos Dimension move). (#72, #303, #334, #335, #336)
+- VDP1: Process framebuffer swap slightly later in the VBlank OUT line. Fixes numerous issues: (#72, #272, #303, #334, #335, #336, #368, #377, #378, #405, #406)
+	- Flickering graphics in DragonHeart - Fire & Steel, King of Fighters '96 / '97, Jantei Battle Cos-Player, PhantasM, Soviet Strike, Virtua Cop 2, and Yellow Brick Road
+	- Corrupted sprites in Center Ring Boxing, and Marvel Super Heroes (Shuma Gorath's Chaos Dimension move)
+	- Partially missing sprites in Fuusui Sensei - Feng-Shui Master
+	- Freezes/crashes in Mahou no Janshi - Poe Poe Poemy, and Shockwave Assault
 - VDP1: Reorder LOPR, COPR, CEF and BEF updates. Fixes missing graphics in Virtual On - Cyber Troopers and Sega Touring CARS. (#112, #246)
 - VDP1: Use SCU DMA bus notification to adjust VDP1 VRAM write timing penalty. Fixes hanging intro FMV in Sonic Jam without breaking Mega Man X3's sprites. (#83)
 - VDP2: Always initialize and update background counters even for disabled layers. Fixes rolling screen in F-1 Challenge. (#300)
@@ -86,7 +90,7 @@ In development.
 - VDP2: Handle RBG window pixels in high resolution modes. Fixes extra column of garbage in Athlete Kings. (#299)
 - VDP2: Invert TVSTAT.ODD reads. Fixes garbled graphics on the top half of the screen in True Pinball. (#320)
 - VDP2: RBG1 uses Rotation Parameter B, not A.
-- VDP2: Reset NBG2/3 base vertical scroll counters when writing to SCYN2/3. Fixes garbles graphics in Marvel Super Heroes vs. Street Fighter during Shuma Gorath's Chaos Dimension move. (#72)
+- VDP2: Reset NBG2/3 base vertical scroll counters when writing to SCYN2/3. Fixes garbled graphics in Marvel Super Heroes vs. Street Fighter during Shuma Gorath's Chaos Dimension move. (#72)
 - VDP2: Rework rotation table calculations. Fixes warped ground on player two's screen in Sonic R multiplayer mode. (#401)
 - VDP2: Skip calculation of VRAM PN/CP accesses for NBGs when RBG1 is enabled. Fixes missing car graphics in Gale Racer. (#359)
 - VDP2: Swap even/odd field when entering VBlank.
