@@ -20,7 +20,7 @@ void CDBlockFiltersView::Display() {
 
     ImGui::BeginGroup();
 
-    if (ImGui::BeginTable("cdblock_filters", 10, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
+    if (ImGui::BeginTable("cdblock_filters", 9, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY)) {
         ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2 + paddingWidth * 2);
         ImGui::TableSetupColumn("File number", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2 + paddingWidth * 2);
         ImGui::TableSetupColumn("Channel number", ImGuiTableColumnFlags_WidthFixed,
