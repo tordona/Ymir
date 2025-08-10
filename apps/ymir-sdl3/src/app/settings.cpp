@@ -826,7 +826,7 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "UseAltSpeed", general.useAltSpeed);
         Parse(tblGeneral, "PauseWhenUnfocused", general.pauseWhenUnfocused);
 
-        general.screenshotScale = std::clamp(general.screenshotScale, 1, 8);
+        general.screenshotScale = std::clamp(general.screenshotScale, 1, 4);
 
         // Rounds to the nearest multiple of 5% and clamps to 10%..500% range.
         auto adjustSpeed = [](double value) { return std::clamp(util::RoundToMultiple(value, 0.05), 0.1, 5.0); };

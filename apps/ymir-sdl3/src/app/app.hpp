@@ -50,16 +50,30 @@ private:
     SDL_PropertiesID m_fileDialogProps;
 
     std::thread m_emuThread;
+    util::Event m_emuProcessEvent{};
 
     AudioSystem m_audioSystem;
 
     std::chrono::steady_clock::time_point m_mouseHideTime;
 
-    util::Event m_emuProcessEvent{};
+    struct Screenshot {
+        std::vector<uint32> fb;
+        uint32 fbWidth, fbHeight;
+        uint32 fbScaleX, fbScaleY;
+        int ssScale;
+        std::chrono::system_clock::time_point timestamp;
+    };
+
+    std::thread m_screenshotThread;
+    util::Event m_writeScreenshotEvent;
+    std::queue<Screenshot> m_screenshotQueue;
+    std::mutex m_screenshotQueueMtx;
+    bool m_screenshotThreadRunning;
 
     void RunEmulator();
 
     void EmulatorThread();
+    void ScreenshotThread();
 
     void OpenWelcomeModal(bool scanIPLROMS);
 

@@ -1552,6 +1552,16 @@ void App::RunEmulator() {
         }
     }};
 
+    // Start screenshots thread
+    m_screenshotThread = std::thread([&] { ScreenshotThread(); });
+    ScopeGuard sgStopScreenshotThread{[&] {
+        m_screenshotThreadRunning = false;
+        m_writeScreenshotEvent.Set();
+        if (m_screenshotThread.joinable()) {
+            m_screenshotThread.join();
+        }
+    }};
+
     SDL_ShowWindow(screen.window);
 
     // Track connected gamepads and player indices
@@ -2006,42 +2016,20 @@ void App::RunEmulator() {
 
             case EvtType::TakeScreenshot: //
             {
-                auto now = std::chrono::system_clock::now();
-                auto localNow = util::to_local_time(now);
-                auto fracTime =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
-                // ISO 8601 + milliseconds
-                auto screenshotPath = m_context.profile.GetPath(ProfilePath::Screenshots) /
-                                      fmt::format("{}-{:%Y%m%d}T{:%H%M%S}.{}.png", m_context.GetGameFileName(),
-                                                  localNow, localNow, fracTime);
-
-                const int ssScale = m_context.settings.general.screenshotScale;
-                const uint32 ssScaleX = ssScale * screen.scaleX;
-                const uint32 ssScaleY = ssScale * screen.scaleY;
-                const uint32 ssWidth = screen.width * ssScaleX;
-                const uint32 ssHeight = screen.height * ssScaleY;
-                std::vector<uint32> scaledFB{};
-                scaledFB.resize(ssWidth * ssHeight);
-
-                // Nearest neighbor interpolation
-                auto &srcFB = screen.framebuffers[1];
-                for (uint32 y = 0; y < screen.height; ++y) {
-                    uint32 *line = &scaledFB[(y * ssScaleY) * ssWidth];
-                    if (ssScaleX == 1) {
-                        std::copy_n(&srcFB[y * screen.width], screen.width, line);
-                    } else {
-                        for (uint32 x = 0; x < screen.width; ++x) {
-                            std::fill_n(&line[x * ssScaleX], ssScaleX, srcFB[y * screen.width + x]);
-                        }
-                    }
-                    for (uint32 py = 1; py < ssScaleY; ++py) {
-                        std::copy_n(line, ssWidth, &line[py * ssWidth]);
-                    }
+                Screenshot ss{};
+                ss.fbWidth = screen.width;
+                ss.fbHeight = screen.height;
+                ss.fb.resize(screen.width * screen.height);
+                std::copy_n(screen.framebuffers[1].begin(), ss.fb.size(), ss.fb.begin());
+                ss.fbScaleX = screen.scaleX;
+                ss.fbScaleY = screen.scaleY;
+                ss.ssScale = m_context.settings.general.screenshotScale;
+                ss.timestamp = std::chrono::system_clock::now();
+                {
+                    std::unique_lock lock{m_screenshotQueueMtx};
+                    m_screenshotQueue.emplace(std::move(ss));
                 }
-                stbi_write_png(fmt::format("{}", screenshotPath).c_str(), ssWidth, ssHeight, 4, scaledFB.data(),
-                               ssWidth * sizeof(uint32));
-
-                m_context.DisplayMessage(fmt::format("Screenshot saved to {}", screenshotPath));
+                m_writeScreenshotEvent.Set();
                 break;
             }
 
@@ -3441,6 +3429,65 @@ void App::EmulatorThread() {
             devlog::debug<grp::base>("SH2-S stepped for {} cycles", cycles);
             break;
         }
+        }
+    }
+}
+
+void App::ScreenshotThread() {
+    m_screenshotThreadRunning = true;
+    while (m_screenshotThreadRunning) {
+        m_writeScreenshotEvent.Wait();
+        m_writeScreenshotEvent.Reset();
+        if (!m_screenshotThreadRunning) {
+            break;
+        }
+
+        Screenshot ss{};
+        while (true) {
+            {
+                std::unique_lock lock{m_screenshotQueueMtx};
+                if (m_screenshotQueue.empty()) {
+                    break;
+                }
+                std::swap(ss, m_screenshotQueue.front());
+                m_screenshotQueue.pop();
+            }
+
+            auto localNow = util::to_local_time(ss.timestamp);
+            auto fracTime =
+                std::chrono::duration_cast<std::chrono::milliseconds>(ss.timestamp.time_since_epoch()).count() % 1000;
+            // ISO 8601 + milliseconds
+            auto screenshotPath =
+                m_context.profile.GetPath(ProfilePath::Screenshots) /
+                fmt::format("{}-{:%Y%m%d}T{:%H%M%S}.{}.png", m_context.GetGameFileName(), localNow, localNow, fracTime);
+
+            const int ssScale = ss.ssScale;
+            const uint32 ssScaleX = ssScale * ss.fbScaleX;
+            const uint32 ssScaleY = ssScale * ss.fbScaleY;
+            const uint32 ssWidth = ss.fbWidth * ssScaleX;
+            const uint32 ssHeight = ss.fbHeight * ssScaleY;
+            std::vector<uint32> scaledFB{};
+            scaledFB.resize(ssWidth * ssHeight);
+
+            // Nearest neighbor interpolation
+            auto &srcFB = ss.fb;
+            for (uint32 y = 0; y < ss.fbHeight; ++y) {
+                uint32 *line = &scaledFB[(y * ssScaleY) * ssWidth];
+                if (ssScaleX == 1) {
+                    std::copy_n(&srcFB[y * ss.fbWidth], ss.fbWidth, line);
+                } else {
+                    for (uint32 x = 0; x < ss.fbWidth; ++x) {
+                        std::fill_n(&line[x * ssScaleX], ssScaleX, srcFB[y * ss.fbWidth + x]);
+                    }
+                }
+                for (uint32 py = 1; py < ssScaleY; ++py) {
+                    std::copy_n(line, ssWidth, &line[py * ssWidth]);
+                }
+            }
+            stbi_write_png(fmt::format("{}", screenshotPath).c_str(), ssWidth, ssHeight, 4, scaledFB.data(),
+                           ssWidth * sizeof(uint32));
+
+            m_context.DisplayMessage(fmt::format("Screenshot saved to {}", screenshotPath));
         }
     }
 }

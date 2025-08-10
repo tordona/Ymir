@@ -130,7 +130,7 @@ void GeneralSettingsView::Display() {
     ImGui::PopFont();
 
     MakeDirty(
-        ImGui::SliderInt("Screenshot scale", &settings.screenshotScale, 1, 8, "%u", ImGuiSliderFlags_AlwaysClamp));
+        ImGui::SliderInt("Screenshot scale", &settings.screenshotScale, 1, 4, "%u", ImGuiSliderFlags_AlwaysClamp));
     widgets::ExplanationTooltip("Adjusts the scale at which screenshots are saved.\n"
                                 "Screenshots taken by the emulator have no aspect ratio distortion and are scaled with "
                                 "nearest neighbor interpolation to preserve the raw framebuffer data.",
