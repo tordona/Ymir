@@ -131,9 +131,7 @@ jobs:
           Copy-Item -Path ".\vendor\tomlplusplus\LICENSE"              -Destination ".\licenses\tomlplusplus-LICENSE"
           Copy-Item -Path ".\vendor\xxHash\xxHash\LICENSE"             -Destination ".\licenses\xxHash-LICENSE"
           Copy-Item -Path ".\LICENSE"                                  -Destination ".\licenses\Ymir-LICENSE"
-          Copy-Item -Path ".\README.md"                                -Destination ".\README.md"
-          Copy-Item -Path ".\CHANGELOG.md"                             -Destination ".\CHANGELOG.md"
-          Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
+          Compress-Archive -Path "README.md","CHANGELOG.md","licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
 
       - name: Upload Ymir artifact
         uses: actions/upload-artifact@v4
