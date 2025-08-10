@@ -127,9 +127,12 @@ jobs:
           Copy-Item -Path ".\vendor\mio\LICENSE"                       -Destination ".\licenses\mio-LICENSE"
           Copy-Item -Path ".\vendor\rtmidi\LICENSE"                    -Destination ".\licenses\RtMidi-LICENSE"
           Copy-Item -Path ".\vendor\SDL\LICENSE.txt"                   -Destination ".\licenses\SDL-LICENSE.txt"
+          Copy-Item -Path ".\vendor\stb\stb\LICENSE"                   -Destination ".\licenses\stb-LICENSE"
           Copy-Item -Path ".\vendor\tomlplusplus\LICENSE"              -Destination ".\licenses\tomlplusplus-LICENSE"
           Copy-Item -Path ".\vendor\xxHash\xxHash\LICENSE"             -Destination ".\licenses\xxHash-LICENSE"
           Copy-Item -Path ".\LICENSE"                                  -Destination ".\licenses\Ymir-LICENSE"
+          Copy-Item -Path ".\README.md"                                -Destination ".\README.md"
+          Copy-Item -Path ".\CHANGELOG.md"                             -Destination ".\CHANGELOG.md"
           Compress-Archive -Path "licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
 
       - name: Upload Ymir artifact
@@ -238,10 +241,11 @@ jobs:
           cp -f vendor/mio/LICENSE                     licenses/mio-LICENSE
           cp -f vendor/rtmidi/LICENSE                  licenses/RtMidi-LICENSE
           cp -f vendor/SDL/LICENSE.txt                 licenses/SDL-LICENSE.txt
+          cp -f vendor/stb/stb/LICENSE                 licenses/stb-LICENSE
           cp -f vendor/tomlplusplus/LICENSE            licenses/tomlplusplus-LICENSE
           cp -f vendor/xxHash/xxHash/LICENSE           licenses/xxHash-LICENSE
           cp -f LICENSE                                licenses/Ymir-LICENSE
-          tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
+          tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz README.md CHANGELOG.md licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
 
       - name: Upload Ymir artifact
         uses: actions/upload-artifact@v4
@@ -320,10 +324,11 @@ jobs:
           cp -f vendor/mio/LICENSE                     licenses/mio-LICENSE
           cp -f vendor/rtmidi/LICENSE                  licenses/RtMidi-LICENSE
           cp -f vendor/SDL/LICENSE.txt                 licenses/SDL-LICENSE.txt
+          cp -f vendor/stb/stb/LICENSE                 licenses/stb-LICENSE
           cp -f vendor/tomlplusplus/LICENSE            licenses/tomlplusplus-LICENSE
           cp -f vendor/xxHash/xxHash/LICENSE           licenses/xxHash-LICENSE
           cp -f LICENSE                                licenses/Ymir-LICENSE
-          zip -r ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip licenses
+          zip -r ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip licenses README.md CHANGELOG.md
           cd ${{ github.workspace }}/build/apps/ymir-sdl3/
           zip ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip ymir-sdl3
 
