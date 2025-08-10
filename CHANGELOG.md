@@ -4,6 +4,8 @@
 
 In development.
 
+Introduced save state file version 8.
+
 ### New features and improvements
 
 - App: Added a button to copy the version string from the About window.
@@ -17,7 +19,7 @@ In development.
 - Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
-- GameDB: Force SH-2 cache emulation for Astal and Dark Savior.
+- GameDB: Force SH-2 cache emulation for Astal, Dark Savior and Soviet Strike.
 - GameDB: Implemented flag to force SH-2 cache emulation to specific games.
 - Debugger: Added CD Block filters view.
 - Debugger: Added SH-2 exception vector list view.
@@ -46,9 +48,9 @@ In development.
 - CD Block: Read subheader data from CD-ROM Mode 2 tracks only and fix their addressing. Fixes missing intro FMV in NiGHTS into Dreams... (#46)
 - CD Block: Start new playbacks from starting FAD when paused. Fixes WipEout 2097 and XL boot issues. (#202)
 - Media: Add support for CD-ROM Mode 2 tracks. Fixes Last Bronx not booting. (#238)
-- Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Hopefully fixes some Last Bronx dumps not booting.
+- Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Fixes some Last Bronx dumps not booting.
 - Media: Compensate for INDEX 00 pregap in multi-indexed tracks in CUE sheets. Fixes partially skipped Minnesota Fats - Pool Legend voice lines. (#363)
-- Media: Realign data offset to hunks between tracks in CHDs. Fixes Last Bronx CHD dumps not booting.
+- Media: Realign data offset to hunks between tracks in CHDs. Fixes some Last Bronx CHD dumps not booting.
 - Save states: Added CD Block file system state to save state data.
 - Scheduler: Ensure events are executed in chronological order.
 - SCU: Fix A-Bus external interrupt handling.
@@ -99,6 +101,8 @@ In development.
 ## Version 0.1.6
 
 Released 2025-07-20.
+
+Introduced save state file version 7.
 
 ### New features and improvements
 
@@ -199,6 +203,8 @@ Released 2025-07-20.
 
 Released 2025-06-28.
 
+Introduced save state file version 6.
+
 ### New features and improvements
 
 - App: Added command-line option `-P` to force emulator to start paused.
@@ -263,6 +269,8 @@ Released 2025-06-28.
 
 Released 2025-06-02.
 
+Save state file version 5.
+
 ### New features and improvements
 
 - App: You can now drag and drop CCD, CHD, CUE, ISO or MDS files into the emulator window to load games.
@@ -275,6 +283,8 @@ Released 2025-06-02.
 ## Version 0.1.4
 
 Released 2025-06-02.
+
+Introduced save state file version 5.
 
 ### New features and improvements
 
@@ -334,6 +344,8 @@ Released 2025-06-02.
 
 Released 2025-05-16.
 
+Introduced save state file version 4.
+
 ### New features and improvements
 
 - Cartridge: Added 16 Mbit ROM cartridge for Ultraman: Hikari no Kyojin Densetsu and The King of Fighters '95. (#71)
@@ -372,6 +384,8 @@ Released 2025-05-16.
 
 Released 2025-05-04.
 
+Introduced save state file version 3.
+
 ### New features and improvements
 
 - Input: Improved support for gamepads. You can now configure triggers as buttons, map analog sticks to the D-Pad, adjust deadzones, and more. (#36, #37, #54)
@@ -387,6 +401,8 @@ Released 2025-05-04.
 ## Version 0.1.1
 
 Released 2025-05-03.
+
+Introduced save state file version 2.
 
 ### New features and improvements
 
@@ -409,3 +425,5 @@ Released 2025-05-03.
 Released 2025-05-01.
 
 Initial release.
+
+Introduced save state file version 1.

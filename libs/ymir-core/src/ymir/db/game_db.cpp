@@ -45,6 +45,8 @@ static const std::unordered_map<std::string_view, GameInfo> kGameInfos = {
     {"MK-81019", {.sh2Cache = true}}, // Astal (USA)
     {"GS-9019",  {.sh2Cache = true}}, // Astal (Japan)
     {"MK-81304", {.sh2Cache = true}}, // Dark Savior (USA)
+    {"T-5013H",  {.sh2Cache = true}}, // Soviet Strike (Europe, France, Germany, USA)
+    {"T-10621G", {.sh2Cache = true}}, // Soviet Strike (Japan)
 };
 // clang-format on
 
