@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(Ymir VERSION 0.1.7)
+project(Ymir VERSION 0.1.8)
 
 include(cmake/CMakeRC.cmake)
 include(cmake/CopyRuntimeDLLs.cmake)
