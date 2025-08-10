@@ -1,5 +1,7 @@
 #include "os_exception_handler.hpp"
 
+#include <ymir/version.hpp>
+
 #include <SDL3/SDL_messagebox.h>
 
 #include <fmt/format.h>
@@ -78,6 +80,7 @@ void RegisterExceptionHandler(bool allExceptions) {
         } else {
             fmt::format_to(out, "Ymir encountered an exception.\n\n");
         }
+        fmt::format_to(out, "Ymir version " Ymir_FULL_VERSION "\n\n");
 
         DWORD threadId = GetCurrentThreadId();
         PWSTR threadDesc = nullptr;
@@ -168,6 +171,7 @@ void RegisterExceptionHandler(bool allExceptions) {
         auto out = std::back_inserter(buf);
 
         fmt::format_to(out, "Ymir encountered a fatal error.\n\n");
+        fmt::format_to(out, "Ymir version " Ymir_FULL_VERSION "\n\n");
         fmt::format_to(out, "signo=0x{:X} code=0x{:X} address=0x{:X}\n", info->si_signo, info->si_code, addr);
 
         // TODO: signal-specific info
