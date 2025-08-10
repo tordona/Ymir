@@ -2024,14 +2024,18 @@ void App::RunEmulator() {
                 scaledFB.resize(ssWidth * ssHeight);
 
                 // Nearest neighbor interpolation
+                auto &srcFB = screen.framebuffers[1];
                 for (uint32 y = 0; y < screen.height; ++y) {
-                    for (uint32 x = 0; x < screen.width; ++x) {
-                        for (uint32 py = 0; py < ssScaleY; ++py) {
-                            for (uint32 px = 0; px < ssScaleX; ++px) {
-                                scaledFB[(y * ssScaleY + py) * ssWidth + x * ssScaleX + px] =
-                                    screen.framebuffers[1][y * screen.width + x];
-                            }
+                    uint32 *line = &scaledFB[(y * ssScaleY) * ssWidth];
+                    if (ssScaleX == 1) {
+                        std::copy_n(&srcFB[y * screen.width], screen.width, line);
+                    } else {
+                        for (uint32 x = 0; x < screen.width; ++x) {
+                            std::fill_n(&line[x * ssScaleX], ssScaleX, srcFB[y * screen.width + x]);
                         }
+                    }
+                    for (uint32 py = 1; py < ssScaleY; ++py) {
+                        std::copy_n(line, ssWidth, &line[py * ssWidth]);
                     }
                 }
                 stbi_write_png(fmt::format("{}", screenshotPath).c_str(), ssWidth, ssHeight, 4, scaledFB.data(),
