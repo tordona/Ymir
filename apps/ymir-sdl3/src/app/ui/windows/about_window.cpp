@@ -291,6 +291,8 @@ void AboutWindow::DrawAboutTab() {
     ImGui::TextUnformatted("Consider supporting my work on ");
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("Patreon", "https://www.patreon.com/StrikerX3");
+
+    ImGui::PopTextWrapPos();
 }
 
 void AboutWindow::DrawDependenciesTab() {
@@ -404,150 +406,160 @@ void AboutWindow::DrawDependenciesTab() {
 }
 
 void AboutWindow::DrawAcknowledgementsTab() {
+    ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
+
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::TextUnformatted("Ymir was made possible by");
+    ImGui::PopFont();
+
+    auto ack = [&](const char *name, const char *url) {
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+        ImGui::TextLinkOpenURL(name, url);
+        ImGui::PopFont();
+    };
+
+    auto ackWithAuthor = [&](const char *name, const char *author, const char *url) {
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+        ImGui::TextLinkOpenURL(name, url);
+        ImGui::PopFont();
+
+        ImGui::SameLine();
+
+        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
+        ImGui::Text("by %s", author);
+        ImGui::PopFont();
+    };
+
+    ackWithAuthor("antime's feeble Sega Saturn page", "antime", "https://antime.kapsi.fi/sega/");
+    ackWithAuthor("Hardware signal traces", "Sergiy Dvodnenko (srg320)", "https://github.com/srg320/Saturn_hw");
+    ackWithAuthor("Original research", "Charles MacDonald",
+                  "https://web.archive.org/web/20150119062930/http://cgfm2.emuviews.com/saturn.php");
     {
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
-        ImGui::TextUnformatted("Ymir was made possible by");
-        ImGui::PopFont();
-
-        auto ack = [&](const char *name, const char *url) {
-            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
-            ImGui::TextLinkOpenURL(name, url);
-            ImGui::PopFont();
-        };
-
-        auto ackWithAuthor = [&](const char *name, const char *author, const char *url) {
-            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
-            ImGui::TextLinkOpenURL(name, url);
-            ImGui::PopFont();
-
-            ImGui::SameLine();
-
-            ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
-            ImGui::Text("by %s", author);
-            ImGui::PopFont();
-        };
-
-        ackWithAuthor("antime's feeble Sega Saturn page", "antime", "https://antime.kapsi.fi/sega/");
-        ackWithAuthor("Hardware signal traces", "Sergiy Dvodnenko (srg320)", "https://github.com/srg320/Saturn_hw");
-        ackWithAuthor("Original research", "Charles MacDonald",
-                      "https://web.archive.org/web/20150119062930/http://cgfm2.emuviews.com/saturn.php");
-        {
-            ImGui::Indent();
-            ack("Sega Saturn hardware notes (sattech.txt)",
-                "https://web.archive.org/web/20140318183509/http://cgfm2.emuviews.com/txt/sattech.txt");
-            ack("VDP1 hardware notes (vdp1tech.txt)",
-                "https://web.archive.org/web/20150106171745/http://cgfm2.emuviews.com/sat/vdp1tech.txt");
-            ack("Sega Saturn Cartridge Information (satcart.txt)",
-                "https://web.archive.org/web/20140724061526/http://cgfm2.emuviews.com/sat/satcart.txt");
-            ack("EMS Action Replay Plus notes (satar.txt)",
-                "https://web.archive.org/web/20140724045721/http://cgfm2.emuviews.com/sat/satar.txt");
-            ack("Comms Link hardware notes (comminfo.txt)",
-                "https://web.archive.org/web/20140724035829/http://cgfm2.emuviews.com/sat/comminfo.txt");
-            ImGui::Unindent();
-        }
-        ackWithAuthor("Collection of Dreamcast docs", "Senryoku",
-                      "https://github.com/Senryoku/dreamcast-docs/tree/master/AICA/DOCS");
-        {
-            ImGui::Indent();
-            ackWithAuthor("Original AICA research", "Neill Corlett",
-                          "https://raw.githubusercontent.com/Senryoku/dreamcast-docs/refs/heads/master/"
-                          "AICA/DOCS/myaica.txt");
-            ImGui::Unindent();
-        }
-        ack("Yabause wiki", "http://wiki.yabause.org/");
-        ack("SegaRetro on Sega Saturn", "https://segaretro.org/Sega_Saturn");
-
-        // -----------------------------------------------------------------------------
-
-        ImGui::NewLine();
-
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
-        ImGui::TextUnformatted("Helpful tools and test suites");
-        ImGui::PopFont();
-
-        ackWithAuthor("libyaul", "mrkotfw and contributors", "https://github.com/yaul-org/libyaul");
-        ackWithAuthor("libyaul-examples", "mrkotfw and contributors", "https://github.com/yaul-org/libyaul-examples");
-        ackWithAuthor("saturn-tests", "StrikerX3", "https://github.com/StrikerX3/saturn-tests");
-        ackWithAuthor("SH-4 single step tests", "raddad772", "https://github.com/SingleStepTests/sh4");
-        ackWithAuthor("M68000 single step tests", "raddad772", "https://github.com/SingleStepTests/m68000");
-        ackWithAuthor("scspadpcm, scsptest, sh2test and scutest", "celeriyacon", "https://github.com/celeriyacon");
-
-        // -----------------------------------------------------------------------------
-
-        ImGui::NewLine();
-
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
-        ImGui::TextUnformatted("Other emulators that inspired Ymir");
-        ImGui::PopFont();
-
-        ackWithAuthor("Saturn MiSTer", "Sergiy Dvodnenko (srg320)", "https://github.com/MiSTer-devel/Saturn_MiSTer");
-
-        ackWithAuthor("Mednafen", "various contributors", "https://mednafen.github.io/");
-        ImGui::SameLine();
-        ImGui::TextLinkOpenURL("(libretro git mirror)##mednafen", "https://github.com/libretro-mirrors/mednafen-git");
-
-        ackWithAuthor("Yaba Sanshiro 2", "devmiyax", "https://github.com/devmiyax/yabause");
-        ImGui::SameLine();
-        ImGui::TextLinkOpenURL("(site)##yaba_sanshiro_2", "https://www.uoyabause.org/");
-
-        ackWithAuthor("Yabause", "Guillaume Duhamel and contributors", "https://github.com/Yabause/yabause");
-
-        ackWithAuthor("Mesen2", "Sour and contributors", "https://github.com/SourMesen/Mesen2");
-        ImGui::SameLine();
-        ImGui::TextLinkOpenURL("(site)##mesen", "https://www.mesen.ca/");
-
-        ackWithAuthor("openMSX", "openMSX developers", "https://github.com/openMSX/openMSX");
-        ImGui::SameLine();
-        ImGui::TextLinkOpenURL("(site)##openmsx", "https://openmsx.org/");
-
-        ackWithAuthor("DuckStation", "Stenzek and contributors", "https://github.com/stenzek/duckstation");
-        ImGui::SameLine();
-        ImGui::TextLinkOpenURL("(site)##duckstation", "https://www.duckstation.org/");
-
-        // -----------------------------------------------------------------------------
-
-        ImGui::NewLine();
-
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
-        ImGui::TextUnformatted("Special thanks");
-        ImGui::PopFont();
-
-        ImGui::TextUnformatted("To the ");
-        ImGui::SameLine(0, 0);
-        ImGui::TextLinkOpenURL("/r/EmuDev community", "https://www.reddit.com/r/EmuDev/");
-        ImGui::SameLine(0, 0);
-        ImGui::TextUnformatted(" and their ");
-        ImGui::SameLine(0, 0);
-        ImGui::TextLinkOpenURL("Discord server", "https://discord.gg/dkmJAes");
-        ImGui::SameLine(0, 0);
-        ImGui::TextUnformatted(".");
-
-        ImGui::TextUnformatted("To the ");
-        ImGui::SameLine(0, 0);
-        ImGui::TextLinkOpenURL("project contributors", "https://github.com/StrikerX3/Ymir/graphs/contributors");
-        ImGui::SameLine(0, 0);
-        ImGui::TextUnformatted(" and users ");
-        ImGui::SameLine(0, 0);
-        ImGui::TextLinkOpenURL("reporting issues and feature requests", "https://github.com/StrikerX3/Ymir/issues");
-        ImGui::SameLine(0, 0);
-        ImGui::TextUnformatted(".");
-
-        ImGui::TextUnformatted("To the friends in the ");
-        ImGui::SameLine(0, 0);
-        ImGui::TextLinkOpenURL("official Ymir Discord server", "https://discord.gg/NN3A7n5dzn");
-        ImGui::SameLine(0, 0);
-        ImGui::TextUnformatted(".");
-
-        ImGui::TextUnformatted("To the ");
-        ImGui::SameLine(0, 0);
-        ImGui::TextLinkOpenURL("Patreon supporters", "https://www.patreon.com/StrikerX3");
-        ImGui::SameLine(0, 0);
-        ImGui::TextUnformatted(".");
-
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
-        ImGui::TextUnformatted("And YOU!");
-        ImGui::PopFont();
+        ImGui::Indent();
+        ack("Sega Saturn hardware notes (sattech.txt)",
+            "https://web.archive.org/web/20140318183509/http://cgfm2.emuviews.com/txt/sattech.txt");
+        ack("VDP1 hardware notes (vdp1tech.txt)",
+            "https://web.archive.org/web/20150106171745/http://cgfm2.emuviews.com/sat/vdp1tech.txt");
+        ack("Sega Saturn Cartridge Information (satcart.txt)",
+            "https://web.archive.org/web/20140724061526/http://cgfm2.emuviews.com/sat/satcart.txt");
+        ack("EMS Action Replay Plus notes (satar.txt)",
+            "https://web.archive.org/web/20140724045721/http://cgfm2.emuviews.com/sat/satar.txt");
+        ack("Comms Link hardware notes (comminfo.txt)",
+            "https://web.archive.org/web/20140724035829/http://cgfm2.emuviews.com/sat/comminfo.txt");
+        ImGui::Unindent();
     }
+    ackWithAuthor("Collection of Dreamcast docs", "Senryoku",
+                  "https://github.com/Senryoku/dreamcast-docs/tree/master/AICA/DOCS");
+    {
+        ImGui::Indent();
+        ackWithAuthor("Original AICA research", "Neill Corlett",
+                      "https://raw.githubusercontent.com/Senryoku/dreamcast-docs/refs/heads/master/"
+                      "AICA/DOCS/myaica.txt");
+        ImGui::Unindent();
+    }
+    ack("Yabause wiki", "http://wiki.yabause.org/");
+    ack("SegaRetro on Sega Saturn", "https://segaretro.org/Sega_Saturn");
+
+    // -----------------------------------------------------------------------------
+
+    ImGui::NewLine();
+
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::TextUnformatted("Helpful tools and test suites");
+    ImGui::PopFont();
+
+    ackWithAuthor("libyaul", "mrkotfw and contributors", "https://github.com/yaul-org/libyaul");
+    ackWithAuthor("libyaul-examples", "mrkotfw and contributors", "https://github.com/yaul-org/libyaul-examples");
+    ackWithAuthor("saturn-tests", "StrikerX3", "https://github.com/StrikerX3/saturn-tests");
+    ackWithAuthor("SH-4 single step tests", "raddad772", "https://github.com/SingleStepTests/sh4");
+    ackWithAuthor("M68000 single step tests", "raddad772", "https://github.com/SingleStepTests/m68000");
+    ackWithAuthor("scspadpcm, scsptest, sh2test and scutest", "celeriyacon", "https://github.com/celeriyacon");
+
+    // -----------------------------------------------------------------------------
+
+    ImGui::NewLine();
+
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::TextUnformatted("Other emulators that inspired Ymir");
+    ImGui::PopFont();
+
+    ackWithAuthor("Saturn MiSTer", "Sergiy Dvodnenko (srg320)", "https://github.com/MiSTer-devel/Saturn_MiSTer");
+
+    ackWithAuthor("Mednafen", "various contributors", "https://mednafen.github.io/");
+    ImGui::SameLine();
+    ImGui::TextLinkOpenURL("(libretro git mirror)##mednafen", "https://github.com/libretro-mirrors/mednafen-git");
+
+    ackWithAuthor("Yaba Sanshiro 2", "devmiyax", "https://github.com/devmiyax/yabause");
+    ImGui::SameLine();
+    ImGui::TextLinkOpenURL("(site)##yaba_sanshiro_2", "https://www.uoyabause.org/");
+
+    ackWithAuthor("Yabause", "Guillaume Duhamel and contributors", "https://github.com/Yabause/yabause");
+
+    ackWithAuthor("Mesen2", "Sour and contributors", "https://github.com/SourMesen/Mesen2");
+    ImGui::SameLine();
+    ImGui::TextLinkOpenURL("(site)##mesen", "https://www.mesen.ca/");
+
+    ackWithAuthor("openMSX", "openMSX developers", "https://github.com/openMSX/openMSX");
+    ImGui::SameLine();
+    ImGui::TextLinkOpenURL("(site)##openmsx", "https://openmsx.org/");
+
+    ackWithAuthor("DuckStation", "Stenzek and contributors", "https://github.com/stenzek/duckstation");
+    ImGui::SameLine();
+    ImGui::TextLinkOpenURL("(site)##duckstation", "https://www.duckstation.org/");
+
+    // -----------------------------------------------------------------------------
+
+    ImGui::NewLine();
+
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::TextUnformatted("Special thanks");
+    ImGui::PopFont();
+
+    ImGui::TextUnformatted("To the ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("/r/EmuDev community", "https://www.reddit.com/r/EmuDev/");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted(" and their ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("Discord server", "https://discord.gg/dkmJAes");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted(".");
+
+    ImGui::TextUnformatted("To the ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("project contributors", "https://github.com/StrikerX3/Ymir/graphs/contributors");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted(" and users ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("reporting issues and feature requests", "https://github.com/StrikerX3/Ymir/issues");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted(".");
+
+    ImGui::TextUnformatted("To the friends in the ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("official Ymir Discord server", "https://discord.gg/NN3A7n5dzn");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted(", especially:");
+    ImGui::Indent();
+    ImGui::TextUnformatted(
+        "Aydan Watkins, celeriyacon, Charles / thelastangryman1907, Damian Gracz, fathamburger, GoodWall_533, Jano, "
+        "Katanchiro, sasori95 / Immersion95, secreto7, Silanda, Sorer, TheCoolPup, waspennator, Zet-sensei.");
+    ImGui::Unindent();
+
+    ImGui::TextUnformatted("To the ");
+    ImGui::SameLine(0, 0);
+    ImGui::TextLinkOpenURL("Patreon supporters", "https://www.patreon.com/StrikerX3");
+    ImGui::SameLine(0, 0);
+    ImGui::TextUnformatted(":");
+    ImGui::Indent();
+    ImGui::TextUnformatted("Aydan Watkins, Diego Bartolom\u00E9, khalifax10, Mored4u, Munch, Oliver Stadler.");
+    ImGui::Unindent();
+
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::TextUnformatted("And YOU!");
+    ImGui::PopFont();
+
+    ImGui::PopTextWrapPos();
 }
 
 } // namespace app::ui
