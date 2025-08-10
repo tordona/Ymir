@@ -27,6 +27,7 @@ void GeneralSettingsView::Display() {
     const float itemSpacingWidth = ImGui::GetStyle().ItemSpacing.x;
     const float fileSelectorButtonWidth = ImGui::CalcTextSize("...").x + paddingWidth * 2;
     const float clearButtonWidth = ImGui::CalcTextSize("Clear").x + paddingWidth * 2;
+    const float openButtonWidth = ImGui::CalcTextSize("Open").x + paddingWidth * 2;
 
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -193,7 +194,8 @@ void GeneralSettingsView::Display() {
                 std::string imagePath = fmt::format("{}", profile.GetPathOverride(profPath));
                 std::string currPath = fmt::format("{}", profile.GetPath(profPath));
 
-                ImGui::SetNextItemWidth(-(fileSelectorButtonWidth + clearButtonWidth + itemSpacingWidth * 2));
+                ImGui::SetNextItemWidth(
+                    -(fileSelectorButtonWidth + clearButtonWidth + openButtonWidth + itemSpacingWidth * 3));
                 if (MakeDirty(ImGui::InputTextWithHint(label.c_str(), currPath.c_str(), &imagePath,
                                                        ImGuiInputTextFlags_ElideLeft))) {
                     profile.SetPathOverride(profPath, std::u8string{imagePath.begin(), imagePath.end()});
@@ -214,6 +216,11 @@ void GeneralSettingsView::Display() {
                 ImGui::SameLine();
                 if (ImGui::Button(fmt::format("Clear{}", label).c_str())) {
                     profile.ClearOverridePath(profPath);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button(fmt::format("Open{}", label).c_str())) {
+                    auto path = m_context.profile.GetPath(profPath);
+                    SDL_OpenURL(fmt::format("file:///{}", path).c_str());
                 }
             }
         };
