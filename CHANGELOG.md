@@ -19,14 +19,14 @@ Introduced save state file version 8.
 - Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on cppcoro.
-- GameDB: Force SH-2 cache emulation for Astal, Dark Savior and Soviet Strike.
-- GameDB: Implemented flag to force SH-2 cache emulation to specific games.
 - Debugger: Added CD Block filters view.
-- Debugger: Added SH-2 exception vector list view.
 - Debugger: Added rudimentary SH-2 breakpoint management and per-game debugger state persistence. (#22)
+- Debugger: Added SH-2 exception vector list view.
 - Debugger: Allow suspending SH-2 CPUs in debug mode. (#22)
 - Debugger: Implemented SH-2 breakpoints. (#22)
 - Debugger: Introduced debug break signal that can be raised from just about anywhere. (#21)
+- GameDB: Force SH-2 cache emulation for Astal, Dark Savior and Soviet Strike.
+- GameDB: Implemented flag to force SH-2 cache emulation to specific games.
 - Input: Categorized gamepad triggers and sticks as absolute axes. Absolute axes output fixed values at specific positions.
 - Input: Categorized gamepad triggers as monopolar axes (having values ranging from 0.0 to 1.0) and gamepad sticks as bipolar axes (-1.0 to +1.0).
 - Input: Implemented Arcade Racer peripheral. (#29)
@@ -48,8 +48,8 @@ Introduced save state file version 8.
 - CD Block: Read subheader data from CD-ROM Mode 2 tracks only and fix their addressing. Fixes missing intro FMV in NiGHTS into Dreams... (#46)
 - CD Block: Start new playbacks from starting FAD when paused. Fixes WipEout 2097 and XL boot issues. (#202)
 - Media: Add support for CD-ROM Mode 2 tracks. Fixes Last Bronx not booting. (#238)
-- Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Fixes some Last Bronx dumps not booting.
 - Media: Compensate for INDEX 00 pregap in multi-indexed tracks in CUE sheets. Fixes partially skipped Minnesota Fats - Pool Legend voice lines. (#363)
+- Media: Fix handling of pregap in data tracks in single BIN+CUE dumps. Fixes some Last Bronx dumps not booting.
 - Media: Realign data offset to hunks between tracks in CHDs. Fixes some Last Bronx CHD dumps not booting.
 - Save states: Added CD Block file system state to save state data.
 - Scheduler: Ensure events are executed in chronological order.
