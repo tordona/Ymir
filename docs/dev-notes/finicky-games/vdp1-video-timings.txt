@@ -3,6 +3,7 @@ Games that are sensitive to VDP1 and video signal timings
 =========================================================
 
 What to test to verify VDP1 framebuffer erase and swap timings:
+  DragonHeart - Fire & Steel    sprites get corrupted
   IPL boot animation            3D graphics flicker
   I Love Donald Duck            sprites linger on items menu
   Marvel Super Heroes           sprites get corrupted (e.g Shuma Gorath's Chaos Dimension move)

@@ -1128,7 +1128,7 @@ void VDP::BeginVPhaseTopBorder() {
 void VDP::BeginVPhaseLastLine() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering last line phase", m_state.regs2.VCNT);
 
-    devlog::debug<grp::base>("## VBlank OUT");
+    devlog::trace<grp::base>("## VBlank OUT");
 
     devlog::trace<grp::base>("Begin VDP2 frame, VDP1 framebuffer {}", m_state.displayFB);
 
