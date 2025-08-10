@@ -12,6 +12,8 @@
 
 #include <fmt/std.h>
 
+#include <SDL3/SDL_misc.h>
+
 namespace app::ui {
 
 GeneralSettingsView::GeneralSettingsView(SharedContext &context)
@@ -135,6 +137,13 @@ void GeneralSettingsView::Display() {
                                 "Screenshots taken by the emulator have no aspect ratio distortion and are scaled with "
                                 "nearest neighbor interpolation to preserve the raw framebuffer data.",
                                 m_context.displayScale);
+
+    ImGui::TextUnformatted("Screenshots are saved to ");
+    ImGui::SameLine(0, 0);
+    if (ImGui::TextLink(fmt::format("{}", m_context.profile.GetPath(ProfilePath::Screenshots)).c_str())) {
+        auto path = m_context.profile.GetPath(ProfilePath::Screenshots);
+        SDL_OpenURL(fmt::format("file:///{}", path).c_str());
+    }
 
     // -----------------------------------------------------------------------------------------------------------------
 
