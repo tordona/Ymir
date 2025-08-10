@@ -55,6 +55,9 @@ static const std::set<DWORD> kAllowedExceptions = {
     // Old method of setting thread name
     0x406D1388,
 
+    // Windows Runtime Originate Error, usually triggered by interactions with file dialogs
+    0x40080201,
+
     // Let C++ exceptions go through. They are handled by try-catch blocks in many places.
     0xE06D7363,
     0xE04D5343,
