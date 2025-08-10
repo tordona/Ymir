@@ -138,6 +138,8 @@ struct Settings {
         bool boostEmuThreadPriority;
         bool boostProcessPriority;
 
+        int screenshotScale;
+
         bool enableRewindBuffer;
         // TODO: rewind buffer size
         int rewindCompressionLevel;

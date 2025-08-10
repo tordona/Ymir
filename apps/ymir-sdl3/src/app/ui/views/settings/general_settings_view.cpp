@@ -126,6 +126,19 @@ void GeneralSettingsView::Display() {
     // -----------------------------------------------------------------------------------------------------------------
 
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::SeparatorText("Screenshots");
+    ImGui::PopFont();
+
+    MakeDirty(
+        ImGui::SliderInt("Screenshot scale", &settings.screenshotScale, 1, 8, "%u", ImGuiSliderFlags_AlwaysClamp));
+    widgets::ExplanationTooltip("Adjusts the scale at which screenshots are saved.\n"
+                                "Screenshots taken by the emulator have no aspect ratio distortion and are scaled with "
+                                "nearest neighbor interpolation to preserve the raw framebuffer data.",
+                                m_context.displayScale);
+
+    // -----------------------------------------------------------------------------------------------------------------
+
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
     ImGui::SeparatorText("Rewind buffer");
     ImGui::PopFont();
 
@@ -142,10 +155,9 @@ void GeneralSettingsView::Display() {
                                    ImGuiSliderFlags_AlwaysClamp))) {
         m_context.rewindBuffer.LZ4Accel = 1 << (16 - settings.rewindCompressionLevel);
     }
-
     widgets::ExplanationTooltip("Adjust compression ratio vs. speed.\n"
                                 "Higher values improve compression ratio, reducing memory usage.\n"
-                                "Lower values increase compression speed and improve emulation performance.\n",
+                                "Lower values increase compression speed and improve emulation performance.",
                                 m_context.displayScale);
 
     // -----------------------------------------------------------------------------------------------------------------

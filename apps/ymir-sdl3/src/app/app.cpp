@@ -2014,8 +2014,29 @@ void App::RunEmulator() {
                 auto screenshotPath = m_context.profile.GetPath(ProfilePath::Screenshots) /
                                       fmt::format("{}-{:%Y%m%d}T{:%H%M%S}.{}.png", m_context.GetGameFileName(),
                                                   localNow, localNow, fracTime);
-                stbi_write_png(fmt::format("{}", screenshotPath).c_str(), screen.width, screen.height, 4,
-                               screen.framebuffers[1].data(), screen.width * sizeof(uint32));
+
+                const int ssScale = m_context.settings.general.screenshotScale;
+                const uint32 ssScaleX = ssScale * screen.scaleX;
+                const uint32 ssScaleY = ssScale * screen.scaleY;
+                const uint32 ssWidth = screen.width * ssScaleX;
+                const uint32 ssHeight = screen.height * ssScaleY;
+                std::vector<uint32> scaledFB{};
+                scaledFB.resize(ssWidth * ssHeight);
+
+                // Nearest neighbor interpolation
+                for (uint32 y = 0; y < screen.height; ++y) {
+                    for (uint32 x = 0; x < screen.width; ++x) {
+                        for (uint32 py = 0; py < ssScaleY; ++py) {
+                            for (uint32 px = 0; px < ssScaleX; ++px) {
+                                scaledFB[(y * ssScaleY + py) * ssWidth + x * ssScaleX + px] =
+                                    screen.framebuffers[1][y * screen.width + x];
+                            }
+                        }
+                    }
+                }
+                stbi_write_png(fmt::format("{}", screenshotPath).c_str(), ssWidth, ssHeight, 4, scaledFB.data(),
+                               ssWidth * sizeof(uint32));
+
                 m_context.DisplayMessage(fmt::format("Screenshot saved to {}", screenshotPath));
                 break;
             }

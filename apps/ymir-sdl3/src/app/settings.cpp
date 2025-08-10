@@ -652,11 +652,15 @@ void Settings::ResetToDefaults() {
     general.rememberLastLoadedDisc = false;
     general.boostEmuThreadPriority = true;
     general.boostProcessPriority = true;
+    general.screenshotScale = 2;
+
     general.enableRewindBuffer = false;
     general.rewindCompressionLevel = 12;
+
     general.mainSpeedFactor = 1.0;
     general.altSpeedFactor = 0.5;
     general.useAltSpeed = false;
+
     general.pauseWhenUnfocused = false;
 
     gui.overrideUIScale = false;
@@ -815,11 +819,14 @@ SettingsLoadResult Settings::Load(const std::filesystem::path &path) {
         Parse(tblGeneral, "BoostEmuThreadPriority", general.boostEmuThreadPriority);
         Parse(tblGeneral, "BoostProcessPriority", general.boostProcessPriority);
         Parse(tblGeneral, "EnableRewindBuffer", general.enableRewindBuffer);
+        Parse(tblGeneral, "ScreenshotScale", general.screenshotScale);
         Parse(tblGeneral, "RewindCompressionLevel", general.rewindCompressionLevel);
         Parse(tblGeneral, "MainSpeedFactor", general.mainSpeedFactor);
         Parse(tblGeneral, "AltSpeedFactor", general.altSpeedFactor);
         Parse(tblGeneral, "UseAltSpeed", general.useAltSpeed);
         Parse(tblGeneral, "PauseWhenUnfocused", general.pauseWhenUnfocused);
+
+        general.screenshotScale = std::clamp(general.screenshotScale, 1, 8);
 
         // Rounds to the nearest multiple of 5% and clamps to 10%..500% range.
         auto adjustSpeed = [](double value) { return std::clamp(util::RoundToMultiple(value, 0.05), 0.1, 5.0); };
@@ -1179,6 +1186,7 @@ SettingsSaveResult Settings::Save() {
             {"BoostEmuThreadPriority", general.boostEmuThreadPriority},
             {"BoostProcessPriority", general.boostProcessPriority},
             {"EnableRewindBuffer", general.enableRewindBuffer},
+            {"ScreenshotScale", general.screenshotScale},
             {"RewindCompressionLevel", general.rewindCompressionLevel},
             {"MainSpeedFactor", general.mainSpeedFactor.Get()},
             {"AltSpeedFactor", general.altSpeedFactor.Get()},
