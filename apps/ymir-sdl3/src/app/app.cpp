@@ -3434,6 +3434,8 @@ void App::EmulatorThread() {
 }
 
 void App::ScreenshotThread() {
+    util::SetCurrentThreadName("Screenshoot processing thread");
+
     m_screenshotThreadRunning = true;
     while (m_screenshotThreadRunning) {
         m_writeScreenshotEvent.Wait();
