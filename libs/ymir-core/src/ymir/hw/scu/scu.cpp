@@ -401,6 +401,7 @@ void SCU::SaveState(state::SCUState &state) const {
     state.timer0Counter = m_timer0Counter;
     state.timer1Reload = m_timer1Reload;
     state.timer1Mode = m_timer1Mode;
+    state.timer1Triggered = m_timer1Triggered;
     state.timerEnable = m_timerEnable;
 
     state.wramSizeSelect = m_WRAMSizeSelect;
@@ -470,8 +471,9 @@ void SCU::LoadState(const state::SCUState &state) {
     m_timer0Compare = state.timer0Compare;
     m_timer0Counter = state.timer0Counter;
     m_timer1Reload = state.timer1Reload;
-    m_timerEnable = state.timerEnable;
+    m_timer1Triggered = state.timer1Triggered;
     m_timer1Mode = state.timer1Mode;
+    m_timerEnable = state.timerEnable;
 
     m_WRAMSizeSelect = state.wramSizeSelect;
 
@@ -1007,8 +1009,8 @@ void SCU::TriggerDMATransfer(DMATrigger trigger) {
 FORCE_INLINE void SCU::TickTimer1() {
     if (m_timerEnable && (!m_timer1Mode || m_timer0Counter == m_timer0Compare)) {
         TriggerTimer1();
-        m_timer1Triggered = true;
     }
+    m_timer1Triggered = true;
 }
 
 template <mem_primitive T, bool peek>
