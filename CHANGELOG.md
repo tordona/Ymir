@@ -79,7 +79,7 @@ Introduced save state file version 8.
 - VDP1: Reorder LOPR, COPR, CEF and BEF updates. Fixes missing graphics in Virtual On - Cyber Troopers and Sega Touring CARS. (#112, #246)
 - VDP1: Use SCU DMA bus notification to adjust VDP1 VRAM write timing penalty. Fixes hanging intro FMV in Sonic Jam without breaking Mega Man X3's sprites. (#83)
 - VDP2: Always initialize and update background counters even for disabled layers. Fixes rolling screen in F-1 Challenge. (#300)
-- VDP2: Block bitmap reads from VRAM banks without CP appropriate access. Fixes dirty graphics in NFL Quarterback Club 97's title screen. (#332)
+- VDP2: Block bitmap reads from VRAM banks without appropriate CP access. Fixes dirty graphics in NFL Quarterback Club 97's title screen. (#332)
 - VDP2: Compute bitmap data access offsets when multiple chunks are read for an NBG. Fixes background offset in Doukyuusei - if while maintaining the slicing fix for Capcom Generation - Dai-5-shuu Kakutouka-tachi. (#384)
 - VDP2: Don't apply sprite shadow if sprite priority is lower than the top layer. Fixes shadows drawing on top of objects in Blue Seed - Kushinada Hirokuden. (#349)
 - VDP2: Don't blend line screen with layer 1 if line screen color calculations are disabled. Fixes fog in battle backgrounds in Zanma Chou Ougi - Valhollian. (#352)
