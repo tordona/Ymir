@@ -32,6 +32,12 @@ void SCSPSlotsView::Display() {
         for (uint32 i = 0; i < 32; ++i) {
             const auto &slot = slots[i];
 
+            const bool disabled = (slot.egState == scsp::Slot::EGState::Release && slot.GetEGLevel() >= 0x3C0) ||
+                                  (!slot.active && slot.soundSource == scsp::Slot::SoundSource::SoundRAM);
+
+            if (disabled) {
+                ImGui::BeginDisabled();
+            }
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
                 ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
@@ -52,6 +58,9 @@ void SCSPSlotsView::Display() {
                 ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%04X", slot.loopEndAddress);
                 ImGui::PopFont();
+            }
+            if (disabled) {
+                ImGui::EndDisabled();
             }
         }
 
