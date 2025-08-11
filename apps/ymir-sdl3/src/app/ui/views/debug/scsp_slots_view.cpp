@@ -2,6 +2,8 @@
 
 #include <ymir/hw/scsp/scsp.hpp>
 
+#include <app/ui/fonts/IconsMaterialSymbols.h>
+
 using namespace ymir;
 
 namespace app::ui {
@@ -21,11 +23,12 @@ void SCSPSlotsView::Display() {
 
     ImGui::BeginGroup();
 
-    if (ImGui::BeginTable("slots", 4, ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::BeginTable("slots", 5, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2 + paddingWidth * 2);
         ImGui::TableSetupColumn("SA", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 5 + paddingWidth * 2);
         ImGui::TableSetupColumn("LSA", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 4 + paddingWidth * 2);
         ImGui::TableSetupColumn("LEA", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 4 + paddingWidth * 2);
+        ImGui::TableSetupColumn("Loop", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2 + paddingWidth * 2);
         ImGui::TableSetupScrollFreeze(1, 1);
         ImGui::TableHeadersRow();
 
@@ -58,6 +61,27 @@ void SCSPSlotsView::Display() {
                 ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%04X", slot.loopEndAddress);
                 ImGui::PopFont();
+            }
+            if (ImGui::TableNextColumn()) {
+                using enum scsp::Slot::LoopControl;
+                switch (slot.loopControl) {
+                case Off:
+                    ImGui::TextUnformatted(ICON_MS_KEYBOARD_TAB);
+                    ImGui::SetItemTooltip("No loop");
+                    break;
+                case Normal:
+                    ImGui::TextUnformatted(ICON_MS_ARROW_RIGHT_ALT);
+                    ImGui::SetItemTooltip("Forward");
+                    break;
+                case Reverse:
+                    ImGui::TextUnformatted(ICON_MS_ARROW_LEFT_ALT);
+                    ImGui::SetItemTooltip("Reverse");
+                    break;
+                case Alternate:
+                    ImGui::TextUnformatted(ICON_MS_SWAP_HORIZ);
+                    ImGui::SetItemTooltip("Alternate");
+                    break;
+                }
             }
             if (disabled) {
                 ImGui::EndDisabled();
