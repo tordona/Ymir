@@ -1181,6 +1181,33 @@ public:
 
     const sys::CBClockSpeedChange CbClockSpeedChange =
         util::MakeClassMemberRequiredCallback<&SCSP::UpdateClockRatios>(this);
+
+public:
+    // -------------------------------------------------------------------------
+    // Debugger
+
+    class Probe {
+    public:
+        explicit Probe(SCSP &scsp);
+
+        const std::array<Slot, 32> &GetSlots() const {
+            return m_scsp.m_slots;
+        }
+
+    private:
+        SCSP &m_scsp;
+    };
+
+    Probe &GetProbe() {
+        return m_probe;
+    }
+
+    const Probe &GetProbe() const {
+        return m_probe;
+    }
+
+private:
+    Probe m_probe{*this};
 };
 
 } // namespace ymir::scsp

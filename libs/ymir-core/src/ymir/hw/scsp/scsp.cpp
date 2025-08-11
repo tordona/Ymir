@@ -1147,4 +1147,10 @@ ExceptionVector SCSP::AcknowledgeInterrupt(uint8 level) {
     return ExceptionVector::AutoVectorRequest;
 }
 
+// -----------------------------------------------------------------------------
+// Probe implementation
+
+SCSP::Probe::Probe(SCSP &scsp)
+    : m_scsp(scsp) {}
+
 } // namespace ymir::scsp

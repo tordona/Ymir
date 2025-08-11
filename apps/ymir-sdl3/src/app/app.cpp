@@ -152,6 +152,7 @@ App::App()
     , m_masterSH2WindowSet(m_context, true)
     , m_slaveSH2WindowSet(m_context, false)
     , m_scuWindowSet(m_context)
+    , m_scspWindowSet(m_context)
     , m_vdpWindowSet(m_context)
     , m_cdblockWindowSet(m_context)
     , m_debugOutputWindow(m_context)
@@ -2619,6 +2620,12 @@ void App::RunEmulator() {
                         ImGui::EndMenu();
                     }
 
+                    if (ImGui::BeginMenu("SCSP")) {
+                        ImGui::MenuItem("Slots", nullptr, &m_scspWindowSet.slots.Open);
+
+                        ImGui::EndMenu();
+                    }
+
                     if (ImGui::BeginMenu("VDP")) {
                         auto &vdp = m_context.saturn.instance->VDP;
                         auto layerMenuItem = [&](const char *name, vdp::Layer layer) {
@@ -4515,6 +4522,7 @@ void App::DrawWindows() {
     m_masterSH2WindowSet.DisplayAll();
     m_slaveSH2WindowSet.DisplayAll();
     m_scuWindowSet.DisplayAll();
+    m_scspWindowSet.DisplayAll();
     m_vdpWindowSet.DisplayAll();
     m_cdblockWindowSet.DisplayAll();
 
