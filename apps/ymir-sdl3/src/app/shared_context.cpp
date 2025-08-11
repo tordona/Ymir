@@ -18,7 +18,7 @@ SharedContext::SharedContext() {
 
 SharedContext::~SharedContext() = default;
 
-std::filesystem::path SharedContext::GetGameFileName() const {
+std::filesystem::path SharedContext::GetGameFileName(bool oldStyle) const {
     // Use serial number + disc title if available
     {
         std::unique_lock lock{locks.disc};
@@ -35,7 +35,11 @@ std::filesystem::path SharedContext::GetGameFileName() const {
                         return ch;
                     }
                 });
-                return fmt::format("[{}] {}", disc.header.productNumber, title);
+                if (oldStyle) {
+                    return fmt::format("[{}] {}", disc.header.productNumber, title);
+                } else {
+                    return fmt::format("{} [{}]", title, disc.header.productNumber);
+                }
             } else {
                 return fmt::format("[{}]", disc.header.productNumber);
             }
@@ -55,7 +59,14 @@ std::filesystem::path SharedContext::GetInternalBackupRAMPath() const {
     if (settings.system.internalBackupRAMPerGame) {
         const std::filesystem::path basePath = profile.GetPath(ProfilePath::BackupMemory) / "games";
         std::filesystem::create_directories(basePath);
-        return basePath / fmt::format("bup-int-{}.bin", GetGameFileName());
+
+        // Rename old-style backup files to new format
+        const std::filesystem::path oldPath = basePath / fmt::format("bup-int-{}.bin", GetGameFileName(true));
+        const std::filesystem::path newPath = basePath / fmt::format("bup-int-{}.bin", GetGameFileName(false));
+        if (oldPath != newPath && std::filesystem::is_regular_file(oldPath)) {
+            std::filesystem::rename(oldPath, newPath);
+        }
+        return newPath;
     } else if (!settings.system.internalBackupRAMImagePath.empty()) {
         return settings.system.internalBackupRAMImagePath;
     } else {

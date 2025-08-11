@@ -591,7 +591,7 @@ struct SharedContext {
         eventQueues.gui.enqueue(std::move(event));
     }
 
-    std::filesystem::path GetGameFileName() const;
+    std::filesystem::path GetGameFileName(bool oldStyle = false) const;
 
     std::filesystem::path GetInternalBackupRAMPath() const;
     std::filesystem::path GetPerGameExternalBackupRAMPath(ymir::bup::BackupMemorySize bupSize) const;
