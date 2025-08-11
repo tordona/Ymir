@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           if [ ${{ inputs.dev-build }} = true ]; then
-            echo "project-version=$(sed -nr "s/project\(Ymir\s+VERSION\s+(\S+)\)/\1/p" CMakeLists.txt)-dev-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+            echo "project-version=v$(sed -nr "s/project\(Ymir\s+VERSION\s+(\S+)\)/\1/p" CMakeLists.txt)-dev-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
           else
             echo "project-version=${GITHUB_REF_NAME//+/_}" >> "$GITHUB_OUTPUT"
           fi
