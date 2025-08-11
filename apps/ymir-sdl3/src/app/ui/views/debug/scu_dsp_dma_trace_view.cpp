@@ -8,7 +8,7 @@ SCUDSPDMATraceView::SCUDSPDMATraceView(SharedContext &context)
 
 void SCUDSPDMATraceView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -50,17 +50,17 @@ void SCUDSPDMATraceView::Display() {
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%u", trace.counter);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
                 if (trace.toD0) {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     ImGui::Text("%07X", trace.addrD0);
                     ImGui::PopFont();
                     ImGui::SameLine();
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                     if (trace.addrInc > 0) {
                         if (trace.hold) {
                             ImGui::TextDisabled("(+%d)", trace.addrInc);
@@ -96,11 +96,11 @@ void SCUDSPDMATraceView::Display() {
                     default: ImGui::Text("Invalid (%u)", trace.addrDSP); break;
                     }
                 } else {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     ImGui::Text("%07X", trace.addrD0);
                     ImGui::PopFont();
                     ImGui::SameLine();
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                     if (trace.addrInc > 0) {
                         ImGui::TextDisabled("+%d", trace.addrInc);
                     } else if (trace.addrInc < 0) {
@@ -110,7 +110,7 @@ void SCUDSPDMATraceView::Display() {
                 }
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%X", trace.count == 0 ? 0x100 : trace.count);
                 ImGui::PopFont();
             }

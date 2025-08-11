@@ -11,7 +11,7 @@ SH2DMAControllerChannelView::SH2DMAControllerChannelView(SharedContext &context,
     , m_index(index) {}
 
 void SH2DMAControllerChannelView::Display() {
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -25,7 +25,7 @@ void SH2DMAControllerChannelView::Display() {
 
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     ImGui::InputScalar(fmt::format("##sar{}", m_index).c_str(), ImGuiDataType_U32, &m_channel.srcAddress, nullptr,
                        nullptr, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
     ImGui::PopFont();
@@ -39,7 +39,7 @@ void SH2DMAControllerChannelView::Display() {
 
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     ImGui::InputScalar(fmt::format("##dar{}", m_index).c_str(), ImGuiDataType_U32, &m_channel.dstAddress, nullptr,
                        nullptr, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
     ImGui::PopFont();
@@ -54,7 +54,7 @@ void SH2DMAControllerChannelView::Display() {
     uint32 xferCount = m_channel.xferCount;
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 6);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     if (ImGui::InputScalar(fmt::format("##tcr{}", m_index).c_str(), ImGuiDataType_U32, &xferCount, nullptr, nullptr,
                            "%06X", ImGuiInputTextFlags_CharsHexadecimal)) {
         m_channel.xferCount = xferCount;
@@ -71,7 +71,7 @@ void SH2DMAControllerChannelView::Display() {
     uint32 CHCR = m_channel.ReadCHCR();
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     if (ImGui::InputScalar(fmt::format("##chcr{}", m_index).c_str(), ImGuiDataType_U32, &CHCR, nullptr, nullptr, "%08X",
                            ImGuiInputTextFlags_CharsHexadecimal)) {
         m_channel.WriteCHCR<true>(CHCR);
@@ -88,7 +88,7 @@ void SH2DMAControllerChannelView::Display() {
     uint8 DRCR = m_channel.ReadDRCR();
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     if (ImGui::InputScalar(fmt::format("##drcr{}", m_index).c_str(), ImGuiDataType_U8, &DRCR, nullptr, nullptr, "%02X",
                            ImGuiInputTextFlags_CharsHexadecimal)) {
         m_channel.WriteDRCR(DRCR);

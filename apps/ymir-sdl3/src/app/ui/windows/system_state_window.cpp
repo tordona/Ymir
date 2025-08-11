@@ -296,7 +296,7 @@ void SystemStateWindow::DrawCDDrive() {
 
     if (status == cdblock::kStatusCodePlay || status == cdblock::kStatusCodeScan) {
         ImGui::BeginGroup();
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         if (msf.m == 0) {
             ImGui::TextDisabled("00");
         } else {
@@ -343,7 +343,7 @@ void SystemStateWindow::DrawCDDrive() {
         ImGui::SameLine(0, 0);
 
         ImGui::BeginGroup();
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         const uint32 numZeros = std::countl_zero(fad) / 4 - 2; // FAD is 24 bits
         ImGui::TextDisabled("%0*u", numZeros, 0);
         ImGui::SameLine(0, 0);
@@ -353,7 +353,7 @@ void SystemStateWindow::DrawCDDrive() {
         ImGui::SetItemTooltip("Frame address (FAD)");
     } else {
         ImGui::BeginGroup();
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         ImGui::TextDisabled("--");
         ImGui::SameLine(0, 0);
         ImGui::TextUnformatted(":");
@@ -372,7 +372,7 @@ void SystemStateWindow::DrawCDDrive() {
         ImGui::SameLine(0, 0);
 
         ImGui::BeginGroup();
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         ImGui::TextDisabled("------");
         ImGui::PopFont();
         ImGui::EndGroup();

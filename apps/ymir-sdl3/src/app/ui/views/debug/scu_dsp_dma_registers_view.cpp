@@ -11,7 +11,7 @@ SCUDSPDMARegistersView::SCUDSPDMARegistersView(SharedContext &context)
 void SCUDSPDMARegistersView::Display() {
     ImGui::BeginGroup();
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -53,7 +53,7 @@ void SCUDSPDMARegistersView::Display() {
             ImGui::TextUnformatted("to");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 7);
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             if (ImGui::InputScalar("##dst", ImGuiDataType_U32, &dsp.dmaWriteAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
                 dsp.dmaWriteAddr &= 0x7FF'FFFC;
@@ -66,7 +66,7 @@ void SCUDSPDMARegistersView::Display() {
             ImGui::TextUnformatted("From");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 7);
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             if (ImGui::InputScalar("##src", ImGuiDataType_U32, &dsp.dmaReadAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
                 dsp.dmaReadAddr &= 0x7FF'FFFC;
@@ -133,7 +133,7 @@ void SCUDSPDMARegistersView::Display() {
         ImGui::TextUnformatted("Count:");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         ImGui::InputScalar("##count", ImGuiDataType_U8, &dsp.dmaCount, nullptr, nullptr, "%02X",
                            ImGuiInputTextFlags_CharsHexadecimal);
         ImGui::PopFont();

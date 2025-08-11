@@ -16,13 +16,13 @@ void SH2PowerView::Display() {
     auto &probe = m_sh2.GetProbe();
     auto &sbycr = probe.SBYCR();
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     ImGui::InputScalar("##sbycr", ImGuiDataType_U8, &sbycr.u8, nullptr, nullptr, "%02X",
                        ImGuiInputTextFlags_CharsHexadecimal);
     ImGui::PopFont();

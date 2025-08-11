@@ -26,7 +26,7 @@ void SH2RegistersView::Display() {
     const bool tallLayout = ImGui::GetContentRegionAvail().y >= ImGui::GetFrameHeightWithSpacing() * 25;
 
     // Compute several layout sizes
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
     const float flagsSpacing = 4.0f * m_context.displayScale;
@@ -48,7 +48,7 @@ void SH2RegistersView::Display() {
         auto endX = ImGui::GetCursorPosX();
         ImGui::SameLine(0, regLabelWidth - endX + startX);
 
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         ImGui::SetNextItemWidth(regFieldWidth);
         ImGui::InputScalar(fmt::format("##input_{}", name).c_str(), ImGuiDataType_U32, &value, nullptr, nullptr, "%08X",
                            ImGuiInputTextFlags_CharsHexadecimal);
@@ -107,7 +107,7 @@ void SH2RegistersView::Display() {
         ImGui::SameLine();
 
         ImGui::BeginGroup();
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
         uint8 ILevel = sr.ILevel;
         if (ImGui::InputScalar("##input_SR_ILevel", ImGuiDataType_U8, &ILevel, nullptr, nullptr, "%X",
@@ -200,7 +200,7 @@ float SH2RegistersView::GetViewWidth() {
     const bool tallLayout = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().CellPadding.y * 2 >=
                             ImGui::GetFrameHeightWithSpacing() * 25;
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
     const float flagsSpacing = 4.0f * m_context.displayScale;

@@ -2913,7 +2913,7 @@ void App::RunEmulator() {
                                                         ImVec2(p3.x + size * 0.5f, p3.y), color);
                         }
 
-                        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
+                        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fontSizes.medium);
                         const auto textSize = ImGui::CalcTextSize(speed.c_str());
                         ImGui::PopFont();
 
@@ -2924,11 +2924,11 @@ void App::RunEmulator() {
                         const ImVec2 textPos(rectPos.x + textPadding.x, rectPos.y + textPadding.y);
 
                         drawList->AddText(m_context.fonts.sansSerif.regular,
-                                          m_context.fonts.sizes.medium * m_context.displayScale,
+                                          m_context.fontSizes.medium * m_context.displayScale,
                                           ImVec2(textPos.x + textShadowOffset, textPos.y + textShadowOffset),
                                           ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.85f)), speed.c_str());
                         drawList->AddText(m_context.fonts.sansSerif.regular,
-                                          m_context.fonts.sizes.medium * m_context.displayScale, textPos,
+                                          m_context.fontSizes.medium * m_context.displayScale, textPos,
                                           ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.00f)), speed.c_str());
                     } else if (rev) {
                         const ImVec2 p1 = {tl.x + size * 0.75f, br.y};
@@ -2997,7 +2997,7 @@ void App::RunEmulator() {
 
                 const float textWrapWidth = viewport->WorkSize.x - padding.x * 4.0f;
 
-                ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.small);
+                ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fontSizes.small);
                 const auto textSize = ImGui::CalcTextSize(fpsText.c_str(), nullptr, false, textWrapWidth);
                 ImGui::PopFont();
 
@@ -3010,9 +3010,9 @@ void App::RunEmulator() {
                     rectPos,
                     ImVec2(rectPos.x + textSize.x + padding.x * 2.0f, rectPos.y + textSize.y + padding.y * 2.0f),
                     ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, 0.5f)));
-                drawList->AddText(
-                    m_context.fonts.sansSerif.regular, m_context.fonts.sizes.small * m_context.displayScale, textPos,
-                    ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f)), fpsText.c_str(), nullptr, textWrapWidth);
+                drawList->AddText(m_context.fonts.sansSerif.regular, m_context.fontSizes.small * m_context.displayScale,
+                                  textPos, ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 1.0f)), fpsText.c_str(), nullptr,
+                                  textWrapWidth);
             }
 
             // Draw messages
@@ -3048,7 +3048,7 @@ void App::RunEmulator() {
 
                     const float textWrapWidth = viewport->WorkSize.x - padding.x * 4.0f - spacing.x * 2.0f;
 
-                    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
+                    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fontSizes.large);
                     const auto textSize = ImGui::CalcTextSize(message->message.c_str(), nullptr, false, textWrapWidth);
                     ImGui::PopFont();
                     const ImVec2 textPos(messageX + padding.x, messageY + padding.y);
@@ -3058,7 +3058,7 @@ void App::RunEmulator() {
                         ImVec2(messageX + textSize.x + padding.x * 2.0f, messageY + textSize.y + padding.y * 2.0f),
                         ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, alpha * 0.5f)));
                     drawList->AddText(m_context.fonts.sansSerif.regular,
-                                      m_context.fonts.sizes.large * m_context.displayScale, textPos,
+                                      m_context.fontSizes.large * m_context.displayScale, textPos,
                                       ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, alpha)), message->message.c_str(),
                                       nullptr, textWrapWidth);
 
@@ -3525,10 +3525,10 @@ void App::OpenWelcomeModal(bool scanIPLROMs) {
                      ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale * 0.7f,
                             m_context.images.ymirLogo.size.y * m_context.displayScale * 0.7f));
 
-        ImGui::PushFont(m_context.fonts.display, m_context.fonts.sizes.display);
+        ImGui::PushFont(m_context.fonts.display, m_context.fontSizes.display);
         ImGui::TextUnformatted("Ymir");
         ImGui::PopFont();
-        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
+        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fontSizes.large);
         ImGui::TextUnformatted("Welcome to Ymir!");
         ImGui::PopFont();
         ImGui::NewLine();

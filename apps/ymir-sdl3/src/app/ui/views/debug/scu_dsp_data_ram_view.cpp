@@ -10,7 +10,7 @@ SCUDSPDataRAMView::SCUDSPDataRAMView(SharedContext &context)
 
 void SCUDSPDataRAMView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -30,14 +30,14 @@ void SCUDSPDataRAMView::Display() {
         for (uint32 i = 0; i < 64; i++) {
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text("%02X", i);
                 ImGui::PopFont();
             }
             for (uint32 bank = 0; bank < 4; bank++) {
                 if (ImGui::TableNextColumn()) {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                     ImGui::SetNextItemWidth(paddingWidth * 2 + hexCharWidth * 8);
                     ImGui::InputScalar(fmt::format("##data_{}_{}", bank, i).c_str(), ImGuiDataType_U32,
                                        &dsp.dataRAM[bank][i], nullptr, nullptr, "%08X",

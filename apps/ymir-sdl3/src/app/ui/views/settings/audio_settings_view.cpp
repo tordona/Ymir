@@ -21,7 +21,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::SeparatorText("General");
     ImGui::PopFont();
 
@@ -39,7 +39,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::SeparatorText("Quality");
     ImGui::PopFont();
 
@@ -47,7 +47,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::SeparatorText("MIDI");
     ImGui::PopFont();
 
@@ -132,7 +132,7 @@ void AudioSettingsView::Display() {
 
     // -----------------------------------------------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::SeparatorText("Accuracy");
     ImGui::PopFont();
 
@@ -141,7 +141,7 @@ void AudioSettingsView::Display() {
     // -----------------------------------------------------------------------------------------------------------------
 
     if constexpr (false) { // NOTE: disabled because it is unimplemented
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
         ImGui::SeparatorText("Performance");
         ImGui::PopFont();
 

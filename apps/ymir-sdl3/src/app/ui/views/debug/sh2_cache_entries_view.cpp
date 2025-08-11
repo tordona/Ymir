@@ -14,7 +14,7 @@ void SH2CacheEntriesView::Display() {
     auto &probe = m_sh2.GetProbe();
     auto &cache = probe.GetCache();
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -44,7 +44,7 @@ void SH2CacheEntriesView::Display() {
                 const char dataWayCh = sh2::IsValidCacheWay(dataWay) ? '0' + dataWay : '-';
 
                 ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 if (ImGui::InputScalar(fmt::format("##lru_{}", i).c_str(), ImGuiDataType_U8, &lru, nullptr, nullptr,
                                        "%02X", ImGuiInputTextFlags_CharsHexadecimal)) {
                     lru = std::min<uint8>(lru, 0b111111);
@@ -68,7 +68,7 @@ void SH2CacheEntriesView::Display() {
 
                     uint32 tagAddress = entry.tag[way].tagAddress << 10u;
                     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     if (ImGui::InputScalar(fmt::format("##entry_{}_way_{}_tag_addr", i, way).c_str(), ImGuiDataType_U32,
                                            &tagAddress, nullptr, nullptr, "%08X",
                                            ImGuiInputTextFlags_CharsHexadecimal)) {

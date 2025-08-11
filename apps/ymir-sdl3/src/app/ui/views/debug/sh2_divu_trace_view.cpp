@@ -30,7 +30,7 @@ void SH2DivisionUnitTraceView::Display() {
     }
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -62,7 +62,7 @@ void SH2DivisionUnitTraceView::Display() {
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%u", trace.counter);
                 ImGui::PopFont();
             }
@@ -71,7 +71,7 @@ void SH2DivisionUnitTraceView::Display() {
             }
             if (ImGui::TableNextColumn()) {
                 if (m_showHex) {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     if (trace.div64) {
                         ImGui::Text("%016" PRIX64, trace.dividend);
                     } else {
@@ -84,7 +84,7 @@ void SH2DivisionUnitTraceView::Display() {
             }
             if (ImGui::TableNextColumn()) {
                 if (m_showHex) {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     ImGui::Text("%08X", trace.divisor);
                     ImGui::PopFont();
                 } else {
@@ -94,7 +94,7 @@ void SH2DivisionUnitTraceView::Display() {
             if (ImGui::TableNextColumn()) {
                 if (trace.finished) {
                     if (m_showHex) {
-                        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                         ImGui::Text("%08X", trace.quotient);
                         ImGui::PopFont();
                     } else {
@@ -105,7 +105,7 @@ void SH2DivisionUnitTraceView::Display() {
             if (ImGui::TableNextColumn()) {
                 if (trace.finished) {
                     if (m_showHex) {
-                        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                         ImGui::Text("%08X", trace.remainder);
                         ImGui::PopFont();
                     } else {

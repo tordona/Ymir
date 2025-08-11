@@ -31,7 +31,7 @@ void SCUDMAStateView::Display(uint8 channel) {
             const uint32 currIndirectAddr = probe.GetCurrentDMAIndirectSourceAddress(channel);
             ImGui::Text("Indirect transfer from ");
             ImGui::SameLine();
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::Text("%07X", currIndirectAddr);
             ImGui::PopFont();
         } else {
@@ -51,10 +51,10 @@ void SCUDMAStateView::Display(uint8 channel) {
     const uint32 currSrcAddrInc = probe.GetCurrentDMASourceAddressIncrement(channel);
     const uint32 currDstAddr = probe.GetCurrentDMADestinationAddress(channel);
     const uint32 currDstAddrInc = probe.GetCurrentDMADestinationAddressIncrement(channel);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     ImGui::Text("%07X", currSrcAddr);
     ImGui::PopFont();
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
     ImGui::SameLine();
     if (currSrcAddrInc > 0) {
         ImGui::TextDisabled("+%-2X", currSrcAddrInc);
@@ -65,10 +65,10 @@ void SCUDMAStateView::Display(uint8 channel) {
     ImGui::SameLine();
     ImGui::TextUnformatted("->");
     ImGui::SameLine();
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     ImGui::Text("%07X", currDstAddr);
     ImGui::PopFont();
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
     ImGui::SameLine();
     if (currDstAddrInc > 0) {
         ImGui::TextDisabled("+%-2X", currDstAddrInc);
@@ -78,7 +78,7 @@ void SCUDMAStateView::Display(uint8 channel) {
     ImGui::PopFont();
 
     const uint32 currXferCount = probe.GetCurrentDMATransferCount(channel);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     ImGui::Text("%X", currXferCount);
     ImGui::PopFont();
     ImGui::SameLine();

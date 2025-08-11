@@ -500,17 +500,17 @@ struct SharedContext {
         } monospace;
 
         ImFont *display = nullptr;
-
-        struct {
-            float small = 14.0f;
-            float medium = 16.0f;
-            float large = 20.0f;
-            float xlarge = 28.0f;
-
-            float display = 64.0f;
-            float displaySmall = 24.0f;
-        } sizes;
     } fonts;
+
+    struct FontSizes {
+        float small = 14.0f;
+        float medium = 16.0f;
+        float large = 20.0f;
+        float xlarge = 28.0f;
+
+        float display = 64.0f;
+        float displaySmall = 24.0f;
+    } fontSizes;
 
     struct Colors {
         ImVec4 good{0.25f, 1.00f, 0.41f, 1.00f};

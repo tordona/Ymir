@@ -18,7 +18,7 @@ void VDP2VRAMDelayView::Display() {
     const auto &nbgLayerStates = probe.GetNBGLayerStates();
 
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
     const float spaceWidth = ImGui::CalcTextSize(" ").x;
@@ -117,7 +117,7 @@ void VDP2VRAMDelayView::Display() {
             const uint32 max = hires ? 4 : 8;
             for (uint32 i = 0; i < max; ++i) {
                 if (ImGui::TableNextColumn()) {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     switch (timings[i]) {
                     case vdp::CyclePatterns::PatNameNBG0: ImGui::TextUnformatted("PN0"); break;
                     case vdp::CyclePatterns::PatNameNBG1: ImGui::TextUnformatted("PN1"); break;

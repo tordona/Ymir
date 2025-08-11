@@ -220,20 +220,20 @@ void AboutWindow::DrawAboutTab() {
                  ImVec2(m_context.images.ymirLogo.size.x * m_context.displayScale,
                         m_context.images.ymirLogo.size.y * m_context.displayScale));
 
-    ImGui::PushFont(m_context.fonts.display, m_context.fonts.sizes.display);
+    ImGui::PushFont(m_context.fonts.display, m_context.fontSizes.display);
     ImGui::TextUnformatted("Ymir");
     ImGui::PopFont();
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.xlarge);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.xlarge);
     ImGui::TextUnformatted("Version " Ymir_FULL_VERSION);
     ImGui::PopFont();
 #if Ymir_DEV_BUILD
     ImGui::SameLine();
-    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.xlarge);
+    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fontSizes.xlarge);
     ImGui::TextUnformatted("(development build)");
     ImGui::PopFont();
 #endif
 
-    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fontSizes.large);
     ImGui::TextUnformatted("A Sega Saturn emulator");
     ImGui::PopFont();
 
@@ -300,7 +300,7 @@ void AboutWindow::DrawDependenciesTab() {
 
     // -----------------------------------------------------------------------------
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::TextUnformatted("Libraries");
     ImGui::PopFont();
 
@@ -315,7 +315,7 @@ void AboutWindow::DrawDependenciesTab() {
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
-            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
             ImGui::TextUnformatted(dep.name);
             ImGui::PopFont();
             if (dep.version != nullptr) {
@@ -359,7 +359,7 @@ void AboutWindow::DrawDependenciesTab() {
 
     ImGui::Separator();
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::TextUnformatted("Fonts");
     ImGui::PopFont();
 
@@ -389,7 +389,7 @@ void AboutWindow::DrawDependenciesTab() {
             }
             ImGui::SetCursorPos(cursor);
 
-            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
             ImGui::TextUnformatted(font.name);
             ImGui::PopFont();
 
@@ -408,24 +408,24 @@ void AboutWindow::DrawDependenciesTab() {
 void AboutWindow::DrawAcknowledgementsTab() {
     ImGui::PushTextWrapPos(ImGui::GetWindowContentRegionMax().x);
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::TextUnformatted("Ymir was made possible by");
     ImGui::PopFont();
 
     auto ack = [&](const char *name, const char *url) {
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
         ImGui::TextLinkOpenURL(name, url);
         ImGui::PopFont();
     };
 
     auto ackWithAuthor = [&](const char *name, const char *author, const char *url) {
-        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
         ImGui::TextLinkOpenURL(name, url);
         ImGui::PopFont();
 
         ImGui::SameLine();
 
-        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.sansSerif.regular, m_context.fontSizes.medium);
         ImGui::Text("by %s", author);
         ImGui::PopFont();
     };
@@ -464,7 +464,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
 
     ImGui::NewLine();
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::TextUnformatted("Helpful tools and test suites");
     ImGui::PopFont();
 
@@ -482,7 +482,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
 
     ImGui::NewLine();
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::TextUnformatted("Other emulators that inspired Ymir");
     ImGui::PopFont();
 
@@ -514,7 +514,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
 
     ImGui::NewLine();
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::TextUnformatted("Special thanks");
     ImGui::PopFont();
 
@@ -561,7 +561,7 @@ void AboutWindow::DrawAcknowledgementsTab() {
     ImGui::TextUnformatted("Aydan Watkins, Diego Bartolom\u00E9, khalifax10, Mored4u, Munch, Oliver Stadler.");
     ImGui::Unindent();
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.large);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::TextUnformatted("And YOU!");
     ImGui::PopFont();
 

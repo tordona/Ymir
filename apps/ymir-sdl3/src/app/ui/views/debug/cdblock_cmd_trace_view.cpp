@@ -8,7 +8,7 @@ CDBlockCommandTraceView::CDBlockCommandTraceView(SharedContext &context)
 
 void CDBlockCommandTraceView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -48,19 +48,19 @@ void CDBlockCommandTraceView::Display() {
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%u", trace.index);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%04X %04X %04X %04X", trace.request[0], trace.request[1], trace.request[2],
                             trace.request[3]);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
                 if (trace.processed) {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     ImGui::Text("%04X %04X %04X %04X", trace.response[0], trace.response[1], trace.response[2],
                                 trace.response[3]);
                     ImGui::PopFont();

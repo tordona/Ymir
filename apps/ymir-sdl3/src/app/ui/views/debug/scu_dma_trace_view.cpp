@@ -8,7 +8,7 @@ SCUDMATraceView::SCUDMATraceView(SharedContext &context)
 
 void SCUDMATraceView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -53,18 +53,18 @@ void SCUDMATraceView::Display() {
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%u", trace.counter);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%u", trace.channel);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
                 if (trace.indirect) {
-                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                     ImGui::Text("%07X", trace.indirectAddr);
                     ImGui::PopFont();
                 } else {
@@ -72,20 +72,20 @@ void SCUDMATraceView::Display() {
                 }
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%07X", trace.srcAddr);
                 ImGui::PopFont();
                 ImGui::SameLine();
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                 ImGui::TextDisabled("+%d", trace.srcAddrInc);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%07X", trace.dstAddr);
                 ImGui::PopFont();
                 ImGui::SameLine();
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                 ImGui::TextDisabled("+%d", trace.dstAddrInc);
                 ImGui::PopFont();
             }

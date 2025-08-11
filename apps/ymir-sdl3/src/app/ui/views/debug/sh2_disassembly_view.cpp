@@ -35,7 +35,7 @@ void SH2DisassemblyView::Display() {
         ImGui::EndMenuBar();
     }
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const ImVec2 disasmCharSize = ImGui::CalcTextSize("x");
     const float lineHeight = ImGui::GetTextLineHeightWithSpacing();
     const float itemSpacing = ImGui::GetStyle().ItemSpacing.y;
@@ -51,7 +51,7 @@ void SH2DisassemblyView::Display() {
         // TODO: branch arrows
         // TODO: cursor
 
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         auto &probe = m_sh2.GetProbe();
         const uint32 pc = probe.PC() & ~1;
         const uint32 pr = probe.PR() & ~1;

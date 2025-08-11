@@ -35,7 +35,7 @@ void MemoryViewerWindow::DrawContents() {
     const mem_view::Region *nextRegion = m_memViewState->selectedRegion;
     auto &currRegion = *nextRegion;
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     if (ImGui::BeginCombo("##region", currRegion.ToString().c_str(),
                           ImGuiComboFlags_HeightLarge | ImGuiComboFlags_WidthFitPreview)) {
         for (auto &group : mem_view::regions::kRegionGroups) {
@@ -62,13 +62,13 @@ void MemoryViewerWindow::DrawContents() {
         currRegion.paramsFn(m_memViewState.get());
     }
     ImGui::Separator();
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     m_memViewState->memoryEditor.DrawContents(this, currRegion.size, currRegion.baseAddress);
     ImGui::PopFont();
     if (m_memViewState->memoryEditor.MouseHovered) {
         const uint32 address = currRegion.baseAddress + m_memViewState->memoryEditor.MouseHoveredAddr;
         if (ImGui::BeginTooltip()) {
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::Text("%08X", address);
             ImGui::PopFont();
             ImGui::EndTooltip();

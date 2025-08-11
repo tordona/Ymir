@@ -28,14 +28,14 @@ void SH2DMAControllerChannelTraceView::DisplayStatistics() {
         ImGui::TableNextRow();
 
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
             ImGui::Text("%" PRIu64, stats.numTransfers);
             ImGui::PopFont();
             ImGui::TextUnformatted("transfers");
         }
 
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
             if (stats.bytesTransferred >= 1_TiB) {
                 ImGui::Text("%0.2lf TiB", util::BytesToTiB(stats.bytesTransferred));
             } else if (stats.bytesTransferred >= 1_GiB) {
@@ -52,7 +52,7 @@ void SH2DMAControllerChannelTraceView::DisplayStatistics() {
         }
 
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
             ImGui::Text("%" PRIu64, stats.interrupts);
             ImGui::PopFont();
             ImGui::TextUnformatted("interrupts");
@@ -65,7 +65,7 @@ void SH2DMAControllerChannelTraceView::DisplayStatistics() {
 
 void SH2DMAControllerChannelTraceView::DisplayTrace() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -107,16 +107,16 @@ void SH2DMAControllerChannelTraceView::DisplayTrace() {
 
             ImGui::TableNextRow();
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%u", trace.counter);
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%08X", trace.srcAddress);
                 ImGui::PopFont();
                 ImGui::SameLine();
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                 if (trace.srcInc > 0) {
                     ImGui::TextDisabled("+%d", trace.srcInc);
                 } else if (trace.srcInc < 0) {
@@ -125,11 +125,11 @@ void SH2DMAControllerChannelTraceView::DisplayTrace() {
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%08X", trace.dstAddress);
                 ImGui::PopFont();
                 ImGui::SameLine();
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.small);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.small);
                 if (trace.dstInc > 0) {
                     ImGui::TextDisabled("+%d", trace.dstInc);
                 } else if (trace.dstInc < 0) {
@@ -138,7 +138,7 @@ void SH2DMAControllerChannelTraceView::DisplayTrace() {
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%X", trace.count);
                 ImGui::PopFont();
             }

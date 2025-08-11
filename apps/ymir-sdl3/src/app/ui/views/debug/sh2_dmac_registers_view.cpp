@@ -15,7 +15,7 @@ void SH2DMAControllerRegistersView::Display() {
     auto &dmaor = probe.DMAOR();
     auto &intc = probe.INTC();
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -23,7 +23,7 @@ void SH2DMAControllerRegistersView::Display() {
 
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 8);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     ImGui::InputScalar("##dmaor", ImGuiDataType_U32, &DMAOR, nullptr, nullptr, "%08X",
                        ImGuiInputTextFlags_CharsHexadecimal);
     ImGui::PopFont();
@@ -56,7 +56,7 @@ void SH2DMAControllerRegistersView::Display() {
         ImGui::BeginGroup();
         uint8 vector = intc.GetVector(sh2::InterruptSource::DMAC0_XferEnd);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         if (ImGui::InputScalar("##vcrdma0", ImGuiDataType_U8, &vector, nullptr, nullptr, "%02X",
                                ImGuiInputTextFlags_CharsHexadecimal)) {
             intc.SetVector(sh2::InterruptSource::DMAC0_XferEnd, vector);
@@ -72,7 +72,7 @@ void SH2DMAControllerRegistersView::Display() {
         ImGui::BeginGroup();
         uint8 vector = intc.GetVector(sh2::InterruptSource::DMAC1_XferEnd);
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         if (ImGui::InputScalar("##vcrdma1", ImGuiDataType_U8, &vector, nullptr, nullptr, "%02X",
                                ImGuiInputTextFlags_CharsHexadecimal)) {
             intc.SetVector(sh2::InterruptSource::DMAC1_XferEnd, vector);
@@ -88,7 +88,7 @@ void SH2DMAControllerRegistersView::Display() {
         uint8 level = intc.GetLevel(sh2::InterruptSource::DMAC0_XferEnd);
         ImGui::BeginGroup();
         ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
-        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+        ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
         if (ImGui::InputScalar("##ipra_dmacipn", ImGuiDataType_U8, &level, nullptr, nullptr, "%X",
                                ImGuiInputTextFlags_CharsHexadecimal)) {
             intc.SetLevel(sh2::InterruptSource::DMAC0_XferEnd, std::min<uint8>(level, 0xF));

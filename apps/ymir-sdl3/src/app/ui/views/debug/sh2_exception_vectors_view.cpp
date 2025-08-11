@@ -42,7 +42,7 @@ void SH2ExceptionVectorsView::Display() {
     const uint32 baseAddress = m_useVBR ? vbr : m_customAddress;
 
     // Compute several layout sizes
-    const float fontSize = m_context.fonts.sizes.medium;
+    const float fontSize = m_context.fontSizes.medium;
     ImGui::PushFont(m_context.fonts.monospace.regular, fontSize);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
@@ -160,7 +160,7 @@ void SH2ExceptionVectorsView::Display() {
 
 float SH2ExceptionVectorsView::GetWidth() const {
     // Compute several layout sizes
-    const float fontSize = m_context.fonts.sizes.medium;
+    const float fontSize = m_context.fontSizes.medium;
     ImGui::PushFont(m_context.fonts.monospace.regular, fontSize);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();

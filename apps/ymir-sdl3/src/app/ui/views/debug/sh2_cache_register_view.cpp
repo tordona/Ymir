@@ -14,14 +14,14 @@ void SH2CacheRegisterView::Display() {
     auto &probe = m_sh2.GetProbe();
     auto &cache = probe.GetCache();
 
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
     uint8 CCR = cache.ReadCCR();
 
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 2);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     if (ImGui::InputScalar("##ccr", ImGuiDataType_U8, &CCR, nullptr, nullptr, "%02X",
                            ImGuiInputTextFlags_CharsHexadecimal)) {
         cache.WriteCCR<true>(CCR);
@@ -52,7 +52,7 @@ void SH2CacheRegisterView::Display() {
     uint8 Wn = cache.CCR.Wn;
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetStyle().FramePadding.x * 2 + hexCharWidth * 1);
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     if (ImGui::InputScalar("##way", ImGuiDataType_U8, &Wn, nullptr, nullptr, "%X",
                            ImGuiInputTextFlags_CharsHexadecimal)) {
         cache.CCR.Wn = std::min<uint8>(Wn, 3);

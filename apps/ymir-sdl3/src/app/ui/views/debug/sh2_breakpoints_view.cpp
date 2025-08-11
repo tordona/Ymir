@@ -15,7 +15,7 @@ SH2BreakpointsView::SH2BreakpointsView(SharedContext &context, sh2::SH2 &sh2)
     , m_sh2(sh2) {}
 
 void SH2BreakpointsView::Display() {
-    const float fontSize = m_context.fonts.sizes.medium;
+    const float fontSize = m_context.fontSizes.medium;
     ImGui::PushFont(m_context.fonts.monospace.regular, fontSize);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
@@ -71,7 +71,7 @@ void SH2BreakpointsView::Display() {
         m_context.debuggers.MakeDirty();
     }
 
-    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.medium);
     ImGui::SeparatorText("Active breakpoints");
     ImGui::PopFont();
 

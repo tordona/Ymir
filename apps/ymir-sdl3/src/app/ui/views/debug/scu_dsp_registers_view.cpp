@@ -13,7 +13,7 @@ void SCUDSPRegistersView::Display() {
     const float cellPaddingHeight = ImGui::GetStyle().CellPadding.y;
     const float frameHeight = ImGui::GetFrameHeight();
     const float framePadding = ImGui::GetStyle().FramePadding.x;
-    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+    ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
     const float hexCharWidth = ImGui::CalcTextSize("F").x;
     ImGui::PopFont();
 
@@ -95,7 +95,7 @@ void SCUDSPRegistersView::Display() {
             ImGui::TextUnformatted("PC");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 2);
             ImGui::InputScalar("##reg_pc", ImGuiDataType_U8, &dsp.PC, nullptr, nullptr, "%02X",
                                ImGuiInputTextFlags_CharsHexadecimal);
@@ -106,7 +106,7 @@ void SCUDSPRegistersView::Display() {
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted("LOP");
             ImGui::SameLine();
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 3);
             uint16 lop = dsp.loopCount;
             if (ImGui::InputScalar("##reg_lop", ImGuiDataType_U16, &lop, nullptr, nullptr, "%03X",
@@ -119,7 +119,7 @@ void SCUDSPRegistersView::Display() {
 
             ImGui::TextUnformatted("TOP");
             ImGui::SameLine();
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 2);
             ImGui::InputScalar("##reg_top", ImGuiDataType_U8, &dsp.loopTop, nullptr, nullptr, "%02X",
                                ImGuiInputTextFlags_CharsHexadecimal);
@@ -130,7 +130,7 @@ void SCUDSPRegistersView::Display() {
             ImGui::TextUnformatted("RA0");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 7);
             if (ImGui::InputScalar("##reg_ra0", ImGuiDataType_S32, &dsp.dmaReadAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
@@ -144,7 +144,7 @@ void SCUDSPRegistersView::Display() {
         }
         if (ImGui::TableNextColumn()) {
             uint64 ac = dsp.AC.u64;
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 12);
             if (ImGui::InputScalar("##reg_ac", ImGuiDataType_U64, &ac, nullptr, nullptr, "%012X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
@@ -157,7 +157,7 @@ void SCUDSPRegistersView::Display() {
             ImGui::TextUnformatted("RX");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 8);
             ImGui::InputScalar("##reg_rx", ImGuiDataType_S32, &dsp.RX, nullptr, nullptr, "%08X",
                                ImGuiInputTextFlags_CharsHexadecimal);
@@ -171,7 +171,7 @@ void SCUDSPRegistersView::Display() {
         }
         if (ImGui::TableNextColumn()) {
             ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, flagsSpacing);
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             for (uint32 i = 0; i < 4; i++) {
                 uint8 ct = dsp.CT.array[i];
                 if (i > 0) {
@@ -191,7 +191,7 @@ void SCUDSPRegistersView::Display() {
             ImGui::TextUnformatted("WA0");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 7);
             if (ImGui::InputScalar("##reg_wa0", ImGuiDataType_S32, &dsp.dmaWriteAddr, nullptr, nullptr, "%07X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
@@ -205,7 +205,7 @@ void SCUDSPRegistersView::Display() {
         }
         if (ImGui::TableNextColumn()) {
             uint64 p = dsp.P.u64;
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 12);
             if (ImGui::InputScalar("##reg_p", ImGuiDataType_U64, &p, nullptr, nullptr, "%012X",
                                    ImGuiInputTextFlags_CharsHexadecimal)) {
@@ -218,7 +218,7 @@ void SCUDSPRegistersView::Display() {
             ImGui::TextUnformatted("RY");
         }
         if (ImGui::TableNextColumn()) {
-            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fonts.sizes.medium);
+            ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
             ImGui::SetNextItemWidth(framePadding * 2 + hexCharWidth * 8);
             ImGui::InputScalar("##reg_ry", ImGuiDataType_S32, &dsp.RY, nullptr, nullptr, "%08X",
                                ImGuiInputTextFlags_CharsHexadecimal);
