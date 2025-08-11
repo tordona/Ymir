@@ -473,7 +473,10 @@ void AboutWindow::DrawAcknowledgementsTab() {
     ackWithAuthor("saturn-tests", "StrikerX3", "https://github.com/StrikerX3/saturn-tests");
     ackWithAuthor("SH-4 single step tests", "raddad772", "https://github.com/SingleStepTests/sh4");
     ackWithAuthor("M68000 single step tests", "raddad772", "https://github.com/SingleStepTests/m68000");
-    ackWithAuthor("scspadpcm, scsptest, sh2test and scutest", "celeriyacon", "https://github.com/celeriyacon");
+    ackWithAuthor("Various tests", "celeriyacon", "https://github.com/celeriyacon");
+    ImGui::Indent();
+    ImGui::TextUnformatted("misctest, scspadpcm, scsptest, sh2test, scutest and vdp2test");
+    ImGui::Unindent();
 
     // -----------------------------------------------------------------------------
 
@@ -533,7 +536,10 @@ void AboutWindow::DrawAcknowledgementsTab() {
     ImGui::SameLine(0, 0);
     ImGui::TextLinkOpenURL("reporting issues and feature requests", "https://github.com/StrikerX3/Ymir/issues");
     ImGui::SameLine(0, 0);
-    ImGui::TextUnformatted(".");
+    ImGui::TextUnformatted(", including:");
+    ImGui::Indent();
+    ImGui::TextUnformatted("Wunkolo, bsdcode, GlaireDaggers, BlueInterlude, lvsweat, floreal.");
+    ImGui::Unindent();
 
     ImGui::TextUnformatted("To the friends in the ");
     ImGui::SameLine(0, 0);
