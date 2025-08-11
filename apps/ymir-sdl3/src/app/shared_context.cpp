@@ -63,6 +63,12 @@ std::filesystem::path SharedContext::GetInternalBackupRAMPath() const {
     }
 }
 
+std::filesystem::path SharedContext::GetPerGameExternalBackupRAMPath(ymir::bup::BackupMemorySize bupSize) const {
+    const std::filesystem::path basePath = profile.GetPath(ProfilePath::BackupMemory) / "games";
+    std::filesystem::create_directories(basePath);
+    return basePath / fmt::format("bup-ext-{}M-{}.bin", BupSizeToSize(bupSize) * 8 / 1024 / 1024, GetGameFileName());
+}
+
 ymir::sys::SystemMemory &SharedContext::SaturnContainer::GetSystemMemory() {
     return instance->mem;
 }

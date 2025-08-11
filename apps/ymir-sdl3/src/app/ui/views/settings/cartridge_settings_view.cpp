@@ -50,9 +50,19 @@ void CartridgeSettingsView::Display() {
         Settings::Cartridge::Type::ROM,
     };
 
+    ImGui::PushTextWrapPos(ImGui::GetContentRegionMax().x);
+
     ImGui::TextUnformatted("Current cartridge: ");
     ImGui::SameLine(0, 0);
     widgets::CartridgeInfo(m_context);
+    {
+        std::unique_lock lock{m_context.locks.cart};
+        auto &cart = m_context.saturn.GetCartridge();
+        if (cart.GetType() == cart::CartType::BackupMemory) {
+            auto &bupCart = *cart.As<cart::CartType::BackupMemory>();
+            ImGui::Text("Image path: %s", fmt::format("{}", bupCart.GetBackupMemory().GetPath()).c_str());
+        }
+    }
 
     MakeDirty(ImGui::Checkbox("Automatically switch to recommended cartridges", &settings.autoLoadGameCarts));
     widgets::ExplanationTooltip(
@@ -106,6 +116,7 @@ void CartridgeSettingsView::Display() {
         case db::Cartridge::DRAM32Mbit: wantedCartType = cart::CartType::DRAM32Mbit; break;
         case db::Cartridge::ROM_KOF95: wantedCartType = cart::CartType::ROM; break;
         case db::Cartridge::ROM_Ultraman: wantedCartType = cart::CartType::ROM; break;
+        case db::Cartridge::BackupRAM: wantedCartType = cart::CartType::BackupMemory; break;
         default: wantedCartType = cart::CartType::None; break;
         }
 
@@ -133,13 +144,19 @@ void CartridgeSettingsView::Display() {
             case db::Cartridge::ROM_Ultraman:
                 ImGui::TextColored(color, "The currently loaded game requires the Ultraman ROM cartridge.");
                 break;
+            case db::Cartridge::BackupRAM:
+                ImGui::TextColored(color, "A Backup RAM cartridge is recommended for this game.");
+                break;
             default: break;
             }
-
             ImGui::SameLine();
 
             if (MakeDirty(ImGui::Button("Insert##recommended_cart"))) {
                 m_context.EnqueueEvent(events::gui::LoadRecommendedGameCartridge());
+            }
+
+            if (gameInfo->cartReason) {
+                ImGui::TextColored(color, "Reason: %s", gameInfo->cartReason);
             }
         }
     }
@@ -150,6 +167,8 @@ void CartridgeSettingsView::Display() {
     case Settings::Cartridge::Type::DRAM: DrawDRAMSettings(); break;
     case Settings::Cartridge::Type::ROM: DrawROMSettings(); break;
     }
+
+    ImGui::PopTextWrapPos();
 }
 
 void CartridgeSettingsView::DrawBackupRAMSettings() {

@@ -4092,6 +4092,22 @@ void App::LoadRecommendedCartridge() {
         }
         break;
     }
+    case Cart::BackupRAM: //
+    {
+        // TODO: centralize backup RAM image management tasks somewhere
+        std::filesystem::path cartPath =
+            m_context.GetPerGameExternalBackupRAMPath(ymir::bup::BackupMemorySize::_32Mbit);
+        std::error_code error{};
+        ymir::bup::BackupMemory bupMem{};
+        bupMem.CreateFrom(cartPath, ymir::bup::BackupMemorySize::_32Mbit, error);
+        if (error) {
+            m_context.EnqueueEvent(
+                events::gui::ShowError(fmt::format("Failed to load external backup memory: {}", error.message())));
+        } else {
+            m_context.EnqueueEvent(events::emu::InsertBackupMemoryCartridge(cartPath));
+        }
+        break;
+    }
     }
 
     // TODO: notify user

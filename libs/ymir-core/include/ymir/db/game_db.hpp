@@ -12,11 +12,12 @@ Contains information about specific games that require special handling.
 namespace ymir::db {
 
 /// @brief The cartridge required for the game to work
-enum class Cartridge { None, DRAM8Mbit, DRAM32Mbit, ROM_KOF95, ROM_Ultraman };
+enum class Cartridge { None, DRAM8Mbit, DRAM32Mbit, ROM_KOF95, ROM_Ultraman, BackupRAM };
 
 /// @brief Information about a game in the database.
 struct GameInfo {
     Cartridge cartridge = Cartridge::None; ///< Cartridge required for the game to work
+    const char *cartReason = nullptr;      ///< Text describing why the cartridge is required
     bool sh2Cache = false;                 ///< SH-2 cache emulation required for the game to work
 };
 

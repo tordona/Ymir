@@ -27,9 +27,9 @@ static const std::unordered_map<std::string_view, GameInfo> kGameInfos = {
     {"T-3119G",    {.cartridge = Cartridge::DRAM8Mbit}}, // Real Bout Garou Densetsu Special (Japan)
     {"T-3116G",    {.cartridge = Cartridge::DRAM8Mbit}}, // Samurai Spirits - Amakusa Kourin (Japan)
     {"T-3104G",    {.cartridge = Cartridge::DRAM8Mbit}}, // Samurai Spirits - Zankurou Musouken (Japan)
-    {"610636008",  {.cartridge = Cartridge::DRAM8Mbit}}, // "Tech Saturn 1997.6 (Japan)
     {"T-16509G",   {.cartridge = Cartridge::DRAM8Mbit}}, // Super Real Mahjong P7 (Japan)
     {"T-16510G",   {.cartridge = Cartridge::DRAM8Mbit}}, // Super Real Mahjong P7 (Japan)
+    {"610636008",  {.cartridge = Cartridge::DRAM8Mbit}}, // "Tech Saturn 1997.6 (Japan)
     {"T-3108G",    {.cartridge = Cartridge::DRAM8Mbit}}, // The King of Fighters '96 (Japan)
     {"T-3121G",    {.cartridge = Cartridge::DRAM8Mbit}}, // The King of Fighters '97 (Japan)
     {"T-1515G",    {.cartridge = Cartridge::DRAM8Mbit}}, // Waku Waku 7 (Japan)
@@ -41,6 +41,9 @@ static const std::unordered_map<std::string_view, GameInfo> kGameInfos = {
     {"T-1246G", {.cartridge = Cartridge::DRAM32Mbit}}, // Street Fighter Zero 3 (Japan)
     {"T-1229G", {.cartridge = Cartridge::DRAM32Mbit}}, // Vampire Savior (Japan)
     {"T-1226G", {.cartridge = Cartridge::DRAM32Mbit}}, // X-Men vs. Street Fighter (Japan)
+
+    {"T-16804G", {.cartridge = Cartridge::BackupRAM, .cartReason = "Required for saving games"}},   // Dezaemon 2 (Japan)
+    {"GS-9197",  {.cartridge = Cartridge::BackupRAM, .cartReason = "Required for saving replays"}}, // Sega Ages - Galaxy Force II (Japan)
 
     {"MK-81019", {.sh2Cache = true}}, // Astal (USA)
     {"GS-9019",  {.sh2Cache = true}}, // Astal (Japan)

@@ -594,6 +594,7 @@ struct SharedContext {
     std::filesystem::path GetGameFileName() const;
 
     std::filesystem::path GetInternalBackupRAMPath() const;
+    std::filesystem::path GetPerGameExternalBackupRAMPath(ymir::bup::BackupMemorySize bupSize) const;
 
     std::string GetMidiVirtualInputPortName() {
         return "Ymir Virtual MIDI Input";

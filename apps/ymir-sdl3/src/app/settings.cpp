@@ -2248,6 +2248,16 @@ uint32 CapacityToSize(Settings::Cartridge::BackupRAM::Capacity capacity) {
     }
 }
 
+uint32 BupSizeToSize(ymir::bup::BackupMemorySize bupSize) {
+    switch (bupSize) {
+    case ymir::bup::BackupMemorySize::_4Mbit: return 512_KiB;
+    case ymir::bup::BackupMemorySize::_8Mbit: return 1_MiB;
+    case ymir::bup::BackupMemorySize::_16Mbit: return 2_MiB;
+    case ymir::bup::BackupMemorySize::_32Mbit: return 4_MiB;
+    default: return 4_MiB;
+    }
+}
+
 void Settings::RebindContext::Rebind(input::InputBind &bind,
                                      const std::array<input::InputElement, input::kNumBindsPerInput> &defaults) {
     // Unbind the old inputs and remember which actions were bound to them to exclude from the set of replaced actions

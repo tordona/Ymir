@@ -543,5 +543,6 @@ const char *BupCapacityLongName(Settings::Cartridge::BackupRAM::Capacity capacit
 Settings::Cartridge::BackupRAM::Capacity SizeToCapacity(uint32 size);
 ymir::bup::BackupMemorySize CapacityToBupSize(Settings::Cartridge::BackupRAM::Capacity capacity);
 uint32 CapacityToSize(Settings::Cartridge::BackupRAM::Capacity capacity);
+uint32 BupSizeToSize(ymir::bup::BackupMemorySize bupSize);
 
 } // namespace app

@@ -8,6 +8,7 @@ Uses save state file version 8.
 
 ### New features and improvements
 
+- Cart: Automatically insert Backup RAM cartridges for games that recommend their use, such as Dezaemon 2 and Sega Ages - Galaxy Force II. (#356)
 
 ### Fixes
 
