@@ -25,7 +25,7 @@ void SCSPSlotsView::Display() {
 
     ImGui::BeginGroup();
 
-    if (ImGui::BeginTable("slots", 37, ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::BeginTable("slots", 39, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2);
         ImGui::TableSetupColumn("KYONB", ImGuiTableColumnFlags_WidthFixed, msCharWidth);
         ImGui::TableSetupColumn("SA", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 5);
@@ -62,7 +62,9 @@ void SCSPSlotsView::Display() {
         ImGui::TableSetupColumn("IMXL", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 1);
         ImGui::TableSetupColumn("ISEL", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 1);
         ImGui::TableSetupColumn("DISDL", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 1);
-        ImGui::TableSetupColumn("DIPAN", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2);
+        ImGui::TableSetupColumn("DIPAN", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2 + paddingWidth);
+        ImGui::TableSetupColumn("EG state", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 3);
+        ImGui::TableSetupColumn("EG level", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 3);
 
         // TODO: EFSDL / EFPAN  (probably in DSP view)
         // - slots  0 to 15 = DSP.EFREG[0-15]
@@ -500,6 +502,26 @@ void SCSPSlotsView::Display() {
                 // DIPAN
                 ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::Text("%02X", slot.directPan);
+                ImGui::PopFont();
+            }
+
+            if (ImGui::TableNextColumn()) {
+                // EG state
+                using enum scsp::Slot::EGState;
+
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
+                switch (slot.egState) {
+                case Attack: ImGui::TextUnformatted("ATK"); break;
+                case Decay1: ImGui::TextUnformatted("DC1"); break;
+                case Decay2: ImGui::TextUnformatted("DC2"); break;
+                case Release: ImGui::TextUnformatted("REL"); break;
+                }
+                ImGui::PopFont();
+            }
+            if (ImGui::TableNextColumn()) {
+                // EG level
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
+                ImGui::Text("%03X", slot.GetEGLevel());
                 ImGui::PopFont();
             }
 
