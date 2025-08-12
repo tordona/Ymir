@@ -4,8 +4,6 @@
 
 #include <util/ring_buffer.hpp>
 
-#include <array>
-
 namespace app {
 
 struct SCSPTracer final : ymir::debug::ISCSPTracer {
