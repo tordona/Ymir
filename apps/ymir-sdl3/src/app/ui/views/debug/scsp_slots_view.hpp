@@ -13,6 +13,8 @@ public:
 private:
     SharedContext &m_context;
     ymir::scsp::SCSP &m_scsp;
+
+    bool m_colorSlotsBySA = true;
 };
 
 } // namespace app::ui
