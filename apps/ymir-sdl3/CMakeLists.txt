@@ -168,6 +168,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/settings/tweaks_settings_view.cpp
     src/app/ui/views/settings/tweaks_settings_view.hpp
 
+    src/app/ui/widgets/audio_widgets.cpp
+    src/app/ui/widgets/audio_widgets.hpp
     src/app/ui/widgets/cartridge_widgets.cpp
     src/app/ui/widgets/cartridge_widgets.hpp
     src/app/ui/widgets/common_widgets.cpp
