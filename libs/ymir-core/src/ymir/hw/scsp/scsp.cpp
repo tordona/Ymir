@@ -9,6 +9,21 @@ using namespace ymir::m68k;
 
 namespace ymir::scsp {
 
+// -----------------------------------------------------------------------------
+// Debugger
+
+template <bool debug>
+FORCE_INLINE static void TraceSample(debug::ISCSPTracer *tracer, sint16 left, sint16 right) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->Sample(left, right);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Implementation
+
 SCSP::SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config)
     : m_m68k(*this)
     , m_scheduler(scheduler)
@@ -18,7 +33,7 @@ SCSP::SCSP(core::Scheduler &scheduler, core::Configuration::Audio &config)
     config.interpolation.Observe(m_interpMode);
     config.threadedSCSP.Observe([&](bool value) { EnableThreading(value); });
 
-    m_sampleTickEvent = m_scheduler.RegisterEvent(core::events::SCSPSample, this, OnSampleTickEvent);
+    m_sampleTickEvent = m_scheduler.RegisterEvent(core::events::SCSPSample, this, OnSampleTickEvent<false>);
 
     for (uint32 i = 0; i < 32; i++) {
         m_slots[i].index = i;
@@ -154,6 +169,15 @@ void SCSP::MapMemory(sys::Bus &bus) {
 
 void SCSP::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
     m_scheduler.SetEventCountFactor(m_sampleTickEvent, clockRatios.SCSPNum, clockRatios.SCSPDen);
+}
+
+void SCSP::SetDebugTracing(bool enable) {
+    if (m_debugTracing != enable) {
+        m_debugTracing = enable;
+        if (enable) {
+            UpdateStepFunction();
+        }
+    }
 }
 
 uint32 SCSP::ReceiveCDDA(std::span<uint8, 2352> data) {
@@ -479,32 +503,26 @@ void SCSP::LoadState(const state::SCSPState &state) {
     m_expectedOutputPacketSize = state.expectedOutputPacketSize;
 
     // Realign the tick event if the save state was using a more granular slot step
-    if (m_stepGranularity < 5u && (m_currSlot & ((1u << m_stepGranularity) - 1u)) != 0) {
-        switch (m_stepGranularity) {
-        case 0u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnSlotTickEvent<0u>); break;
-        case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u>); break;
-        case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<2u>); break;
-        case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<3u>); break;
-        case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<4u>); break;
-        default: util::unreachable();
-        }
+    if (m_stepGranularity <= 5u && (m_currSlot & ((1u << m_stepGranularity) - 1u)) != 0) {
+        UpdateStepFunction();
     }
 }
 
-template <uint32 stepShift>
+template <uint32 stepShift, bool debug>
 void SCSP::OnSlotTickEvent(core::EventContext &eventContext, void *userContext) {
     auto &scsp = *static_cast<SCSP *>(userContext);
-    scsp.TickSlots<stepShift>();
+    scsp.TickSlots<stepShift, debug>();
     eventContext.Reschedule(kCyclesPerSlot << stepShift);
 }
 
+template <bool debug>
 void SCSP::OnSampleTickEvent(core::EventContext &eventContext, void *userContext) {
     auto &scsp = *static_cast<SCSP *>(userContext);
-    scsp.TickSample();
+    scsp.TickSample<debug>();
     eventContext.Reschedule(kCyclesPerSample);
 }
 
-template <uint32 newStepShift>
+template <uint32 newStepShift, bool debug>
 void SCSP::OnTransitionalTickEvent(core::EventContext &eventContext, void *userContext) {
     static_assert(newStepShift <= 5u, "newStepShift must be at most 5 (32 slots)");
 
@@ -515,15 +533,15 @@ void SCSP::OnTransitionalTickEvent(core::EventContext &eventContext, void *userC
     if ((scsp.m_currSlot & kSlotIndexMask) == 0) {
         // Aligned; switch to the bigger tick event
         if constexpr (newStepShift == 5u) {
-            scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSampleTickEvent);
+            scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSampleTickEvent<debug>);
             eventContext.Reschedule(kCyclesPerSample);
         } else {
-            scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSlotTickEvent<newStepShift>);
+            scsp.m_scheduler.SetEventCallback(scsp.m_sampleTickEvent, &scsp, OnSlotTickEvent<newStepShift, debug>);
             eventContext.Reschedule(kCyclesPerSlot << newStepShift);
         }
     } else {
         // Not yet aligned; continue ticking slots one by one
-        scsp.TickSlots<0>();
+        scsp.TickSlots<0, debug>();
         eventContext.Reschedule(kCyclesPerSlot);
     }
 }
@@ -541,11 +559,11 @@ void SCSP::SetStepGranularity(uint32 granularity) {
 
             core::Scheduler::EventCallback callback;
             switch (granularity) {
-            case 0u: callback = OnSlotTickEvent<0u>; break;
-            case 1u: callback = (m_currSlot & 0x1) ? OnTransitionalTickEvent<1u> : OnSlotTickEvent<1u>; break;
-            case 2u: callback = (m_currSlot & 0x3) ? OnTransitionalTickEvent<2u> : OnSlotTickEvent<2u>; break;
-            case 3u: callback = (m_currSlot & 0x7) ? OnTransitionalTickEvent<3u> : OnSlotTickEvent<3u>; break;
-            case 4u: callback = (m_currSlot & 0xF) ? OnTransitionalTickEvent<4u> : OnSlotTickEvent<4u>; break;
+            case 0u: callback = GetSlotTickEvent<0u>(); break;
+            case 1u: callback = (m_currSlot & 0x1) ? GetTransitionalTickEvent<1u>() : GetSlotTickEvent<1u>(); break;
+            case 2u: callback = (m_currSlot & 0x3) ? GetTransitionalTickEvent<2u>() : GetSlotTickEvent<2u>(); break;
+            case 3u: callback = (m_currSlot & 0x7) ? GetTransitionalTickEvent<3u>() : GetSlotTickEvent<3u>(); break;
+            case 4u: callback = (m_currSlot & 0xF) ? GetTransitionalTickEvent<4u>() : GetSlotTickEvent<4u>(); break;
             default: util::unreachable();
             }
             m_scheduler.SetEventCallback(m_sampleTickEvent, this, callback);
@@ -553,15 +571,27 @@ void SCSP::SetStepGranularity(uint32 granularity) {
             // Going from smaller to larger steps requires the slot counter to be realigned.
             // Luckily, we don't need to reschedule it.
             switch (granularity) {
-            case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<1u>); break;
-            case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<2u>); break;
-            case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<3u>); break;
-            case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<4u>); break;
-            case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, OnTransitionalTickEvent<5u>); break;
+            case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<1u>()); break;
+            case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<2u>()); break;
+            case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<3u>()); break;
+            case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<4u>()); break;
+            case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<5u>()); break;
             default: util::unreachable();
             }
         }
         m_stepGranularity = granularity;
+    }
+}
+
+void SCSP::UpdateStepFunction() {
+    switch (m_stepGranularity) {
+    case 0u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetSlotTickEvent<0u>()); break;
+    case 1u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<1u>()); break;
+    case 2u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<2u>()); break;
+    case 3u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<3u>()); break;
+    case 4u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<4u>()); break;
+    case 5u: m_scheduler.SetEventCallback(m_sampleTickEvent, this, GetTransitionalTickEvent<5u>()); break;
+    default: util::unreachable();
     }
 }
 
@@ -690,17 +720,18 @@ void SCSP::ExecuteDMA() {
     }
 }
 
-template <uint32 stepShift>
+template <uint32 stepShift, bool debug>
 FORCE_INLINE void SCSP::TickSlots() {
     RunM68K(kM68KCyclesPerSlot << stepShift);
     ProcessMidiInputQueue();
-    StepSlots<stepShift>();
+    StepSlots<stepShift, debug>();
 }
 
+template <bool debug>
 FORCE_INLINE void SCSP::TickSample() {
     RunM68K(kM68KCyclesPerSample);
     ProcessMidiInputQueue();
-    StepSample();
+    StepSample<debug>();
 }
 
 FORCE_INLINE void SCSP::RunM68K(uint64 cycles) {
@@ -713,17 +744,17 @@ FORCE_INLINE void SCSP::RunM68K(uint64 cycles) {
     }
 }
 
-template <uint32 stepShift>
+template <uint32 stepShift, bool debug>
 FORCE_INLINE void SCSP::StepSlots() {
     if constexpr (stepShift == 5u) {
-        ProcessSlots(m_currSlot);
+        ProcessSlots<debug>(m_currSlot);
         ++m_currSlot;
     } else {
         static constexpr uint32 kNumSlots = 1u << stepShift;
         static constexpr uint32 kSlotMask = kNumSlots - 1u;
         assert((m_currSlot & kSlotMask) == 0);
         for (uint32 i = 0; i < kNumSlots; ++i) {
-            ProcessSlots(m_currSlot + i);
+            ProcessSlots<debug>(m_currSlot + i);
         }
         m_currSlot += kNumSlots;
     }
@@ -734,10 +765,11 @@ FORCE_INLINE void SCSP::StepSlots() {
     }
 }
 
+template <bool debug>
 FORCE_INLINE void SCSP::StepSample() {
     assert(m_currSlot == 0);
     for (uint32 i = 0; i < 32; ++i) {
-        ProcessSlots(i);
+        ProcessSlots<debug>(i);
     }
     IncrementSampleCounter();
 }
@@ -752,6 +784,7 @@ FORCE_INLINE void SCSP::UpdateTimers() {
     }
 }
 
+template <bool debug>
 FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
     const uint32 op1SlotIndex = i;
     const uint32 op2SlotIndex = (i - 1u) & 31;
@@ -840,6 +873,7 @@ FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
 
         // Write to output and reset
         m_cbOutputSample(m_out[0], m_out[1]);
+        TraceSample<debug>(m_tracer, m_out[0], m_out[1]);
         m_out.fill(0);
 
         // Copy CDDA data to DSP EXTS (0=left, 1=right)

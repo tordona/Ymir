@@ -18,6 +18,8 @@
 
 #include <ymir/hw/hw_defs.hpp>
 
+#include <ymir/debug/scsp_tracer_base.hpp>
+
 #include <ymir/hw/cdblock/cdblock_internal_callbacks.hpp>
 #include <ymir/sys/system_internal_callbacks.hpp>
 
@@ -139,6 +141,13 @@ public:
         return 5u - m_stepGranularity;
     }
 
+    // Enables or disables debug tracing
+    void SetDebugTracing(bool enable);
+
+    [[nodiscard]] bool IsDebugTracingEnabled() const noexcept {
+        return m_debugTracing;
+    }
+
     // Feeds CDDA data into the buffer and returns how many thirds of the buffer are used
     uint32 ReceiveCDDA(std::span<uint8, 2352> data);
 
@@ -193,22 +202,48 @@ private:
     core::EventID m_sampleTickEvent;
 
     // Processes a slot tick.
-    template <uint32 stepShift>
+    template <uint32 stepShift, bool debug>
     static void OnSlotTickEvent(core::EventContext &eventContext, void *userContext);
 
     // Processes a sample tick.
+    template <bool debug>
     static void OnSampleTickEvent(core::EventContext &eventContext, void *userContext);
 
     // Transitional event used when switching from smaller to larger steps.
     // Processes slot by slot until the slot index aligns back to 0, then switches to sample tick events.
-    template <uint32 newStepShift>
+    template <uint32 newStepShift, bool debug>
     static void OnTransitionalTickEvent(core::EventContext &eventContext, void *userContext);
+
+    // Retrieves a pointer to the transitional tick event processing function based on the current debug tracing mode.
+    template <uint32 newStepShift>
+    auto GetTransitionalTickEvent() {
+        return m_debugTracing ? OnTransitionalTickEvent<newStepShift, true>
+                              : OnTransitionalTickEvent<newStepShift, false>;
+    }
+
+    // Retrieves a pointer to the slot tick event processing function based on the current debug tracing mode.
+    template <uint32 stepShift>
+    auto GetSlotTickEvent() const {
+        return m_debugTracing ? OnSlotTickEvent<stepShift, true> : OnSlotTickEvent<stepShift, false>;
+    }
+
+    // Retrieves a pointer to the sample tick event processing function based on the current debug tracing mode.
+    auto GetSampleTickEvent() const {
+        return m_debugTracing ? OnSampleTickEvent<true> : OnSampleTickEvent<false>;
+    }
+
+    // Updates the step function for processing samples.
+    // Takes into account the current granularity step size and the debug tracing flag.
+    void UpdateStepFunction();
 
     // The emulation step granularity expressed as a bit shift.
     // Note that this is inverted relative to the values given by the public interface (5 - value), therefore:
     //   5 = step 32 slots (one sample) at a time (least granular, default)
     //   0 = step 1 slot at a time (most granular)
     uint32 m_stepGranularity = 5u;
+
+    // Whether debug tracing is enabled
+    bool m_debugTracing = false;
 
     CBOutputSample m_cbOutputSample;
     CBTriggerSoundRequestInterrupt m_cbTriggerSoundRequestInterrupt;
@@ -1090,8 +1125,9 @@ private:
     // -------------------------------------------------------------------------
     // Audio processing
 
-    template <uint32 stepShift>
-    void TickSlots();  // Processes a single slot (16 SCSP cycles)
+    template <uint32 stepShift, bool debug>
+    void TickSlots(); // Processes a single slot (16 SCSP cycles)
+    template <bool debug>
     void TickSample(); // Processes a full sample (512 SCSP cycles)
 
     void RunM68K(uint64 cycles);
@@ -1099,15 +1135,17 @@ private:
 
     // Emulates one slot's worth of cycles.
     // This executes the 7 slot operations once, and 4 DSP program steps.
-    template <uint32 stepShift>
+    template <uint32 stepShift, bool debug>
     void StepSlots();
 
     // Emulates an entire sample's worth of cycles.
     // This executes the 7 slot operations 32 times, and all 128 DSP program steps.
     // Requires the slot counter to be aligned to 0.
+    template <bool debug>
     void StepSample();
 
     // Performs the 7 operation steps on slots from index i to i-6 (modulo 32).
+    template <bool debug>
     void ProcessSlots(uint32 i);
 
     // Advances the sample counter by one.
@@ -1186,6 +1224,12 @@ public:
     // -------------------------------------------------------------------------
     // Debugger
 
+    // Attaches the specified tracer to this component.
+    // Pass nullptr to disable tracing.
+    void UseTracer(debug::ISCSPTracer *tracer) {
+        m_tracer = tracer;
+    }
+
     class Probe {
     public:
         explicit Probe(SCSP &scsp);
@@ -1208,6 +1252,7 @@ public:
 
 private:
     Probe m_probe{*this};
+    debug::ISCSPTracer *m_tracer = nullptr;
 };
 
 } // namespace ymir::scsp

@@ -252,6 +252,7 @@ void Saturn::EnableDebugTracing(bool enable) {
     }
     m_systemFeatures.enableDebugTracing = enable;
     UpdateFunctionPointers();
+    SCSP.SetDebugTracing(enable);
 }
 
 void Saturn::SaveState(state::State &state) const {

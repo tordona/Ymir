@@ -65,6 +65,7 @@ EmuEvent SetDebugTrace(bool enable) {
             ctx.saturn.instance->masterSH2.UseTracer(&ctx.tracers.masterSH2);
             ctx.saturn.instance->slaveSH2.UseTracer(&ctx.tracers.slaveSH2);
             ctx.saturn.instance->SCU.UseTracer(&ctx.tracers.SCU);
+            ctx.saturn.instance->SCSP.UseTracer(&ctx.tracers.SCSP);
             ctx.saturn.instance->CDBlock.UseTracer(&ctx.tracers.CDBlock);
         }
         ctx.DisplayMessage(fmt::format("Debug tracing {}", (enable ? "enabled" : "disabled")));
