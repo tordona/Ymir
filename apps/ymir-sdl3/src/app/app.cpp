@@ -4354,6 +4354,10 @@ bool App::LoadDiscImage(std::filesystem::path path) {
     {
         std::unique_lock lock{m_context.locks.disc};
         m_context.saturn.instance->LoadDisc(std::move(disc));
+        if (m_context.saturn.GetConfiguration().system.autodetectRegion) {
+            m_context.settings.system.videoStandard = m_context.saturn.GetConfiguration().system.videoStandard.Get();
+            m_context.settings.MakeDirty();
+        }
     }
 
     // Load new internal backup memory image if using per-game images
