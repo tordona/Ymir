@@ -14,7 +14,7 @@ Uses save state file version 8.
 
 ### Fixes
 
-
+- SCSP: Don't use SBCTL on slots that are playing samples from Sound RAM when the EG reaches the silence threshold. Fixes busted audio in Guardian Heroes and Elevator Action^2. (#155)
 
 
 ## Version 0.1.7

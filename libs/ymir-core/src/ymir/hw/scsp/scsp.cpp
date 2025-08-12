@@ -1164,7 +1164,11 @@ FORCE_INLINE void SCSP::SlotProcessStep5_4(Slot &slot) {
 
 FORCE_INLINE void SCSP::SlotProcessStep6_4(Slot &slot) {
     if (slot.soundSource == Slot::SoundSource::SoundRAM && !slot.active) {
-        slot.output = slot.sampleXOR;
+        if (slot.GetEGLevel() < 0x3C0) {
+            slot.output = slot.sampleXOR;
+        } else {
+            slot.output = 0;
+        }
     } else if (!slot.soundDirect) {
         slot.output = (slot.output * ((slot.finalLevel & 0x3F) ^ 0x7F)) >> ((slot.finalLevel >> 6) + 7);
     }
