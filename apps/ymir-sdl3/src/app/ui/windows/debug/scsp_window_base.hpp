@@ -2,7 +2,7 @@
 
 #include <app/ui/window_base.hpp>
 
-// #include <app/debug/scsp_tracer.hpp>
+#include <app/debug/scsp_tracer.hpp>
 
 namespace app::ui {
 
@@ -13,7 +13,7 @@ public:
 
 protected:
     ymir::scsp::SCSP &m_scsp;
-    // SCSPTracer &m_tracer;
+    SCSPTracer &m_tracer;
 };
 
 } // namespace app::ui
