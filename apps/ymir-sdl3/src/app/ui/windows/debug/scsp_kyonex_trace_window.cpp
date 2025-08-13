@@ -12,7 +12,7 @@ SCSPKeyOnExecuteTraceWindow::SCSPKeyOnExecuteTraceWindow(SharedContext &context)
 
 void SCSPKeyOnExecuteTraceWindow::PrepareWindow() {
     ImGui::SetNextWindowSizeConstraints(ImVec2(300 * m_context.displayScale, 100 * m_context.displayScale),
-                                        ImVec2(FLT_MAX, FLT_MAX));
+                                        ImVec2(450 * m_context.displayScale, FLT_MAX));
 }
 
 void SCSPKeyOnExecuteTraceWindow::DrawContents() {
