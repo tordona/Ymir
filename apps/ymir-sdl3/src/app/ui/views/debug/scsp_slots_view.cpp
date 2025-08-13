@@ -3,6 +3,7 @@
 #include <ymir/hw/scsp/scsp.hpp>
 
 #include <app/ui/fonts/IconsMaterialSymbols.h>
+#include <app/ui/widgets/audio_widgets.hpp>
 
 using namespace ymir;
 
@@ -10,7 +11,8 @@ namespace app::ui {
 
 SCSPSlotsView::SCSPSlotsView(SharedContext &context)
     : m_context(context)
-    , m_scsp(context.saturn.GetSCSP()) {}
+    , m_scsp(context.saturn.GetSCSP())
+    , m_tracer(context.tracers.SCSP) {}
 
 void SCSPSlotsView::Display() {
     const float paddingWidth = ImGui::GetStyle().FramePadding.x;
@@ -19,6 +21,8 @@ void SCSPSlotsView::Display() {
     ImGui::PopFont();
     const ImVec2 msCharSize = ImGui::CalcTextSize(ICON_MS_KEYBOARD_TAB);
     const auto msCharWidth = msCharSize.x;
+
+    const ImVec2 wfSize{80.0f * m_context.displayScale, msCharSize.y};
 
     auto &probe = m_scsp.GetProbe();
     const auto &slots = probe.GetSlots();
@@ -29,7 +33,7 @@ void SCSPSlotsView::Display() {
 
     const ImVec4 defaultColor = ImGui::GetStyle().Colors[ImGuiCol_Text];
 
-    if (ImGui::BeginTable("slots", 40, ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::BeginTable("slots", 41, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2);
         ImGui::TableSetupColumn("KYONB", ImGuiTableColumnFlags_WidthFixed, msCharWidth);
         ImGui::TableSetupColumn("SA", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 5);
@@ -70,6 +74,7 @@ void SCSPSlotsView::Display() {
         ImGui::TableSetupColumn("ISEL", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 1);
         ImGui::TableSetupColumn("DISDL", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 1);
         ImGui::TableSetupColumn("DIPAN", ImGuiTableColumnFlags_WidthFixed, hexCharWidth * 2 + paddingWidth);
+        ImGui::TableSetupColumn("Output", ImGuiTableColumnFlags_WidthFixed, wfSize.x);
 
         // TODO: EFSDL / EFPAN  (probably in DSP view)
         // - slots  0 to 15 = DSP.EFREG[0-15]
@@ -559,6 +564,18 @@ void SCSPSlotsView::Display() {
                 ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
                 ImGui::TextColored(color, "%02X", slot.directPan);
                 ImGui::PopFont();
+            }
+            if (ImGui::TableNextColumn()) {
+                // Output
+                auto &output = m_tracer.slotOutputs[i];
+                const uint32 len = output.Count();
+                const uint32 max = std::min(len, 512u);
+                const uint32 ofs = len > 512 ? len - 512 : 0;
+                std::array<float, 512> waveform{};
+                for (uint32 j = 0; j < max; ++j) {
+                    waveform[j] = output.Read(j + ofs) / 32768.0f;
+                }
+                widgets::Oscilloscope(m_context, std::span{waveform}.first(max), wfSize);
             }
 
             if (disabled) {

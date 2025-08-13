@@ -13,6 +13,7 @@ public:
 private:
     SharedContext &m_context;
     ymir::scsp::SCSP &m_scsp;
+    SCSPTracer &m_tracer;
 
     bool m_colorSlotsBySA = true;
 };
