@@ -1,8 +1,5 @@
 #include "scsp_kyonex_trace_view.hpp"
 
-#include <app/ui/fonts/IconsMaterialSymbols.h>
-#include <app/ui/widgets/audio_widgets.hpp>
-
 #include <cinttypes>
 
 using namespace ymir;
