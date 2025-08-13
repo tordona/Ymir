@@ -21,6 +21,10 @@ public:
         }
     }
 
+    size_t Capacity() const {
+        return N;
+    }
+
     size_t Count() const {
         return m_count;
     }

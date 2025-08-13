@@ -12,14 +12,14 @@ namespace ymir::scsp {
 // -----------------------------------------------------------------------------
 // Debugger
 
-/*template <bool debug>
-FORCE_INLINE static void TraceSample(debug::ISCSPTracer *tracer, sint16 left, sint16 right) {
+template <bool debug>
+FORCE_INLINE static void TraceSlotSample(debug::ISCSPTracer *tracer, uint32 index, sint16 output) {
     if constexpr (debug) {
         if (tracer) {
-            return tracer->Sample(left, right);
+            return tracer->SlotSample(index, output);
         }
     }
-}*/
+}
 
 // -----------------------------------------------------------------------------
 // Implementation
@@ -835,6 +835,8 @@ FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
     // Accumulate direct send output
     AddOutput(op7Slot.output, op7Slot.directSendLevel, op7Slot.directPan);
 
+    TraceSlotSample<debug>(m_tracer, op7SlotIndex, op7Slot.output);
+
     if (op7SlotIndex < 16) {
         // Accumulate EFREG into final output
         AddOutput(m_dsp.effectOut[op7SlotIndex], op7Slot.effectSendLevel, op7Slot.effectPan);
@@ -873,7 +875,6 @@ FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
 
         // Write to output and reset
         m_cbOutputSample(m_out[0], m_out[1]);
-        // TraceSample<debug>(m_tracer, m_out[0], m_out[1]);
         m_out.fill(0);
 
         // Copy CDDA data to DSP EXTS (0=left, 1=right)

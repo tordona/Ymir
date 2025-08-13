@@ -4,15 +4,18 @@
 
 #include <util/ring_buffer.hpp>
 
+#include <array>
+
 namespace app {
 
 struct SCSPTracer final : ymir::debug::ISCSPTracer {
+    std::array<util::RingBuffer<sint16, 2048>, 32> slotOutputs;
 
 private:
     // -------------------------------------------------------------------------
     // ISCSPTracer implementation
 
-    // TODO: void SlotSample(uint32 index, sint16 left, sint16 right) final;
+    void SlotSample(uint32 index, sint16 output) final;
 };
 
 } // namespace app

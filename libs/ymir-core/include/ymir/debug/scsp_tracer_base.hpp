@@ -20,9 +20,8 @@ struct ISCSPTracer {
 
     /// @brief Invoked for each slot when the SCSP outputs a sample.
     /// @param[in] index the slot index
-    /// @param[in] left the left channel of the final output sample
-    /// @param[in] right the right channel of the final output sample
-    // TODO: void SlotSample(uint32 index, sint16 left, sint16 right) final;
+    /// @param[in] left the slot output sample
+    virtual void SlotSample(uint32 index, sint16 sample) = 0;
 };
 
 } // namespace ymir::debug

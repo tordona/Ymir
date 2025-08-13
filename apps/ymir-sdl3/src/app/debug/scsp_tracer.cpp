@@ -2,9 +2,8 @@
 
 namespace app {
 
-/*void SCSPTracer::Sample(sint16 left, sint16 right) {
-    output.Write({left, right});
-    // TODO: capture outputs from every slot as well; needs the probe
-}*/
+void SCSPTracer::SlotSample(uint32 index, sint16 output) {
+    slotOutputs[index].Write(output);
+}
 
 } // namespace app
