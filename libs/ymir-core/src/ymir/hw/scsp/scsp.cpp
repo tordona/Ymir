@@ -21,6 +21,15 @@ FORCE_INLINE static void TraceSlotSample(debug::ISCSPTracer *tracer, uint32 inde
     }
 }
 
+template <bool debug>
+FORCE_INLINE static void TraceKeyOnExecute(debug::ISCSPTracer *tracer, uint32 slotsMask) {
+    if constexpr (debug) {
+        if (tracer) {
+            return tracer->KeyOnExecute(slotsMask);
+        }
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Implementation
 
@@ -824,7 +833,7 @@ FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
     m_dsp.Step();
 
     // Cycles 6,7
-    SlotProcessStep1_4(op1Slot);
+    SlotProcessStep1_4<debug>(op1Slot);
     SlotProcessStep2_4(op2Slot);
     SlotProcessStep3_4(op3Slot);
     SlotProcessStep4_4(op4Slot);
@@ -932,6 +941,7 @@ FORCE_INLINE void SCSP::AddOutput(sint32 output, uint8 sendLevel, uint8 pan) {
     m_out[1] += (panChanSel ? panOut : output) >> 14;
 }
 
+template <bool debug>
 FORCE_INLINE void SCSP::SlotProcessStep1_4(Slot &slot) {
     m_lfsr = (m_lfsr >> 1u) | (((m_lfsr >> 5u) ^ m_lfsr) & 1u) << 16u;
 
@@ -952,15 +962,23 @@ FORCE_INLINE void SCSP::SlotProcessStep1_4(Slot &slot) {
             static_cast<uint8>(slot.loopStartLink), slot.modXSelect, slot.modYSelect, slot.modLevel,
             static_cast<uint8>(slot.ampLFOWaveform), slot.ampLFOSens);
     }
-    if (slot.index == 31) {
-        if constexpr (devlog::debug_enabled<grp::kyonex>) {
-            if (m_kyonexExecute) {
-                static char out[32];
-                for (auto &slot : m_slots) {
-                    out[slot.index] = slot.keyOnBit ? '+' : '_';
-                }
-                devlog::debug<grp::kyonex>("{}", std::string_view(out, 32));
+    if constexpr (debug) {
+        if (slot.index == 31 && m_kyonexExecute) {
+            uint32 kyonbMask = 0;
+            for (uint32 i = 0; i < 32; ++i) {
+                kyonbMask |= m_slots[i].keyOnBit << i;
             }
+            TraceKeyOnExecute<debug>(m_tracer, kyonbMask);
+        }
+    }
+
+    if constexpr (devlog::debug_enabled<grp::kyonex>) {
+        if (slot.index == 31 && m_kyonexExecute) {
+            static char out[32];
+            for (auto &slot : m_slots) {
+                out[slot.index] = slot.keyOnBit ? '+' : '_';
+            }
+            devlog::debug<grp::kyonex>("{}", std::string_view(out, 32));
         }
     }
 

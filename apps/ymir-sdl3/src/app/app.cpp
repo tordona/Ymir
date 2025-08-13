@@ -2623,6 +2623,7 @@ void App::RunEmulator() {
                     if (ImGui::BeginMenu("SCSP")) {
                         ImGui::MenuItem("Output", nullptr, &m_scspWindowSet.output.Open);
                         ImGui::MenuItem("Slots", nullptr, &m_scspWindowSet.slots.Open);
+                        ImGui::MenuItem("KYONEX trace", nullptr, &m_scspWindowSet.kyonexTrace.Open);
 
                         ImGui::EndMenu();
                     }

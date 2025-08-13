@@ -1181,17 +1181,21 @@ private:
     // Many sample cycle-based operations, including the final output sent to the DAC, are aligned to operation 7 when
     // it finishes processing slot 31.
 
-    void SlotProcessStep1_4(Slot &slot); // Phase generation and pitch LFO calculation
-    void SlotProcessStep2_2(Slot &slot); // Phase latch
-    void SlotProcessStep2_3(Slot &slot); // X modulation data read
-    void SlotProcessStep2_4(Slot &slot); // Y modulation data read and address pointer calculation
-    void SlotProcessStep3_2(Slot &slot); // Waveform read (current sample)
-    void SlotProcessStep3_4(Slot &slot); // Waveform read (next sample)
-    void SlotProcessStep4_2(Slot &slot); // Current sample latch for interpolation
+#define TPL_DEBUG template <bool debug>
+
+    TPL_DEBUG void SlotProcessStep1_4(Slot &slot); // Phase generation and pitch LFO calculation
+    void SlotProcessStep2_2(Slot &slot);           // Phase latch
+    void SlotProcessStep2_3(Slot &slot);           // X modulation data read
+    void SlotProcessStep2_4(Slot &slot);           // Y modulation data read and address pointer calculation
+    void SlotProcessStep3_2(Slot &slot);           // Waveform read (current sample)
+    void SlotProcessStep3_4(Slot &slot);           // Waveform read (next sample)
+    void SlotProcessStep4_2(Slot &slot);           // Current sample latch for interpolation
     void SlotProcessStep4_4(Slot &slot); // Interpolation, envelope generator update and amplitude LFO calculation
     void SlotProcessStep5_4(Slot &slot); // ALFO calculation
     void SlotProcessStep6_4(Slot &slot); // Total level calculation
     void SlotProcessStep7_1(Slot &slot); // Sound stack write
+
+#undef TPL_DEBUG
 
     // The audio interpolation mode.
     // Linear is accurate to the hardware. Other options are offered as tweaks or enhancements.

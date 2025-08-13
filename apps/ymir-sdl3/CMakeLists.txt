@@ -66,6 +66,8 @@ add_executable(ymir-sdl3
     src/app/ui/views/debug/cdblock_filters_view.hpp
     src/app/ui/views/debug/debug_output_view.cpp
     src/app/ui/views/debug/debug_output_view.hpp
+    src/app/ui/views/debug/scsp_kyonex_trace_view.cpp
+    src/app/ui/views/debug/scsp_kyonex_trace_view.hpp
     src/app/ui/views/debug/scsp_output_view.cpp
     src/app/ui/views/debug/scsp_output_view.hpp
     src/app/ui/views/debug/scsp_slots_view.cpp
@@ -213,6 +215,8 @@ add_executable(ymir-sdl3
     src/app/ui/windows/debug/debug_output_window.hpp
     src/app/ui/windows/debug/memory_viewer_window.cpp
     src/app/ui/windows/debug/memory_viewer_window.hpp
+    src/app/ui/windows/debug/scsp_kyonex_trace_window.cpp
+    src/app/ui/windows/debug/scsp_kyonex_trace_window.hpp
     src/app/ui/windows/debug/scsp_output_window.cpp
     src/app/ui/windows/debug/scsp_output_window.hpp
     src/app/ui/windows/debug/scsp_slots_window.cpp

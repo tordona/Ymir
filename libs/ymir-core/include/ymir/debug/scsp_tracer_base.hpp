@@ -22,6 +22,10 @@ struct ISCSPTracer {
     /// @param[in] index the slot index
     /// @param[in] left the slot output sample
     virtual void SlotSample(uint32 index, sint16 sample) = 0;
+
+    /// @brief Invoked when KYONEX is processed.
+    /// @param[in] slotsMask a bitmask with state of KYONB for each slot
+    virtual void KeyOnExecute(uint32 slotsMask) = 0;
 };
 
 } // namespace ymir::debug

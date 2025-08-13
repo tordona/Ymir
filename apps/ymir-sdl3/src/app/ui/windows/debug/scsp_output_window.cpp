@@ -16,8 +16,6 @@ void SCSPOutputWindow::PrepareWindow() {
 }
 
 void SCSPOutputWindow::DrawContents() {
-    // TODO: all slot outputs
-
     m_outputView.Display(ImGui::GetContentRegionAvail());
 }
 
