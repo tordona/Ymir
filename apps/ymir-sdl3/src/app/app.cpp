@@ -176,15 +176,15 @@ int App::Run(const CommandLineOptions &options) {
         auto &emuSpeed = m_context.emuSpeed;
         generalSettings.mainSpeedFactor.ObserveAndNotify([&](double value) {
             emuSpeed.speedFactors[0] = value;
-            m_audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
+            m_context.audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
         });
         generalSettings.altSpeedFactor.ObserveAndNotify([&](double value) {
             emuSpeed.speedFactors[1] = value;
-            m_audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
+            m_context.audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
         });
         generalSettings.useAltSpeed.ObserveAndNotify([&](bool value) {
             emuSpeed.altSpeed = value;
-            m_audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
+            m_context.audioSystem.SetSync(emuSpeed.ShouldSyncToAudio());
         });
     }
 
@@ -813,24 +813,24 @@ void App::RunEmulator() {
     static constexpr int kChannels = 2;
     static constexpr uint32 kBufferSize = 512; // TODO: make this configurable
 
-    if (!m_audioSystem.Init(kSampleRate, kSampleFormat, kChannels, kBufferSize)) {
+    if (!m_context.audioSystem.Init(kSampleRate, kSampleFormat, kChannels, kBufferSize)) {
         devlog::error<grp::base>("Unable to create audio stream: {}", SDL_GetError());
         return;
     }
-    ScopeGuard sgDeinitAudio{[&] { m_audioSystem.Deinit(); }};
+    ScopeGuard sgDeinitAudio{[&] { m_context.audioSystem.Deinit(); }};
 
     // Connect gain and mute to settings
-    m_context.settings.audio.volume.ObserveAndNotify([&](float volume) { m_audioSystem.SetGain(volume); });
-    m_context.settings.audio.mute.ObserveAndNotify([&](bool mute) { m_audioSystem.SetMute(mute); });
+    m_context.settings.audio.volume.ObserveAndNotify([&](float volume) { m_context.audioSystem.SetGain(volume); });
+    m_context.settings.audio.mute.ObserveAndNotify([&](bool mute) { m_context.audioSystem.SetMute(mute); });
 
     m_context.settings.audio.stepGranularity.ObserveAndNotify(
         [&](uint32 granularity) { m_context.EnqueueEvent(events::emu::SetSCSPStepGranularity(granularity)); });
 
-    if (m_audioSystem.Start()) {
+    if (m_context.audioSystem.Start()) {
         int sampleRate;
         SDL_AudioFormat audioFormat;
         int channels;
-        if (!m_audioSystem.GetAudioStreamFormat(&sampleRate, &audioFormat, &channels)) {
+        if (!m_context.audioSystem.GetAudioStreamFormat(&sampleRate, &audioFormat, &channels)) {
             devlog::error<grp::base>("Unable to get audio stream format: {}", SDL_GetError());
             return;
         }
@@ -859,9 +859,9 @@ void App::RunEmulator() {
         devlog::error<grp::base>("Unable to start audio stream: {}", SDL_GetError());
     }
 
-    m_context.saturn.instance->SCSP.SetSampleCallback({&m_audioSystem, [](sint16 left, sint16 right, void *ctx) {
-                                                           static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right);
-                                                       }});
+    m_context.saturn.instance->SCSP.SetSampleCallback(
+        {&m_context.audioSystem,
+         [](sint16 left, sint16 right, void *ctx) { static_cast<AudioSystem *>(ctx)->ReceiveSample(left, right); }});
 
     m_context.saturn.instance->SCSP.SetSendMidiOutputCallback(
         {&m_context.midi.midiOutput, [](std::span<uint8> payload, void *ctx) {
@@ -1084,11 +1084,11 @@ void App::RunEmulator() {
         inputContext.SetButtonHandler(actions::emu::TurboSpeed,
                                       [&](void *, const input::InputElement &, bool actuated) {
                                           m_context.emuSpeed.limitSpeed = !actuated;
-                                          m_audioSystem.SetSync(m_context.emuSpeed.ShouldSyncToAudio());
+                                          m_context.audioSystem.SetSync(m_context.emuSpeed.ShouldSyncToAudio());
                                       });
         inputContext.SetTriggerHandler(actions::emu::TurboSpeedHold, [&](void *, const input::InputElement &) {
             m_context.emuSpeed.limitSpeed ^= true;
-            m_audioSystem.SetSync(m_context.emuSpeed.ShouldSyncToAudio());
+            m_context.audioSystem.SetSync(m_context.emuSpeed.ShouldSyncToAudio());
         });
         inputContext.SetTriggerHandler(actions::emu::ToggleAlternateSpeed, [&](void *, const input::InputElement &) {
             auto &settings = m_context.settings.general;
@@ -1544,7 +1544,7 @@ void App::RunEmulator() {
         // HACK: unpause, unsilence audio system and set frame request signal in order to unlock the emulator thread if
         // it is waiting for free space in the audio buffer due to being paused
         m_emuProcessEvent.Set();
-        m_audioSystem.SetSilent(false);
+        m_context.audioSystem.SetSilent(false);
         screen.frameRequestEvent.Set();
         m_context.EnqueueEvent(events::emu::SetPaused(false));
         m_context.EnqueueEvent(events::emu::Shutdown());
@@ -1622,8 +1622,8 @@ void App::RunEmulator() {
                 // Deliver frame early if audio buffer is emptying (video sync is slowing down emulation too much).
                 // Attempt to maintain the audio buffer between 30% and 70%.
                 // Smoothly adjust frame interval up or down if audio buffer exceeds either threshold.
-                const uint32 audioBufferSize = m_audioSystem.GetBufferCount();
-                const uint32 audioBufferCap = m_audioSystem.GetBufferCapacity();
+                const uint32 audioBufferSize = m_context.audioSystem.GetBufferCount();
+                const uint32 audioBufferCap = m_context.audioSystem.GetBufferCapacity();
                 const double audioBufferMinLevel = 0.3;
                 const double audioBufferMaxLevel = 0.7;
                 const double frameIntervalAdjustWeight =
@@ -2705,7 +2705,8 @@ void App::RunEmulator() {
 
             /*if (ImGui::Begin("Audio buffer")) {
                 ImGui::SetNextItemWidth(-1);
-                ImGui::ProgressBar((float)m_audioSystem.GetBufferCount() / m_audioSystem.GetBufferCapacity());
+                ImGui::ProgressBar((float)m_context.audioSystem.GetBufferCount() /
+            m_context.audioSystem.GetBufferCapacity());
             }
             ImGui::End();*/
 
@@ -3279,7 +3280,7 @@ void App::EmulatorThread() {
                 const bool newPaused = std::get<bool>(evt.value);
                 stepAction = newPaused ? StepAction::Noop : StepAction::RunFrame;
                 m_context.paused = newPaused;
-                m_audioSystem.SetSilent(newPaused);
+                m_context.audioSystem.SetSilent(newPaused);
                 if (m_context.screen.videoSync) {
                     // Avoid locking the GUI thread
                     m_context.screen.frameReadyEvent.Set();
@@ -3289,13 +3290,13 @@ void App::EmulatorThread() {
             case ForwardFrameStep:
                 stepAction = StepAction::FrameStep;
                 m_context.paused = true;
-                m_audioSystem.SetSilent(false);
+                m_context.audioSystem.SetSilent(false);
                 break;
             case ReverseFrameStep:
                 stepAction = StepAction::FrameStep;
                 m_context.paused = true;
                 m_context.rewinding = true;
-                m_audioSystem.SetSilent(false);
+                m_context.audioSystem.SetSilent(false);
                 break;
             case StepMSH2:
                 stepAction = StepAction::StepMSH2;
@@ -3303,7 +3304,7 @@ void App::EmulatorThread() {
                     m_context.paused = true;
                     m_context.DisplayMessage("Paused due to single-stepping master SH-2");
                 }
-                m_audioSystem.SetSilent(true);
+                m_context.audioSystem.SetSilent(true);
                 break;
             case StepSSH2:
                 stepAction = StepAction::StepSSH2;
@@ -3311,7 +3312,7 @@ void App::EmulatorThread() {
                     m_context.paused = true;
                     m_context.DisplayMessage("Paused due to single-stepping slave SH-2");
                 }
-                m_audioSystem.SetSilent(true);
+                m_context.audioSystem.SetSilent(true);
                 break;
 
             case OpenCloseTray:
@@ -3421,7 +3422,7 @@ void App::EmulatorThread() {
 
             if (stepAction == StepAction::FrameStep) {
                 m_context.rewinding = false;
-                m_audioSystem.SetSilent(true);
+                m_context.audioSystem.SetSilent(true);
             }
             break;
         }

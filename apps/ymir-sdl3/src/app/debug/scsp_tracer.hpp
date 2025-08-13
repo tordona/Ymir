@@ -7,17 +7,12 @@
 namespace app {
 
 struct SCSPTracer final : ymir::debug::ISCSPTracer {
-    struct Sample {
-        sint16 left;
-        sint16 right;
-    };
-    util::RingBuffer<Sample, 1024> output;
 
 private:
     // -------------------------------------------------------------------------
     // ISCSPTracer implementation
 
-    void Sample(sint16 left, sint16 right) final;
+    // TODO: void SlotSample(uint32 index, sint16 left, sint16 right) final;
 };
 
 } // namespace app

@@ -2,7 +2,6 @@
 
 #include "cmdline_opts.hpp"
 
-#include "audio_system.hpp"
 #include "shared_context.hpp"
 
 #include "ui/windows/about_window.hpp"
@@ -52,8 +51,6 @@ private:
 
     std::thread m_emuThread;
     util::Event m_emuProcessEvent{};
-
-    AudioSystem m_audioSystem;
 
     std::chrono::steady_clock::time_point m_mouseHideTime;
 

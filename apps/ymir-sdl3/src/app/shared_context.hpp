@@ -1,5 +1,6 @@
 #pragma once
 
+#include <app/audio_system.hpp>
 #include <app/message.hpp>
 #include <app/profile.hpp>
 #include <app/rewind_buffer.hpp>
@@ -161,6 +162,8 @@ struct SharedContext {
             return const_cast<SaturnContainer *>(this)->GetConfiguration();
         }
     } saturn;
+
+    AudioSystem audioSystem;
 
     float displayScale = 1.0f;
 

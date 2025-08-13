@@ -12,14 +12,14 @@ namespace ymir::scsp {
 // -----------------------------------------------------------------------------
 // Debugger
 
-template <bool debug>
+/*template <bool debug>
 FORCE_INLINE static void TraceSample(debug::ISCSPTracer *tracer, sint16 left, sint16 right) {
     if constexpr (debug) {
         if (tracer) {
             return tracer->Sample(left, right);
         }
     }
-}
+}*/
 
 // -----------------------------------------------------------------------------
 // Implementation
@@ -873,7 +873,7 @@ FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
 
         // Write to output and reset
         m_cbOutputSample(m_out[0], m_out[1]);
-        TraceSample<debug>(m_tracer, m_out[0], m_out[1]);
+        // TraceSample<debug>(m_tracer, m_out[0], m_out[1]);
         m_out.fill(0);
 
         // Copy CDDA data to DSP EXTS (0=left, 1=right)

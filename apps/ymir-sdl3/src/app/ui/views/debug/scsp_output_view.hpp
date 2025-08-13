@@ -1,6 +1,9 @@
 #pragma once
 
+#include <app/audio_system.hpp>
 #include <app/shared_context.hpp>
+
+#include <app/ui/widgets/audio_widgets.hpp>
 
 #include <app/debug/scsp_tracer.hpp>
 
@@ -15,6 +18,9 @@ public:
 private:
     SharedContext &m_context;
     SCSPTracer &m_tracer;
+
+    std::array<Sample, 2048> m_audioBuffer;
+    std::array<widgets::StereoSample, 2048> m_waveform;
 };
 
 } // namespace app::ui

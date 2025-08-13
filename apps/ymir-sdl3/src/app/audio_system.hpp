@@ -11,6 +11,10 @@
 
 namespace app {
 
+struct Sample {
+    sint16 left, right;
+};
+
 class AudioSystem {
 public:
     bool Init(int sampleRate, SDL_AudioFormat format, int channels, uint32 bufferSize);
@@ -23,6 +27,12 @@ public:
     bool GetAudioStreamFormat(int *sampleRate, SDL_AudioFormat *format, int *channels);
 
     void ReceiveSample(sint16 left, sint16 right);
+
+    void Snapshot(std::span<Sample, 2048> out) const {
+        const uint32 readPos = m_readPos;
+        std::copy(m_buffer.begin() + readPos, m_buffer.end(), out.begin());
+        std::copy(m_buffer.begin(), m_buffer.begin() + readPos, out.begin() + out.size() - readPos);
+    }
 
     void SetGain(float gain) {
         m_gain = gain;
@@ -71,10 +81,6 @@ public:
     }
 
 private:
-    struct Sample {
-        sint16 left, right;
-    };
-
     SDL_AudioStream *m_audioStream = nullptr;
     bool m_running = false;
 
