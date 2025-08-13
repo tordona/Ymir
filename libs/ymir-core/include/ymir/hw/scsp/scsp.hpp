@@ -1076,7 +1076,7 @@ private:
     // --- Slot Status Register ---
 
     uint8 m_monitorSlotCall; // (W) MSLC - selects a slot to monitor the current sample offset from SA
-                             // (R) CA - Call Address - the offset from SA of the current sample (in 4 KiB units?)
+                             // (R) CA - Call Address - the offset from SA of the current sample (in 4 KiB units)
 
     // --- MIDI Register ---
 
@@ -1240,6 +1240,26 @@ public:
 
         const std::array<Slot, 32> &GetSlots() const {
             return m_scsp.m_slots;
+        }
+
+        uint16 GetMCIEB() const {
+            return m_scsp.m_scuEnabledInterrupts;
+        }
+
+        uint16 GetMCIPD() const {
+            return m_scsp.m_scuPendingInterrupts;
+        }
+
+        uint16 GetSCIEB() const {
+            return m_scsp.m_m68kEnabledInterrupts;
+        }
+
+        uint16 GetSCIPD() const {
+            return m_scsp.m_m68kPendingInterrupts;
+        }
+
+        const std::array<uint8, 3> &GetSCILV() const {
+            return m_scsp.m_m68kInterruptLevels;
         }
 
     private:
