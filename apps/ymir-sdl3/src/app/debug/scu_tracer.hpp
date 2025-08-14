@@ -19,6 +19,8 @@ struct SCUTracer final : ymir::debug::ISCUTracer {
     void ClearDMATransfers();
     void ClearDSPDMATransfers();
 
+    void DebugPortWrite(uint8 ch);
+
     bool traceInterrupts = false;
     bool traceDMA = false;
     bool traceDSPDMA = false;
@@ -68,8 +70,6 @@ private:
 
     void RaiseInterrupt(uint8 index, uint8 level) final;
     void AcknowledgeInterrupt(uint8 index) final;
-
-    void DebugPortWrite(uint8 ch) final;
 
     void DMA(uint8 channel, uint32 srcAddr, uint32 dstAddr, uint32 xferCount, uint32 srcAddrInc, uint32 dstAddrInc,
              bool indirect, uint32 indirectAddr) final;

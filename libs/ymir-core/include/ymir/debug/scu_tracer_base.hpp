@@ -27,10 +27,6 @@ struct ISCUTracer {
     /// @param[in] index the interrupt index; see `ymir::scu::InterruptStatus`
     virtual void AcknowledgeInterrupt(uint8 index) {}
 
-    /// @brief Invoked when a byte is writted to mednafen's debug port.
-    /// @param[in] ch the character written to the port
-    virtual void DebugPortWrite(uint8 ch) {}
-
     /// @brief Invoked when a DMA transfer begins and on every indirect transfer.
     /// @param[in] channel the channel index
     /// @param[in] srcAddr the starting source address

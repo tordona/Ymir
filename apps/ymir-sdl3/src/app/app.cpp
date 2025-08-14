@@ -1529,6 +1529,9 @@ void App::RunEmulator() {
              }
          }});
 
+    m_context.saturn.instance->SCU.SetDebugPortWriteCallback(
+        util::MakeClassMemberOptionalCallback<&SCUTracer::DebugPortWrite>(&m_context.tracers.SCU));
+
     // ---------------------------------
     // Main emulator loop
 

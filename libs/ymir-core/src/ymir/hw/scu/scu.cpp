@@ -27,12 +27,6 @@ FORCE_INLINE static void TraceAcknowledgeInterrupt(debug::ISCUTracer *tracer, ui
     }
 }
 
-FORCE_INLINE static void TraceDebugPortWrite(debug::ISCUTracer *tracer, uint8 ch) {
-    if (tracer) {
-        return tracer->DebugPortWrite(ch);
-    }
-}
-
 FORCE_INLINE static void TraceDMA(debug::ISCUTracer *tracer, uint8 channel, uint32 srcAddr, uint32 dstAddr,
                                   uint32 xferCount, uint32 srcAddrInc, uint32 dstAddrInc, bool indirect,
                                   uint32 indirectAddr) {
@@ -525,7 +519,7 @@ void SCU::WriteCartridge(uint32 address, T value) {
     } else if constexpr (std::is_same_v<T, uint8>) {
         if (address == 0x210'0001) [[unlikely]] {
             // mednafen debug port
-            TraceDebugPortWrite(m_tracer, value);
+            m_cbDebugPortWrite(value);
             if constexpr (devlog::debug_enabled<grp::debug>) {
                 if (value == '\n') {
                     devlog::debug<grp::debug>("{}", m_debugOutput);

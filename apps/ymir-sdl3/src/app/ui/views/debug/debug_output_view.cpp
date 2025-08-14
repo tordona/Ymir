@@ -7,11 +7,6 @@ DebugOutputView::DebugOutputView(SharedContext &context)
     , m_tracer(context.tracers.SCU) {}
 
 void DebugOutputView::Display() {
-    // TODO: should check if tracer is attached instead
-    if (!m_context.saturn.IsDebugTracingEnabled()) {
-        ImGui::TextUnformatted("Tracing is disabled -- no debug output will be captured.");
-        ImGui::TextUnformatted("Enable tracing under Debug > Enable tracing (F11).");
-    }
     if (ImGui::Button("Clear##debug_output")) {
         m_tracer.ClearDebugMessages();
     }

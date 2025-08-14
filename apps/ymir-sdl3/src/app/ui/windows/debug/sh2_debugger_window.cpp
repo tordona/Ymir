@@ -131,7 +131,7 @@ void SH2DebuggerWindow::DrawContents() {
         // Enable debug tracing
         m_context.EnqueueEvent(events::emu::SetDebugTrace(true));
     }
-    if (ImGui::Shortcut(ImGuiKey_Space) || ImGui::Shortcut(ImGuiKey_R)) {
+    if (ImGui::Shortcut(ImGuiKey_Space, baseFlags) || ImGui::Shortcut(ImGuiKey_R, baseFlags)) {
         // Pause/Resume
         m_context.EnqueueEvent(events::emu::SetPaused(!m_context.paused));
     }

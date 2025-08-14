@@ -12,6 +12,8 @@
 
 #include <ymir/hw/hw_defs.hpp>
 
+#include <ymir/hw/scu/scu_callbacks.hpp>
+
 #include <ymir/hw/cdblock/cdblock_internal_callbacks.hpp>
 #include <ymir/hw/scsp/scsp_internal_callbacks.hpp>
 #include <ymir/hw/scu/scu_internal_callbacks.hpp>
@@ -80,6 +82,10 @@ public:
 
     template <bool debug>
     void Advance(uint64 cycles);
+
+    void SetDebugPortWriteCallback(CBDebugPortWrite callback) {
+        m_cbDebugPortWrite = callback;
+    }
 
     // -------------------------------------------------------------------------
     // Cartridge slot
@@ -150,6 +156,8 @@ private:
 
     CBExternalInterrupt m_cbExternalMasterInterrupt;
     CBExternalInterrupt m_cbExternalSlaveInterrupt;
+
+    CBDebugPortWrite m_cbDebugPortWrite;
 
     core::Scheduler &m_scheduler;
     core::EventID m_timer1Event;

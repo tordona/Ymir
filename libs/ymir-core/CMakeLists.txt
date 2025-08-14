@@ -51,6 +51,7 @@ add_library(ymir-core
     include/ymir/hw/scsp/scsp_timer.hpp
 
     include/ymir/hw/scu/scu.hpp
+    include/ymir/hw/scu/scu_callbacks.hpp
     include/ymir/hw/scu/scu_defs.hpp
     include/ymir/hw/scu/scu_dma.hpp
     include/ymir/hw/scu/scu_dsp.hpp
