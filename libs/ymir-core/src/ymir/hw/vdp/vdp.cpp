@@ -859,13 +859,14 @@ void VDP::UpdateResolution() {
 
     // Horizontal/vertical resolution tables
     // NTSC uses the first two vRes entries, PAL uses the full table, and exclusive monitors use 480 lines
-    // TODO: exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
+    // For exclusive monitor: even hRes entries are valid for 31 KHz monitors, odd are for Hi-Vision
     static constexpr uint32 hRes[] = {320, 352, 640, 704};
     static constexpr uint32 vRes[] = {224, 240, 256, 256};
 
-    m_HRes = hRes[m_state.regs2.TVMD.HRESOn];
-    m_VRes = vRes[m_state.regs2.TVMD.VRESOn & (m_state.regs2.TVSTAT.PAL ? 3 : 1)];
-    if (m_state.regs2.TVMD.IsInterlaced()) {
+    const bool exclusiveMonitor = m_state.regs2.TVMD.HRESOn & 4;
+    m_HRes = hRes[m_state.regs2.TVMD.HRESOn & 3];
+    m_VRes = exclusiveMonitor ? 480 : vRes[m_state.regs2.TVMD.VRESOn & (m_state.regs2.TVSTAT.PAL ? 3 : 1)];
+    if (!exclusiveMonitor && m_state.regs2.TVMD.IsInterlaced()) {
         // Interlaced modes double the vertical resolution
         m_VRes *= 2;
     }
@@ -880,6 +881,7 @@ void VDP::UpdateResolution() {
     //   LDt = Last Dot
     //   ADp = Active Display
     // NOTE: these timings specify the HCNT interval between phases
+    // TODO: exclusive monitor timings: (HRESOn & 1) ? 212 : 213
     static constexpr std::array<std::array<uint32, 6>, 4> hTimings{{
         // RBd, HSy, VBC, LBd, LDt, ADp
         {320, 27, 27, 26, 26, 1}, // {320, 347, 374, 400, 426, 427},
@@ -887,7 +889,7 @@ void VDP::UpdateResolution() {
         {640, 54, 54, 52, 52, 2}, // {640, 694, 748, 800, 852, 854},
         {704, 46, 56, 58, 44, 2}, // {704, 750, 806, 864, 908, 910},
     }};
-    m_HTimings = hTimings[m_state.regs2.TVMD.HRESOn & 3]; // TODO: check exclusive monitor timings
+    m_HTimings = hTimings[m_state.regs2.TVMD.HRESOn & 3];
 
     // Vertical phase timings (to reach):
     //   BBd = Bottom Border
@@ -896,6 +898,10 @@ void VDP::UpdateResolution() {
     //   LLn = Last Line
     //   ADp = Active Display
     // NOTE: these timings indicate the VCNT at which the specified phase begins
+    // TODO: exclusive monitor timings: (HRESOn & 1) ? 562 : 525
+    // TODO: interlaced mode timings for odd fields:
+    // - normal modes: vTimings - 1
+    // - exclusive modes: vTimings + 2
     static constexpr std::array<std::array<std::array<uint32, 5>, 4>, 2> vTimings{{
         // NTSC
         {{

@@ -16,6 +16,7 @@ Introduced save state file version 9.
 ### Fixes
 
 - SCSP: Don't use SBCTL on slots that are playing samples from Sound RAM when the EG reaches the silence threshold. Fixes busted audio in Guardian Heroes and Elevator Action^2. (#155)
+- VDP2: Fix exclusive monitor resolution sizes and out-of-bounds reads from lookup tables.
 - VDP2: Recalculate RBG0/1 page base addresses when changed mid-frame. Fixes broken ground on NiGHTS into Dreams's boss fights. (#423)
 
 
