@@ -10,6 +10,7 @@ Introduced save state file version 9.
 
 - Backup RAM: Per-game internal backup RAM file names changed from `bup-int-[<game code>] <title>.bin` to `bup-int-<title> [<game code>].bin` to allow sorting files alphabetically in file browsers. Existing files will be automatically renamed as they are loaded.
 - Cart: Automatically insert Backup RAM cartridges for games that recommend their use, such as Dezaemon 2 and Sega Ages - Galaxy Force II. (#356)
+- CD Block: Allow querying files at specific frame addresses and display file being read in System State window.
 - Debug: Allow exporting debug output to a file.
 - Debug: Move debug port writes to a callback and remove them from the SCU tracer. Eliminates the need for debug tracing to use Mednafen's debug output method.
 - SCSP: Basic debugger view for all slot registers and some state.

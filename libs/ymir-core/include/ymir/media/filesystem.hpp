@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -209,6 +210,14 @@ public:
     // Retrieves the file info from the current directory for the given absolute file ID.
     const FileInfo &GetFileInfo(uint32 fileID) const;
 
+    // Retrieves the filesystem entry at the specified frame address.
+    // Retuns nullptr if there is no file at that FAD, it is out of range or it doesn't point to a data track.
+    const FilesystemEntry *GetFileAtFrameAddress(uint32 fad) const;
+
+    // Retrieves the full path of the file at the specified frame address.
+    // Retuns nullptr if there is no file at that FAD, it is out of range or it doesn't point to a data track.
+    std::string GetPathAtFrameAddress(uint32 fad) const;
+
     // -------------------------------------------------------------------------
     // Save states
 
@@ -222,6 +231,18 @@ private:
 
     // Disc hash
     XXH128Hash m_hash{};
+
+    struct FileIndex {
+        size_t directory;
+        size_t file;
+    };
+    // Frame address to file map.
+    // The key is actually the upper bound of the filesystem entry.
+    std::map<uint32, FileIndex> m_fadToFiles{};
+
+    std::optional<FileIndex> LookupFileIndexAtFrameAddress(uint32 fad) const;
+
+    std::string BuildPath(uint16 directoryIndex) const;
 
     // Current file system operation state.
     // These fields should be stored in the save state

@@ -438,6 +438,9 @@ public:
 
         uint8 GetCDDeviceConnection() const;
 
+        const media::fs::FilesystemEntry *GetFileAtFrameAddress(uint32 fad) const;
+        std::string GetPathAtFrameAddress(uint32 fad) const;
+
         std::span<const Filter, kNumFilters> GetFilters() const;
 
     private:

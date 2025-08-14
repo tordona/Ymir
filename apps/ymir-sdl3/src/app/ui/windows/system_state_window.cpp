@@ -390,6 +390,17 @@ void SystemStateWindow::DrawCDDrive() {
     } else {
         ImGui::TextUnformatted("No repeat");
     }
+
+    if (status == cdblock::kStatusCodePlay) {
+        std::string file = probe.GetPathAtFrameAddress(fad);
+        if (!file.empty()) {
+            ImGui::Text("Reading file %s", file.c_str());
+        } else {
+            ImGui::TextUnformatted("Not a file");
+        }
+    } else {
+        ImGui::TextUnformatted("");
+    }
 }
 
 void SystemStateWindow::DrawBackupMemory() {

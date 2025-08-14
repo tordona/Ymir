@@ -33,5 +33,5 @@ Development assertions must be enabled by defining the `Ymir_DEV_ASSERTIONS` mac
         } while (false)
 #else
     #define YMIR_DEV_ASSERT(cond)
-    #define YMIR_DEV_CHECK(cond)
+    #define YMIR_DEV_CHECK()
 #endif

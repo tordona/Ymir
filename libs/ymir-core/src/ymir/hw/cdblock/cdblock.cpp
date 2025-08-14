@@ -3155,6 +3155,14 @@ uint8 CDBlock::Probe::GetCDDeviceConnection() const {
     return m_cdblock.m_cdDeviceConnection;
 }
 
+const media::fs::FilesystemEntry *CDBlock::Probe::GetFileAtFrameAddress(uint32 fad) const {
+    return m_cdblock.m_fs.GetFileAtFrameAddress(fad);
+}
+
+std::string CDBlock::Probe::GetPathAtFrameAddress(uint32 fad) const {
+    return m_cdblock.m_fs.GetPathAtFrameAddress(fad);
+}
+
 std::span<const Filter, kNumFilters> CDBlock::Probe::GetFilters() const {
     return m_cdblock.m_filters;
 }

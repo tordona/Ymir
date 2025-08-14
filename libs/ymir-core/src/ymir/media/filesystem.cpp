@@ -17,6 +17,7 @@ void Filesystem::Clear() {
     m_currDirectory = ~0;
     m_currFileOffset = 0;
     m_hash.fill(0);
+    m_fadToFiles.clear();
 }
 
 bool Filesystem::Read(const Disc &disc) {
@@ -173,34 +174,7 @@ std::string Filesystem::GetCurrentPath() const {
     }
     assert(m_currDirectory < m_directories.size());
 
-    if (m_currDirectory == 0) {
-        // Root directory
-        return "/";
-    }
-
-    // Build path from components
-    std::vector<uint32> fullPath{};
-    uint32 currDir = m_currDirectory;
-    fullPath.push_back(currDir);
-    while (currDir != 0 && fullPath.size() < 32) {
-        currDir = m_directories[currDir].m_parent - 1; // 1-indexed
-        if (currDir != 0) {
-            fullPath.push_back(currDir);
-        }
-    }
-
-    std::string out{};
-
-    bool first = true;
-    for (auto it = fullPath.rbegin(); it != fullPath.rend(); ++it) {
-        if (first) {
-            first = false;
-        } else {
-            out += "/";
-        }
-        out += m_directories[*it].m_name;
-    }
-    return out;
+    return BuildPath(m_currDirectory);
 }
 
 uint32 Filesystem::GetFileCount() const {
@@ -252,6 +226,30 @@ const FileInfo &media::fs::Filesystem::GetFileInfo(uint32 fileID) const {
     return currDirContents[fileID].GetFileInfo();
 }
 
+const FilesystemEntry *Filesystem::GetFileAtFrameAddress(uint32 fad) const {
+    if (auto index = LookupFileIndexAtFrameAddress(fad)) {
+        auto &dir = m_directories[index->directory];
+        auto &contents = dir.GetContents();
+        return &contents[index->file];
+    }
+    return nullptr;
+}
+
+std::string Filesystem::GetPathAtFrameAddress(uint32 fad) const {
+    if (auto index = LookupFileIndexAtFrameAddress(fad)) {
+        auto &dir = m_directories[index->directory];
+        auto &contents = dir.GetContents();
+        std::string path = BuildPath(index->directory);
+        std::string filename(contents[index->file].Name());
+        if (path == "/") {
+            return filename;
+        } else {
+            return path + "/" + filename;
+        }
+    }
+    return "";
+}
+
 void Filesystem::SaveState(state::CDBlockState::FilesystemState &state) const {
     state.currDirectory = m_currDirectory;
     state.currFileOffset = m_currFileOffset;
@@ -267,6 +265,55 @@ bool Filesystem::ValidateState(const state::CDBlockState::FilesystemState &state
 void Filesystem::LoadState(const state::CDBlockState::FilesystemState &state) {
     m_currDirectory = state.currDirectory;
     m_currFileOffset = state.currFileOffset;
+}
+
+std::optional<Filesystem::FileIndex> Filesystem::LookupFileIndexAtFrameAddress(uint32 fad) const {
+    auto it = m_fadToFiles.upper_bound(fad);
+    if (it == m_fadToFiles.end()) {
+        return std::nullopt;
+    }
+
+    assert(it->second.directory < m_directories.size());
+    auto &dir = m_directories[it->second.directory];
+    auto &contents = dir.GetContents();
+
+    assert(it->second.file < contents.size());
+    auto &file = contents[it->second.file];
+    if (fad < file.FrameAddress()) {
+        return std::nullopt;
+    }
+    return it->second;
+}
+
+std::string Filesystem::BuildPath(uint16 directoryIndex) const {
+    if (directoryIndex == 0) {
+        // Root directory
+        return "/";
+    }
+
+    // Build path from components
+    std::vector<uint32> fullPath{};
+    uint32 currDir = directoryIndex;
+    fullPath.push_back(currDir);
+    while (currDir != 0 && fullPath.size() < 32) {
+        currDir = m_directories[currDir].m_parent - 1; // 1-indexed
+        if (currDir != 0) {
+            fullPath.push_back(currDir);
+        }
+    }
+
+    std::string out{};
+
+    bool first = true;
+    for (auto it = fullPath.rbegin(); it != fullPath.rend(); ++it) {
+        if (first) {
+            first = false;
+        } else {
+            out += "/";
+        }
+        out += m_directories[*it].m_name;
+    }
+    return out;
 }
 
 bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor &volDesc) {
@@ -346,6 +393,7 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
             }
 
             // Create a directory entry
+            const size_t directoryIndex = m_directories.size();
             Directory &directory =
                 m_directories.emplace_back(dirRecord, pathTableRecord.parentDirNumber, pathTableRecord.directoryID);
             auto &contents = directory.GetContents();
@@ -396,7 +444,16 @@ bool Filesystem::ReadPathTableRecords(const Track &track, const VolumeDescriptor
                     const uint8 fileNum = 0;
 
                     // Add record to directory
-                    contents.emplace_back(subdirRecord, pathRecIndex + 1, fileNum);
+                    const size_t fsEntryIndex = contents.size();
+                    auto &fsEntry = contents.emplace_back(subdirRecord, pathRecIndex + 1, fileNum);
+
+                    // Map FAD->entry
+                    if (fsEntry.IsFile()) {
+                        const uint32 entryBaseFAD = fsEntry.FrameAddress();
+                        const uint32 entryFADCount = (fsEntry.Size() + 2047) / 2048;
+                        const uint32 finalFAD = entryBaseFAD + entryFADCount - 1;
+                        m_fadToFiles.insert({finalFAD, {directoryIndex, fsEntryIndex}});
+                    }
 
                     dirRecOffset += subdirRecord.recordSize;
                 }
