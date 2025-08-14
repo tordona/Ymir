@@ -2667,11 +2667,7 @@ FORCE_INLINE std::array<uint8, kVDP2VRAMSize> &VDP::VDP2GetVRAM() {
 
 void VDP::VDP2InitFrame() {
     const VDP2Regs &regs2 = VDP2GetRegs();
-    if (regs2.bgEnabled[5]) {
-        VDP2InitRotationBG<0>();
-        VDP2InitRotationBG<1>();
-    } else {
-        VDP2InitRotationBG<0>();
+    if (!regs2.bgEnabled[5]) {
         VDP2InitNormalBG<0>();
         VDP2InitNormalBG<1>();
         VDP2InitNormalBG<2>();
@@ -2700,22 +2696,29 @@ FORCE_INLINE void VDP::VDP2InitNormalBG() {
     }
 }
 
-template <uint32 index>
-FORCE_INLINE void VDP::VDP2InitRotationBG() {
-    static_assert(index < 2, "Invalid RBG index");
+FORCE_INLINE void VDP::VDP2UpdateRotationPageBaseAddresses(VDP2Regs &regs2) {
+    for (int index = 0; index < 2; index++) {
+        if (!regs2.bgEnabled[index + 4]) {
+            continue;
+        }
 
-    const VDP2Regs &regs2 = VDP2GetRegs();
-    const BGParams &bgParams = regs2.bgParams[index];
-    const bool cellSizeShift = bgParams.cellSizeShift;
-    const bool twoWordChar = bgParams.twoWordChar;
+        BGParams &bgParams = regs2.bgParams[index];
+        if (!bgParams.rbgPageBaseAddressesDirty) {
+            continue;
+        }
+        bgParams.rbgPageBaseAddressesDirty = false;
 
-    for (int param = 0; param < 2; param++) {
-        const RotationParams &rotParam = regs2.rotParams[param];
-        auto &pageBaseAddresses = m_rotParamStates[param].pageBaseAddresses;
-        const uint16 plsz = rotParam.plsz;
-        for (int plane = 0; plane < 16; plane++) {
-            const uint32 mapIndex = rotParam.mapIndices[plane];
-            pageBaseAddresses[plane] = CalcPageBaseAddress(cellSizeShift, twoWordChar, plsz, mapIndex);
+        const bool cellSizeShift = bgParams.cellSizeShift;
+        const bool twoWordChar = bgParams.twoWordChar;
+
+        for (int param = 0; param < 2; param++) {
+            const RotationParams &rotParam = regs2.rotParams[param];
+            auto &pageBaseAddresses = m_rotParamStates[param].pageBaseAddresses;
+            const uint16 plsz = rotParam.plsz;
+            for (int plane = 0; plane < 16; plane++) {
+                const uint32 mapIndex = rotParam.mapIndices[plane];
+                pageBaseAddresses[index][plane] = CalcPageBaseAddress(cellSizeShift, twoWordChar, plsz, mapIndex);
+            }
         }
     }
 }
@@ -3481,6 +3484,8 @@ FORCE_INLINE void VDP::VDP2PrepareLine(uint32 y) {
         VDP2CalcRotationParameterTables(y);
     }
 
+    VDP2UpdateRotationPageBaseAddresses(regs2);
+
     VDP2DrawLineColorAndBackScreens(y);
 
     VDP2UpdateLineScreenScrollParams(y);
@@ -3866,7 +3871,8 @@ FORCE_INLINE void VDP::VDP2DrawRotationBG(uint32 y, uint32 colorMode, bool altFi
             const auto chmEnum = static_cast<CharacterMode>(chm);
             const auto cfEnum = static_cast<ColorFormat>(cf <= 4 ? cf : 4);
             const uint32 colorMode = clm <= 2 ? clm : 2;
-            arr[chm][fcc][cf][clm] = &VDP::VDP2DrawRotationScrollBG<selRotParam, chmEnum, fcc, cfEnum, colorMode>;
+            arr[chm][fcc][cf][clm] =
+                &VDP::VDP2DrawRotationScrollBG<bgIndex, selRotParam, chmEnum, fcc, cfEnum, colorMode>;
         });
 
         return arr;
@@ -5347,7 +5353,8 @@ NO_INLINE void VDP::VDP2DrawNormalBitmapBG(uint32 y, const BGParams &bgParams, L
     }
 }
 
-template <bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+template <uint32 bgIndex, bool selRotParam, VDP::CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat,
+          uint32 colorMode>
 NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState,
                                              VRAMFetcher &vramFetcher, std::span<const bool> windowState,
                                              bool altField) {
@@ -5419,8 +5426,8 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
         } else if ((scrollX < maxScrollX && scrollY < maxScrollY) || usingRepeat) {
             // Plot pixel
             const Pixel pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
-                bgParams, rotParamState.pageBaseAddresses, rotParams.pageShiftH, rotParams.pageShiftV, scrollCoord,
-                m_vramFetchers[altField][rotParamSelector]);
+                bgParams, rotParamState.pageBaseAddresses[bgIndex], rotParams.pageShiftH, rotParams.pageShiftV,
+                scrollCoord, m_vramFetchers[altField][rotParamSelector]);
             if (!doubleResH || !windowState[xx]) {
                 layerState.pixels.SetPixel(xx, pixel);
             }

@@ -928,7 +928,9 @@ private:
         }
 
         void Reset() {
-            pageBaseAddresses.fill(0);
+            for (auto &addrs : pageBaseAddresses) {
+                addrs.fill(0);
+            }
             screenCoords.fill({});
             lineColor.fill({.u32 = 0});
             transparent.fill(false);
@@ -937,9 +939,9 @@ private:
         }
 
         // Page base addresses for RBG planes A-P using Rotation Parameters A and B.
-        // Indexing: [Plane A-P]
+        // Indexing: [RBG0-1][Plane A-P]
         // Derived from mapIndices, CHCTLA/CHCTLB.xxCHSZ, PNCR.xxPNB and PLSZ.xxPLSZn
-        std::array<uint32, 16> pageBaseAddresses;
+        std::array<std::array<uint32, 16>, 2> pageBaseAddresses;
 
         // Precomputed screen coordinates (with 16 fractional bits).
         alignas(16) std::array<CoordS32, kMaxResH> screenCoords;
@@ -1145,9 +1147,7 @@ private:
     template <uint32 index>
     void VDP2InitNormalBG();
 
-    // Initializes the specified RBG.
-    template <uint32 index>
-    void VDP2InitRotationBG();
+    void VDP2UpdateRotationPageBaseAddresses(VDP2Regs &regs2);
 
     // Updates the enabled backgrounds.
     void VDP2UpdateEnabledBGs();
@@ -1341,12 +1341,14 @@ private:
     // altField selects the complementary field when rendering deinterlaced frames
     // vramFetcher is the corresponding background layer's VRAM fetcher.
     //
+    // bgIndex specifies the rotation background index, from 0 to 1.
     // selRotParam enables dynamic rotation parameter selection (for RBG0).
     // charMode indicates if character patterns use two words or one word with standard or extended character data.
     // fourCellChar indicates if character patterns are 1x1 cells (false) or 2x2 cells (true).
     // colorFormat is the color format for cell data.
     // colorMode is the CRAM color mode.
-    template <bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat, uint32 colorMode>
+    template <uint32 bgIndex, bool selRotParam, CharacterMode charMode, bool fourCellChar, ColorFormat colorFormat,
+              uint32 colorMode>
     void VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams, LayerState &layerState, VRAMFetcher &vramFetcher,
                                   std::span<const bool> windowState, bool altField);
 

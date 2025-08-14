@@ -4,7 +4,7 @@
 
 In development.
 
-Uses save state file version 8.
+Introduced save state file version 9.
 
 ### New features and improvements
 
@@ -16,6 +16,7 @@ Uses save state file version 8.
 ### Fixes
 
 - SCSP: Don't use SBCTL on slots that are playing samples from Sound RAM when the EG reaches the silence threshold. Fixes busted audio in Guardian Heroes and Elevator Action^2. (#155)
+- VDP2: Recalculate RBG0/1 page base addresses when changed mid-frame. Fixes broken ground on NiGHTS into Dreams's boss fights. (#423)
 
 
 ## Version 0.1.7

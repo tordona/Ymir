@@ -178,6 +178,8 @@ struct alignas(128) BGParams {
 
         plsz = 0;
         bmsz = 0;
+
+        rbgPageBaseAddressesDirty = true;
     }
 
     // If true, honor transparency bit in color data.
@@ -366,6 +368,17 @@ struct alignas(128) BGParams {
     // Raw register values, to facilitate reads.
     uint16 plsz; // Raw value of PLSZ.xxPLSZn
     uint16 bmsz; // Raw value of CHCTLA/CHCTLB.xxBMSZ
+
+    // Dirty flags
+
+    // Whether the page base addresses for RBGs need to be recalculated.
+    // Set when any of the following is changed:
+    // - CHCTLB.R0CHSZ (RBG0) or CHCTLA.N0CHSZ (RBG1)
+    // - PNCR.R0PNB (RBG0) or PNCN0.N0PNB (RBG1)
+    // - PLSZ.RxPLSZn
+    // - MPOFR
+    // - MPABRA-MPOPRB
+    bool rbgPageBaseAddressesDirty;
 
     void UpdatePLSZ() {
         pageShiftH = plsz & 1;

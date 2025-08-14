@@ -21,7 +21,8 @@ namespace ymir::state {
 //   6 = 0.1.5
 //   7 = 0.1.6
 //   8 = 0.1.7
-inline constexpr uint32 kVersion = 8;
+//   9 = 0.1.8
+inline constexpr uint32 kVersion = 9;
 
 } // namespace ymir::state
 
@@ -514,6 +515,9 @@ void serialize(Archive &ar, VDPState::VDPRendererState::NormBGLayerState &s, con
 
 template <class Archive>
 void serialize(Archive &ar, VDPState::VDPRendererState::RotationParamState &s, const uint32 version) {
+    // v9:
+    // - Changed fields
+    //   - pageBaseAddresses changed from std::array<uint32, 16> to std::array<std::array<uint32, 16>, 2>
     // v8:
     // - New fields
     //   - Xst = 0
@@ -521,7 +525,12 @@ void serialize(Archive &ar, VDPState::VDPRendererState::RotationParamState &s, c
     // - Removed fields
     //   - sint32 scrX
     //   - sint32 scrY
-    ar(s.pageBaseAddresses);
+    if (version >= 9) {
+        ar(s.pageBaseAddresses);
+    } else {
+        ar(s.pageBaseAddresses[0]);
+        s.pageBaseAddresses[1] = s.pageBaseAddresses[0];
+    }
     if (version >= 8) {
         ar(s.Xst, s.Yst);
     } else {

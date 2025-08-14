@@ -940,6 +940,7 @@ struct VDP2Regs {
         bgParams[1].bmsz = bit::extract<2, 3>(value);
         bgParams[1].colorFormat = static_cast<ColorFormat>(bit::extract<4, 6>(value));
         bgParams[1].UpdateCHCTL();
+        bgParams[1].rbgPageBaseAddressesDirty = true;
 
         bgParams[2].cellSizeShift = bit::extract<8>(value);
         bgParams[2].bitmap = bit::test<9>(value);
@@ -1005,6 +1006,7 @@ struct VDP2Regs {
         bgParams[0].bmsz = bit::extract<10>(value);
         bgParams[0].colorFormat = static_cast<ColorFormat>(bit::extract<12, 14>(value));
         bgParams[0].UpdateCHCTL();
+        bgParams[0].rbgPageBaseAddressesDirty = true;
     }
 
     // 18002C   BMPNA   NBG0/NBG1 Bitmap Palette Number
@@ -1114,6 +1116,9 @@ struct VDP2Regs {
         bgParams[bgIndex].extChar = bit::test<14>(value);
         bgParams[bgIndex].twoWordChar = !bit::test<15>(value);
         bgParams[bgIndex].UpdatePageBaseAddresses();
+        if (bgIndex <= 1) { // RBG0/1
+            bgParams[bgIndex].rbgPageBaseAddressesDirty = true;
+        }
     }
     FORCE_INLINE void WritePNCNA(uint16 value) {
         WritePNCN(1, value);
@@ -1202,6 +1207,9 @@ struct VDP2Regs {
         rotParams[1].screenOverProcess = static_cast<ScreenOverProcess>(bit::extract<14, 15>(value));
         rotParams[0].UpdatePLSZ();
         rotParams[1].UpdatePLSZ();
+
+        bgParams[0].rbgPageBaseAddressesDirty = true;
+        bgParams[1].rbgPageBaseAddressesDirty = true;
     }
 
     // 18003C   MPOFN   NBG0-3 Map Offset
@@ -1267,6 +1275,9 @@ struct VDP2Regs {
         // shift by 17 is the same as multiply by 0x20000, which is the boundary for bitmap data
         rotParams[0].bitmapBaseAddress = bit::extract<0, 2>(value) << 17u;
         rotParams[1].bitmapBaseAddress = bit::extract<4, 6>(value) << 17u;
+
+        bgParams[0].rbgPageBaseAddressesDirty = true;
+        bgParams[1].rbgPageBaseAddressesDirty = true;
     }
 
     // 180040   MPABN0  NBG0 Normal Scroll Screen Map for Planes A,B
@@ -1455,6 +1466,9 @@ struct VDP2Regs {
         auto &bg = rotParams[paramIndex];
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 0], bit::extract<0, 5>(value));
         bit::deposit_into<0, 5>(bg.mapIndices[planeIndex * 2 + 1], bit::extract<8, 13>(value));
+
+        bgParams[0].rbgPageBaseAddressesDirty = true;
+        bgParams[1].rbgPageBaseAddressesDirty = true;
     }
     FORCE_INLINE void WriteMPABRA(uint16 value) {
         WriteMPR(0, 0, value);
