@@ -3805,9 +3805,9 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
         }
         layerState.pixels.transparent[x] = false;
     } else {
+        layerState.pixels.color[x] = color;
         layerState.pixels.transparent[x] = spriteData.special == SpriteData::Special::Transparent;
     }
-    layerState.pixels.color[x] = color;
     layerState.pixels.priority[x] = params.priorities[spriteData.priority];
     attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
     attr.shadowOrWindow = spriteData.shadowOrWindow;
