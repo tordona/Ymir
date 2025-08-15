@@ -3812,7 +3812,7 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     attr.colorCalcRatio = params.colorCalcRatios[spriteData.colorCalcRatio];
     attr.shadowOrWindow = spriteData.shadowOrWindow;
     attr.normalShadow = spriteData.special == SpriteData::Special::Shadow;
-    if constexpr (transparentMeshes) {
+    if constexpr (transparentMeshes && !applyMesh) {
         attr.transparentMesh = false;
     }
 }
