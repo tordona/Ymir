@@ -173,7 +173,7 @@ bool Load(std::filesystem::path chdPath, Disc &disc, bool preloadToRAM) {
     util::ScopeGuard sgInvalidateDisc{[&] { disc.Invalidate(); }};
 
     chd_file *file = nullptr;
-    chd_error error = chd_open(fmt::format("{}", chdPath).c_str(), CHD_OPEN_READ, nullptr, &file);
+    chd_error error = chd_open(chdPath.string().c_str(), CHD_OPEN_READ, nullptr, &file);
     if (error != CHDERR_NONE) {
         // fmt::println("CHD: Failed to open file {}: {}", chdPath, chd_error_string(error));
         return false;

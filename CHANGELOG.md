@@ -18,6 +18,7 @@ Introduced save state file version 9.
 
 ### Fixes
 
+- App: Set UTF-8 locale globally. Fixes CHD loader unable to load files with Unicode characters in their names.
 - CD Block: Prevent a crash when attempting to set up subcode transfers without an active track.
 - Media: Fix handling of Unicode characters when loading or saving the recent game disc list.
 - Media: Properly handle UTF-8-encoded CUE files referencing other files with Unicode characters.

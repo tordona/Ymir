@@ -132,6 +132,7 @@
 
 #include <RtMidi.h>
 
+#include <clocale>
 #include <mutex>
 #include <numbers>
 #include <span>
@@ -168,6 +169,9 @@ App::App()
 
 int App::Run(const CommandLineOptions &options) {
     devlog::info<grp::base>("{} {}", Ymir_APP_NAME, ymir::version::fullstring);
+
+    // Use UTF-8 locale by default on all C runtime functions
+    setlocale(LC_ALL, ".UTF8");
 
     m_options = options;
 
