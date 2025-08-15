@@ -5080,7 +5080,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
             // Blend layer 2 with sprite mesh layer colors
             if constexpr (transparentMeshes) {
                 Color888AverageMasked(std::span{layer2Pixels}.first(m_HRes), layer2BlendMeshLayer, layer2Pixels,
-                                      m_layerStates[altFieldSrc][0].pixels.color);
+                                      m_layerStates[altFieldSrc][LYR_Sprite].pixels.color);
             }
 
             // TODO: honor color RAM mode + palette/RGB format restrictions
@@ -5110,7 +5110,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
         // Blend layer 1 with sprite mesh layer colors
         if constexpr (transparentMeshes) {
             Color888AverageMasked(std::span{layer1Pixels}.first(m_HRes), layer1BlendMeshLayer, layer1Pixels,
-                                  m_layerStates[altFieldSrc][0].pixels.color);
+                                  m_layerStates[altFieldSrc][LYR_Sprite].pixels.color);
         }
 
         // Blend layer 0 and layer 1
@@ -5145,14 +5145,14 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     // Blend layer 0 with sprite mesh layer colors
     if constexpr (transparentMeshes) {
         Color888AverageMasked(framebufferOutput, layer0BlendMeshLayer, framebufferOutput,
-                              m_layerStates[altFieldSrc][0].pixels.color);
+                              m_layerStates[altFieldSrc][LYR_Sprite].pixels.color);
     }
 
     // Gather shadow data
     alignas(16) std::array<bool, kMaxResH> layer0ShadowEnabled;
     for (uint32 x = 0; x < m_HRes; x++) {
         // Sprite layer is beneath top layer
-        if (m_layerStates[altFieldSrc][0].pixels.priority[x] < scanline_layerPrios[x][0]) {
+        if (m_layerStates[altFieldSrc][LYR_Sprite].pixels.priority[x] < scanline_layerPrios[x][0]) {
             layer0ShadowEnabled[x] = false;
             continue;
         }
