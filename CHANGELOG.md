@@ -18,7 +18,7 @@ Introduced save state file version 9.
 
 ### Fixes
 
-- CD Block:Prevent a crash when attempting to set up subcode transfers without an active track.
+- CD Block: Prevent a crash when attempting to set up subcode transfers without an active track.
 - SCSP: Don't use SBCTL on slots that are playing samples from Sound RAM when the EG reaches the silence threshold. Fixes busted audio in Guardian Heroes and Elevator Action^2. (#155)
 - VDP2: Fix exclusive monitor resolution sizes and out-of-bounds reads from lookup tables. (thanks to @celeriyacon)
 - VDP2: Implement VCNT skip as a dedicated vertical phase. (thanks to @celeriyacon)
