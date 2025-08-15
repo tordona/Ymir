@@ -1242,6 +1242,12 @@ bool CDBlock::SetupSubcodeTransfer(uint8 type) {
         return false;
     }
 
+    // TODO: check why this is happening
+    if (m_status.track == 0xFF) {
+        YMIR_DEV_CHECK();
+        return false;
+    }
+
     if (type == 0) {
         devlog::trace<grp::xfer>("Starting subcode Q transfer");
 
