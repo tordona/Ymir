@@ -171,7 +171,8 @@ int App::Run(const CommandLineOptions &options) {
     devlog::info<grp::base>("{} {}", Ymir_APP_NAME, ymir::version::fullstring);
 
     // Use UTF-8 locale by default on all C runtime functions
-    setlocale(LC_ALL, ".UTF8");
+    // TODO: adjust this to the user's preferred locale (with ".UTF8" suffix) when i18n is implemented
+    setlocale(LC_ALL, "en_us.UTF8");
 
     m_options = options;
 
