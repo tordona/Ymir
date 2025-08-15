@@ -235,7 +235,8 @@ private:
 
     // Display timings
     std::array<uint32, 6> m_HTimings;
-    std::array<uint32, 5> m_VTimings;
+    std::array<uint32, 6> m_VTimings;
+    uint16 m_VCounterSkip;
 
     // Moves to the next phase.
     void UpdatePhase();
@@ -262,6 +263,7 @@ private:
     void BeginVPhaseActiveDisplay();
     void BeginVPhaseBottomBorder();
     void BeginVPhaseBlankingAndSync();
+    void BeginVPhaseVCounterSkip();
     void BeginVPhaseTopBorder();
     void BeginVPhaseLastLine();
 

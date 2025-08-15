@@ -180,7 +180,14 @@ struct VDPState {
     enum class HorizontalPhase { Active, RightBorder, Sync, VBlankOut, LeftBorder, LastDot };
     HorizontalPhase HPhase; // Current horizontal display phase
 
-    enum class VerticalPhase { Active, BottomBorder, BlankingAndSync, TopBorder, LastLine };
+    enum class VerticalPhase {
+        Active = 0,
+        BottomBorder = 1,
+        BlankingAndSync = 2,
+        VCounterSkip = 5,
+        TopBorder = 3,
+        LastLine = 4
+    };
     VerticalPhase VPhase; // Current vertical display phase
 
     struct VDPRendererState {

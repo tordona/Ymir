@@ -228,6 +228,7 @@ struct VDPState {
         case VerticalPhase::Active: state.VPhase = state::VDPState::VerticalPhase::Active; break;
         case VerticalPhase::BottomBorder: state.VPhase = state::VDPState::VerticalPhase::BottomBorder; break;
         case VerticalPhase::BlankingAndSync: state.VPhase = state::VDPState::VerticalPhase::BlankingAndSync; break;
+        case VerticalPhase::VCounterSkip: state.VPhase = state::VDPState::VerticalPhase::VCounterSkip; break;
         case VerticalPhase::TopBorder: state.VPhase = state::VDPState::VerticalPhase::TopBorder; break;
         case VerticalPhase::LastLine: state.VPhase = state::VDPState::VerticalPhase::LastLine; break;
         }
@@ -248,6 +249,7 @@ struct VDPState {
         case state::VDPState::VerticalPhase::Active: break;
         case state::VDPState::VerticalPhase::BottomBorder: break;
         case state::VDPState::VerticalPhase::BlankingAndSync: break;
+        case state::VDPState::VerticalPhase::VCounterSkip: break;
         case state::VDPState::VerticalPhase::TopBorder: break;
         case state::VDPState::VerticalPhase::LastLine: break;
         default: return false;
@@ -436,6 +438,7 @@ struct VDPState {
         case state::VDPState::VerticalPhase::Active: VPhase = VerticalPhase::Active; break;
         case state::VDPState::VerticalPhase::BottomBorder: VPhase = VerticalPhase::BottomBorder; break;
         case state::VDPState::VerticalPhase::BlankingAndSync: VPhase = VerticalPhase::BlankingAndSync; break;
+        case state::VDPState::VerticalPhase::VCounterSkip: VPhase = VerticalPhase::VCounterSkip; break;
         case state::VDPState::VerticalPhase::TopBorder: VPhase = VerticalPhase::TopBorder; break;
         case state::VDPState::VerticalPhase::LastLine: VPhase = VerticalPhase::LastLine; break;
         }

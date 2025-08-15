@@ -19,6 +19,8 @@ struct VDP2Regs {
         EXTEN.u16 = 0x0;
         HCNT = 0x0;
         VCNT = 0x0;
+        VCNTShift = 0;
+        VCNTSkip = 0;
         vramControl.Reset();
         VRSIZE.u16 = 0x0;
         cyclePatterns.Reset();
@@ -453,9 +455,11 @@ struct VDP2Regs {
     //       bit 0 contains interlaced field (0=odd, 1=even)
     //     All other modes: bits 8-0 shifted left by 1; VCT0 is invalid
     uint16 VCNT;
+    uint16 VCNTShift;
+    uint16 VCNTSkip;
 
     FORCE_INLINE uint16 ReadVCNT() const {
-        return VCNT;
+        return (VCNT << VCNTShift) + VCNTSkip;
     }
 
     FORCE_INLINE void WriteVCNT(uint16 value) {

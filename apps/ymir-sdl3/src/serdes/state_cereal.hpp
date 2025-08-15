@@ -315,6 +315,9 @@ void serialize(Archive &ar, SMPCState::INTBACK &s) {
 
 template <class Archive>
 void serialize(Archive &ar, VDPState &s, const uint32 version) {
+    // v9:
+    // - New fields
+    //   - enum VDPState::VerticalPhase: added VCounterSkip (= 5)
     // v7:
     // - New fields
     //   - VDP1TimingPenalty = 0
@@ -334,6 +337,34 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
         uint16 VCounter;
         ar(VCounter);
         s.regs2.VCNT = VCounter;
+    }
+    if (version < 9) {
+        uint16 lowerBound, upperBound;
+        if (s.regs2.TVSTAT & 1) {
+            // PAL
+            switch (s.regs2.TVMD & 3) {
+            case 0:
+                lowerBound = 259;
+                upperBound = 281;
+                break;
+            case 1:
+                lowerBound = 267;
+                upperBound = 289;
+                break;
+            case 2: [[fallthrough]];
+            case 3:
+                lowerBound = 275;
+                upperBound = 297;
+                break;
+            }
+        } else {
+            // NTSC
+            lowerBound = (s.regs2.TVMD & 1) ? 245 : 237;
+            upperBound = 255;
+        }
+        if (s.regs2.VCNT >= lowerBound && s.regs2.VCNT < upperBound) {
+            s.VPhase = VDPState::VerticalPhase::VCounterSkip;
+        }
     }
     serialize(ar, s.renderer, version);
 

@@ -537,6 +537,15 @@ void VDP::LoadState(const state::VDPState &state) {
     m_VDPRenderContext.vdp1Done = state.renderer.vdp1Done;
 
     UpdateResolution<true>();
+
+    switch (m_state.VPhase) {
+    case VerticalPhase::Active: [[fallthrough]];
+    case VerticalPhase::BottomBorder: [[fallthrough]];
+    case VerticalPhase::BlankingAndSync: m_state.regs2.VCNTSkip = 0; break;
+    case VerticalPhase::VCounterSkip: [[fallthrough]];
+    case VerticalPhase::TopBorder: [[fallthrough]];
+    case VerticalPhase::LastLine: m_state.regs2.VCNTSkip = m_VCounterSkip; break;
+    }
 }
 
 void VDP::SetLayerEnabled(Layer layer, bool enabled) {
@@ -864,9 +873,10 @@ void VDP::UpdateResolution() {
     static constexpr uint32 vRes[] = {224, 240, 256, 256};
 
     const bool exclusiveMonitor = m_state.regs2.TVMD.HRESOn & 4;
+    const bool interlaced = m_state.regs2.TVMD.IsInterlaced();
     m_HRes = hRes[m_state.regs2.TVMD.HRESOn & 3];
     m_VRes = exclusiveMonitor ? 480 : vRes[m_state.regs2.TVMD.VRESOn & (m_state.regs2.TVSTAT.PAL ? 3 : 1)];
-    if (!exclusiveMonitor && m_state.regs2.TVMD.IsInterlaced()) {
+    if (!exclusiveMonitor && interlaced) {
         // Interlaced modes double the vertical resolution
         m_VRes *= 2;
     }
@@ -894,6 +904,7 @@ void VDP::UpdateResolution() {
     // Vertical phase timings (to reach):
     //   BBd = Bottom Border
     //   BSy = Blanking and Vertical Sync
+    //   VCS = VCNT skip
     //   TBd = Top Border
     //   LLn = Last Line
     //   ADp = Active Display
@@ -902,22 +913,22 @@ void VDP::UpdateResolution() {
     // TODO: interlaced mode timings for odd fields:
     // - normal modes: vTimings - 1
     // - exclusive modes: vTimings + 2
-    static constexpr std::array<std::array<std::array<uint32, 5>, 4>, 2> vTimings{{
+    static constexpr std::array<std::array<std::array<uint32, 6>, 4>, 2> vTimings{{
         // NTSC
         {{
-            // BBd, BSy, TBd, LLn, ADp
-            {224, 232, 255, 262, 263},
-            {240, 240, 255, 262, 263},
-            {224, 232, 255, 262, 263},
-            {240, 240, 255, 262, 263},
+            // BBd, BSy, VCS, TBd, LLn, ADp
+            {224, 232, 237, 255, 262, 263},
+            {240, 240, 245, 255, 262, 263},
+            {224, 232, 237, 255, 262, 263},
+            {240, 240, 245, 255, 262, 263},
         }},
         // PAL
         {{
-            // BBd, BSy, TBd, LLn, ADp
-            {224, 256, 281, 312, 313},
-            {240, 264, 289, 312, 313},
-            {256, 272, 297, 312, 313},
-            {256, 272, 297, 312, 313},
+            // BBd, BSy, VCS, TBd, LLn, ADp
+            {224, 256, 259, 281, 312, 313},
+            {240, 264, 267, 289, 312, 313},
+            {256, 272, 275, 297, 312, 313},
+            {256, 272, 275, 297, 312, 313},
         }},
     }};
     m_VTimings = vTimings[m_state.regs2.TVSTAT.PAL][m_state.regs2.TVMD.VRESOn];
@@ -926,6 +937,21 @@ void VDP::UpdateResolution() {
     const uint32 dotClockMult = (m_state.regs2.TVMD.HRESOn & 2) ? 2 : 4;
     for (auto &timing : m_HTimings) {
         timing *= dotClockMult;
+    }
+
+    m_state.regs2.VCNTShift = m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity ? 1 : 0;
+
+    if (exclusiveMonitor) {
+        const uint16 baseSkip = (m_state.regs2.TVMD.HRESOn & 1) ? 562 : 525;
+        m_VCounterSkip = 0x400 - baseSkip;
+        if (interlaced && m_state.regs2.TVSTAT.ODD) {
+            m_VCounterSkip -= 2;
+        }
+        m_VCounterSkip >>= 1u;
+    } else {
+        const uint16 baseSkip = m_state.regs2.TVSTAT.PAL ? 313 : 263;
+        const uint16 fieldSkip = ~m_state.regs2.TVSTAT.ODD & static_cast<uint16>(interlaced);
+        m_VCounterSkip = 0x200 - baseSkip + fieldSkip;
     }
 
     if constexpr (verbose) {
@@ -955,6 +981,7 @@ FORCE_INLINE void VDP::IncrementVCounter() {
         case VerticalPhase::Active: BeginVPhaseActiveDisplay(); break;
         case VerticalPhase::BottomBorder: BeginVPhaseBottomBorder(); break;
         case VerticalPhase::BlankingAndSync: BeginVPhaseBlankingAndSync(); break;
+        case VerticalPhase::VCounterSkip: BeginVPhaseVCounterSkip(); break;
         case VerticalPhase::TopBorder: BeginVPhaseTopBorder(); break;
         case VerticalPhase::LastLine: BeginVPhaseLastLine(); break;
         }
@@ -1097,6 +1124,8 @@ void VDP::BeginHPhaseLastDot() {
 
 void VDP::BeginVPhaseActiveDisplay() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering vertical active display phase", m_state.regs2.VCNT);
+
+    m_state.regs2.VCNTSkip = 0;
 }
 
 void VDP::BeginVPhaseBottomBorder() {
@@ -1121,6 +1150,12 @@ void VDP::BeginVPhaseBlankingAndSync() {
         m_VDPRenderContext.renderFinishedSignal.Reset();
     }
     m_cbFrameComplete(m_framebuffer.data(), m_HRes, m_VRes);
+}
+
+void VDP::BeginVPhaseVCounterSkip() {
+    devlog::trace<grp::base>("(VCNT = {:3d})  Entering vertical counter skip phase", m_state.regs2.VCNT);
+
+    m_state.regs2.VCNTSkip = m_VCounterSkip;
 }
 
 void VDP::BeginVPhaseTopBorder() {
