@@ -1174,7 +1174,7 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
 }
 
 void CDBlock::SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber) {
-    devlog::debug<grp::xfer>("Starting sector write transfer - {} sectors into buffer partition {}", sectorCount,
+    devlog::trace<grp::xfer>("Starting sector write transfer - {} sectors into buffer partition {}", sectorCount,
                              partitionNumber);
 
     m_xferPartition = partitionNumber;
