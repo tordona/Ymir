@@ -23,6 +23,7 @@ Introduced save state file version 9.
 - Media: Fix handling of Unicode characters when loading or saving the recent game disc list.
 - Media: Properly handle UTF-8-encoded CUE files referencing other files with Unicode characters.
 - SCSP: Don't use SBCTL on slots that are playing samples from Sound RAM when the EG reaches the silence threshold. Fixes busted audio in Guardian Heroes and Elevator Action^2. (#155)
+- SCSP: Silence audio when MVOL=0. Fixes lingering sound/music when pausing in Sega Ages - Galaxy Force II. (#427)
 - VDP2: Fix exclusive monitor resolution sizes and out-of-bounds reads from lookup tables. (thanks to @celeriyacon)
 - VDP2: Fix palette-based transparent meshes not blending with VDP2 layer (such as in Bulk Slash).
 - VDP2: Implement VCNT skip as a dedicated vertical phase. (thanks to @celeriyacon)

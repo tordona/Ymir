@@ -857,6 +857,9 @@ FORCE_INLINE void SCSP::ProcessSlots(uint32 i) {
 
         // Master volume attenuates sound in steps of 3 dB, or 0.5 bits per step
         auto applyMasterVolume = [&](sint32 out) {
+            if (m_masterVolume == 0) {
+                return 0;
+            }
             const uint32 masterVolume = m_masterVolume ^ 0xF;
             out <<= 8;
             out >>= masterVolume >> 1u;
