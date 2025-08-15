@@ -4408,8 +4408,12 @@ void App::LoadRecentDiscs() {
 
     m_context.state.recentDiscs.clear();
     while (in) {
-        std::filesystem::path path;
-        in >> path;
+        std::string line;
+        if (!std::getline(in, line)) {
+            break;
+        }
+        std::u8string u8line{line.begin(), line.end()};
+        std::filesystem::path path = u8line;
         if (!path.empty()) {
             m_context.state.recentDiscs.push_back(path);
         }
@@ -4420,7 +4424,8 @@ void App::SaveRecentDiscs() {
     auto listPath = m_context.profile.GetPath(ProfilePath::PersistentState) / "recent_discs.txt";
     std::ofstream out{listPath};
     for (auto &path : m_context.state.recentDiscs) {
-        out << path << "\n";
+        std::u8string u8path = path.u8string();
+        out << reinterpret_cast<const char *>(u8path.data()) << "\n";
     }
 }
 
