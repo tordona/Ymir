@@ -2663,7 +2663,7 @@ void CDBlock::CmdGetSectorData() {
         // TODO: should hold status flag kStatusFlagXferRequest until ready
     }
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY | kHIRQ_EHST);
+    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
 }
 
 void CDBlock::CmdDeleteSectorData() {
