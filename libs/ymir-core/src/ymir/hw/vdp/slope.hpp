@@ -50,6 +50,7 @@ public:
             majcounterend = ToFrac(y2) + majinc;
             mincounter = ToFracHalfBias(x1);
         }
+        mincounterstart = mincounter;
     }
 
     // Clips the slope to the area 0x0..width x height.
@@ -184,9 +185,10 @@ protected:
 
     bool xmajor; // true if abs(dx) >= abs(dy)
 
-    sint64 majcounter;    // coordinate counter for the major axis (fractional, incremented by majinc per step)
-    sint64 majcounterend; // final coordinate counter for the major axis
-    sint64 mincounter;    // coordinate counter for the minor axis (fractional, incremented by mininc per step)
+    sint64 majcounter;      // coordinate counter for the major axis (fractional, incremented by majinc per step)
+    sint64 majcounterend;   // final coordinate counter for the major axis
+    sint64 mincounter;      // coordinate counter for the minor axis (fractional, incremented by mininc per step)
+    sint64 mincounterstart; // starting coordinate counter for the minor axis
 
     // Retrieves the current fractional X coordinate
     FORCE_INLINE sint64 FracX() const {
@@ -222,7 +224,7 @@ public:
     // Determines if the current step needs antialiasing
     FORCE_INLINE bool NeedsAntiAliasing() const {
         // Antialiasing is needed when the coordinate on the minor axis has changed from the previous step
-        return ((mincounter - mininc) >> kFracBits) != (mincounter >> kFracBits);
+        return mincounter != mincounterstart && ((mincounter - mininc) >> kFracBits) != (mincounter >> kFracBits);
     }
 
     // Returns the X coordinate of the antialiased pixel
