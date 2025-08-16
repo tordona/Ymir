@@ -125,6 +125,14 @@ public:
     template <bool poke>
     void VDP1WriteReg(uint32 address, uint16 value);
 
+    std::span<const uint8> VDP1GetDisplayFramebuffer() const {
+        return m_state.spriteFB[m_state.displayFB];
+    }
+
+    std::span<const uint8> VDP1GetDrawFramebuffer() const {
+        return m_state.spriteFB[m_state.displayFB ^ 1];
+    }
+
     // -------------------------------------------------------------------------
     // VDP2 memory/register access
 
