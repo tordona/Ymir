@@ -1043,7 +1043,7 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
 
         auto outPath = testPath / "out";
         auto filename = std::filesystem::path(test.fbFile).replace_extension("").string();
-        auto outFile = outPath / fmt::format("{}-final.png", filename);
+        auto outFile = outPath / fmt::format("{}.png", filename);
         std::filesystem::create_directories(outPath);
         stbi_write_png(outFile.string().c_str(), test.width, test.height, 4, finalFB.data(),
                        test.width * sizeof(uint32));
@@ -1052,15 +1052,19 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
         stbi_uc *img = stbi_load(fbPath.string().c_str(), &imgX, &imgY, &ch, 4);
         std::vector<uint32> deltaFB = finalFB;
         if (img != nullptr) {
+            bool hasDelta = false;
             for (uint32 i = 0; i < deltaFB.size(); ++i) {
                 deltaFB[i] ^= reinterpret_cast<uint32 *>(img)[i];
                 if (deltaFB[i] & 0xFFFFFF) {
                     deltaFB[i] |= 0xFF000000;
+                    hasDelta = true;
                 }
             }
-            auto deltaFile = outPath / fmt::format("{}-delta.png", filename);
-            stbi_write_png(deltaFile.string().c_str(), test.width, test.height, 4, deltaFB.data(),
-                           test.width * sizeof(uint32));
+            if (hasDelta) {
+                auto deltaFile = outPath / fmt::format("{}-delta.png", filename);
+                stbi_write_png(deltaFile.string().c_str(), test.width, test.height, 4, deltaFB.data(),
+                               test.width * sizeof(uint32));
+            }
         } else {
             fmt::println("WARNING: file {} not found", fbPath);
         }
