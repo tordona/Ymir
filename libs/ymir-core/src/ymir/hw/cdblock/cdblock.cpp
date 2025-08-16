@@ -39,17 +39,17 @@ static uint32 CalcPutOffset(uint32 getSize, uint32 putSize) {
         2340, // + header (sector offset and mode)
         2352, // + sync bytes
     };
-    const bool getHasSyncBytes = getSize >= 2532;
+    const bool getHasSyncBytes = getSize >= 2352;
     const bool getHasHeader = getSize >= 2340;
     const bool getHasSubheader = getSize >= 2336;
 
-    const bool putHasSyncBytes = putSize >= 2532;
+    const bool putHasSyncBytes = putSize >= 2352;
     const bool putHasHeader = putSize >= 2340;
     const bool putHasSubheader = putSize >= 2336;
 
     uint32 offset = 0;
 
-    if (getHasSubheader && !putHasSyncBytes) {
+    if (getHasSyncBytes && !putHasSyncBytes) {
         offset += 12;
     }
     if (getHasHeader && !putHasHeader) {
