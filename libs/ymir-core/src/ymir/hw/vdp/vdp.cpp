@@ -6429,4 +6429,16 @@ const std::array<VDP::NormBGLayerState, 4> &VDP::Probe::GetNBGLayerStates() cons
     return m_vdp.m_normBGLayerStates;
 }
 
+template <mem_primitive T>
+void VDP::Probe::VDP1WriteVRAM(uint32 address, T value) {
+    m_vdp.VDP1WriteVRAM<T, true>(address, value);
+}
+
+template void VDP::Probe::VDP1WriteVRAM<uint8>(uint32, uint8);
+template void VDP::Probe::VDP1WriteVRAM<uint16>(uint32, uint16);
+
+void VDP::Probe::VDP1WriteReg(uint32 address, uint16 value) {
+    m_vdp.VDP1WriteReg<true>(address, value);
+}
+
 } // namespace ymir::vdp

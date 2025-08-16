@@ -976,6 +976,8 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
         auto vdp = std::make_unique<ymir::vdp::VDP>(scheduler, config);
         vdp->SetVDP1DrawCallback({&renderDone, [](void *ctx) { *static_cast<bool *>(ctx) = true; }});
 
+        auto &probe = vdp->GetProbe();
+
         auto vramPath = testPath / test.vramFile;
         auto cramPath = testPath / test.cramFile;
         auto fbPath = testPath / test.fbFile;
@@ -989,7 +991,7 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
             }
             for (uint32 addr = 0; addr < ymir::vdp::kVDP1VRAMSize; ++addr) {
                 const uint8 value = in.get();
-                vdp->VDP1WriteVRAM<uint8, true>(addr, value);
+                probe.VDP1WriteVRAM<uint8>(addr, value);
             }
         }
         {
@@ -1001,8 +1003,8 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
             in.read((char *)cram.data(), ymir::vdp::kVDP2CRAMSize);
         }
 
-        vdp->VDP1WriteReg<false>(0x04, 3); // PTMR
-        vdp->VDP1WriteReg<false>(0x06, 0); // EWDR
+        probe.VDP1WriteReg(0x04, 3); // PTMR
+        probe.VDP1WriteReg(0x06, 0); // EWDR
 
         while (!renderDone) {
             const uint64 cycles = scheduler.NextCount();
@@ -1043,7 +1045,7 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
 
         auto outPath = testPath / "out";
         auto filename = std::filesystem::path(test.fbFile).replace_extension("").string();
-        auto outFile = outPath / fmt::format("{}.png", filename);
+        auto outFile = outPath / fmt::format("{}-final.png", filename);
         std::filesystem::create_directories(outPath);
         stbi_write_png(outFile.string().c_str(), test.width, test.height, 4, finalFB.data(),
                        test.width * sizeof(uint32));

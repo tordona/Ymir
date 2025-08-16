@@ -106,24 +106,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    // VDP1 memory/register access
-
-    template <mem_primitive T>
-    T VDP1ReadVRAM(uint32 address) const;
-
-    template <mem_primitive T, bool poke>
-    void VDP1WriteVRAM(uint32 address, T value);
-
-    template <mem_primitive T>
-    T VDP1ReadFB(uint32 address) const;
-
-    template <mem_primitive T>
-    void VDP1WriteFB(uint32 address, T value);
-
-    template <bool peek>
-    uint16 VDP1ReadReg(uint32 address) const;
-    template <bool poke>
-    void VDP1WriteReg(uint32 address, uint16 value);
+    // VDP1 framebuffer access
 
     std::span<const uint8> VDP1GetDisplayFramebuffer() const {
         return m_state.spriteFB[m_state.displayFB];
@@ -132,24 +115,6 @@ public:
     std::span<const uint8> VDP1GetDrawFramebuffer() const {
         return m_state.spriteFB[m_state.displayFB ^ 1];
     }
-
-    // -------------------------------------------------------------------------
-    // VDP2 memory/register access
-
-    template <mem_primitive T>
-    T VDP2ReadVRAM(uint32 address) const;
-
-    template <mem_primitive T>
-    void VDP2WriteVRAM(uint32 address, T value);
-
-    template <mem_primitive T, bool peek>
-    T VDP2ReadCRAM(uint32 address) const;
-
-    template <mem_primitive T, bool poke>
-    void VDP2WriteCRAM(uint32 address, T value);
-
-    uint16 VDP2ReadReg(uint32 address) const;
-    void VDP2WriteReg(uint32 address, uint16 value);
 
     // -------------------------------------------------------------------------
     // Save states
@@ -211,6 +176,45 @@ private:
 
     // Invoked when the renderer finishes drawing a frame.
     CBFrameComplete m_cbFrameComplete;
+
+    // -------------------------------------------------------------------------
+    // VDP1 memory/register access
+
+    template <mem_primitive T>
+    T VDP1ReadVRAM(uint32 address) const;
+
+    template <mem_primitive T, bool poke>
+    void VDP1WriteVRAM(uint32 address, T value);
+
+    template <mem_primitive T>
+    T VDP1ReadFB(uint32 address) const;
+
+    template <mem_primitive T>
+    void VDP1WriteFB(uint32 address, T value);
+
+    template <bool peek>
+    uint16 VDP1ReadReg(uint32 address) const;
+
+    template <bool poke>
+    void VDP1WriteReg(uint32 address, uint16 value);
+
+    // -------------------------------------------------------------------------
+    // VDP2 memory/register access
+
+    template <mem_primitive T>
+    T VDP2ReadVRAM(uint32 address) const;
+
+    template <mem_primitive T>
+    void VDP2WriteVRAM(uint32 address, T value);
+
+    template <mem_primitive T, bool peek>
+    T VDP2ReadCRAM(uint32 address) const;
+
+    template <mem_primitive T, bool poke>
+    void VDP2WriteCRAM(uint32 address, T value);
+
+    uint16 VDP2ReadReg(uint32 address) const;
+    void VDP2WriteReg(uint32 address, uint16 value);
 
     // -------------------------------------------------------------------------
 
@@ -1527,6 +1531,11 @@ public:
         [[nodiscard]] const VDP2Regs &GetVDP2Regs() const;
 
         [[nodiscard]] const std::array<NormBGLayerState, 4> &GetNBGLayerStates() const;
+
+        template <mem_primitive T>
+        void VDP1WriteVRAM(uint32 address, T value);
+
+        void VDP1WriteReg(uint32 address, uint16 value);
 
     private:
         VDP &m_vdp;
