@@ -89,6 +89,7 @@ struct CDBlockState {
     };
     alignas(16) std::array<BufferState, cdblock::kNumBuffers + 1> buffers; // 200 buffers + 1 scratch buffer
     uint32 scratchBufferPutIndex;
+    uint32 reservedBuffers;
 
     struct FilterState {
         uint32 startFrameAddress;

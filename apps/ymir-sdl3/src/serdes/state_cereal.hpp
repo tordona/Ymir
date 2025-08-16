@@ -952,6 +952,9 @@ void serialize(Archive &ar, SCSPTimer &s) {
 
 template <class Archive>
 void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
+    // v9:
+    // - New fields
+    //   - reservedBuffers = 0
     // v8:
     // - New fields
     //   - fs
@@ -995,6 +998,11 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
         }
 
         s.scratchBufferPutIndex = 0;
+    }
+    if (version >= 9) {
+        ar(s.reservedBuffers);
+    } else {
+        s.reservedBuffers = 0;
     }
     ar(s.filters);
     ar(s.cdDeviceConnection, s.lastCDWritePartition);

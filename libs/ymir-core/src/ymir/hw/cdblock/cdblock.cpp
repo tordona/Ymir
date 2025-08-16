@@ -1454,14 +1454,11 @@ void CDBlock::EndTransfer() {
     case TransferType::PutSector: //
     {
         const uint32 sectorCount = m_xferLength * sizeof(uint16) / m_putSectorLength;
-        if (m_partitionManager.GetFreeBufferCount() >= sectorCount) {
-            for (uint32 i = 0; i < sectorCount; ++i) {
-                m_partitionManager.InsertHead(m_xferPartition, m_scratchBuffers[i]);
-            }
-            devlog::trace<grp::xfer>("Sector sent to partition {}", m_xferPartition);
-        } else {
-            devlog::trace<grp::xfer>("Not enough room to write sector");
+        for (uint32 i = 0; i < sectorCount; ++i) {
+            m_partitionManager.InsertHead(m_xferPartition, m_scratchBuffers[i]);
         }
+        devlog::trace<grp::xfer>("Sector sent to partition {}", m_xferPartition);
+        m_partitionManager.UnreserveBuffers();
         DisconnectCDDevice(m_xferPartition);
         DisconnectFilterInput(m_xferPartition);
         SetInterrupt(kHIRQ_EHST);
@@ -2655,14 +2652,14 @@ void CDBlock::CmdGetSectorData() {
         reject = true;
     } else {
         SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
-        // TODO: should set status flag kStatusFlagXferRequest until ready
     }
 
     // Output structure: standard CD status data
     if (reject) [[unlikely]] {
         ReportCDStatus(kStatusReject);
     } else {
-        ReportCDStatus();
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
+        // TODO: should hold status flag kStatusFlagXferRequest until ready
     }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY | kHIRQ_EHST);
@@ -2724,14 +2721,14 @@ void CDBlock::CmdGetThenDeleteSectorData() {
         reject = true;
     } else {
         SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
-        // TODO: should set status flag kStatusFlagXferRequest until ready
     }
 
     // Output structure: standard CD status data
     if (reject) [[unlikely]] {
         ReportCDStatus(kStatusReject);
     } else {
-        ReportCDStatus();
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
+        // TODO: should hold status flag kStatusFlagXferRequest until ready
     }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY | kHIRQ_EHST);
@@ -2753,11 +2750,8 @@ void CDBlock::CmdPutSectorData() {
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
         devlog::trace<grp::base>("Put sector transfer rejected: invalid partition {}", partitionNumber);
         reject = true;
-    } else if (m_partitionManager.GetFreeBufferCount() < sectorNumber) [[unlikely]] {
+    } else if (!m_partitionManager.ReserveBuffers(sectorNumber)) [[unlikely]] {
         devlog::trace<grp::base>("Put sector transfer rejected: not enough free buffers available");
-        wait = true;
-    } else if (sectorNumber == 0) [[unlikely]] {
-        devlog::trace<grp::base>("Put sector transfer rejected: requested zero sectors");
         wait = true;
     } else {
         SetupPutSectorTransfer(sectorNumber, partitionNumber);
@@ -2773,7 +2767,11 @@ void CDBlock::CmdPutSectorData() {
         // TODO: should hold status flag kStatusFlagXferRequest until ready
     }
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
+    uint16 hirq = kHIRQ_CMOK;
+    if (!reject && !wait) {
+        hirq |= kHIRQ_DRDY;
+    }
+    SetInterrupt(hirq);
 }
 
 void CDBlock::CmdCopySectorData() {

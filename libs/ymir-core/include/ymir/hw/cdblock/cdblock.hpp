@@ -268,6 +268,8 @@ private:
 
         uint8 GetBufferCount(uint8 partitionIndex) const;
         uint32 GetFreeBufferCount() const;
+        bool ReserveBuffers(uint16 count);
+        void UnreserveBuffers();
 
         void InsertHead(uint8 partitionIndex, const Buffer &buffer);
         Buffer *GetTail(uint8 partitionIndex, uint8 offset);
@@ -290,6 +292,7 @@ private:
         std::array<std::deque<Buffer>, kNumPartitions> m_partitions;
 
         uint32 m_freeBuffers;
+        uint32 m_reservedBuffers;
     };
 
     PartitionManager m_partitionManager;

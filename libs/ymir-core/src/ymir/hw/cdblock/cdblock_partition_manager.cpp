@@ -25,8 +25,21 @@ uint8 CDBlock::PartitionManager::GetBufferCount(uint8 partitionIndex) const {
 }
 
 uint32 CDBlock::PartitionManager::GetFreeBufferCount() const {
-    devlog::trace<grp::part_mgr>("Free buffers = {}", m_freeBuffers);
-    return m_freeBuffers;
+    const uint32 freeCount = m_freeBuffers - m_reservedBuffers;
+    devlog::trace<grp::part_mgr>("Free buffers = {}", freeCount);
+    return freeCount;
+}
+
+bool CDBlock::PartitionManager::ReserveBuffers(uint16 count) {
+    if (count == 0 || count > m_freeBuffers) {
+        return false;
+    }
+    m_reservedBuffers = count;
+    return true;
+}
+
+void CDBlock::PartitionManager::UnreserveBuffers() {
+    m_reservedBuffers = 0;
 }
 
 void CDBlock::PartitionManager::InsertHead(uint8 partitionIndex, const Buffer &buffer) {
@@ -120,13 +133,20 @@ void CDBlock::PartitionManager::SaveState(state::CDBlockState &state) const {
             bufferIndex++;
         }
     }
+    state.reservedBuffers = m_reservedBuffers;
 }
 
 bool CDBlock::PartitionManager::ValidateState(const state::CDBlockState &state) const {
+    uint32 usedBuffers = 0u;
     for (const auto &buffer : state.buffers) {
-        if (buffer.partitionIndex >= kNumPartitions && buffer.partitionIndex != 0xFF) {
+        if (buffer.partitionIndex < kNumPartitions) {
+            ++usedBuffers;
+        } else if (buffer.partitionIndex != 0xFF) {
             return false;
         }
+    }
+    if (state.reservedBuffers + usedBuffers > kNumBuffers) {
+        return false;
     }
     return true;
 }
@@ -150,6 +170,7 @@ void CDBlock::PartitionManager::LoadState(const state::CDBlockState &state) {
             --m_freeBuffers;
         }
     }
+    m_reservedBuffers = state.reservedBuffers;
 }
 
 } // namespace ymir::cdblock
