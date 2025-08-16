@@ -23,6 +23,7 @@ Introduced save state file version 9.
 - App: Set UTF-8 locale globally. Fixes CHD loader unable to load files with Unicode characters in their names.
 - CD Block: Prevent a crash when attempting to set up subcode transfers without an active track.
 - CD Block: Use CD Block clock ratios instead of SCSP's for drive state update events.
+- CD Block: Various Put/Get/Delete Sector Data nuances. (thanks to @celeriyacon)
 - Media: Fix handling of Unicode characters when loading or saving the recent game disc list.
 - Media: Properly handle UTF-8-encoded CUE files referencing other files with Unicode characters.
 - SCSP: Don't use SBCTL on slots that are playing samples from Sound RAM when the EG reaches the silence threshold. Fixes busted audio in Guardian Heroes and Elevator Action^2. (#155)

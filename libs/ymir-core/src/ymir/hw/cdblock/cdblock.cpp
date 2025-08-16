@@ -1198,6 +1198,10 @@ void CDBlock::SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber) 
         buffer.subheader.submode = 0;
         buffer.subheader.codingInfo = 0;
     }
+
+    // Disconnect CD device if connected to the same filter
+    DisconnectCDDevice(partitionNumber);
+    DisconnectFilterInput(m_xferPartition);
 }
 
 uint32 CDBlock::SetupFileInfoTransfer(uint32 fileID) {
@@ -1332,6 +1336,11 @@ void CDBlock::ReadSector() {
 }
 
 uint16 CDBlock::DoReadTransfer() {
+    if (m_xferPos >= m_xferLength) {
+        // TODO: what to return here?
+        return 0xFFFF;
+    }
+
     uint16 value;
     if (m_xferBufferPos < m_xferBuffer.size()) {
         // TODO: what happens when games attempt to do out-of-bounds reads from TOC of file info transfers?
@@ -1373,6 +1382,10 @@ uint16 CDBlock::DoReadTransfer() {
 }
 
 void CDBlock::DoWriteTransfer(uint16 value) {
+    if (m_xferPos >= m_xferLength) {
+        return;
+    }
+
     switch (m_xferType) {
     case TransferType::PutSector:
         if (m_scratchBufferPutIndex < m_scratchBuffers.size()) {
@@ -1411,11 +1424,7 @@ void CDBlock::AdvanceTransfer() {
             } else {
                 devlog::trace<grp::xfer>("Not enough room to write sector");
             }
-            SetInterrupt(kHIRQ_EHST);
         }
-        m_xferType = TransferType::None;
-        m_xferPos = 0;
-        m_xferLength = 0;
     }
 }
 
@@ -1453,6 +1462,8 @@ void CDBlock::EndTransfer() {
         } else {
             devlog::trace<grp::xfer>("Not enough room to write sector");
         }
+        DisconnectCDDevice(m_xferPartition);
+        DisconnectFilterInput(m_xferPartition);
         SetInterrupt(kHIRQ_EHST);
         break;
     }
@@ -1478,6 +1489,16 @@ bool CDBlock::ConnectCDDevice(uint8 filterNumber) {
         return false;
     }
     return true;
+}
+
+bool CDBlock::DisconnectCDDevice(uint8 filterNumber) {
+    // Disconnect CD device if connected to the same filter
+    if (m_cdDeviceConnection == filterNumber) {
+        m_cdDeviceConnection = Filter::kDisconnected;
+        devlog::trace<grp::xfer>("CD device disconnected from filter {}", filterNumber);
+        return true;
+    }
+    return false;
 }
 
 void CDBlock::DisconnectFilterInput(uint8 filterNumber) {
@@ -2284,12 +2305,12 @@ void CDBlock::CmdGetFilterConnection() {
         // Output structure:
         // status code    <blank>
         // pass conn      fail conn
-        // <blank>
+        // filter number  <blank>
         // <blank>
         const auto &filter = m_filters[filterNumber];
         m_CR[0] = (m_status.statusCode << 8u);
         m_CR[1] = (filter.passOutput << 8u) | filter.failOutput;
-        m_CR[2] = 0x0000;
+        m_CR[2] = (filterNumber << 8u);
         m_CR[3] = 0x0000;
     } else {
         ReportCDStatus(kStatusReject);
@@ -2735,9 +2756,11 @@ void CDBlock::CmdPutSectorData() {
     } else if (m_partitionManager.GetFreeBufferCount() < sectorNumber) [[unlikely]] {
         devlog::trace<grp::base>("Put sector transfer rejected: not enough free buffers available");
         wait = true;
+    } else if (sectorNumber == 0) [[unlikely]] {
+        devlog::trace<grp::base>("Put sector transfer rejected: requested zero sectors");
+        wait = true;
     } else {
         SetupPutSectorTransfer(sectorNumber, partitionNumber);
-        // TODO: should set status flag kStatusFlagXferRequest until ready
     }
 
     // Output structure: standard CD status data
@@ -2746,7 +2769,8 @@ void CDBlock::CmdPutSectorData() {
     } else if (wait) [[unlikely]] {
         ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait);
     } else {
-        ReportCDStatus();
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
+        // TODO: should hold status flag kStatusFlagXferRequest until ready
     }
 
     SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);

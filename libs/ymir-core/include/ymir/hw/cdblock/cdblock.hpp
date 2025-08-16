@@ -307,6 +307,7 @@ private:
     uint32 m_putSectorLength;
 
     bool ConnectCDDevice(uint8 filterNumber);
+    bool DisconnectCDDevice(uint8 filterNumber);
 
     void DisconnectFilterInput(uint8 filterNumber);
 
