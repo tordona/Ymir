@@ -1197,6 +1197,7 @@ void CDBlock::SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber) 
         buffer.subheader.chanNum = 0;
         buffer.subheader.submode = 0;
         buffer.subheader.codingInfo = 0;
+        buffer.data.fill(0);
     }
 
     // Disconnect CD device if connected to the same filter
