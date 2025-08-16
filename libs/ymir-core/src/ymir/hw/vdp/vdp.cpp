@@ -2171,10 +2171,10 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     const CoordS32 coordC{rx, by << doubleV};
     const CoordS32 coordD{lx, by << doubleV};
 
-    devlog::trace<grp::vdp1_render>(
-        "Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-        "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-        lx, ty, rx, ty, rx, by, lx, by, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} "
+                                    "color={:04X} gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+                                    cmdAddress, lx, ty, rx, ty, rx, by, lx, by, color, gouraudTable, mode.u16,
+                                    charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
@@ -2337,10 +2337,10 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
     const CoordS32 coordC{qxc, qyc << doubleV};
     const CoordS32 coordD{qxd, qyd << doubleV};
 
-    devlog::trace<grp::vdp1_render>(
-        "Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-        "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-        qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} "
+                                    "color={:04X} gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+                                    cmdAddress, qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16,
+                                    charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
@@ -2423,10 +2423,10 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
     const CoordS32 coordC{xc, yc << doubleV};
     const CoordS32 coordD{xd, yd << doubleV};
 
-    devlog::trace<grp::vdp1_render>(
-        "Draw distorted sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} color={:04X} "
-        "gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-        xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16, charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Draw distorted sprite: {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d} "
+                                    "{:6d}x{:<6d} color={:04X} gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
+                                    cmdAddress, xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16,
+                                    charSizeH, charSizeV, charAddr);
 
     if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
@@ -2505,9 +2505,9 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     const CoordS32 coordC{xc, yc << doubleV};
     const CoordS32 coordD{xd, yd << doubleV};
 
-    devlog::trace<grp::vdp1_render>(
-        "Draw polygon: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb, yb,
-        xc, yc, xd, yd, color, gouraudTable, mode.u16);
+    devlog::debug<grp::vdp1_render>("[{:05X}] Draw polygon: {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d}, color "
+                                    "{:04X}, gouraud table {:05X}, CMDPMOD = {:04X}",
+                                    cmdAddress, xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
     if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
@@ -2576,8 +2576,8 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     const CoordS32 coordD{xd, yd << doubleV};
 
     devlog::trace<grp::vdp1_render>(
-        "Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa, ya, xb,
-        yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
+        "[{:05X}] Draw polylines: {}x{} - {}x{} - {}x{} - {}x{}, color {:04X}, gouraud table {:05X}, CMDPMOD = {:04X}",
+        cmdAddress, xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable >> 3u, mode.u16);
 
     if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
         return;
@@ -2636,8 +2636,9 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
 
-    devlog::trace<grp::vdp1_render>("Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {}, CMDPMOD = {:04X}", xa,
-                                    ya, xb, yb, color, gouraudTable, mode.u16);
+    devlog::trace<grp::vdp1_render>(
+        "[{:05X}] Draw line: {}x{} - {}x{}, color {:04X}, gouraud table {:05X}, CMDPMOD = {:04X}", cmdAddress, xa, ya,
+        xb, yb, color, gouraudTable, mode.u16);
 
     if (VDP1IsLineSystemClipped<deinterlace>(coordA, coordB)) {
         return;
@@ -2669,7 +2670,7 @@ void VDP::VDP1Cmd_SetSystemClipping(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.sysClipH = bit::extract<0, 9>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x14));
     ctx.sysClipV = bit::extract<0, 8>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x16));
-    devlog::trace<grp::vdp1_render>("Set system clipping: {}x{}", ctx.sysClipH, ctx.sysClipV);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Set system clipping: {}x{}", cmdAddress, ctx.sysClipH, ctx.sysClipV);
 }
 
 void VDP::VDP1Cmd_SetUserClipping(uint32 cmdAddress) {
@@ -2678,15 +2679,16 @@ void VDP::VDP1Cmd_SetUserClipping(uint32 cmdAddress) {
     ctx.userClipY0 = bit::extract<0, 8>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E));
     ctx.userClipX1 = bit::extract<0, 9>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x14));
     ctx.userClipY1 = bit::extract<0, 8>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x16));
-    devlog::trace<grp::vdp1_render>("Set user clipping: {}x{} - {}x{}", ctx.userClipX0, ctx.userClipY0, ctx.userClipX1,
-                                    ctx.userClipY1);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Set user clipping: {}x{} - {}x{}", cmdAddress, ctx.userClipX0,
+                                    ctx.userClipY0, ctx.userClipX1, ctx.userClipY1);
 }
 
 void VDP::VDP1Cmd_SetLocalCoordinates(uint32 cmdAddress) {
     auto &ctx = m_VDP1RenderContext;
     ctx.localCoordX = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0C));
     ctx.localCoordY = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E));
-    devlog::trace<grp::vdp1_render>("Set local coordinates: {}x{}", ctx.localCoordX, ctx.localCoordY);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Set local coordinates: {}x{}", cmdAddress, ctx.localCoordX,
+                                    ctx.localCoordY);
 }
 
 // -----------------------------------------------------------------------------
