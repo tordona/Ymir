@@ -2505,7 +2505,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
     const CoordS32 coordC{xc, yc << doubleV};
     const CoordS32 coordD{xd, yd << doubleV};
 
-    devlog::debug<grp::vdp1_render>("[{:05X}] Draw polygon: {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d}, color "
+    devlog::trace<grp::vdp1_render>("[{:05X}] Draw polygon: {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d}, color "
                                     "{:04X}, gouraud table {:05X}, CMDPMOD = {:04X}",
                                     cmdAddress, xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16);
 
