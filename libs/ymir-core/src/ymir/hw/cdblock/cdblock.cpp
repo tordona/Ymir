@@ -2672,12 +2672,16 @@ void CDBlock::CmdGetSectorData() {
     const uint16 sectorNumber = m_CR[3];
 
     bool reject = false;
+    bool wait = false;
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
-        devlog::trace<grp::base>("Get then delete sector transfer rejected: invalid partition {}", partitionNumber);
+        devlog::trace<grp::base>("Get sector transfer rejected: invalid partition {}", partitionNumber);
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
-        devlog::trace<grp::base>("Get then delete sector transfer rejected: no data in partition {}", partitionNumber);
+        devlog::trace<grp::base>("Get sector transfer rejected: no data in partition {}", partitionNumber);
         reject = true;
+    } else if (sectorNumber == 0) {
+        devlog::trace<grp::base>("Get sector transfer rejected: requested zero sectors");
+        wait = true;
     } else {
         SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
     }
@@ -2685,12 +2689,18 @@ void CDBlock::CmdGetSectorData() {
     // Output structure: standard CD status data
     if (reject) [[unlikely]] {
         ReportCDStatus(kStatusReject);
+    } else if (wait) [[unlikely]] {
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait);
     } else {
         ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
         // TODO: should hold status flag kStatusFlagXferRequest until ready
     }
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY);
+    uint16 hirq = kHIRQ_CMOK;
+    if (!reject && !wait) {
+        hirq |= kHIRQ_DRDY;
+    }
+    SetInterrupt(hirq);
 }
 
 void CDBlock::CmdDeleteSectorData() {
@@ -2706,12 +2716,16 @@ void CDBlock::CmdDeleteSectorData() {
     const uint16 sectorNumber = m_CR[3];
 
     bool reject = false;
+    bool wait = false;
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
         devlog::trace<grp::base>("Delete sector rejected: invalid partition {}", partitionNumber);
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
         devlog::trace<grp::base>("Delete sector rejected: no data in partition {}", partitionNumber);
         reject = true;
+    } else if (sectorNumber == 0) {
+        devlog::trace<grp::base>("Delete sector rejected: requested zero sectors");
+        wait = true;
     } else {
         const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
         devlog::trace<grp::base>("Freed {} sectors from partition {} at offset {}", numFreedSectors, partitionNumber,
@@ -2721,6 +2735,8 @@ void CDBlock::CmdDeleteSectorData() {
     // Output structure: standard CD status data
     if (reject) [[unlikely]] {
         ReportCDStatus(kStatusReject);
+    } else if (wait) [[unlikely]] {
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait);
     } else {
         ReportCDStatus();
     }
@@ -2741,12 +2757,16 @@ void CDBlock::CmdGetThenDeleteSectorData() {
     const uint16 sectorNumber = m_CR[3];
 
     bool reject = false;
+    bool wait = false;
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
         devlog::trace<grp::base>("Get then delete sector transfer rejected: invalid partition {}", partitionNumber);
         reject = true;
     } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
         devlog::trace<grp::base>("Get then delete sector transfer rejected: no data in partition {}", partitionNumber);
         reject = true;
+    } else if (sectorNumber == 0) {
+        devlog::trace<grp::base>("Get then delete sector transfer rejected: requested zero sectors");
+        wait = true;
     } else {
         SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
     }
@@ -2754,12 +2774,18 @@ void CDBlock::CmdGetThenDeleteSectorData() {
     // Output structure: standard CD status data
     if (reject) [[unlikely]] {
         ReportCDStatus(kStatusReject);
+    } else if (wait) [[unlikely]] {
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait);
     } else {
         ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
         // TODO: should hold status flag kStatusFlagXferRequest until ready
     }
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_DRDY | kHIRQ_EHST);
+    uint16 hirq = kHIRQ_CMOK;
+    if (!reject && !wait) {
+        hirq |= kHIRQ_DRDY | kHIRQ_EHST;
+    }
+    SetInterrupt(hirq);
 }
 
 void CDBlock::CmdPutSectorData() {
