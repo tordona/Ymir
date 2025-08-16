@@ -10,7 +10,7 @@ target_include_directories(ymir-sandbox
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
 )
-target_link_libraries(ymir-sandbox PRIVATE ymir::ymir-core SDL3::SDL3)
+target_link_libraries(ymir-sandbox PRIVATE ymir::ymir-core SDL3::SDL3 stb::stb)
 target_compile_features(ymir-sandbox PUBLIC cxx_std_20)
 
 ## Add dependencies
