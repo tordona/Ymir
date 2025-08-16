@@ -38,7 +38,15 @@ bool CDBlock::PartitionManager::ReserveBuffers(uint16 count) {
     return true;
 }
 
-void CDBlock::PartitionManager::UnreserveBuffers() {
+bool CDBlock::PartitionManager::UseReservedBuffers(uint16 count) {
+    if (count <= m_reservedBuffers) {
+        m_reservedBuffers -= count;
+        return true;
+    }
+    return false;
+}
+
+void CDBlock::PartitionManager::ReleaseReservedBuffers() {
     m_reservedBuffers = 0;
 }
 

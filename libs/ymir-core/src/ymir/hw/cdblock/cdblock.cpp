@@ -30,6 +30,38 @@ FORCE_INLINE static void TraceProcessCommandResponse(debug::ICDBlockTracer *trac
 }
 
 // -----------------------------------------------------------------------------
+// Utility
+
+static uint32 CalcPutOffset(uint32 getSize, uint32 putSize) {
+    static constexpr uint32 kSectorLengths[] = {
+        2048, // user data
+        2336, // + subheader (checksum, ECC)
+        2340, // + header (sector offset and mode)
+        2352, // + sync bytes
+    };
+    const bool getHasSyncBytes = getSize >= 2532;
+    const bool getHasHeader = getSize >= 2340;
+    const bool getHasSubheader = getSize >= 2336;
+
+    const bool putHasSyncBytes = putSize >= 2532;
+    const bool putHasHeader = putSize >= 2340;
+    const bool putHasSubheader = putSize >= 2336;
+
+    uint32 offset = 0;
+
+    if (getHasSubheader && !putHasSyncBytes) {
+        offset += 12;
+    }
+    if (getHasHeader && !putHasHeader) {
+        offset += 4;
+    }
+    if (getHasSubheader && !putHasSubheader) {
+        offset += 8;
+    }
+    return offset;
+}
+
+// -----------------------------------------------------------------------------
 // Implementation
 
 CDBlock::CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &config)
@@ -121,6 +153,7 @@ void CDBlock::Reset(bool hard) {
 
     m_getSectorLength = 2048;
     m_putSectorLength = 2048;
+    m_putOffset = 0;
 
     m_processingCommand = false;
 
@@ -500,6 +533,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
 
     m_getSectorLength = state.getSectorLength;
     m_putSectorLength = state.putSectorLength;
+    m_putOffset = CalcPutOffset(m_getSectorLength, m_putSectorLength);
 
     m_processingCommand = state.processingCommand;
 
@@ -1392,7 +1426,7 @@ void CDBlock::DoWriteTransfer(uint16 value) {
         if (m_scratchBufferPutIndex < m_scratchBuffers.size()) {
             auto &buffer = m_scratchBuffers[m_scratchBufferPutIndex];
             if (m_xferBufferPos < m_putSectorLength) {
-                util::WriteBE<uint16>(&buffer.data[m_xferBufferPos], value);
+                util::WriteBE<uint16>(&buffer.data[m_xferBufferPos + m_putOffset], value);
             }
         }
         m_xferBufferPos += sizeof(uint16);
@@ -1415,17 +1449,6 @@ void CDBlock::AdvanceTransfer() {
     m_xferCount++;
     if (m_xferPos >= m_xferLength) {
         devlog::trace<grp::xfer>("Transfer finished - {} of {} words transferred", m_xferCount, m_xferLength);
-        if (m_xferType == TransferType::PutSector) {
-            const uint32 sectorCount = m_xferLength * sizeof(uint16) / m_putSectorLength;
-            if (m_partitionManager.GetFreeBufferCount() >= sectorCount) {
-                for (uint32 i = 0; i < sectorCount; ++i) {
-                    m_partitionManager.InsertHead(m_xferPartition, m_scratchBuffers[i]);
-                }
-                devlog::trace<grp::xfer>("Sector sent to partition {}", m_xferPartition);
-            } else {
-                devlog::trace<grp::xfer>("Not enough room to write sector");
-            }
-        }
     }
 }
 
@@ -1455,11 +1478,14 @@ void CDBlock::EndTransfer() {
     case TransferType::PutSector: //
     {
         const uint32 sectorCount = m_xferLength * sizeof(uint16) / m_putSectorLength;
-        for (uint32 i = 0; i < sectorCount; ++i) {
-            m_partitionManager.InsertHead(m_xferPartition, m_scratchBuffers[i]);
+        if (m_partitionManager.UseReservedBuffers(sectorCount)) {
+            for (uint32 i = 0; i < sectorCount; ++i) {
+                m_partitionManager.InsertHead(m_xferPartition, m_scratchBuffers[i]);
+            }
+            devlog::trace<grp::xfer>("Sector sent to partition {}", m_xferPartition);
+        } else {
+            devlog::trace<grp::xfer>("Not enough room to write sector");
         }
-        devlog::trace<grp::xfer>("Sector sent to partition {}", m_xferPartition);
-        m_partitionManager.UnreserveBuffers();
         DisconnectCDDevice(m_xferPartition);
         DisconnectFilterInput(m_xferPartition);
         SetInterrupt(kHIRQ_EHST);
@@ -2624,6 +2650,7 @@ void CDBlock::CmdSetSectorLength() {
     if (putSectorLength < 4) {
         m_putSectorLength = kSectorLengths[putSectorLength];
     }
+    m_putOffset = CalcPutOffset(m_getSectorLength, m_putSectorLength);
     devlog::debug<grp::base>("Sector lengths: get={} put={}", m_getSectorLength, m_putSectorLength);
 
     // Output structure: standard CD status data

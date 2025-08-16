@@ -269,7 +269,8 @@ private:
         uint8 GetBufferCount(uint8 partitionIndex) const;
         uint32 GetFreeBufferCount() const;
         bool ReserveBuffers(uint16 count);
-        void UnreserveBuffers();
+        bool UseReservedBuffers(uint16 count);
+        void ReleaseReservedBuffers();
 
         void InsertHead(uint8 partitionIndex, const Buffer &buffer);
         Buffer *GetTail(uint8 partitionIndex, uint8 offset);
@@ -308,6 +309,7 @@ private:
 
     uint32 m_getSectorLength;
     uint32 m_putSectorLength;
+    uint32 m_putOffset;
 
     bool ConnectCDDevice(uint8 filterNumber);
     bool DisconnectCDDevice(uint8 filterNumber);
