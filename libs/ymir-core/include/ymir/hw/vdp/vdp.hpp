@@ -52,6 +52,13 @@ public:
 
     void MapMemory(sys::Bus &bus);
 
+    // TODO: replace with scheduler events
+    template <bool debug>
+    void Advance(uint64 cycles);
+
+    // -------------------------------------------------------------------------
+    // Frontend callbacks
+
     void SetRenderCallback(CBFrameComplete callback) {
         m_cbFrameComplete = callback;
     }
@@ -63,6 +70,9 @@ public:
     void SetVDP1FramebufferSwapCallback(CBVDP1FramebufferSwap callback) {
         m_cbVDP1FramebufferSwap = callback;
     }
+
+    // -------------------------------------------------------------------------
+    // Configuration
 
     // Enable or disable deinterlacing of double-density interlaced frames.
     void SetDeinterlaceRender(bool enable) {
@@ -84,10 +94,6 @@ public:
         return m_transparentMeshes;
     }
 
-    // TODO: replace with scheduler events
-    template <bool debug>
-    void Advance(uint64 cycles);
-
     void DumpVDP1VRAM(std::ostream &out) const;
     void DumpVDP2VRAM(std::ostream &out) const;
     void DumpVDP2CRAM(std::ostream &out) const;
@@ -98,6 +104,44 @@ public:
     bool InLastLinePhase() const {
         return m_state.VPhase == VerticalPhase::LastLine;
     }
+
+    // -------------------------------------------------------------------------
+    // VDP1 memory/register access
+
+    template <mem_primitive T>
+    T VDP1ReadVRAM(uint32 address) const;
+
+    template <mem_primitive T, bool poke>
+    void VDP1WriteVRAM(uint32 address, T value);
+
+    template <mem_primitive T>
+    T VDP1ReadFB(uint32 address) const;
+
+    template <mem_primitive T>
+    void VDP1WriteFB(uint32 address, T value);
+
+    template <bool peek>
+    uint16 VDP1ReadReg(uint32 address) const;
+    template <bool poke>
+    void VDP1WriteReg(uint32 address, uint16 value);
+
+    // -------------------------------------------------------------------------
+    // VDP2 memory/register access
+
+    template <mem_primitive T>
+    T VDP2ReadVRAM(uint32 address) const;
+
+    template <mem_primitive T>
+    void VDP2WriteVRAM(uint32 address, T value);
+
+    template <mem_primitive T, bool peek>
+    T VDP2ReadCRAM(uint32 address) const;
+
+    template <mem_primitive T, bool poke>
+    void VDP2WriteCRAM(uint32 address, T value);
+
+    uint16 VDP2ReadReg(uint32 address) const;
+    void VDP2WriteReg(uint32 address, uint16 value);
 
     // -------------------------------------------------------------------------
     // Save states
@@ -142,52 +186,11 @@ private:
     void EnableThreadedVDP(bool enable);
     void IncludeVDP1RenderInVDPThread(bool enable);
 
-    // -------------------------------------------------------------------------
-    // VDP1 memory/register access
-
-    template <mem_primitive T>
-    T VDP1ReadVRAM(uint32 address) const;
-
-    template <mem_primitive T, bool poke>
-    void VDP1WriteVRAM(uint32 address, T value);
-
-    template <mem_primitive T>
-    T VDP1ReadFB(uint32 address) const;
-
-    template <mem_primitive T>
-    void VDP1WriteFB(uint32 address, T value);
-
-    template <bool peek>
-    uint16 VDP1ReadReg(uint32 address) const;
-    template <bool poke>
-    void VDP1WriteReg(uint32 address, uint16 value);
-
     // Hacky VDP1 command execution timing penalty accrued from external writes to VRAM
     // TODO: count pulled out of thin air
     static constexpr uint64 kVDP1TimingPenaltyPerWrite = 22;
     uint64 m_VDP1TimingPenaltyCycles;   // accumulated cycle penalty
     uint64 m_VDP1TimingPenaltyPerWrite; // penalty per write
-
-    // -------------------------------------------------------------------------
-    // VDP2 memory/register access
-
-    template <mem_primitive T>
-    T VDP2ReadVRAM(uint32 address) const;
-
-    template <mem_primitive T>
-    void VDP2WriteVRAM(uint32 address, T value);
-
-    template <mem_primitive T, bool peek>
-    T VDP2ReadCRAM(uint32 address) const;
-
-    template <mem_primitive T, bool poke>
-    void VDP2WriteCRAM(uint32 address, T value);
-
-    template <mem_primitive T>
-    void VDP2UpdateCRAMCache(uint32 address);
-
-    uint16 VDP2ReadReg(uint32 address) const;
-    void VDP2WriteReg(uint32 address, uint16 value);
 
     // -------------------------------------------------------------------------
     // Frontend callbacks
@@ -225,6 +228,9 @@ private:
     FORCE_INLINE uint32 MapRendererCRAMAddress(uint32 address) const {
         return kCRAMAddressMapping[m_VDPRenderContext.vdp2.regs.vramControl.colorRAMMode >> 1][address & 0xFFF];
     }
+
+    template <mem_primitive T>
+    void VDP2UpdateCRAMCache(uint32 address);
 
     // -------------------------------------------------------------------------
     // Timings and signals

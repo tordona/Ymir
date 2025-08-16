@@ -389,6 +389,213 @@ void VDP::DumpVDP1Framebuffers(std::ostream &out) const {
     }
 }
 
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) const {
+    address &= 0x7FFFF;
+    return util::ReadBE<T>(&m_state.VRAM1[address]);
+}
+
+template <mem_primitive T, bool poke>
+FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
+    address &= 0x7FFFF;
+    util::WriteBE<T>(&m_state.VRAM1[address], value);
+    if (m_effectiveRenderVDP1InVDP2Thread) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
+    }
+
+    if constexpr (!poke) {
+        // HACK: Add a timing penalty to VDP1 command execution on every VRAM write coming from SH-2
+        if (m_VDP1RenderContext.rendering) {
+            m_VDP1TimingPenaltyCycles += m_VDP1TimingPenaltyPerWrite; // FIXME: pulled out of thin air
+        }
+    }
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) const {
+    address &= 0x3FFFF;
+    return util::ReadBE<T>(&m_state.spriteFB[m_state.displayFB ^ 1][address]);
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
+    address &= 0x3FFFF;
+    util::WriteBE<T>(&m_state.spriteFB[m_state.displayFB ^ 1][address], value);
+    if (m_deinterlaceRender) {
+        util::WriteBE<T>(&m_altSpriteFB[m_state.displayFB ^ 1][address & 0x3FFFF], value);
+    }
+    // if (m_effectiveRenderVDP1InVDP2Thread) {
+    //     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
+    // }
+}
+
+template <bool peek>
+FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) const {
+    address &= 0x7FFFF;
+    return m_state.regs1.Read<peek>(address);
+}
+
+template <bool poke>
+FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
+    address &= 0x7FFFF;
+    if (m_effectiveRenderVDP1InVDP2Thread) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
+    }
+    m_state.regs1.Write<poke>(address, value);
+
+    switch (address) {
+    case 0x00:
+        if constexpr (!poke) {
+            devlog::trace<grp::vdp1_regs>("Write to TVM={:d}{:d}{:d}", m_state.regs1.hdtvEnable,
+                                          m_state.regs1.fbRotEnable, m_state.regs1.pixel8Bits);
+            devlog::trace<grp::vdp1_regs>("Write to VBE={:d}", m_state.regs1.vblankErase);
+        }
+        break;
+    case 0x02:
+        if constexpr (!poke) {
+            devlog::trace<grp::vdp1_regs>("Write to DIE={:d} DIL={:d}", m_state.regs1.dblInterlaceEnable,
+                                          m_state.regs1.dblInterlaceDrawLine);
+            devlog::trace<grp::vdp1_regs>("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}",
+                                          m_state.regs1.fbSwapMode, m_state.regs1.fbSwapTrigger,
+                                          m_state.regs1.fbManualSwap, m_state.regs1.fbManualErase);
+        }
+        break;
+    case 0x04:
+        if constexpr (!poke) {
+            devlog::trace<grp::vdp1_regs>("Write to PTM={:d}", m_state.regs1.plotTrigger);
+            if (m_state.regs1.plotTrigger == 0b01) {
+                VDP1BeginFrame();
+            }
+        }
+        break;
+    case 0x0C: // ENDR
+        // TODO: schedule drawing termination after 30 cycles
+        m_VDP1RenderContext.rendering = false;
+        m_VDP1TimingPenaltyCycles = 0;
+        break;
+    }
+}
+
+template <mem_primitive T>
+FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) const {
+    // TODO: handle VRSIZE.VRAMSZ
+    address &= 0x7FFFF;
+    return util::ReadBE<T>(&m_state.VRAM2[address]);
+}
+
+template <mem_primitive T>
+FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
+    // TODO: handle VRSIZE.VRAMSZ
+    address &= 0x7FFFF;
+    util::WriteBE<T>(&m_state.VRAM2[address], value);
+    if (m_threadedVDPRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2VRAMWrite<T>(address, value));
+    }
+}
+
+template <mem_primitive T, bool peek>
+FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) const {
+    if constexpr (std::is_same_v<T, uint32>) {
+        uint32 value = VDP2ReadCRAM<uint16, peek>(address + 0) << 16u;
+        value |= VDP2ReadCRAM<uint16, peek>(address + 2) << 0u;
+        return value;
+    }
+
+    address = MapCRAMAddress(address);
+    T value = util::ReadBE<T>(&m_state.CRAM[address]);
+    if constexpr (!peek) {
+        devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
+    }
+    return value;
+}
+
+template <mem_primitive T, bool poke>
+FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
+    if constexpr (std::is_same_v<T, uint32>) {
+        VDP2WriteCRAM<uint16, poke>(address + 0, value >> 16u);
+        VDP2WriteCRAM<uint16, poke>(address + 2, value >> 0u);
+        return;
+    }
+
+    address = MapCRAMAddress(address);
+    if constexpr (!poke) {
+        devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
+    }
+    util::WriteBE<T>(&m_state.CRAM[address], value);
+    VDP2UpdateCRAMCache<T>(address);
+    if (m_threadedVDPRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
+    }
+    if (m_state.regs2.vramControl.colorRAMMode == 0) {
+        if constexpr (!poke) {
+            devlog::trace<grp::vdp2_regs>("   replicated to {:05X}", address ^ 0x800);
+        }
+        util::WriteBE<T>(&m_state.CRAM[address ^ 0x800], value);
+        VDP2UpdateCRAMCache<T>(address);
+        if (m_threadedVDPRendering) {
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
+        }
+    }
+}
+
+FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) const {
+    address &= 0x1FF;
+    return m_state.regs2.Read(address);
+}
+
+FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
+    address &= 0x1FF;
+    if (m_threadedVDPRendering) {
+        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2RegWrite(address, value));
+    }
+    m_state.regs2.Write(address, value);
+    devlog::trace<grp::vdp2_regs>("VDP2 register write to {:03X} = {:04X}", address, value);
+
+    switch (address) {
+    case 0x000:
+        devlog::trace<grp::vdp2_regs>("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}",
+                                      m_state.regs2.TVMD.u16, (uint16)m_state.regs2.TVMD.HRESOn,
+                                      (uint16)m_state.regs2.TVMD.VRESOn, (uint16)m_state.regs2.TVMD.LSMDn,
+                                      (uint16)m_state.regs2.TVMD.BDCLMD, (uint16)m_state.regs2.TVMD.DISP,
+                                      (m_state.regs2.TVMDDirty ? " (dirty)" : ""));
+        break;
+    case 0x020: [[fallthrough]]; // BGON
+    case 0x028: [[fallthrough]]; // CHCTLA
+    case 0x02A:                  // CHCTLB
+        if (m_threadedVDPRendering) {
+            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2UpdateEnabledBGs());
+        } else {
+            VDP2UpdateEnabledBGs();
+        }
+        break;
+
+    case 0x074: [[fallthrough]]; // SCYIN0
+    case 0x076:                  // SCYDN0
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[0].scrollAmountV = m_state.regs2.bgParams[1].scrollAmountV;
+        }
+        break;
+    case 0x084: [[fallthrough]]; // SCYIN1
+    case 0x086:                  // SCYDN1
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[1].scrollAmountV = m_state.regs2.bgParams[2].scrollAmountV;
+        }
+        break;
+    case 0x092: // SCYN2
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[2].scrollAmountV = m_state.regs2.bgParams[3].scrollAmountV;
+            m_normBGLayerStates[2].fracScrollY = 0;
+        }
+        break;
+    case 0x096: // SCYN3
+        if (!m_threadedVDPRendering) {
+            m_normBGLayerStates[3].scrollAmountV = m_state.regs2.bgParams[4].scrollAmountV;
+            m_normBGLayerStates[3].fracScrollY = 0;
+        }
+        break;
+    }
+}
+
 void VDP::SaveState(state::VDPState &state) const {
     if (m_threadedVDPRendering) {
         m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::PreSaveStateSync());
@@ -620,155 +827,6 @@ void VDP::IncludeVDP1RenderInVDPThread(bool enable) {
 }
 
 template <mem_primitive T>
-FORCE_INLINE T VDP::VDP1ReadVRAM(uint32 address) const {
-    address &= 0x7FFFF;
-    return util::ReadBE<T>(&m_state.VRAM1[address]);
-}
-
-template <mem_primitive T, bool poke>
-FORCE_INLINE void VDP::VDP1WriteVRAM(uint32 address, T value) {
-    address &= 0x7FFFF;
-    util::WriteBE<T>(&m_state.VRAM1[address], value);
-    if (m_effectiveRenderVDP1InVDP2Thread) {
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1VRAMWrite<T>(address, value));
-    }
-
-    if constexpr (!poke) {
-        // HACK: Add a timing penalty to VDP1 command execution on every VRAM write coming from SH-2
-        if (m_VDP1RenderContext.rendering) {
-            m_VDP1TimingPenaltyCycles += m_VDP1TimingPenaltyPerWrite; // FIXME: pulled out of thin air
-        }
-    }
-}
-
-template <mem_primitive T>
-FORCE_INLINE T VDP::VDP1ReadFB(uint32 address) const {
-    address &= 0x3FFFF;
-    return util::ReadBE<T>(&m_state.spriteFB[m_state.displayFB ^ 1][address]);
-}
-
-template <mem_primitive T>
-FORCE_INLINE void VDP::VDP1WriteFB(uint32 address, T value) {
-    address &= 0x3FFFF;
-    util::WriteBE<T>(&m_state.spriteFB[m_state.displayFB ^ 1][address], value);
-    if (m_deinterlaceRender) {
-        util::WriteBE<T>(&m_altSpriteFB[m_state.displayFB ^ 1][address & 0x3FFFF], value);
-    }
-    // if (m_effectiveRenderVDP1InVDP2Thread) {
-    //     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1FBWrite<T>(address, value));
-    // }
-}
-
-template <bool peek>
-FORCE_INLINE uint16 VDP::VDP1ReadReg(uint32 address) const {
-    address &= 0x7FFFF;
-    return m_state.regs1.Read<peek>(address);
-}
-
-template <bool poke>
-FORCE_INLINE void VDP::VDP1WriteReg(uint32 address, uint16 value) {
-    address &= 0x7FFFF;
-    if (m_effectiveRenderVDP1InVDP2Thread) {
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP1RegWrite(address, value));
-    }
-    m_state.regs1.Write<poke>(address, value);
-
-    switch (address) {
-    case 0x00:
-        if constexpr (!poke) {
-            devlog::trace<grp::vdp1_regs>("Write to TVM={:d}{:d}{:d}", m_state.regs1.hdtvEnable,
-                                          m_state.regs1.fbRotEnable, m_state.regs1.pixel8Bits);
-            devlog::trace<grp::vdp1_regs>("Write to VBE={:d}", m_state.regs1.vblankErase);
-        }
-        break;
-    case 0x02:
-        if constexpr (!poke) {
-            devlog::trace<grp::vdp1_regs>("Write to DIE={:d} DIL={:d}", m_state.regs1.dblInterlaceEnable,
-                                          m_state.regs1.dblInterlaceDrawLine);
-            devlog::trace<grp::vdp1_regs>("Write to FCM={:d} FCT={:d} manualswap={:d} manualerase={:d}",
-                                          m_state.regs1.fbSwapMode, m_state.regs1.fbSwapTrigger,
-                                          m_state.regs1.fbManualSwap, m_state.regs1.fbManualErase);
-        }
-        break;
-    case 0x04:
-        if constexpr (!poke) {
-            devlog::trace<grp::vdp1_regs>("Write to PTM={:d}", m_state.regs1.plotTrigger);
-            if (m_state.regs1.plotTrigger == 0b01) {
-                VDP1BeginFrame();
-            }
-        }
-        break;
-    case 0x0C: // ENDR
-        // TODO: schedule drawing termination after 30 cycles
-        m_VDP1RenderContext.rendering = false;
-        m_VDP1TimingPenaltyCycles = 0;
-        break;
-    }
-}
-
-template <mem_primitive T>
-FORCE_INLINE T VDP::VDP2ReadVRAM(uint32 address) const {
-    // TODO: handle VRSIZE.VRAMSZ
-    address &= 0x7FFFF;
-    return util::ReadBE<T>(&m_state.VRAM2[address]);
-}
-
-template <mem_primitive T>
-FORCE_INLINE void VDP::VDP2WriteVRAM(uint32 address, T value) {
-    // TODO: handle VRSIZE.VRAMSZ
-    address &= 0x7FFFF;
-    util::WriteBE<T>(&m_state.VRAM2[address], value);
-    if (m_threadedVDPRendering) {
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2VRAMWrite<T>(address, value));
-    }
-}
-
-template <mem_primitive T, bool peek>
-FORCE_INLINE T VDP::VDP2ReadCRAM(uint32 address) const {
-    if constexpr (std::is_same_v<T, uint32>) {
-        uint32 value = VDP2ReadCRAM<uint16, peek>(address + 0) << 16u;
-        value |= VDP2ReadCRAM<uint16, peek>(address + 2) << 0u;
-        return value;
-    }
-
-    address = MapCRAMAddress(address);
-    T value = util::ReadBE<T>(&m_state.CRAM[address]);
-    if constexpr (!peek) {
-        devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM read from {:03X} = {:X}", sizeof(T) * 8, address, value);
-    }
-    return value;
-}
-
-template <mem_primitive T, bool poke>
-FORCE_INLINE void VDP::VDP2WriteCRAM(uint32 address, T value) {
-    if constexpr (std::is_same_v<T, uint32>) {
-        VDP2WriteCRAM<uint16, poke>(address + 0, value >> 16u);
-        VDP2WriteCRAM<uint16, poke>(address + 2, value >> 0u);
-        return;
-    }
-
-    address = MapCRAMAddress(address);
-    if constexpr (!poke) {
-        devlog::trace<grp::vdp2_regs>("{}-bit VDP2 CRAM write to {:05X} = {:X}", sizeof(T) * 8, address, value);
-    }
-    util::WriteBE<T>(&m_state.CRAM[address], value);
-    VDP2UpdateCRAMCache<T>(address);
-    if (m_threadedVDPRendering) {
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address, value));
-    }
-    if (m_state.regs2.vramControl.colorRAMMode == 0) {
-        if constexpr (!poke) {
-            devlog::trace<grp::vdp2_regs>("   replicated to {:05X}", address ^ 0x800);
-        }
-        util::WriteBE<T>(&m_state.CRAM[address ^ 0x800], value);
-        VDP2UpdateCRAMCache<T>(address);
-        if (m_threadedVDPRendering) {
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2CRAMWrite<T>(address ^ 0x800, value));
-        }
-    }
-}
-
-template <mem_primitive T>
 FORCE_INLINE void VDP::VDP2UpdateCRAMCache(uint32 address) {
     address &= ~1;
     const Color555 color5{.u16 = util::ReadBE<uint16>(&m_state.CRAM[address])};
@@ -776,64 +834,6 @@ FORCE_INLINE void VDP::VDP2UpdateCRAMCache(uint32 address) {
     if constexpr (std::is_same_v<T, uint32>) {
         const Color555 color5{.u16 = util::ReadBE<uint16>(&m_state.CRAM[address + 2])};
         m_CRAMCache[(address + 2) / sizeof(uint16)] = ConvertRGB555to888(color5);
-    }
-}
-
-FORCE_INLINE uint16 VDP::VDP2ReadReg(uint32 address) const {
-    address &= 0x1FF;
-    return m_state.regs2.Read(address);
-}
-
-FORCE_INLINE void VDP::VDP2WriteReg(uint32 address, uint16 value) {
-    address &= 0x1FF;
-    if (m_threadedVDPRendering) {
-        m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2RegWrite(address, value));
-    }
-    m_state.regs2.Write(address, value);
-    devlog::trace<grp::vdp2_regs>("VDP2 register write to {:03X} = {:04X}", address, value);
-
-    switch (address) {
-    case 0x000:
-        devlog::trace<grp::vdp2_regs>("TVMD write: {:04X} - HRESO={:d} VRESO={:d} LSMD={:d} BDCLMD={:d} DISP={:d}{}",
-                                      m_state.regs2.TVMD.u16, (uint16)m_state.regs2.TVMD.HRESOn,
-                                      (uint16)m_state.regs2.TVMD.VRESOn, (uint16)m_state.regs2.TVMD.LSMDn,
-                                      (uint16)m_state.regs2.TVMD.BDCLMD, (uint16)m_state.regs2.TVMD.DISP,
-                                      (m_state.regs2.TVMDDirty ? " (dirty)" : ""));
-        break;
-    case 0x020: [[fallthrough]]; // BGON
-    case 0x028: [[fallthrough]]; // CHCTLA
-    case 0x02A:                  // CHCTLB
-        if (m_threadedVDPRendering) {
-            m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2UpdateEnabledBGs());
-        } else {
-            VDP2UpdateEnabledBGs();
-        }
-        break;
-
-    case 0x074: [[fallthrough]]; // SCYIN0
-    case 0x076:                  // SCYDN0
-        if (!m_threadedVDPRendering) {
-            m_normBGLayerStates[0].scrollAmountV = m_state.regs2.bgParams[1].scrollAmountV;
-        }
-        break;
-    case 0x084: [[fallthrough]]; // SCYIN1
-    case 0x086:                  // SCYDN1
-        if (!m_threadedVDPRendering) {
-            m_normBGLayerStates[1].scrollAmountV = m_state.regs2.bgParams[2].scrollAmountV;
-        }
-        break;
-    case 0x092: // SCYN2
-        if (!m_threadedVDPRendering) {
-            m_normBGLayerStates[2].scrollAmountV = m_state.regs2.bgParams[3].scrollAmountV;
-            m_normBGLayerStates[2].fracScrollY = 0;
-        }
-        break;
-    case 0x096: // SCYN3
-        if (!m_threadedVDPRendering) {
-            m_normBGLayerStates[3].scrollAmountV = m_state.regs2.bgParams[4].scrollAmountV;
-            m_normBGLayerStates[3].fracScrollY = 0;
-        }
-        break;
     }
 }
 
