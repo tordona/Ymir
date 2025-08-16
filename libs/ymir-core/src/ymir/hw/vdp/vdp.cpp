@@ -1973,6 +1973,10 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
 template <bool antiAlias, bool deinterlace, bool transparentMeshes>
 FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
                                     VDP1GouraudParams &gouraudParams) {
+    if (VDP1IsLineSystemClipped<deinterlace>(coord1, coord2)) {
+        return;
+    }
+
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
     const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
