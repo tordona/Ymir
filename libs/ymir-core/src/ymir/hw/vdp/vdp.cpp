@@ -1770,13 +1770,19 @@ FORCE_INLINE void VDP::VDP1CommitMeshPolygon(CoordS32 topLeft, CoordS32 bottomRi
     auto &valid = m_VDP1RenderContext.stagingFBValid;
 
     const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
+    const uint16 doubleV = deinterlace && doubleDensity && !regs1.dblInterlaceEnable;
 
-    for (sint32 y = topLeft.y(); y <= bottomRight.y(); ++y) {
+    const sint32 x0 = std::max<sint32>(topLeft.x(), 0);
+    const sint32 x1 = std::min<sint32>(bottomRight.x(), m_VDP1RenderContext.sysClipH);
+    const sint32 y0 = std::max<sint32>(topLeft.y(), 0);
+    const sint32 y1 = std::min<sint32>(bottomRight.y(), m_VDP1RenderContext.sysClipV << doubleV);
+
+    for (sint32 y = y0; y <= y1; ++y) {
         sint32 yy = y;
         if (doubleDensity && regs1.dblInterlaceEnable) {
             yy >>= 1;
         }
-        for (sint32 x = topLeft.x(); x <= bottomRight.x(); ++x) {
+        for (sint32 x = x0; x <= x1; ++x) {
             uint32 fbOffset = yy * regs1.fbSizeH + x;
             if (regs1.pixel8Bits) {
                 fbOffset &= 0x3FFFF;

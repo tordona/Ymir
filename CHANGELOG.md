@@ -15,6 +15,7 @@ Introduced save state file version 9.
 - Debug: Move debug port writes to a callback and remove them from the SCU tracer. Eliminates the need for debug tracing to use Mednafen's debug output method.
 - SCSP: Basic debugger view for all slot registers and some state.
 - SCSP: Final output oscilloscope view.
+- VDP1: Optimize mesh polygons by limiting updates to system clip area.
 
 ### Fixes
 
