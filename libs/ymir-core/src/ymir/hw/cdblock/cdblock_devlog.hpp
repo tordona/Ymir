@@ -11,6 +11,7 @@ namespace ymir::cdblock::grp {
 //
 // base
 //   regs
+//   cmd
 //   play_init
 //   play
 //   xfer
@@ -24,6 +25,10 @@ struct base {
 
 struct regs : public base {
     static constexpr std::string_view name = "CDBlock-Regs";
+};
+
+struct cmd : public base {
+    static constexpr std::string_view name = "CDBlock-Command";
 };
 
 struct play_init : public base {

@@ -1495,7 +1495,7 @@ void CDBlock::SetupCommand() {
 }
 
 FORCE_INLINE void CDBlock::ProcessCommand() {
-    devlog::trace<grp::base>("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+    devlog::trace<grp::cmd>("Processing command {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
     TraceProcessCommand(m_tracer, m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 
     const uint8 cmd = m_CR[0] >> 8u;
@@ -1573,17 +1573,17 @@ FORCE_INLINE void CDBlock::ProcessCommand() {
         // case 0xE2: CmdGetMpegROM(); break;
 
     default:
-        devlog::warn<grp::base>("Unimplemented command {:02X}", cmd);
+        devlog::warn<grp::cmd>("Unimplemented command {:02X}", cmd);
         YMIR_DEV_CHECK();
         break;
     }
 
-    devlog::trace<grp::base>("Command response:  {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
+    devlog::trace<grp::cmd>("Command response:  {:04X} {:04X} {:04X} {:04X}", m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
     TraceProcessCommandResponse(m_tracer, m_CR[0], m_CR[1], m_CR[2], m_CR[3]);
 }
 
 void CDBlock::CmdGetStatus() {
-    devlog::trace<grp::base>("-> Get status");
+    devlog::trace<grp::cmd>("-> Get status");
 
     // Input structure:
     // 0x00     <blank>
@@ -1598,7 +1598,7 @@ void CDBlock::CmdGetStatus() {
 }
 
 void CDBlock::CmdGetHardwareInfo() {
-    devlog::trace<grp::base>("-> Get hardware info");
+    devlog::trace<grp::cmd>("-> Get hardware info");
 
     // Input structure:
     // 0x01     <blank>
@@ -1620,7 +1620,7 @@ void CDBlock::CmdGetHardwareInfo() {
 }
 
 void CDBlock::CmdGetTOC() {
-    devlog::trace<grp::base>("-> Get TOC");
+    devlog::trace<grp::cmd>("-> Get TOC");
 
     // Input structure:
     // 0x02     <blank>
@@ -1648,7 +1648,7 @@ void CDBlock::CmdGetTOC() {
 }
 
 void CDBlock::CmdGetSessionInfo() {
-    devlog::trace<grp::base>("-> Get session info");
+    devlog::trace<grp::cmd>("-> Get session info");
 
     // Input structure:
     // 0x03     session data type (00 = all, others = specific session)
@@ -1688,7 +1688,7 @@ void CDBlock::CmdGetSessionInfo() {
 }
 
 void CDBlock::CmdInitializeCDSystem() {
-    devlog::trace<grp::base>("-> Initialize CD system");
+    devlog::trace<grp::cmd>("-> Initialize CD system");
 
     // Input structure:
     // 0x04           initialization flags
@@ -1718,7 +1718,7 @@ void CDBlock::CmdInitializeCDSystem() {
     }
 
     if (softReset) {
-        devlog::debug<grp::base>("Soft reset");
+        devlog::debug<grp::cmd>("Soft reset");
         // TODO: use Reset(false)
         // TODO: switch to Busy for a bit before NoDisc/Pause
         m_targetDriveCycles = kDriveCyclesNotPlaying;
@@ -1752,7 +1752,7 @@ void CDBlock::CmdInitializeCDSystem() {
 }
 
 void CDBlock::CmdOpenTray() {
-    devlog::trace<grp::base>("-> Open tray");
+    devlog::trace<grp::cmd>("-> Open tray");
 
     // Input structure:
     // 0x05     <blank>
@@ -1769,7 +1769,7 @@ void CDBlock::CmdOpenTray() {
 }
 
 void CDBlock::CmdEndDataTransfer() {
-    devlog::trace<grp::base>("-> End data transfer");
+    devlog::trace<grp::cmd>("-> End data transfer");
 
     // Input structure:
     // 0x06     <blank>
@@ -1795,7 +1795,7 @@ void CDBlock::CmdEndDataTransfer() {
 }
 
 void CDBlock::CmdPlayDisc() {
-    devlog::trace<grp::base>("-> Play disc");
+    devlog::trace<grp::cmd>("-> Play disc");
 
     // Input structure:
     // 0x10           start position bits 23-16
@@ -1819,7 +1819,7 @@ void CDBlock::CmdPlayDisc() {
 }
 
 void CDBlock::CmdSeekDisc() {
-    devlog::trace<grp::base>("-> Seek disc");
+    devlog::trace<grp::cmd>("-> Seek disc");
 
     // Input structure:
     // 0x11           start position bits 23-16
@@ -1928,7 +1928,7 @@ void CDBlock::CmdSeekDisc() {
 }
 
 void CDBlock::CmdScanDisc() {
-    devlog::trace<grp::base>("-> Scan disc");
+    devlog::trace<grp::cmd>("-> Scan disc");
 
     // Input structure:
     // 0x12     scan direction
@@ -1948,7 +1948,7 @@ void CDBlock::CmdScanDisc() {
 }
 
 void CDBlock::CmdGetSubcodeQ_RW() {
-    devlog::trace<grp::base>("-> Get Subcode Q/RW");
+    devlog::trace<grp::cmd>("-> Get Subcode Q/RW");
 
     // Input structure:
     // 0x20     type
@@ -1984,7 +1984,7 @@ void CDBlock::CmdGetSubcodeQ_RW() {
 }
 
 void CDBlock::CmdSetCDDeviceConnection() {
-    devlog::trace<grp::base>("-> Set CD device connection");
+    devlog::trace<grp::cmd>("-> Set CD device connection");
 
     // Input structure:
     // 0x30           <blank>
@@ -2005,7 +2005,7 @@ void CDBlock::CmdSetCDDeviceConnection() {
 }
 
 void CDBlock::CmdGetCDDeviceConnection() {
-    devlog::trace<grp::base>("-> Get CD device connection");
+    devlog::trace<grp::cmd>("-> Get CD device connection");
 
     // Input structure:
     // 0x31           <blank>
@@ -2027,7 +2027,7 @@ void CDBlock::CmdGetCDDeviceConnection() {
 }
 
 void CDBlock::CmdGetLastBufferDest() {
-    devlog::trace<grp::base>("-> Get last buffer destination");
+    devlog::trace<grp::cmd>("-> Get last buffer destination");
 
     // Input structure:
     // 0x32     <blank>
@@ -2049,7 +2049,7 @@ void CDBlock::CmdGetLastBufferDest() {
 }
 
 void CDBlock::CmdSetFilterRange() {
-    devlog::trace<grp::base>("-> Set filter range");
+    devlog::trace<grp::cmd>("-> Set filter range");
 
     // Input structure:
     // 0x40           start frame address bits 23-16
@@ -2077,7 +2077,7 @@ void CDBlock::CmdSetFilterRange() {
 }
 
 void CDBlock::CmdGetFilterRange() {
-    devlog::trace<grp::base>("-> Get filter range");
+    devlog::trace<grp::cmd>("-> Get filter range");
 
     // Input structure:
     // 0x41           <blank>
@@ -2105,7 +2105,7 @@ void CDBlock::CmdGetFilterRange() {
 }
 
 void CDBlock::CmdSetFilterSubheaderConditions() {
-    devlog::trace<grp::base>("-> Set filter subheader conditions");
+    devlog::trace<grp::cmd>("-> Set filter subheader conditions");
 
     // Input structure:
     // 0x42           channel
@@ -2145,7 +2145,7 @@ void CDBlock::CmdSetFilterSubheaderConditions() {
 }
 
 void CDBlock::CmdGetFilterSubheaderConditions() {
-    devlog::trace<grp::base>("-> Get filter subheader conditions");
+    devlog::trace<grp::cmd>("-> Get filter subheader conditions");
 
     // Input structure:
     // 0x43           <blank>
@@ -2173,7 +2173,7 @@ void CDBlock::CmdGetFilterSubheaderConditions() {
 }
 
 void CDBlock::CmdSetFilterMode() {
-    devlog::trace<grp::base>("-> Set filter mode");
+    devlog::trace<grp::cmd>("-> Set filter mode");
 
     // Input structure:
     // 0x44           mode
@@ -2209,7 +2209,7 @@ void CDBlock::CmdSetFilterMode() {
 }
 
 void CDBlock::CmdGetFilterMode() {
-    devlog::trace<grp::base>("-> Get filter mode");
+    devlog::trace<grp::cmd>("-> Get filter mode");
 
     // Input structure:
     // 0x45           <blank>
@@ -2237,7 +2237,7 @@ void CDBlock::CmdGetFilterMode() {
 }
 
 void CDBlock::CmdSetFilterConnection() {
-    devlog::trace<grp::base>("-> Set filter connection");
+    devlog::trace<grp::cmd>("-> Set filter connection");
 
     // Input structure:
     // 0x46           connection flags
@@ -2272,7 +2272,7 @@ void CDBlock::CmdSetFilterConnection() {
 }
 
 void CDBlock::CmdGetFilterConnection() {
-    devlog::trace<grp::base>("-> Get filter connection");
+    devlog::trace<grp::cmd>("-> Get filter connection");
 
     // Input structure:
     // 0x47           <blank>
@@ -2300,7 +2300,7 @@ void CDBlock::CmdGetFilterConnection() {
 }
 
 void CDBlock::CmdResetSelector() {
-    devlog::trace<grp::base>("-> Reset selector");
+    devlog::trace<grp::cmd>("-> Reset selector");
 
     // Input structure:
     // 0x48              reset flags
@@ -2373,7 +2373,7 @@ void CDBlock::CmdResetSelector() {
 }
 
 void CDBlock::CmdGetBufferSize() {
-    devlog::trace<grp::base>("-> Get buffer size");
+    devlog::trace<grp::cmd>("-> Get buffer size");
 
     // Input structure:
     // 0x50     <blank>
@@ -2398,7 +2398,7 @@ void CDBlock::CmdGetBufferSize() {
 }
 
 void CDBlock::CmdGetSectorNumber() {
-    devlog::trace<grp::base>("-> Get sector number");
+    devlog::trace<grp::cmd>("-> Get sector number");
 
     // Input structure:
     // 0x51              <blank>
@@ -2424,7 +2424,7 @@ void CDBlock::CmdGetSectorNumber() {
 }
 
 void CDBlock::CmdCalculateActualSize() {
-    devlog::trace<grp::base>("-> Calculate actual size");
+    devlog::trace<grp::cmd>("-> Calculate actual size");
 
     // Input structure:
     // 0x52               <blank>
@@ -2474,7 +2474,7 @@ void CDBlock::CmdCalculateActualSize() {
 }
 
 void CDBlock::CmdGetActualSize() {
-    devlog::trace<grp::base>("-> Get actual size");
+    devlog::trace<grp::cmd>("-> Get actual size");
 
     // Input structure:
     // 0x53     <blank>
@@ -2496,7 +2496,7 @@ void CDBlock::CmdGetActualSize() {
 }
 
 void CDBlock::CmdGetSectorInfo() {
-    devlog::trace<grp::base>("-> Get sector info");
+    devlog::trace<grp::cmd>("-> Get sector info");
 
     // Input structure:
     // 0x54               <blank>
@@ -2534,7 +2534,7 @@ void CDBlock::CmdGetSectorInfo() {
 }
 
 void CDBlock::CmdExecuteFADSearch() {
-    devlog::trace<grp::base>("-> Execute frame address search");
+    devlog::trace<grp::cmd>("-> Execute frame address search");
 
     // Input structure:
     // 0x55     <blank>
@@ -2557,7 +2557,7 @@ void CDBlock::CmdExecuteFADSearch() {
 }
 
 void CDBlock::CmdGetFADSearchResults() {
-    devlog::trace<grp::base>("-> Get frame address search results");
+    devlog::trace<grp::cmd>("-> Get frame address search results");
 
     // Input structure:
     // 0x56     <blank>
@@ -2583,7 +2583,7 @@ void CDBlock::CmdGetFADSearchResults() {
 }
 
 void CDBlock::CmdSetSectorLength() {
-    devlog::trace<grp::base>("-> Set sector length");
+    devlog::trace<grp::cmd>("-> Set sector length");
 
     // Input structure:
     // 0x60               get sector length
@@ -2615,7 +2615,7 @@ void CDBlock::CmdSetSectorLength() {
 }
 
 void CDBlock::CmdGetSectorData() {
-    devlog::trace<grp::base>("-> Get sector data");
+    devlog::trace<grp::cmd>("-> Get sector data");
 
     // Input structure:
     // 0x61               <blank>
@@ -2649,7 +2649,7 @@ void CDBlock::CmdGetSectorData() {
 }
 
 void CDBlock::CmdDeleteSectorData() {
-    devlog::trace<grp::base>("-> Delete sector data");
+    devlog::trace<grp::cmd>("-> Delete sector data");
 
     // Input structure:
     // 0x62               <blank>
@@ -2684,7 +2684,7 @@ void CDBlock::CmdDeleteSectorData() {
 }
 
 void CDBlock::CmdGetThenDeleteSectorData() {
-    devlog::trace<grp::base>("-> Get then delete sector data");
+    devlog::trace<grp::cmd>("-> Get then delete sector data");
 
     // Input structure:
     // 0x63               <blank>
@@ -2718,7 +2718,7 @@ void CDBlock::CmdGetThenDeleteSectorData() {
 }
 
 void CDBlock::CmdPutSectorData() {
-    devlog::trace<grp::base>("-> Put sector data");
+    devlog::trace<grp::cmd>("-> Put sector data");
 
     // Input structure:
     // 0x64               <blank>
@@ -2754,7 +2754,7 @@ void CDBlock::CmdPutSectorData() {
 }
 
 void CDBlock::CmdCopySectorData() {
-    devlog::trace<grp::base>("-> Copy sector data");
+    devlog::trace<grp::cmd>("-> Copy sector data");
 
     // Input structure:
     // 0x65                      destination filter number
@@ -2778,7 +2778,7 @@ void CDBlock::CmdCopySectorData() {
 }
 
 void CDBlock::CmdMoveSectorData() {
-    devlog::trace<grp::base>("-> Move sector data");
+    devlog::trace<grp::cmd>("-> Move sector data");
 
     // Input structure:
     // 0x66                      destination filter number
@@ -2801,7 +2801,7 @@ void CDBlock::CmdMoveSectorData() {
 }
 
 void CDBlock::CmdGetCopyError() {
-    devlog::trace<grp::base>("-> Get copy error");
+    devlog::trace<grp::cmd>("-> Get copy error");
 
     // Input structure:
     // 0x67     <blank>
@@ -2825,7 +2825,7 @@ void CDBlock::CmdGetCopyError() {
 }
 
 void CDBlock::CmdChangeDirectory() {
-    devlog::trace<grp::base>("-> Change directory");
+    devlog::trace<grp::cmd>("-> Change directory");
 
     // Input structure:
     // 0x70            <blank>
@@ -2858,7 +2858,7 @@ void CDBlock::CmdChangeDirectory() {
 }
 
 void CDBlock::CmdReadDirectory() {
-    devlog::trace<grp::base>("-> Read directory");
+    devlog::trace<grp::cmd>("-> Read directory");
 
     // Input structure:
     // 0x71            <blank>
@@ -2891,7 +2891,7 @@ void CDBlock::CmdReadDirectory() {
 }
 
 void CDBlock::CmdGetFileSystemScope() {
-    devlog::trace<grp::base>("-> Get file system scope");
+    devlog::trace<grp::cmd>("-> Get file system scope");
 
     // Input structure:
     // 0x72     <blank>
@@ -2920,7 +2920,7 @@ void CDBlock::CmdGetFileSystemScope() {
 }
 
 void CDBlock::CmdGetFileInfo() {
-    devlog::trace<grp::base>("-> Get file info");
+    devlog::trace<grp::cmd>("-> Get file info");
 
     // Input structure:
     // 0x73     <blank>
@@ -2958,7 +2958,7 @@ void CDBlock::CmdGetFileInfo() {
 }
 
 void CDBlock::CmdReadFile() {
-    devlog::trace<grp::base>("-> Read file");
+    devlog::trace<grp::cmd>("-> Read file");
 
     // Input structure:
     // 0x74            offset bits 23-16
@@ -2980,7 +2980,7 @@ void CDBlock::CmdReadFile() {
 }
 
 void CDBlock::CmdAbortFile() {
-    devlog::trace<grp::base>("-> Abort file");
+    devlog::trace<grp::cmd>("-> Abort file");
 
     // Input structure:
     // 0x75     <blank>
@@ -3005,7 +3005,7 @@ void CDBlock::CmdMpegGetInterrupt() {}
 void CDBlock::CmdMpegSetInterruptMask() {}
 
 void CDBlock::CmdMpegInit() {
-    devlog::trace<grp::base>("-> MPEG init");
+    devlog::trace<grp::cmd>("-> MPEG init");
 
     // Input structure:
     // 0x93     <blank>
@@ -3057,7 +3057,7 @@ void CDBlock::CmdMpegSetVideoEffects() {}
 void CDBlock::CmdMpegSetLSI() {}
 
 void CDBlock::CmdAuthenticateDevice() {
-    devlog::trace<grp::base>("-> Authenticate device");
+    devlog::trace<grp::cmd>("-> Authenticate device");
 
     // Input structure:
     // 0xE0    <blank>
@@ -3094,7 +3094,7 @@ void CDBlock::CmdAuthenticateDevice() {
 }
 
 void CDBlock::CmdIsDeviceAuthenticated() {
-    devlog::trace<grp::base>("-> Is device authenticated");
+    devlog::trace<grp::cmd>("-> Is device authenticated");
 
     // Input structure:
     // 0xE1    <blank>
