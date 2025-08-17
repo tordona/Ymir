@@ -4,6 +4,8 @@
 
 #include <util/sdl_file_dialog.hpp>
 
+#include <misc/cpp/imgui_stdlib.h>
+
 namespace app::ui {
 
 DebugOutputView::DebugOutputView(SharedContext &context)
@@ -34,8 +36,8 @@ void DebugOutputView::Display() {
             fullBuffer.append(m_tracer.debugMessages.Read(i)).append("\n");
         }
         fullBuffer.append(m_tracer.GetDebugMessageBuffer());
-        ImGui::InputTextMultiline("##debug_output", fullBuffer.data(), fullBuffer.size(),
-                                  ImGui::GetContentRegionAvail(), ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputTextMultiline("##debug_output", &fullBuffer, ImGui::GetContentRegionAvail(),
+                                  ImGuiInputTextFlags_ReadOnly);
         ImGui::PopFont();
     }
     ImGui::EndChild();
