@@ -1500,13 +1500,9 @@ void CDBlock::EndTransfer() {
     case TransferType::GetThenDeleteSector:
         if (m_xferType == TransferType::GetThenDeleteSector) {
             // Delete sectors, including current sector if not fully read
-            uint32 numSectors = m_xferSectorPos - m_xferDelStart;
-            if (m_xferBufferPos > 0 && m_xferBufferPos < m_xferGetLength / sizeof(uint16)) {
-                ++numSectors;
-            }
-            const uint32 numSectorsRemoved =
-                m_partitionManager.DeleteSectors(m_xferPartition, m_xferDelStart, numSectors);
-            devlog::trace<grp::xfer>("{} of {} sectors freed", numSectors, numSectorsRemoved);
+            const uint32 numFreedSectors =
+                m_partitionManager.DeleteSectors(m_xferPartition, m_xferDelStart, m_xferDelCount);
+            devlog::trace<grp::xfer>("{} of {} sectors freed", m_xferDelCount, numFreedSectors);
         }
         SetInterrupt(kHIRQ_EHST);
         break;
