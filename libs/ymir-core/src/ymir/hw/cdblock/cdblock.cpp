@@ -2682,14 +2682,21 @@ void CDBlock::CmdGetSectorData() {
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
         devlog::trace<grp::base>("Get sector transfer rejected: invalid partition {}", partitionNumber);
         reject = true;
-    } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
-        devlog::trace<grp::base>("Get sector transfer rejected: no data in partition {}", partitionNumber);
-        reject = true;
-    } else if (sectorNumber == 0) {
-        devlog::trace<grp::base>("Get sector transfer rejected: requested zero sectors");
-        wait = true;
     } else {
-        SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
+        const uint32 partSecCount = m_partitionManager.GetBufferCount(partitionNumber);
+        if (partSecCount == 0) [[unlikely]] {
+            devlog::trace<grp::base>("Get sector transfer rejected: no data in partition {}", partitionNumber);
+            reject = true;
+        } else if (sectorNumber == 0) {
+            devlog::trace<grp::base>("Get sector transfer rejected: requested zero sectors");
+            wait = true;
+        } else if (sectorNumber > partSecCount) {
+            devlog::trace<grp::base>("Get sector transfer rejected: requested more sectors than available ({} > {})",
+                                     sectorNumber, partSecCount);
+            wait = true;
+        } else {
+            SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
+        }
     }
 
     // Output structure: standard CD status data
@@ -2726,16 +2733,24 @@ void CDBlock::CmdDeleteSectorData() {
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
         devlog::trace<grp::base>("Delete sector rejected: invalid partition {}", partitionNumber);
         reject = true;
-    } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
-        devlog::trace<grp::base>("Delete sector rejected: no data in partition {}", partitionNumber);
-        reject = true;
-    } else if (sectorNumber == 0) {
-        devlog::trace<grp::base>("Delete sector rejected: requested zero sectors");
-        wait = true;
     } else {
-        const uint32 numFreedSectors = m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
-        devlog::trace<grp::base>("Freed {} sectors from partition {} at offset {}", numFreedSectors, partitionNumber,
-                                 sectorOffset);
+        const uint32 partSecCount = m_partitionManager.GetBufferCount(partitionNumber);
+        if (partSecCount == 0) [[unlikely]] {
+            devlog::trace<grp::base>("Delete sector rejected: no data in partition {}", partitionNumber);
+            reject = true;
+        } else if (sectorNumber == 0) {
+            devlog::trace<grp::base>("Delete sector rejected: requested zero sectors");
+            wait = true;
+        } else if (sectorNumber > partSecCount) {
+            devlog::trace<grp::base>("Delete sector rejected: requested more sectors than available ({} > {})",
+                                     sectorNumber, partSecCount);
+            wait = true;
+        } else {
+            const uint32 numFreedSectors =
+                m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
+            devlog::trace<grp::base>("Freed {} sectors from partition {} at offset {}", numFreedSectors,
+                                     partitionNumber, sectorOffset);
+        }
     }
 
     // Output structure: standard CD status data
@@ -2767,14 +2782,23 @@ void CDBlock::CmdGetThenDeleteSectorData() {
     if (partitionNumber >= kNumPartitions) [[unlikely]] {
         devlog::trace<grp::base>("Get then delete sector transfer rejected: invalid partition {}", partitionNumber);
         reject = true;
-    } else if (m_partitionManager.GetBufferCount(partitionNumber) == 0) [[unlikely]] {
-        devlog::trace<grp::base>("Get then delete sector transfer rejected: no data in partition {}", partitionNumber);
-        reject = true;
-    } else if (sectorNumber == 0) {
-        devlog::trace<grp::base>("Get then delete sector transfer rejected: requested zero sectors");
-        wait = true;
     } else {
-        SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
+        const uint32 partSecCount = m_partitionManager.GetBufferCount(partitionNumber);
+        if (partSecCount == 0) [[unlikely]] {
+            devlog::trace<grp::base>("Get then delete sector transfer rejected: no data in partition {}",
+                                     partitionNumber);
+            reject = true;
+        } else if (sectorNumber == 0) {
+            devlog::trace<grp::base>("Get then delete sector transfer rejected: requested zero sectors");
+            wait = true;
+        } else if (sectorNumber > partSecCount) {
+            devlog::trace<grp::base>(
+                "Get then delete sector transfer rejected: requested more sectors than available ({} > {})",
+                sectorNumber, partSecCount);
+            wait = true;
+        } else {
+            SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
+        }
     }
 
     // Output structure: standard CD status data
