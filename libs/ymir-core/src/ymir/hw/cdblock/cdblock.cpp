@@ -1514,7 +1514,7 @@ void CDBlock::EndTransfer() {
     case TransferType::GetThenDeleteSector:
         if (m_xferType == TransferType::GetThenDeleteSector) {
             // Delete sectors, including current sector if not fully read
-            uint32 numSectors = m_xferSectorPos;
+            uint32 numSectors = m_xferSectorPos - m_xferDelStart;
             if (m_xferBufferPos > 0 && m_xferBufferPos < m_xferGetLength / sizeof(uint16)) {
                 ++numSectors;
             }
