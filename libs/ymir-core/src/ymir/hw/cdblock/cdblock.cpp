@@ -2690,7 +2690,7 @@ void CDBlock::CmdGetSectorData() {
         } else if (sectorNumber == 0) {
             devlog::trace<grp::base>("Get sector transfer rejected: requested zero sectors");
             wait = true;
-        } else if (sectorNumber != 0xFFFF && sectorNumber > partSecCount) {
+        } else if (sectorNumber != 0xFFFF && sectorOffset + sectorNumber > partSecCount) {
             devlog::trace<grp::base>("Get sector transfer rejected: requested more sectors than available ({} > {})",
                                      sectorNumber, partSecCount);
             wait = true;
@@ -2741,7 +2741,7 @@ void CDBlock::CmdDeleteSectorData() {
         } else if (sectorNumber == 0) {
             devlog::trace<grp::base>("Delete sector rejected: requested zero sectors");
             wait = true;
-        } else if (sectorNumber != 0xFFFF && sectorNumber > partSecCount) {
+        } else if (sectorNumber != 0xFFFF && sectorOffset + sectorNumber > partSecCount) {
             devlog::trace<grp::base>("Delete sector rejected: requested more sectors than available ({} > {})",
                                      sectorNumber, partSecCount);
             wait = true;
@@ -2791,7 +2791,7 @@ void CDBlock::CmdGetThenDeleteSectorData() {
         } else if (sectorNumber == 0) {
             devlog::trace<grp::base>("Get then delete sector transfer rejected: requested zero sectors");
             wait = true;
-        } else if (sectorNumber != 0xFFFF && sectorNumber > partSecCount) {
+        } else if (sectorNumber != 0xFFFF && sectorOffset + sectorNumber > partSecCount) {
             devlog::trace<grp::base>(
                 "Get then delete sector transfer rejected: requested more sectors than available ({} > {})",
                 sectorNumber, partSecCount);
