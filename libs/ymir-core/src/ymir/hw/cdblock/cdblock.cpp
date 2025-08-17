@@ -1336,9 +1336,10 @@ void CDBlock::ReadSector() {
         devlog::trace<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
                                  buffer->frameAddress, m_xferSectorPos);
 
-        const bool mode2 = buffer->data[0xF] != 0x01;
+        // TODO: mode 2 form 2 forces get sector length to 2324
+        const bool mode1 = buffer->data[0xF] == 0x01;
         const uint32 getSize = m_getSectorLength;
-        const uint32 limit = mode2 ? 24u : 16u;
+        const uint32 limit = mode1 ? 16u : 24u;
         const uint32 offset = std::min(2352u - getSize, limit);
 
         for (size_t i = 0; i < m_getSectorLength; i += sizeof(uint16)) {
@@ -1409,7 +1410,7 @@ void CDBlock::DoWriteTransfer(uint16 value) {
                 util::WriteBE<uint16>(&buffer.data[writePos], value);
 
                 // Mode 2 subheader parameters
-                if (buffer.data[0xF] != 0x01) {
+                if (buffer.data[0xF] == 0x02) {
                     if (writePos == 0x10) {
                         buffer.subheader.fileNum = buffer.data[0x10];
                         buffer.subheader.chanNum = buffer.data[0x11];
