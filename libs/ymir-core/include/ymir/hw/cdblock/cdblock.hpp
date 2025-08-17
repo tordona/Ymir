@@ -193,6 +193,8 @@ private:
     uint8 m_xferPartition;  // From which partition to read
     // uint8 m_xferFilter;      // To which filter to write
     uint32 m_xferGetLength; // How many bytes to read from the current sector
+    uint32 m_xferDelStart;  // Starting offset of sectors to delete in GetThenDeleteSector transfer
+    uint32 m_xferDelCount;  // Number of sectors to delete in GetThenDeleteSector transfer
 
     // Parameters for subcode transfers
     uint32 m_xferSubcodeFrameAddress; // Last subcode R-W frame address

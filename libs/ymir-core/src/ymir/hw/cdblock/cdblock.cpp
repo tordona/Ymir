@@ -316,6 +316,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
     state.xferSectorEnd = m_xferSectorEnd;
     state.xferPartition = m_xferPartition;
     state.xferGetLength = m_xferGetLength;
+    state.xferDelCount = m_xferDelCount;
 
     state.xferSubcodeFrameAddress = m_xferSubcodeFrameAddress;
     state.xferSubcodeGroup = m_xferSubcodeGroup;
@@ -460,6 +461,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
     m_xferSectorEnd = state.xferSectorEnd;
     m_xferPartition = state.xferPartition;
     m_xferGetLength = state.xferGetLength;
+    m_xferDelCount = state.xferDelCount;
 
     m_xferSubcodeFrameAddress = state.xferSubcodeFrameAddress;
     m_xferSubcodeGroup = state.xferSubcodeGroup;
@@ -1163,17 +1165,17 @@ CDBlock::SectorTransferResult CDBlock::SetupGetSectorTransfer(uint16 sectorPos, 
         return SectorTransferResult::Reject;
     }
 
+    if (sectorCount == 0) {
+        devlog::trace<grp::base>("{} sector transfer rejected: requested zero sectors",
+                                 (del ? "Get then delete" : "Get"));
+        return SectorTransferResult::Wait;
+    }
+
     const uint8 partitionSize = m_partitionManager.GetBufferCount(partitionNumber);
     if (partitionSize == 0) {
         devlog::trace<grp::base>("{} sector transfer rejected: no data in partition {}",
                                  (del ? "Get then delete" : "Get"), partitionNumber);
         return SectorTransferResult::Reject;
-    }
-
-    if (sectorCount == 0) {
-        devlog::trace<grp::base>("{} sector transfer rejected: requested zero sectors",
-                                 (del ? "Get then delete" : "Get"));
-        return SectorTransferResult::Wait;
     }
 
     const bool fromLastSector = sectorPos == 0xFFFF;
@@ -1210,12 +1212,17 @@ CDBlock::SectorTransferResult CDBlock::SetupGetSectorTransfer(uint16 sectorPos, 
                              (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1,
                              partitionNumber);
 
+    const uint32 numSectors = m_xferSectorEnd - m_xferSectorPos + 1;
     m_xferType = del ? TransferType::GetThenDeleteSector : TransferType::GetSector;
     m_xferPos = 0;
     m_xferBufferPos = 0;
-    m_xferLength = m_getSectorLength / sizeof(uint16) * (m_xferSectorEnd - m_xferSectorPos + 1);
+    m_xferLength = m_getSectorLength / sizeof(uint16) * numSectors;
     m_xferCount = 0;
     m_xferExtraCount = 0;
+    if (del) {
+        m_xferDelStart = m_xferSectorPos;
+        m_xferDelCount = numSectors;
+    }
 
     ReadSector();
 
@@ -1424,14 +1431,8 @@ uint16 CDBlock::DoReadTransfer() {
     case TransferType::GetSector: [[fallthrough]];
     case TransferType::GetThenDeleteSector:
         if (m_xferBufferPos >= m_xferGetLength / sizeof(uint16)) {
-            if (m_xferType == TransferType::GetThenDeleteSector) {
-                // Delete sector once fully read
-                m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
-                devlog::trace<grp::xfer>("Sector freed");
-            } else {
-                m_xferSectorPos++;
-                devlog::trace<grp::xfer>("Going to sector {}", m_xferSectorPos);
-            }
+            ++m_xferSectorPos;
+            devlog::trace<grp::xfer>("Going to sector {}", m_xferSectorPos);
             m_xferBufferPos = 0;
             if (m_xferPos + 1 < m_xferLength) {
                 ReadSector();
@@ -1512,11 +1513,14 @@ void CDBlock::EndTransfer() {
     case TransferType::GetSector:
     case TransferType::GetThenDeleteSector:
         if (m_xferType == TransferType::GetThenDeleteSector) {
+            // Delete sectors, including current sector if not fully read
+            uint32 numSectors = m_xferSectorPos;
             if (m_xferBufferPos > 0 && m_xferBufferPos < m_xferGetLength / sizeof(uint16)) {
-                // Delete sector if not fully read
-                m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
-                devlog::trace<grp::xfer>("Sector freed");
+                ++numSectors;
             }
+            const uint32 numSectorsRemoved =
+                m_partitionManager.DeleteSectors(m_xferPartition, m_xferDelStart, numSectors);
+            devlog::trace<grp::xfer>("{} of {} sectors freed", numSectors, numSectorsRemoved);
         }
         SetInterrupt(kHIRQ_EHST);
         break;
@@ -2507,7 +2511,10 @@ void CDBlock::CmdGetSectorNumber() {
     // partition number  <blank>
     // <blank>
     const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
-    const uint8 sectorCount = m_partitionManager.GetBufferCount(partitionNumber);
+    uint8 sectorCount = m_partitionManager.GetBufferCount(partitionNumber);
+    if (m_xferType == TransferType::GetThenDeleteSector) {
+        sectorCount -= m_xferDelCount;
+    }
 
     // Output structure:
     // status code      <blank>

@@ -956,6 +956,8 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     // - New fields
     //   - reservedBuffers = 0
     //   - xferGetLength = getSectorLength
+    //   - xferDelCount = (xferLength + getSectorLength - 1) / getSectorLength if xferType == GetThenDeleteSector,
+    //     otherwise 0
     // v8:
     // - New fields
     //   - fs
@@ -978,7 +980,7 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     ar(s.xferType, s.xferPos, s.xferLength, s.xferCount, s.xferBuffer, s.xferBufferPos);
     ar(s.xferSectorPos, s.xferSectorEnd, s.xferPartition);
     if (version >= 9) {
-        ar(s.xferGetLength);
+        ar(s.xferGetLength, s.xferDelCount);
         // Default value handled below, after reading getSectorLength
     }
     ar(s.xferSubcodeFrameAddress, s.xferSubcodeGroup);
@@ -1024,6 +1026,11 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
 
     if (version < 9) {
         s.xferGetLength = s.getSectorLength;
+        if (s.xferType == CDBlockState::TransferType::GetThenDeleteSector) {
+            s.xferDelCount = (s.xferLength + s.getSectorLength - 1) / s.getSectorLength;
+        } else {
+            s.xferDelCount = 0;
+        }
     }
 }
 
