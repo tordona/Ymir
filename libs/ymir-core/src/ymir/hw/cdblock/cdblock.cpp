@@ -1798,7 +1798,7 @@ void CDBlock::CmdInitializeCDSystem() {
     // Output structure: standard CD status data
     ReportCDStatus();
 
-    SetInterrupt(kHIRQ_CMOK | kHIRQ_ESEL);
+    SetInterrupt(kHIRQ_EFLS | kHIRQ_ECPY | kHIRQ_EHST | kHIRQ_ESEL | kHIRQ_CMOK);
 }
 
 void CDBlock::CmdOpenTray() {
