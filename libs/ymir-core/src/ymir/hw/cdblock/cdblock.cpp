@@ -1155,23 +1155,60 @@ void CDBlock::SetupTOCTransfer() {
     }
 }
 
-void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8 partitionNumber, bool del) {
-    devlog::trace<grp::xfer>("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
-                             (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1,
-                             partitionNumber);
+CDBlock::SectorTransferResult CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount,
+                                                              uint8 partitionNumber, bool del) {
+    if (partitionNumber >= kNumPartitions) {
+        devlog::trace<grp::base>("{} sector transfer rejected: invalid partition {}", (del ? "Get then delete" : "Get"),
+                                 partitionNumber);
+        return SectorTransferResult::Reject;
+    }
 
     const uint8 partitionSize = m_partitionManager.GetBufferCount(partitionNumber);
-    if (sectorPos == 0xFFFF) {
+    if (partitionSize == 0) {
+        devlog::trace<grp::base>("{} sector transfer rejected: no data in partition {}",
+                                 (del ? "Get then delete" : "Get"), partitionNumber);
+        return SectorTransferResult::Reject;
+    }
+
+    if (sectorCount == 0) {
+        devlog::trace<grp::base>("{} sector transfer rejected: requested zero sectors",
+                                 (del ? "Get then delete" : "Get"));
+        return SectorTransferResult::Wait;
+    }
+
+    const bool fromLastSector = sectorPos == 0xFFFF;
+    const bool untilLastSector = sectorCount == 0xFFFF;
+
+    if (fromLastSector && untilLastSector) {
+        m_xferSectorPos = partitionSize - 1;
+        m_xferSectorEnd = partitionSize - 1;
+    } else if (fromLastSector) {
+        // There seems to be an off-by-one error in CD Block logic in this case
+        if (sectorCount == partitionSize) {
+            devlog::trace<grp::base>("{} sector transfer rejected: requested all sectors with offset from end",
+                                     (del ? "Get then delete" : "Get"));
+            return SectorTransferResult::Wait;
+        }
         m_xferSectorPos = partitionSize - sectorCount;
         m_xferSectorEnd = partitionSize - 1;
-    } else if (sectorCount == 0xFFFF) {
+    } else if (untilLastSector) {
         m_xferSectorPos = sectorPos;
         m_xferSectorEnd = partitionSize - 1;
     } else {
         m_xferSectorPos = sectorPos;
-        m_xferSectorEnd = std::min<uint32>(sectorPos + sectorCount - 1, partitionSize);
+        m_xferSectorEnd = sectorPos + sectorCount - 1;
     }
+    if (m_xferSectorPos >= partitionSize || m_xferSectorEnd >= partitionSize) {
+        devlog::trace<grp::base>("{} sector transfer rejected: requested sectors out of range ({}..{} >= {})",
+                                 (del ? "Get then delete" : "Get"), m_xferSectorPos, m_xferSectorEnd, partitionNumber);
+        return SectorTransferResult::Wait;
+    }
+
     m_xferPartition = partitionNumber;
+
+    devlog::trace<grp::xfer>("Starting sector {} transfer - sectors {} to {} into buffer partition {}",
+                             (del ? "read then delete" : "read"), sectorPos, sectorPos + sectorCount - 1,
+                             partitionNumber);
 
     m_xferType = del ? TransferType::GetThenDeleteSector : TransferType::GetSector;
     m_xferPos = 0;
@@ -1181,6 +1218,8 @@ void CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount, uint8
     m_xferExtraCount = 0;
 
     ReadSector();
+
+    return SectorTransferResult::OK;
 }
 
 void CDBlock::SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber) {
@@ -2677,42 +2716,22 @@ void CDBlock::CmdGetSectorData() {
     const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
     const uint16 sectorNumber = m_CR[3];
 
-    bool reject = false;
-    bool wait = false;
-    if (partitionNumber >= kNumPartitions) [[unlikely]] {
-        devlog::trace<grp::base>("Get sector transfer rejected: invalid partition {}", partitionNumber);
-        reject = true;
-    } else {
-        const uint32 partSecCount = m_partitionManager.GetBufferCount(partitionNumber);
-        if (partSecCount == 0) [[unlikely]] {
-            devlog::trace<grp::base>("Get sector transfer rejected: no data in partition {}", partitionNumber);
-            reject = true;
-        } else if (sectorNumber == 0) {
-            devlog::trace<grp::base>("Get sector transfer rejected: requested zero sectors");
-            wait = true;
-        } else if (sectorNumber != 0xFFFF && sectorOffset + sectorNumber > partSecCount) {
-            devlog::trace<grp::base>("Get sector transfer rejected: requested more sectors than available ({} > {})",
-                                     sectorNumber, partSecCount);
-            wait = true;
-        } else {
-            SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
-        }
-    }
-
-    // Output structure: standard CD status data
-    if (reject) [[unlikely]] {
-        ReportCDStatus(kStatusReject);
-    } else if (wait) [[unlikely]] {
-        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait);
-    } else {
-        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
-        // TODO: should hold status flag kStatusFlagXferRequest until ready
-    }
+    const SectorTransferResult result = SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, false);
 
     uint16 hirq = kHIRQ_CMOK;
-    if (!reject && !wait) {
+
+    // Output structure: standard CD status data
+    switch (result) {
+    case SectorTransferResult::OK:
+        // TODO: should hold status flag kStatusFlagXferRequest until ready
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
         hirq |= kHIRQ_DRDY;
+        break;
+    case SectorTransferResult::Wait: ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait); break;
+    case SectorTransferResult::Reject: [[fallthrough]];
+    default: ReportCDStatus(kStatusReject); break;
     }
+
     SetInterrupt(hirq);
 }
 
@@ -2735,15 +2754,22 @@ void CDBlock::CmdDeleteSectorData() {
         reject = true;
     } else {
         const uint32 partSecCount = m_partitionManager.GetBufferCount(partitionNumber);
+
+        const bool fromLastSector = sectorOffset == 0xFFFF;
+        const bool untilLastSector = sectorNumber == 0xFFFF;
+        const uint32 startSector =
+            fromLastSector ? (untilLastSector ? partSecCount - 1 : partSecCount - sectorNumber) : sectorOffset;
+        const uint32 endSector = untilLastSector ? partSecCount - 1 : startSector + sectorNumber - 1;
+
         if (partSecCount == 0) [[unlikely]] {
             devlog::trace<grp::base>("Delete sector rejected: no data in partition {}", partitionNumber);
             reject = true;
         } else if (sectorNumber == 0) {
             devlog::trace<grp::base>("Delete sector rejected: requested zero sectors");
             wait = true;
-        } else if (sectorNumber != 0xFFFF && sectorOffset + sectorNumber > partSecCount) {
-            devlog::trace<grp::base>("Delete sector rejected: requested more sectors than available ({} > {})",
-                                     sectorNumber, partSecCount);
+        } else if (startSector >= partSecCount || endSector >= partSecCount) {
+            devlog::trace<grp::base>("Delete sector rejected: sectors out of range ({}..{} > {})", startSector,
+                                     endSector, partSecCount);
             wait = true;
         } else {
             const uint32 numFreedSectors =
@@ -2777,44 +2803,22 @@ void CDBlock::CmdGetThenDeleteSectorData() {
     const uint8 partitionNumber = bit::extract<8, 15>(m_CR[2]);
     const uint16 sectorNumber = m_CR[3];
 
-    bool reject = false;
-    bool wait = false;
-    if (partitionNumber >= kNumPartitions) [[unlikely]] {
-        devlog::trace<grp::base>("Get then delete sector transfer rejected: invalid partition {}", partitionNumber);
-        reject = true;
-    } else {
-        const uint32 partSecCount = m_partitionManager.GetBufferCount(partitionNumber);
-        if (partSecCount == 0) [[unlikely]] {
-            devlog::trace<grp::base>("Get then delete sector transfer rejected: no data in partition {}",
-                                     partitionNumber);
-            reject = true;
-        } else if (sectorNumber == 0) {
-            devlog::trace<grp::base>("Get then delete sector transfer rejected: requested zero sectors");
-            wait = true;
-        } else if (sectorNumber != 0xFFFF && sectorOffset + sectorNumber > partSecCount) {
-            devlog::trace<grp::base>(
-                "Get then delete sector transfer rejected: requested more sectors than available ({} > {})",
-                sectorNumber, partSecCount);
-            wait = true;
-        } else {
-            SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
-        }
-    }
-
-    // Output structure: standard CD status data
-    if (reject) [[unlikely]] {
-        ReportCDStatus(kStatusReject);
-    } else if (wait) [[unlikely]] {
-        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait);
-    } else {
-        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
-        // TODO: should hold status flag kStatusFlagXferRequest until ready
-    }
+    const SectorTransferResult result = SetupGetSectorTransfer(sectorOffset, sectorNumber, partitionNumber, true);
 
     uint16 hirq = kHIRQ_CMOK;
-    if (!reject && !wait) {
-        hirq |= kHIRQ_DRDY | kHIRQ_EHST;
+
+    // Output structure: standard CD status data
+    switch (result) {
+    case SectorTransferResult::OK:
+        // TODO: should hold status flag kStatusFlagXferRequest until ready
+        ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagXferRequest);
+        hirq |= kHIRQ_DRDY;
+        break;
+    case SectorTransferResult::Wait: ReportCDStatus((m_status.statusCode & 0xF) | kStatusFlagWait); break;
+    case SectorTransferResult::Reject: [[fallthrough]];
+    default: ReportCDStatus(kStatusReject); break;
     }
+
     SetInterrupt(hirq);
 }
 
