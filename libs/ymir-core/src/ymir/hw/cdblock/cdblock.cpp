@@ -1473,7 +1473,7 @@ void CDBlock::EndTransfer() {
     case TransferType::GetSector:
     case TransferType::GetThenDeleteSector:
         if (m_xferType == TransferType::GetThenDeleteSector) {
-            if (m_xferBufferPos < m_getSectorLength / sizeof(uint16)) {
+            if (m_xferBufferPos > 0 && m_xferBufferPos < m_getSectorLength / sizeof(uint16)) {
                 // Delete sector if not fully read
                 m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
                 devlog::trace<grp::xfer>("Sector freed");
