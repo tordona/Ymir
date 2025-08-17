@@ -762,7 +762,7 @@ private:
             if (!mienp) {
                 m_midiInputReadPos = (m_midiInputReadPos + 1) % m_midiInputBuffer.size();
             } else {
-                devlog::error<grp::midi>("Invalid read from empty MIDI buffer");
+                devlog::trace<grp::midi>("Invalid read from empty MIDI buffer");
             }
         }
 
