@@ -122,7 +122,7 @@ void CDBlock::Reset(bool hard) {
         filter.Reset();
     }
     m_cdDeviceConnection = Filter::kDisconnected;
-    m_lastCDWritePartition = ~0u;
+    m_lastCDWritePartition = 0xFF;
 
     m_calculatedPartitionSize = 0;
 
@@ -1830,7 +1830,7 @@ void CDBlock::CmdInitializeCDSystem() {
             filter.Reset();
         }
         m_cdDeviceConnection = Filter::kDisconnected;
-        m_lastCDWritePartition = ~0u;
+        m_lastCDWritePartition = 0xFF;
 
         m_xferType = TransferType::None;
         m_xferPos = 0;
