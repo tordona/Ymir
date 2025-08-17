@@ -20,7 +20,7 @@ Introduced save state file version 9.
 
 ### Fixes
 
-- App: Set UTF-8 locale globally. Fixes CHD loader unable to load files with Unicode characters in their names.
+- App: Set en-US UTF-8 locale globally. Fixes CHD loader unable to load files with Unicode characters in their names.
 - CD Block: Prevent a crash when attempting to set up subcode transfers without an active track.
 - CD Block: Use CD Block clock ratios instead of SCSP's for drive state update events.
 - CD Block: Various Put/Get/Delete Sector Data nuances. (thanks to @celeriyacon)

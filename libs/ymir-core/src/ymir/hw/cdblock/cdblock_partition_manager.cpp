@@ -15,6 +15,7 @@ CDBlock::PartitionManager::PartitionManager() {
 void CDBlock::PartitionManager::Reset() {
     m_partitions.fill({});
     m_freeBuffers = kNumBuffers;
+    m_reservedBuffers = 0;
     devlog::trace<grp::part_mgr>("Cleared partitions; free buffers = {}", m_freeBuffers);
 }
 
