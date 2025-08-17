@@ -1160,50 +1160,36 @@ void CDBlock::SetupTOCTransfer() {
 CDBlock::SectorTransferResult CDBlock::SetupGetSectorTransfer(uint16 sectorPos, uint16 sectorCount,
                                                               uint8 partitionNumber, bool del) {
     if (partitionNumber >= kNumPartitions) {
-        devlog::trace<grp::base>("{} sector transfer rejected: invalid partition {}", (del ? "Get then delete" : "Get"),
+        devlog::trace<grp::xfer>("{} sector transfer rejected: invalid partition {}", (del ? "Get then delete" : "Get"),
                                  partitionNumber);
         return SectorTransferResult::Reject;
     }
 
     if (sectorCount == 0) {
-        devlog::trace<grp::base>("{} sector transfer rejected: requested zero sectors",
+        devlog::trace<grp::xfer>("{} sector transfer rejected: requested zero sectors",
                                  (del ? "Get then delete" : "Get"));
         return SectorTransferResult::Wait;
     }
 
     const uint8 partitionSize = m_partitionManager.GetBufferCount(partitionNumber);
     if (partitionSize == 0) {
-        devlog::trace<grp::base>("{} sector transfer rejected: no data in partition {}",
+        devlog::trace<grp::xfer>("{} sector transfer rejected: no data in partition {}",
                                  (del ? "Get then delete" : "Get"), partitionNumber);
         return SectorTransferResult::Reject;
     }
 
-    const bool fromLastSector = sectorPos == 0xFFFF;
-    const bool untilLastSector = sectorCount == 0xFFFF;
+    m_xferSectorPos = sectorPos == 0xFFFF ? partitionSize - 1 : sectorPos;
+    m_xferSectorEnd = sectorCount == 0xFFFF ? partitionSize - 1 : m_xferSectorPos + sectorCount - 1;
 
-    if (fromLastSector && untilLastSector) {
-        m_xferSectorPos = partitionSize - 1;
-        m_xferSectorEnd = partitionSize - 1;
-    } else if (fromLastSector) {
-        // There seems to be an off-by-one error in CD Block logic in this case
-        if (sectorCount == partitionSize) {
-            devlog::trace<grp::base>("{} sector transfer rejected: requested all sectors with offset from end",
-                                     (del ? "Get then delete" : "Get"));
-            return SectorTransferResult::Wait;
-        }
-        m_xferSectorPos = partitionSize - sectorCount;
-        m_xferSectorEnd = partitionSize - 1;
-    } else if (untilLastSector) {
-        m_xferSectorPos = sectorPos;
-        m_xferSectorEnd = partitionSize - 1;
-    } else {
-        m_xferSectorPos = sectorPos;
-        m_xferSectorEnd = sectorPos + sectorCount - 1;
-    }
     if (m_xferSectorPos >= partitionSize || m_xferSectorEnd >= partitionSize) {
-        devlog::trace<grp::base>("{} sector transfer rejected: requested sectors out of range ({}..{} >= {})",
+        devlog::trace<grp::xfer>("{} sector transfer rejected: sectors out of range ({}..{} >= {})",
                                  (del ? "Get then delete" : "Get"), m_xferSectorPos, m_xferSectorEnd, partitionNumber);
         return SectorTransferResult::Wait;
+    }
+    if (m_xferSectorPos > m_xferSectorEnd) {
+        devlog::trace<grp::xfer>("{} sector transfer rejected: sectors range reversed: {}..{}",
+                                 (del ? "Get then delete" : "Get"), m_xferSectorPos, m_xferSectorEnd);
+        return SectorTransferResult::Reject;
     }
 
     m_xferPartition = partitionNumber;
@@ -2774,22 +2760,22 @@ void CDBlock::CmdDeleteSectorData() {
     } else {
         const uint32 partSecCount = m_partitionManager.GetBufferCount(partitionNumber);
 
-        const bool fromLastSector = sectorOffset == 0xFFFF;
-        const bool untilLastSector = sectorNumber == 0xFFFF;
-        const uint32 startSector =
-            fromLastSector ? (untilLastSector ? partSecCount - 1 : partSecCount - sectorNumber) : sectorOffset;
-        const uint32 endSector = untilLastSector ? partSecCount - 1 : startSector + sectorNumber - 1;
+        const uint32 startSector = sectorOffset == 0xFFFF ? partSecCount - 1 : sectorOffset;
+        const uint32 endSector = sectorNumber == 0xFFFF ? partSecCount - 1 : startSector + sectorNumber - 1;
 
-        if (partSecCount == 0) [[unlikely]] {
-            devlog::trace<grp::base>("Delete sector rejected: no data in partition {}", partitionNumber);
-            reject = true;
-        } else if (sectorNumber == 0) {
+        if (sectorNumber == 0) {
             devlog::trace<grp::base>("Delete sector rejected: requested zero sectors");
             wait = true;
+        } else if (partSecCount == 0) [[unlikely]] {
+            devlog::trace<grp::base>("Delete sector rejected: no data in partition {}", partitionNumber);
+            reject = true;
         } else if (startSector >= partSecCount || endSector >= partSecCount) {
             devlog::trace<grp::base>("Delete sector rejected: sectors out of range ({}..{} > {})", startSector,
                                      endSector, partSecCount);
             wait = true;
+        } else if (startSector > endSector) {
+            devlog::trace<grp::base>("Delete sector rejected: sectors range reversed: {}..{}", startSector, endSector);
+            reject = true;
         } else {
             const uint32 numFreedSectors =
                 m_partitionManager.DeleteSectors(partitionNumber, sectorOffset, sectorNumber);
