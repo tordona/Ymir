@@ -355,6 +355,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
         buffer.data.fill(0);
         buffer.size = 0;
         buffer.frameAddress = 0;
+        buffer.mode2 = false;
         buffer.fileNum = 0;
         buffer.chanNum = 0;
         buffer.submode = 0;
@@ -373,6 +374,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
         state.buffers[pos].data = scratchBuffer.data;
         state.buffers[pos].size = scratchBuffer.size;
         state.buffers[pos].frameAddress = scratchBuffer.frameAddress;
+        state.buffers[pos].mode2 = scratchBuffer.mode2;
         state.buffers[pos].fileNum = scratchBuffer.subheader.fileNum;
         state.buffers[pos].chanNum = scratchBuffer.subheader.chanNum;
         state.buffers[pos].submode = scratchBuffer.subheader.submode;
@@ -498,6 +500,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
         scratchBuffer.data = state.buffers[pos].data;
         scratchBuffer.size = state.buffers[pos].size;
         scratchBuffer.frameAddress = state.buffers[pos].frameAddress;
+        scratchBuffer.mode2 = state.buffers[pos].mode2;
         scratchBuffer.subheader.fileNum = state.buffers[pos].fileNum;
         scratchBuffer.subheader.chanNum = state.buffers[pos].chanNum;
         scratchBuffer.subheader.submode = state.buffers[pos].submode;
@@ -989,8 +992,8 @@ void CDBlock::ProcessDriveStatePlay() {
             Buffer &buffer = m_scratchBuffers[0];
 
             // Sanity check: is the track valid?
-            if (track != nullptr && track->ReadSector(frameAddress, buffer.data, m_getSectorLength)) [[likely]] {
-                devlog::trace<grp::play>("Read {} bytes from frame address {:06X}", m_getSectorLength, frameAddress);
+            if (track != nullptr && track->ReadSector(frameAddress, buffer.data)) [[likely]] {
+                devlog::trace<grp::play>("Read {} bytes from frame address {:06X}", track->sectorSize, frameAddress);
 
                 if (track->controlADR == 0x01) {
                     // If playing an audio track, send to SCSP
@@ -1037,6 +1040,7 @@ void CDBlock::ProcessDriveStatePlay() {
                 } else {
                     buffer.size = m_getSectorLength;
                     buffer.frameAddress = frameAddress;
+                    buffer.mode2 = track->mode2;
                     track->ReadSectorSubheader(frameAddress, buffer.subheader);
 
                     // Check against CD device filter and send data to the appropriate destination
@@ -1226,7 +1230,7 @@ void CDBlock::SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber) 
         auto &buffer = m_scratchBuffers[i];
         buffer.frameAddress = 0;
         buffer.size = m_putSectorLength;
-        buffer.frameAddress = 0;
+        buffer.mode2 = true;
         buffer.subheader.fileNum = 0;
         buffer.subheader.chanNum = 0;
         buffer.subheader.submode = 0;
@@ -1362,8 +1366,10 @@ void CDBlock::ReadSector() {
         devlog::trace<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
                                  buffer->frameAddress, m_xferSectorPos);
 
+        const uint32 offset = std::min(2352u - m_getSectorLength, buffer->mode2 ? 24u : 16u);
+
         for (size_t i = 0; i < m_getSectorLength; i += sizeof(uint16)) {
-            m_xferBuffer[i / sizeof(uint16)] = util::ReadBE<uint16>(&buffer->data[i]);
+            m_xferBuffer[i / sizeof(uint16)] = util::ReadBE<uint16>(&buffer->data[i + offset]);
         }
     } else {
         devlog::warn<grp::xfer>("Out of bounds transfer - sector {}", m_xferSectorPos);

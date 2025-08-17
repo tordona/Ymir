@@ -81,6 +81,7 @@ struct CDBlockState {
         uint8 chanNum;
         uint8 submode;
         uint8 codingInfo;
+        bool mode2;
 
         // 0 to kNumPartitions-1 = that partition
         // 255 = scratch buffer or not used

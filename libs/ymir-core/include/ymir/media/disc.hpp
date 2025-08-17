@@ -67,19 +67,16 @@ struct Track {
         return binaryReader->Read(sectorOffset + userDataOffset, 2048, outBuf) == 2048;
     }
 
-    // Reads a sector of the specified size from the given absolute frame address.
-    // If the output size is larger than the track sector size, the missing parts are synthesized in the output buffer.
-    // The following sizes are supported:
-    // - 2048 bytes: reads only the user data portion of the sector
-    // - 2336 bytes: appends the subheader (checksums and ECC)
-    // - 2340 bytes: prepends the header (min:sec:frac and mode)
-    // - 2352 bytes: prepends the sync bytes
+    // Reads a sector from the given absolute frame address.
+    // If the track sector size is less than 2352, the missing parts are synthesized in the output buffer:
+    // - 2048 bytes: sync bytes + header + checksums/ECC
+    // - 2336 bytes: sync bytes + header
+    // - 2340 bytes: sync bytes
+    // - 2352 bytes: nothing
     // Returns true if the sector was read successfully.
     // Returns false if the sector could not be fully read, the frame address is out of range or the requested size is
     // unsupported.
-    bool ReadSector(uint32 frameAddress, std::span<uint8, 2352> outBuf, uint32 targetSize) const {
-        assert(targetSize == 2048 || targetSize == 2336 || targetSize == 2340 || targetSize == 2352);
-
+    bool ReadSector(uint32 frameAddress, std::span<uint8, 2352> outBuf) const {
         if (frameAddress < startFrameAddress || frameAddress > endFrameAddress) [[unlikely]] {
             return false;
         }
@@ -91,24 +88,17 @@ struct Track {
             return readSize == 2352;
         }
 
-        // Determine which components are needed and which are present
-        const bool needsSyncBytes = targetSize >= 2352;
-        const bool needsHeader = targetSize >= 2340;
-        const bool needsSubheader = targetSize >= 2336;
-
+        // Determine which components are present and where to write the sector data in the output buffer
         const bool hasSyncBytes = sectorSize >= 2352;
         const bool hasHeader = sectorSize >= 2340;
         const bool hasSubheader = sectorSize >= 2336;
-
-        // Determine how much data needs to be skipped from the raw sector read and where we need to write it
-        const uint32 readOffset = (!needsSyncBytes && hasSyncBytes) * 12 + (!needsHeader && hasHeader) * 4 + mode2 * 8;
-        const uint32 writeOffset = (needsSyncBytes && !hasSyncBytes) * 12 + (needsHeader && !hasHeader) * 4;
+        const uint32 writeOffset = !hasSyncBytes * 12 + !hasHeader * 4;
 
         // Try to read raw sector data based on specifications
-        const uint32 sectorOffset = (frameAddress - startFrameAddress) * sectorSize + readOffset;
-        const std::span<uint8> output{outBuf.begin() + writeOffset, targetSize};
-        const uintmax_t readSize = binaryReader->Read(sectorOffset, targetSize, output);
-        if (readSize != targetSize) {
+        const uint32 sectorOffset = (frameAddress - startFrameAddress) * sectorSize;
+        const std::span<uint8> output{outBuf.begin() + writeOffset, sectorSize};
+        const uintmax_t readSize = binaryReader->Read(sectorOffset, sectorSize, output);
+        if (readSize != sectorSize) {
             return false;
         }
 
@@ -117,13 +107,13 @@ struct Track {
         fmt::println("Requested size:    {} bytes", targetSize);*/
 
         // Fill in any missing data
-        if (needsSyncBytes && !hasSyncBytes) {
+        if (!hasSyncBytes) {
             static constexpr std::array<uint8, 12> syncBytes = {0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                                                 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00};
             std::copy(syncBytes.begin(), syncBytes.end(), outBuf.begin());
             // fmt::println("  Added sync bytes");
         }
-        if (needsHeader && !hasHeader) {
+        if (!hasHeader) {
             // Convert absolute frame address to min:sec:frac
             outBuf[0xC] = frameAddress / 75 / 60;
             outBuf[0xD] = (frameAddress / 75) % 60;
@@ -145,7 +135,7 @@ struct Track {
             }
             // fmt::println("  Added header");
         }
-        if (needsSubheader && !hasSubheader) {
+        if (!hasSubheader) {
             // Fill out checksums after user data
             // TODO: actually calculate checksums
             // for now, we'll fill the checksums with zeros and hope that no software ever checks them

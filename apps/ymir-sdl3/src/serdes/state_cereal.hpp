@@ -979,12 +979,18 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     ar(s.xferSubcodeFrameAddress, s.xferSubcodeGroup);
     ar(s.xferExtraCount);
     if (version >= 5) {
-        ar(s.buffers, s.scratchBufferPutIndex);
+        for (auto &buffer : s.buffers) {
+            serialize(ar, buffer, version);
+        }
+        ar(s.scratchBufferPutIndex);
     } else {
         // scratchBuffer was moved into the buffers array immediately after the partition buffers
         auto buffers = std::make_unique<std::array<CDBlockState::BufferState, cdblock::kNumBuffers>>();
         auto scratchBuffer = std::make_unique<CDBlockState::BufferState>();
-        ar(*buffers, *scratchBuffer);
+        for (auto &buffer : *buffers) {
+            serialize(ar, buffer, version);
+        }
+        ar(*scratchBuffer);
 
         // Copy entire buffers array
         std::copy_n(buffers->begin(), cdblock::kNumBuffers, s.buffers.begin());
@@ -1024,10 +1030,19 @@ void serialize(Archive &ar, CDBlockState::StatusState &s) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, CDBlockState::BufferState &s) {
+void serialize(Archive &ar, CDBlockState::BufferState &s, const uint32 version) {
+    // v9:
+    // - New fields:
+    //   - mode2 = true if any of {fileNum, chanNum, submode, codingInfo} is not zero
+
     ar(s.data, s.size);
     ar(s.frameAddress);
     ar(s.fileNum, s.chanNum, s.submode, s.codingInfo);
+    if (version >= 9) {
+        ar(s.mode2);
+    } else {
+        s.mode2 = s.fileNum != 0 || s.chanNum != 0 || s.submode != 0 || s.codingInfo != 0;
+    }
     ar(s.partitionIndex);
 }
 
