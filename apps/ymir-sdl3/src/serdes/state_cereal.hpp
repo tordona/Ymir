@@ -1031,18 +1031,9 @@ void serialize(Archive &ar, CDBlockState::StatusState &s) {
 
 template <class Archive>
 void serialize(Archive &ar, CDBlockState::BufferState &s, const uint32 version) {
-    // v9:
-    // - New fields:
-    //   - mode2 = true if any of {fileNum, chanNum, submode, codingInfo} is not zero
-
     ar(s.data, s.size);
     ar(s.frameAddress);
     ar(s.fileNum, s.chanNum, s.submode, s.codingInfo);
-    if (version >= 9) {
-        ar(s.mode2);
-    } else {
-        s.mode2 = s.fileNum != 0 || s.chanNum != 0 || s.submode != 0 || s.codingInfo != 0;
-    }
     ar(s.partitionIndex);
 }
 

@@ -32,33 +32,8 @@ FORCE_INLINE static void TraceProcessCommandResponse(debug::ICDBlockTracer *trac
 // -----------------------------------------------------------------------------
 // Utility
 
-static uint32 CalcPutOffset(uint32 getSize, uint32 putSize) {
-    static constexpr uint32 kSectorLengths[] = {
-        2048, // user data
-        2336, // + subheader (checksum, ECC)
-        2340, // + header (sector offset and mode)
-        2352, // + sync bytes
-    };
-    const bool getHasSyncBytes = getSize >= 2352;
-    const bool getHasHeader = getSize >= 2340;
-    const bool getHasSubheader = getSize >= 2336;
-
-    const bool putHasSyncBytes = putSize >= 2352;
-    const bool putHasHeader = putSize >= 2340;
-    const bool putHasSubheader = putSize >= 2336;
-
-    uint32 offset = 0;
-
-    if (getHasSyncBytes && !putHasSyncBytes) {
-        offset += 12;
-    }
-    if (getHasHeader && !putHasHeader) {
-        offset += 4;
-    }
-    if (getHasSubheader && !putHasSubheader) {
-        offset += 8;
-    }
-    return offset;
+static uint32 CalcPutOffset(uint32 size) {
+    return std::min(2352u - size, 24u);
 }
 
 // -----------------------------------------------------------------------------
@@ -355,7 +330,6 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
         buffer.data.fill(0);
         buffer.size = 0;
         buffer.frameAddress = 0;
-        buffer.mode2 = false;
         buffer.fileNum = 0;
         buffer.chanNum = 0;
         buffer.submode = 0;
@@ -374,7 +348,6 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
         state.buffers[pos].data = scratchBuffer.data;
         state.buffers[pos].size = scratchBuffer.size;
         state.buffers[pos].frameAddress = scratchBuffer.frameAddress;
-        state.buffers[pos].mode2 = scratchBuffer.mode2;
         state.buffers[pos].fileNum = scratchBuffer.subheader.fileNum;
         state.buffers[pos].chanNum = scratchBuffer.subheader.chanNum;
         state.buffers[pos].submode = scratchBuffer.subheader.submode;
@@ -500,7 +473,6 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
         scratchBuffer.data = state.buffers[pos].data;
         scratchBuffer.size = state.buffers[pos].size;
         scratchBuffer.frameAddress = state.buffers[pos].frameAddress;
-        scratchBuffer.mode2 = state.buffers[pos].mode2;
         scratchBuffer.subheader.fileNum = state.buffers[pos].fileNum;
         scratchBuffer.subheader.chanNum = state.buffers[pos].chanNum;
         scratchBuffer.subheader.submode = state.buffers[pos].submode;
@@ -536,7 +508,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
 
     m_getSectorLength = state.getSectorLength;
     m_putSectorLength = state.putSectorLength;
-    m_putOffset = CalcPutOffset(m_getSectorLength, m_putSectorLength);
+    m_putOffset = CalcPutOffset(m_putSectorLength);
 
     m_processingCommand = state.processingCommand;
 
@@ -1040,7 +1012,6 @@ void CDBlock::ProcessDriveStatePlay() {
                 } else {
                     buffer.size = m_getSectorLength;
                     buffer.frameAddress = frameAddress;
-                    buffer.mode2 = track->mode2;
                     track->ReadSectorSubheader(frameAddress, buffer.subheader);
 
                     // Check against CD device filter and send data to the appropriate destination
@@ -1230,7 +1201,6 @@ void CDBlock::SetupPutSectorTransfer(uint16 sectorCount, uint8 partitionNumber) 
         auto &buffer = m_scratchBuffers[i];
         buffer.frameAddress = 0;
         buffer.size = m_putSectorLength;
-        buffer.mode2 = true;
         buffer.subheader.fileNum = 0;
         buffer.subheader.chanNum = 0;
         buffer.subheader.submode = 0;
@@ -1366,7 +1336,10 @@ void CDBlock::ReadSector() {
         devlog::trace<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
                                  buffer->frameAddress, m_xferSectorPos);
 
-        const uint32 offset = std::min(2352u - buffer->size, buffer->mode2 ? 24u : 16u);
+        const bool mode2 = buffer->data[0xF] != 0x01;
+        const uint32 getSize = m_getSectorLength;
+        const uint32 limit = mode2 ? 24u : 16u;
+        const uint32 offset = std::min(2352u - getSize, limit);
 
         for (size_t i = 0; i < m_getSectorLength; i += sizeof(uint16)) {
             m_xferBuffer[i / sizeof(uint16)] = util::ReadBE<uint16>(&buffer->data[i + offset]);
@@ -1432,7 +1405,19 @@ void CDBlock::DoWriteTransfer(uint16 value) {
         if (m_scratchBufferPutIndex < m_scratchBuffers.size()) {
             auto &buffer = m_scratchBuffers[m_scratchBufferPutIndex];
             if (m_xferBufferPos < m_putSectorLength) {
-                util::WriteBE<uint16>(&buffer.data[m_xferBufferPos + m_putOffset], value);
+                const uint32 writePos = m_xferBufferPos + m_putOffset;
+                util::WriteBE<uint16>(&buffer.data[writePos], value);
+
+                // Mode 2 subheader parameters
+                if (buffer.data[0xF] != 0x01) {
+                    if (writePos == 0x10) {
+                        buffer.subheader.fileNum = buffer.data[0x10];
+                        buffer.subheader.chanNum = buffer.data[0x11];
+                    } else if (writePos == 0x12) {
+                        buffer.subheader.submode = buffer.data[0x12];
+                        buffer.subheader.codingInfo = buffer.data[0x13];
+                    }
+                }
             }
         }
         m_xferBufferPos += sizeof(uint16);
@@ -2654,7 +2639,7 @@ void CDBlock::CmdSetSectorLength() {
     if (putSectorLength < 4) {
         m_putSectorLength = kSectorLengths[putSectorLength];
     }
-    m_putOffset = CalcPutOffset(m_getSectorLength, m_putSectorLength);
+    m_putOffset = CalcPutOffset(m_putSectorLength);
     devlog::debug<grp::base>("Sector lengths: get={} put={}", m_getSectorLength, m_putSectorLength);
 
     // Output structure: standard CD status data

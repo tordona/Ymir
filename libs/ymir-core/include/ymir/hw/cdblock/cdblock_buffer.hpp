@@ -12,7 +12,6 @@ struct Buffer {
     std::array<uint8, 2352> data;
     uint16 size;
     uint32 frameAddress;
-    bool mode2;
     media::Subheader subheader;
 };
 
