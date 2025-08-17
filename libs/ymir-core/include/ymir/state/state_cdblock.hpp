@@ -67,6 +67,7 @@ struct CDBlockState {
     uint32 xferSectorPos;
     uint32 xferSectorEnd;
     uint8 xferPartition;
+    uint32 xferGetLength;
 
     uint32 xferSubcodeFrameAddress;
     uint32 xferSubcodeGroup;

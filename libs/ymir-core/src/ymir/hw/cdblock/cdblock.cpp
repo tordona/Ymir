@@ -315,6 +315,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
     state.xferSectorPos = m_xferSectorPos;
     state.xferSectorEnd = m_xferSectorEnd;
     state.xferPartition = m_xferPartition;
+    state.xferGetLength = m_xferGetLength;
 
     state.xferSubcodeFrameAddress = m_xferSubcodeFrameAddress;
     state.xferSubcodeGroup = m_xferSubcodeGroup;
@@ -458,6 +459,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
     m_xferSectorPos = state.xferSectorPos;
     m_xferSectorEnd = state.xferSectorEnd;
     m_xferPartition = state.xferPartition;
+    m_xferGetLength = state.xferGetLength;
 
     m_xferSubcodeFrameAddress = state.xferSubcodeFrameAddress;
     m_xferSubcodeGroup = state.xferSubcodeGroup;
@@ -1336,17 +1338,31 @@ void CDBlock::ReadSector() {
         devlog::trace<grp::xfer>("Starting transfer from sector at frame address {:08X} - sector {}",
                                  buffer->frameAddress, m_xferSectorPos);
 
-        // TODO: mode 2 form 2 forces get sector length to 2324
+        // Skip to user data when not reading 2352 bytes.
+        // Also force get sector length 2048 -> 2324 when executing:
+        // - Get Sector Data from Mode 2 Form 2 sectors
+        // - Get Then Delete Sector Data from Mode 2 sectors
         const bool mode1 = buffer->data[0xF] == 0x01;
-        const uint32 getSize = m_getSectorLength;
+        const bool mode2 = buffer->data[0xF] == 0x02;
+        const bool mode2form2 = mode2 && bit::test<5>(buffer->data[0x12]);
+        const bool mode2GetThenDelete = mode2 && m_xferType == TransferType::GetThenDeleteSector;
+        const bool extendLength = mode2form2 || mode2GetThenDelete;
+        const uint32 getLength = extendLength ? std::max(2324u, m_getSectorLength) : m_getSectorLength;
         const uint32 limit = mode1 ? 16u : 24u;
-        const uint32 offset = std::min(2352u - getSize, limit);
+        const uint32 offset = std::min(2352u - getLength, limit);
 
-        for (size_t i = 0; i < m_getSectorLength; i += sizeof(uint16)) {
+        for (size_t i = 0; i < getLength; i += sizeof(uint16)) {
             m_xferBuffer[i / sizeof(uint16)] = util::ReadBE<uint16>(&buffer->data[i + offset]);
+        }
+        m_xferGetLength = getLength;
+
+        // Extend total transfer length if the current sector length was extended
+        if (extendLength) {
+            m_xferLength += m_xferGetLength - m_getSectorLength;
         }
     } else {
         devlog::warn<grp::xfer>("Out of bounds transfer - sector {}", m_xferSectorPos);
+        m_xferGetLength = m_getSectorLength;
     }
 }
 
@@ -1368,7 +1384,7 @@ uint16 CDBlock::DoReadTransfer() {
     switch (m_xferType) {
     case TransferType::GetSector: [[fallthrough]];
     case TransferType::GetThenDeleteSector:
-        if (m_xferBufferPos >= m_getSectorLength / sizeof(uint16)) {
+        if (m_xferBufferPos >= m_xferGetLength / sizeof(uint16)) {
             if (m_xferType == TransferType::GetThenDeleteSector) {
                 // Delete sector once fully read
                 m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
@@ -1457,7 +1473,7 @@ void CDBlock::EndTransfer() {
     case TransferType::GetSector:
     case TransferType::GetThenDeleteSector:
         if (m_xferType == TransferType::GetThenDeleteSector) {
-            if (m_xferBufferPos > 0 && m_xferBufferPos < m_getSectorLength / sizeof(uint16)) {
+            if (m_xferBufferPos > 0 && m_xferBufferPos < m_xferGetLength / sizeof(uint16)) {
                 // Delete sector if not fully read
                 m_partitionManager.RemoveTail(m_xferPartition, m_xferSectorPos);
                 devlog::trace<grp::xfer>("Sector freed");

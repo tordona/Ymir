@@ -955,6 +955,7 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     // v9:
     // - New fields
     //   - reservedBuffers = 0
+    //   - xferGetLength = getSectorLength
     // v8:
     // - New fields
     //   - fs
@@ -976,6 +977,10 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     ar(s.discAuthStatus, s.mpegAuthStatus);
     ar(s.xferType, s.xferPos, s.xferLength, s.xferCount, s.xferBuffer, s.xferBufferPos);
     ar(s.xferSectorPos, s.xferSectorEnd, s.xferPartition);
+    if (version >= 9) {
+        ar(s.xferGetLength);
+        // Default value handled below, after reading getSectorLength
+    }
     ar(s.xferSubcodeFrameAddress, s.xferSubcodeGroup);
     ar(s.xferExtraCount);
     if (version >= 5) {
@@ -1016,6 +1021,10 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     ar(s.getSectorLength, s.putSectorLength);
     ar(s.processingCommand);
     serialize(ar, s.fs, version);
+
+    if (version < 9) {
+        s.xferGetLength = s.getSectorLength;
+    }
 }
 
 template <class Archive>

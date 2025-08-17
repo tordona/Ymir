@@ -192,6 +192,7 @@ private:
     uint32 m_xferSectorEnd; // Last sector to transfer
     uint8 m_xferPartition;  // From which partition to read
     // uint8 m_xferFilter;      // To which filter to write
+    uint32 m_xferGetLength; // How many bytes to read from the current sector
 
     // Parameters for subcode transfers
     uint32 m_xferSubcodeFrameAddress; // Last subcode R-W frame address
