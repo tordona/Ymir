@@ -63,7 +63,11 @@ void CDBlock::PartitionManager::InsertHead(uint8 partitionIndex, const Buffer &b
 Buffer *CDBlock::PartitionManager::GetTail(uint8 partitionIndex, uint8 offset) {
     assert(partitionIndex < m_partitions.size());
     auto &partition = m_partitions[partitionIndex];
-    return partition.empty() ? nullptr : &*(partition.begin() + offset);
+    if (offset < partition.size()) {
+        return &*(partition.begin() + offset);
+    } else {
+        return nullptr;
+    }
 }
 
 bool CDBlock::PartitionManager::RemoveTail(uint8 partitionIndex, uint8 offset) {
