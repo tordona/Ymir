@@ -1829,6 +1829,7 @@ void CDBlock::CmdInitializeCDSystem() {
         for (auto &filter : m_filters) {
             filter.Reset();
         }
+        m_cdDeviceConnection = Filter::kDisconnected;
     }
 
     m_readSpeed = readSpeed == 1 ? 1 : m_readSpeedFactor;
