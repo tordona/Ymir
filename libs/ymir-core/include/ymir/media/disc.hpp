@@ -95,10 +95,11 @@ struct Track {
         const uint32 writeOffset = !hasSyncBytes * 12 + !hasHeader * 4;
 
         // Try to read raw sector data based on specifications
+        const uint32 outputSize = std::min(sectorSize, 2352u);
         const uint32 sectorOffset = (frameAddress - startFrameAddress) * sectorSize;
-        const std::span<uint8> output{outBuf.begin() + writeOffset, sectorSize};
-        const uintmax_t readSize = binaryReader->Read(sectorOffset, sectorSize, output);
-        if (readSize != sectorSize) {
+        const std::span<uint8> output{outBuf.begin() + writeOffset, outputSize};
+        const uintmax_t readSize = binaryReader->Read(sectorOffset, outputSize, output);
+        if (readSize != outputSize) {
             return false;
         }
 
