@@ -39,6 +39,7 @@ static uint32 CalcPutOffset(uint32 size) {
 // -----------------------------------------------------------------------------
 // Implementation
 
+// NOTE: cannot be less than 2 due to how the Seek state processing is implemented
 static constexpr uint32 kSeekTicks = 2;
 
 CDBlock::CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &config)
@@ -920,24 +921,24 @@ bool CDBlock::SetupScan(uint8 direction) {
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
     case kStatusCodeSeek:
+        // HACK: Extremely hacky way to make the status transition from Seek to Play
         if (m_seekTicks > 0) {
             --m_seekTicks;
-            // HACK: fake CSCT response before switching to Play state
-            // TODO: there really should be a separate state machine for handling this...
-            if (m_seekTicks == 0) {
-                SetInterrupt(kHIRQ_CSCT);
-            }
-        } else {
+        }
+        if (m_seekTicks == 1) {
             if (m_status.controlADR == 0x41) {
                 m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
             } else {
                 // Force 1x speed if playing audio track
                 m_targetDriveCycles = kDriveCyclesPlaying1x;
             }
-            m_status.statusCode = kStatusCodePlay;
             if (m_status.frameAddress < m_playStartPos || m_status.frameAddress > m_playEndPos) {
                 m_status.frameAddress = m_playStartPos;
             }
+            ProcessDriveStatePlay();
+        } else if (m_seekTicks == 0) {
+            m_status.statusCode = kStatusCodePlay;
+            ProcessDriveStatePlay();
         }
         break;
     case kStatusCodePlay: [[fallthrough]];
