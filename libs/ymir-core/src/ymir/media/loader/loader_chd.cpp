@@ -14,9 +14,11 @@
 #include <libchdr/chd.h>
 
 #include <charconv>
+#include <map>
 #include <span>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace ymir::media::loader::chd {
 
@@ -66,9 +68,13 @@ public:
         uintmax_t writeOffset = 0;
         uintmax_t remaining = size;
         for (uintmax_t hunkIndex = firstHunk; hunkIndex <= lastHunk; hunkIndex++) {
-            chd_read(m_file, hunkIndex, m_hunkBuffer.data());
+            if (!m_hunkCache.contains(hunkIndex)) {
+                chd_read(m_file, hunkIndex, m_hunkBuffer.data());
+                m_hunkCache[hunkIndex] = m_hunkBuffer;
+            }
+            auto &buffer = m_hunkCache[hunkIndex];
             const uint32 requested = std::min<size_t>(remaining, m_header->hunkbytes - hunkOffset);
-            std::copy_n(m_hunkBuffer.begin() + hunkOffset, requested, output.begin() + writeOffset);
+            std::copy_n(buffer.begin() + hunkOffset, requested, output.begin() + writeOffset);
 
             remaining -= requested;
             if (remaining == 0) {
@@ -84,6 +90,7 @@ private:
     chd_file *m_file;
     const chd_header *m_header;
     mutable std::vector<uint8> m_hunkBuffer;
+    mutable std::map<uintmax_t, std::vector<uint8>> m_hunkCache;
 };
 
 static bool SetTrackInfo(const chd_header *header, std::string_view typestring, Track &track) {

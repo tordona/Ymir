@@ -13,6 +13,7 @@ Introduced save state file version 9.
 - CD Block: Allow querying files at specific frame addresses and display file being read in System State window.
 - Debug: Allow exporting debug output to a file.
 - Debug: Move debug port writes to a callback and remove them from the SCU tracer. Eliminates the need for debug tracing to use Mednafen's debug output method.
+- Media: Cache CHD hunks for improved performance at the cost of extra RAM usage.
 - SCSP: Basic debugger view for all slot registers and some state.
 - SCSP: Final output oscilloscope view.
 - VDP1: Optimize line plotting by skipping lines that are entirely out of the system clipping area.
