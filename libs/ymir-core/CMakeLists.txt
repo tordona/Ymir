@@ -102,6 +102,7 @@ add_library(ymir-core
     include/ymir/hw/vdp/vdp2_defs.hpp
     include/ymir/hw/vdp/vdp2_regs.hpp
 
+    include/ymir/media/cdrom_crc.hpp
     include/ymir/media/disc.hpp
     include/ymir/media/filesystem.hpp
     include/ymir/media/frame_address.hpp
@@ -217,6 +218,7 @@ add_library(ymir-core
     src/ymir/hw/vdp/slope.hpp
     src/ymir/hw/vdp/vdp.cpp
 
+    src/ymir/media/cdrom_crc.cpp
     src/ymir/media/filesystem.cpp
     src/ymir/media/saturn_header.cpp
 

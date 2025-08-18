@@ -5,7 +5,9 @@
 #include <ymir/media/binary_reader/binary_reader.hpp>
 
 #include <ymir/util/arith_ops.hpp>
+#include <ymir/util/data_ops.hpp>
 
+#include "cdrom_crc.hpp"
 #include "saturn_header.hpp"
 #include "subheader.hpp"
 
@@ -139,10 +141,23 @@ struct Track {
             // fmt::println("  Added header");
         }
         if (!hasSubheader) {
-            // Fill out checksums after user data
-            // TODO: actually calculate checksums
-            // for now, we'll fill the checksums with zeros and hope that no software ever checks them
-            std::fill_n(outBuf.begin() + writeOffset + 2048, 288, 0x00);
+            // Fill out EDC, Intermediate, P-Parity and Q-Parity fields after user data
+            // TODO: handle Mode 2 Form 1 and 2
+
+            std::span<uint8> edcBuf{outBuf.subspan(2064, 4)};
+            std::span<uint8> interBuf{outBuf.subspan(2068, 8)};
+            std::span<uint8> pParityBuf{outBuf.subspan(2076, 172)};
+            std::span<uint8> qParityBuf{outBuf.subspan(2248, 104)};
+
+            const uint32 crc = CalcCRC(std::span<uint8, 2064>{outBuf.first(2064)});
+            util::WriteLE<uint32>(&edcBuf[0], crc);
+
+            std::fill(interBuf.begin(), interBuf.end(), 0x00);
+
+            // TODO: compute ECC (P-Parity and Q-Parity)
+            std::fill(pParityBuf.begin(), pParityBuf.end(), 0x00);
+            std::fill(qParityBuf.begin(), qParityBuf.end(), 0x00);
+
             // fmt::println("  Added subheader");
         }
 
