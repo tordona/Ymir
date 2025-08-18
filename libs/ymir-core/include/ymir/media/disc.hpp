@@ -4,6 +4,8 @@
 
 #include <ymir/media/binary_reader/binary_reader.hpp>
 
+#include <ymir/util/arith_ops.hpp>
+
 #include "saturn_header.hpp"
 #include "subheader.hpp"
 
@@ -116,9 +118,9 @@ struct Track {
         }
         if (!hasHeader) {
             // Convert absolute frame address to min:sec:frac
-            outBuf[0xC] = frameAddress / 75 / 60;
-            outBuf[0xD] = (frameAddress / 75) % 60;
-            outBuf[0xE] = frameAddress % 75;
+            outBuf[0xC] = util::to_bcd(frameAddress / 75 / 60);
+            outBuf[0xD] = util::to_bcd((frameAddress / 75) % 60);
+            outBuf[0xE] = util::to_bcd(frameAddress % 75);
 
             // Determine mode based on track type and sector size
             if (controlADR == 0x41) {
