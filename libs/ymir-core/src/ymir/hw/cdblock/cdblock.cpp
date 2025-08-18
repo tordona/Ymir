@@ -162,9 +162,8 @@ void CDBlock::MapMemory(sys::Bus &bus) {
 }
 
 void CDBlock::UpdateClockRatios(const sys::ClockRatios &clockRatios) {
-    // FIXME: audio track playback is too slow with the CD block ratio
-    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.SCSPNum * 3, clockRatios.SCSPDen);
-    // m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
+    // Drive state updates is counted in thirds, as explained in cdblock_defs.hpp
+    m_scheduler.SetEventCountFactor(m_driveStateUpdateEvent, clockRatios.CDBlockNum * 3, clockRatios.CDBlockDen);
     m_scheduler.SetEventCountFactor(m_commandExecEvent, clockRatios.CDBlockNum, clockRatios.CDBlockDen);
 }
 
