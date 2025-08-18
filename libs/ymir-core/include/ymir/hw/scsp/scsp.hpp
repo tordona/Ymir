@@ -372,11 +372,6 @@ private:
             }
         };
 
-        if constexpr (accessType == SCSPAccessType::M68kCode) {
-            devlog::debug<grp::regs>("M68K attempted to fetch instruction from SCSP register area at {:03X}", address);
-            return 0;
-        }
-
         /**/ if (AddressInRange<0x000, 0x3FF>(address)) {
             // Slot registers
             const uint32 slotIndex = address >> 5;
