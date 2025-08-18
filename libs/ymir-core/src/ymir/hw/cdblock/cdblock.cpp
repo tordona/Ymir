@@ -39,7 +39,7 @@ static uint32 CalcPutOffset(uint32 size) {
 // -----------------------------------------------------------------------------
 // Implementation
 
-static constexpr uint32 kSeekTicks = 10;
+static constexpr uint32 kSeekTicks = 2;
 
 CDBlock::CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &config)
     : m_scheduler(scheduler) {
