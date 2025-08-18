@@ -161,7 +161,7 @@ jobs:
             runner: ubuntu-22.04
           - name: "AArch64-NEON"
             enable_avx2_option: "OFF" # doesn't matter actually
-            runner: ubuntu-22.04-arm
+            runner: ubuntu-24.04-arm
         include:
           - c_compiler: clang
             cpp_compiler: clang++
