@@ -27,9 +27,10 @@ std::filesystem::path SharedContext::GetGameFileName(bool oldStyle) const {
             if (!disc.header.gameTitle.empty()) {
                 std::string title = disc.header.gameTitle;
                 // Clean up invalid characters
+                // TODO: accept Japanese characters (e.g. Strikers 1945)
                 std::transform(title.begin(), title.end(), title.begin(), [](char ch) {
                     if (ch == ':' || ch == '|' || ch == '<' || ch == '>' || ch == '/' || ch == '\\' || ch == '*' ||
-                        ch == '?') {
+                        ch == '?' || ch & 0x80) {
                         return '_';
                     } else {
                         return ch;
