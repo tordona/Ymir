@@ -30,6 +30,7 @@ struct CDBlockState {
 
     uint32 currDriveCycles;
     uint32 targetDriveCycles;
+    uint32 seekTicks;
 
     uint32 playStartParam;
     uint32 playEndParam;

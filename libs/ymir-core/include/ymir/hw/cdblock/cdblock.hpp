@@ -118,6 +118,7 @@ private:
 
     uint32 m_currDriveCycles;   // current cycle count for drive state processing
     uint32 m_targetDriveCycles; // number of cycles until the next drive state update
+    uint32 m_seekTicks;         // number of ticks until Seek transitions to Play
 
     // PlayDisc/ScanDisc parameters
     uint32 m_playStartParam; // starting frame address or track/index

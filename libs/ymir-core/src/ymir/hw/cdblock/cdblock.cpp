@@ -39,6 +39,8 @@ static uint32 CalcPutOffset(uint32 size) {
 // -----------------------------------------------------------------------------
 // Implementation
 
+static constexpr uint32 kSeekTicks = 10;
+
 CDBlock::CDBlock(core::Scheduler &scheduler, core::Configuration::CDBlock &config)
     : m_scheduler(scheduler) {
 
@@ -275,6 +277,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
 
     state.currDriveCycles = m_currDriveCycles;
     state.targetDriveCycles = m_targetDriveCycles;
+    state.seekTicks = m_seekTicks;
 
     state.playStartParam = m_playStartParam;
     state.playEndParam = m_playEndParam;
@@ -421,6 +424,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
 
     m_currDriveCycles = state.currDriveCycles;
     m_targetDriveCycles = state.targetDriveCycles;
+    m_seekTicks = state.seekTicks;
 
     m_playStartParam = state.playStartParam;
     m_playEndParam = state.playEndParam;
@@ -716,8 +720,8 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
             m_status.controlADR = session.tracks[trackIndex].controlADR;
             m_status.track = trackIndex + 1;
             m_status.index = index;
+            m_seekTicks = kSeekTicks; // TODO: calculate realistic seek time
 
-            // TODO: delay seek for a realistic amount of time
             if (m_status.controlADR == 0x41) {
                 m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
             } else {
@@ -795,13 +799,13 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
         if (track != nullptr) [[likely]] {
             // Switch to seek mode
             m_status.statusCode = kStatusCodeSeek;
+            m_status.flags = m_status.controlADR == 0x01 ? 0x8 : 0x0;
             m_status.repeatCount = 0; // first repeat
             m_status.controlADR = track->controlADR;
             m_status.track = track->index;
             m_status.index = track->FindIndex(frameAddress);
-            m_status.flags = m_status.controlADR == 0x01 ? 0x8 : 0x0;
+            m_seekTicks = kSeekTicks; // TODO: calculate realistic seek time
 
-            // TODO: delay seek for a realistic amount of time
             if (m_status.controlADR == 0x41) {
                 m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
             } else {
@@ -891,6 +895,7 @@ bool CDBlock::SetupFilePlayback(uint32 fileID, uint32 offset, uint8 filterNumber
     m_status.controlADR = session.tracks[trackIndex].controlADR;
     m_status.track = trackIndex + 1;
     m_status.index = 1;
+    m_seekTicks = kSeekTicks; // TODO: calculate realistic seek time
 
     devlog::debug<grp::play_init>("Read file {} (ID {}), offset {}, filter {}, frame addresses {:06X} to {:06X}",
                                   fileInfo.name, fileID, offset, filterNumber, m_playStartPos, m_playEndPos);
@@ -915,15 +920,24 @@ bool CDBlock::SetupScan(uint8 direction) {
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
     case kStatusCodeSeek:
-        if (m_status.controlADR == 0x41) {
-            m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
+        if (m_seekTicks > 0) {
+            --m_seekTicks;
+            // HACK: fake CSCT response before switching to Play state
+            // TODO: there really should be a separate state machine for handling this...
+            if (m_seekTicks == 0) {
+                SetInterrupt(kHIRQ_CSCT);
+            }
         } else {
-            // Force 1x speed if playing audio track
-            m_targetDriveCycles = kDriveCyclesPlaying1x;
-        }
-        m_status.statusCode = kStatusCodePlay;
-        if (m_status.frameAddress < m_playStartPos || m_status.frameAddress > m_playEndPos) {
-            m_status.frameAddress = m_playStartPos;
+            if (m_status.controlADR == 0x41) {
+                m_targetDriveCycles = kDriveCyclesPlaying1x / m_readSpeed;
+            } else {
+                // Force 1x speed if playing audio track
+                m_targetDriveCycles = kDriveCyclesPlaying1x;
+            }
+            m_status.statusCode = kStatusCodePlay;
+            if (m_status.frameAddress < m_playStartPos || m_status.frameAddress > m_playEndPos) {
+                m_status.frameAddress = m_playStartPos;
+            }
         }
         break;
     case kStatusCodePlay: [[fallthrough]];

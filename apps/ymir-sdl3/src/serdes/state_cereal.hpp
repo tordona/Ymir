@@ -954,6 +954,7 @@ template <class Archive>
 void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     // v9:
     // - New fields
+    //   - seekTicks = 0
     //   - reservedBuffers = 0
     //   - xferGetLength = getSectorLength
     //   - xferDelCount = (xferLength + getSectorLength - 1) / getSectorLength if xferType == GetThenDeleteSector,
@@ -973,6 +974,11 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     ar(s.status);
     ar(s.readyForPeriodicReports);
     ar(s.currDriveCycles, s.targetDriveCycles);
+    if (version >= 9) {
+        ar(s.seekTicks);
+    } else {
+        s.seekTicks = 0;
+    }
     ar(s.playStartParam, s.playEndParam, s.playRepeatParam, s.scanDirection, s.scanCounter);
     ar(s.playStartPos, s.playEndPos, s.playMaxRepeat, s.playFile, s.bufferFullPause);
     ar(s.readSpeed);
