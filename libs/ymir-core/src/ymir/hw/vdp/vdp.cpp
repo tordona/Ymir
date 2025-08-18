@@ -2813,9 +2813,6 @@ FORCE_INLINE void VDP::VDP2UpdateLineScreenScrollParams(uint32 y) {
     const VDP2Regs &regs2 = VDP2GetRegs();
 
     for (uint32 i = 0; i < 2; ++i) {
-        if (!m_layerEnabled[i + 2]) {
-            continue;
-        }
         const BGParams &bgParams = regs2.bgParams[i + 1];
         NormBGLayerState &bgState = m_normBGLayerStates[i];
         VDP2UpdateLineScreenScroll(y, bgParams, bgState);
@@ -3633,7 +3630,7 @@ void VDP::VDP2DrawLine(uint32 y, bool altField) {
     }
 
     // Compose image
-    VDP2ComposeLine<deinterlace, transparentMeshes>(y, altField, altField);
+    VDP2ComposeLine<deinterlace, transparentMeshes>(y, altField);
 }
 
 FORCE_INLINE void VDP::VDP2DrawLineColorAndBackScreens(uint32 y) {
@@ -4862,11 +4859,11 @@ FORCE_INLINE void Color888CompositeRatioMasked(const std::span<Color888> dest, c
 }
 
 template <bool deinterlace, bool transparentMeshes>
-FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altFieldDst) {
+FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altField) {
     const VDP2Regs &regs = VDP2GetRegs();
     const auto &colorCalcParams = regs.colorCalcParams;
 
-    y = VDP2GetY<deinterlace>(y) ^ static_cast<uint32>(altFieldDst);
+    y = VDP2GetY<deinterlace>(y) ^ static_cast<uint32>(altField);
 
     if (!regs.TVMD.DISP) {
         uint32 color = 0xFF000000;
@@ -4889,12 +4886,12 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     alignas(16) std::array<std::array<uint8, 3>, kMaxResH> scanline_layerPrios;
     std::fill_n(scanline_layerPrios.begin(), m_HRes, kLayerPriosInit);
 
-    for (int layer = 0; layer < m_layerStates[altFieldSrc].size(); layer++) {
+    for (int layer = 0; layer < m_layerStates[altField].size(); layer++) {
         if (!m_layerEnabled[layer]) {
             continue;
         }
 
-        const LayerState &state = m_layerStates[altFieldSrc][layer];
+        const LayerState &state = m_layerStates[altField][layer];
 
         if (AllBool(std::span{state.pixels.transparent}.first(m_HRes))) {
             // All pixels are transparent
@@ -4915,7 +4912,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
                 continue;
             }
             if (layer == LYR_Sprite) {
-                const auto &attr = m_spriteLayerState[altFieldSrc].attrs[x];
+                const auto &attr = m_spriteLayerState[altField].attrs[x];
                 if (attr.normalShadow) {
                     continue;
                 }
@@ -4931,7 +4928,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
                 if (priority > layerPrios[i] || (priority == layerPrios[i] && layer < layers[i])) {
                     // Ignore sprite mesh layer -- it is blended separately
                     if constexpr (transparentMeshes) {
-                        if (layer == LYR_Sprite && m_spriteLayerState[altFieldSrc].attrs[x].transparentMesh) {
+                        if (layer == LYR_Sprite && m_spriteLayerState[altField].attrs[x].transparentMesh) {
                             break;
                         }
                     }
@@ -4954,11 +4951,11 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     if constexpr (transparentMeshes) {
         std::fill_n(scanline_meshLayers.begin(), m_HRes, 0xFF);
         for (uint32 x = 0; x < m_HRes; x++) {
-            const uint8 priority = m_layerStates[altFieldSrc][LYR_Sprite].pixels.priority[x];
+            const uint8 priority = m_layerStates[altField][LYR_Sprite].pixels.priority[x];
             std::array<uint8, 3> &layerPrios = scanline_layerPrios[x];
             for (int i = 0; i < 3; i++) {
                 // The sprite layer has the highest priority on ties, therefore the priority check can be simplified
-                if (priority >= layerPrios[i] && m_spriteLayerState[altFieldSrc].attrs[x].transparentMesh) {
+                if (priority >= layerPrios[i] && m_spriteLayerState[altField].attrs[x].transparentMesh) {
                     scanline_meshLayers[x] = i;
                     break;
                 }
@@ -4971,7 +4968,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
         if (layer == LYR_Back) {
             return m_lineBackLayerState.backColor;
         } else {
-            return m_layerStates[altFieldSrc][layer].pixels.color[x];
+            return m_layerStates[altField][layer].pixels.color[x];
         }
     };
 
@@ -4988,14 +4985,14 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
                 return false;
             }
 
-            const uint8 pixelPriority = m_layerStates[altFieldSrc][LYR_Sprite].pixels.priority[x];
+            const uint8 pixelPriority = m_layerStates[altField][LYR_Sprite].pixels.priority[x];
 
             using enum SpriteColorCalculationCondition;
             switch (spriteParams.colorCalcCond) {
             case PriorityLessThanOrEqual: return pixelPriority <= spriteParams.colorCalcValue;
             case PriorityEqual: return pixelPriority == spriteParams.colorCalcValue;
             case PriorityGreaterThanOrEqual: return pixelPriority >= spriteParams.colorCalcValue;
-            case MsbEqualsOne: return m_layerStates[altFieldSrc][LYR_Sprite].pixels.color[x].msb == 1;
+            case MsbEqualsOne: return m_layerStates[altField][LYR_Sprite].pixels.color[x].msb == 1;
             default: util::unreachable();
             }
         } else if (layer == LYR_Back) {
@@ -5014,7 +5011,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
         if constexpr (transparentMeshes) {
             layer0BlendMeshLayer[x] = scanline_meshLayers[x] == 0;
         }
-        if (m_colorCalcWindow[altFieldSrc][x]) {
+        if (m_colorCalcWindow[altField][x]) {
             layer0ColorCalcEnabled[x] = false;
             continue;
         }
@@ -5026,7 +5023,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
         switch (layer) {
         case LYR_Back: [[fallthrough]];
         case LYR_Sprite: layer0ColorCalcEnabled[x] = true; break;
-        default: layer0ColorCalcEnabled[x] = m_layerStates[altFieldSrc][layer].pixels.specialColorCalc[x]; break;
+        default: layer0ColorCalcEnabled[x] = m_layerStates[altField][layer].pixels.specialColorCalc[x]; break;
         }
     }
 
@@ -5092,7 +5089,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
             // Blend layer 2 with sprite mesh layer colors
             if constexpr (transparentMeshes) {
                 Color888AverageMasked(std::span{layer2Pixels}.first(m_HRes), layer2BlendMeshLayer, layer2Pixels,
-                                      m_layerStates[altFieldSrc][LYR_Sprite].pixels.color);
+                                      m_layerStates[altField][LYR_Sprite].pixels.color);
             }
 
             // TODO: honor color RAM mode + palette/RGB format restrictions
@@ -5122,7 +5119,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
         // Blend layer 1 with sprite mesh layer colors
         if constexpr (transparentMeshes) {
             Color888AverageMasked(std::span{layer1Pixels}.first(m_HRes), layer1BlendMeshLayer, layer1Pixels,
-                                  m_layerStates[altFieldSrc][LYR_Sprite].pixels.color);
+                                  m_layerStates[altField][LYR_Sprite].pixels.color);
         }
 
         // Blend layer 0 and layer 1
@@ -5140,7 +5137,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
 
                 const LayerIndex layer = scanline_layers[x][colorCalcParams.useSecondScreenRatio];
                 switch (layer) {
-                case LYR_Sprite: scanline_ratio[x] = m_spriteLayerState[altFieldSrc].attrs[x].colorCalcRatio; break;
+                case LYR_Sprite: scanline_ratio[x] = m_spriteLayerState[altField].attrs[x].colorCalcRatio; break;
                 case LYR_Back: scanline_ratio[x] = regs.backScreenParams.colorCalcRatio; break;
                 default: scanline_ratio[x] = regs.bgParams[layer - LYR_RBG0].colorCalcRatio; break;
                 }
@@ -5157,22 +5154,22 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
     // Blend layer 0 with sprite mesh layer colors
     if constexpr (transparentMeshes) {
         Color888AverageMasked(framebufferOutput, layer0BlendMeshLayer, framebufferOutput,
-                              m_layerStates[altFieldSrc][LYR_Sprite].pixels.color);
+                              m_layerStates[altField][LYR_Sprite].pixels.color);
     }
 
     // Gather shadow data
     alignas(16) std::array<bool, kMaxResH> layer0ShadowEnabled;
     for (uint32 x = 0; x < m_HRes; x++) {
         // Sprite layer is beneath top layer
-        if (m_layerStates[altFieldSrc][LYR_Sprite].pixels.priority[x] < scanline_layerPrios[x][0]) {
+        if (m_layerStates[altField][LYR_Sprite].pixels.priority[x] < scanline_layerPrios[x][0]) {
             layer0ShadowEnabled[x] = false;
             continue;
         }
 
         // Sprite layer doesn't have shadow
-        const bool isNormalShadow = m_spriteLayerState[altFieldSrc].attrs[x].normalShadow;
+        const bool isNormalShadow = m_spriteLayerState[altField].attrs[x].normalShadow;
         const bool isMSBShadow =
-            !regs.spriteParams.spriteWindowEnable && m_spriteLayerState[altFieldSrc].attrs[x].shadowOrWindow;
+            !regs.spriteParams.spriteWindowEnable && m_spriteLayerState[altField].attrs[x].shadowOrWindow;
         if (!isNormalShadow && !isMSBShadow) {
             layer0ShadowEnabled[x] = false;
             continue;
@@ -5180,7 +5177,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altField
 
         const LayerIndex layer = scanline_layers[x][0];
         switch (layer) {
-        case LYR_Sprite: layer0ShadowEnabled[x] = m_spriteLayerState[altFieldSrc].attrs[x].shadowOrWindow; break;
+        case LYR_Sprite: layer0ShadowEnabled[x] = m_spriteLayerState[altField].attrs[x].shadowOrWindow; break;
         case LYR_Back: layer0ShadowEnabled[x] = regs.backScreenParams.shadowEnable; break;
         default: layer0ShadowEnabled[x] = regs.bgParams[layer - LYR_RBG0].shadowEnable; break;
         }

@@ -1304,12 +1304,12 @@ private:
     // Composes the current VDP2 scanline out of the rendered lines.
     //
     // y is the scanline to draw
-    // altFieldSrc and altFieldDst select the complementary field for reading and writing deinterlaced frames
+    // altField selects the complementary field when rendering deinterlaced frames
     //
     // deinterlace determines whether to deinterlace video output
     // transparentMeshes enables transparent mesh rendering enhancement
     template <bool deinterlace, bool transparentMeshes>
-    void VDP2ComposeLine(uint32 y, bool altFieldSrc, bool altFieldDst);
+    void VDP2ComposeLine(uint32 y, bool altField);
 
     // Draws a normal scroll BG scanline.
     //

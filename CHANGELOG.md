@@ -32,6 +32,7 @@ Introduced save state file version 9.
 - SCSP: Don't use SBCTL on slots that are playing samples from Sound RAM when the EG reaches the silence threshold. Fixes busted audio in Guardian Heroes and Elevator Action^2. (#155)
 - SCSP: Silence audio when MVOL=0. Fixes lingering sound/music when pausing in Sega Ages - Galaxy Force II. (#427)
 - VDP1: Various rendering accuracy improvements. (thanks to Lordus)
+- VDP2: Always read line screen scroll data even for disabled NBGs. Fixes one-frame offset on system settings screen and Deep Fear's GUI elements.
 - VDP2: Fix exclusive monitor resolution sizes and out-of-bounds reads from lookup tables. (thanks to @celeriyacon)
 - VDP2: Fix palette-based transparent meshes not blending with VDP2 layer (such as in Bulk Slash).
 - VDP2: Implement VCNT skip as a dedicated vertical phase. (thanks to @celeriyacon)
