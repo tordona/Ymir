@@ -133,6 +133,7 @@ private:
     uint8 m_playMaxRepeat;  // max repeat count (0=no repeat, 1..14=N repeats, 15=infinite repeats)
     bool m_playFile;        // is playback reading a file?
     bool m_bufferFullPause; // paused because of running out of buffers?
+    bool m_playEndPending;  // is the next Play state update going to end playback?
 
     uint8 m_readSpeed;
     uint8 m_readSpeedFactor;

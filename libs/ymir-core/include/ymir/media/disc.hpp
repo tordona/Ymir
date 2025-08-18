@@ -141,7 +141,7 @@ struct Track {
             // fmt::println("  Added header");
         }
         if (!hasSubheader) {
-            // Fill out EDC, Intermediate, P-Parity and Q-Parity fields after user data
+            // Fill out EDC, Intermediate, P-Parity and Q-Parity fields
             // TODO: handle Mode 2 Form 1 and 2
 
             std::span<uint8> edcBuf{outBuf.subspan(2064, 4)};

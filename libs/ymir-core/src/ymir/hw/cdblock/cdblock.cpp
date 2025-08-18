@@ -96,6 +96,7 @@ void CDBlock::Reset(bool hard) {
     m_playMaxRepeat = 0;
     m_playFile = false;
     m_bufferFullPause = false;
+    m_playEndPending = false;
 
     m_readSpeed = 1;
 
@@ -291,6 +292,7 @@ void CDBlock::SaveState(state::CDBlockState &state) const {
     state.playMaxRepeat = m_playMaxRepeat;
     state.playFile = m_playFile;
     state.bufferFullPause = m_bufferFullPause;
+    state.playEndPending = m_playEndPending;
 
     state.readSpeed = m_readSpeed;
 
@@ -438,6 +440,7 @@ void CDBlock::LoadState(const state::CDBlockState &state) {
     m_playMaxRepeat = state.playMaxRepeat;
     m_playFile = state.playFile;
     m_bufferFullPause = state.bufferFullPause;
+    m_playEndPending = state.playEndPending;
 
     m_readSpeed = state.readSpeed;
 
@@ -965,6 +968,21 @@ void CDBlock::ProcessDriveState() {
 }
 
 void CDBlock::ProcessDriveStatePlay() {
+    if (m_playEndPending) [[unlikely]] {
+        m_playEndPending = false;
+
+        m_status.frameAddress = m_playEndPos + 1;
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+
+        uint16 hirq = kHIRQ_PEND;
+        if (m_playFile) {
+            hirq |= kHIRQ_EFLS | kHIRQ_EHST;
+        }
+        SetInterrupt(hirq);
+        m_status.statusCode = kStatusCodePause;
+        return;
+    }
+
     const bool scan = (m_status.statusCode & 0xF) == kStatusCodeScan;
     const uint32 frameAddress = m_status.frameAddress;
     if (frameAddress <= m_playEndPos) {
@@ -1117,13 +1135,7 @@ void CDBlock::ProcessDriveStatePlay() {
             m_status.repeatCount++;
         } else {
             devlog::debug<grp::play>("Playback ended");
-            m_status.frameAddress = m_playEndPos + 1;
-            m_status.statusCode = kStatusCodePause;
-            m_targetDriveCycles = kDriveCyclesNotPlaying;
-            SetInterrupt(kHIRQ_PEND);
-            if (m_playFile) {
-                SetInterrupt(kHIRQ_EFLS | kHIRQ_EHST);
-            }
+            m_playEndPending = true;
         }
     }
 }

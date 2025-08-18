@@ -955,10 +955,11 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     // v9:
     // - New fields
     //   - seekTicks = 0
-    //   - reservedBuffers = 0
+    //   - playEndPending = false
     //   - xferGetLength = getSectorLength
     //   - xferDelCount = (xferLength + getSectorLength - 1) / getSectorLength if xferType == GetThenDeleteSector,
     //     otherwise 0
+    //   - reservedBuffers = 0
     // v8:
     // - New fields
     //   - fs
@@ -981,6 +982,11 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
     }
     ar(s.playStartParam, s.playEndParam, s.playRepeatParam, s.scanDirection, s.scanCounter);
     ar(s.playStartPos, s.playEndPos, s.playMaxRepeat, s.playFile, s.bufferFullPause);
+    if (version >= 9) {
+        ar(s.playEndPending);
+    } else {
+        s.playEndPending = false;
+    }
     ar(s.readSpeed);
     ar(s.discAuthStatus, s.mpegAuthStatus);
     ar(s.xferType, s.xferPos, s.xferLength, s.xferCount, s.xferBuffer, s.xferBufferPos);

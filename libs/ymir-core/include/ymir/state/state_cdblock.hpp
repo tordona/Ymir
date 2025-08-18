@@ -43,6 +43,7 @@ struct CDBlockState {
     uint8 playMaxRepeat;
     bool playFile;
     bool bufferFullPause;
+    bool playEndPending;
 
     uint8 readSpeed;
 
