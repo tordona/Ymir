@@ -923,6 +923,21 @@ bool CDBlock::SetupScan(uint8 direction) {
 
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
+    case kStatusCodeBusy:
+        if (m_playEndPending) [[unlikely]] {
+            m_playEndPending = false;
+
+            m_status.frameAddress = m_playEndPos + 1;
+            m_targetDriveCycles = kDriveCyclesNotPlaying;
+
+            uint16 hirq = kHIRQ_PEND;
+            if (m_playFile) {
+                hirq |= kHIRQ_EFLS | kHIRQ_EHST;
+            }
+            SetInterrupt(hirq);
+            m_status.statusCode = kStatusCodePause;
+        }
+        break;
     case kStatusCodeSeek:
         // HACK: Extremely hacky way to make the status transition from Seek to Play
         if (m_seekTicks > 0) {
@@ -968,21 +983,6 @@ void CDBlock::ProcessDriveState() {
 }
 
 void CDBlock::ProcessDriveStatePlay() {
-    if (m_playEndPending) [[unlikely]] {
-        m_playEndPending = false;
-
-        m_status.frameAddress = m_playEndPos + 1;
-        m_targetDriveCycles = kDriveCyclesNotPlaying;
-
-        uint16 hirq = kHIRQ_PEND;
-        if (m_playFile) {
-            hirq |= kHIRQ_EFLS | kHIRQ_EHST;
-        }
-        SetInterrupt(hirq);
-        m_status.statusCode = kStatusCodePause;
-        return;
-    }
-
     const bool scan = (m_status.statusCode & 0xF) == kStatusCodeScan;
     const uint32 frameAddress = m_status.frameAddress;
     if (frameAddress <= m_playEndPos) {
@@ -1136,6 +1136,8 @@ void CDBlock::ProcessDriveStatePlay() {
         } else {
             devlog::debug<grp::play>("Playback ended");
             m_playEndPending = true;
+            m_status.statusCode = kStatusCodeBusy;
+            // FIXME: cdbtest somehow expects FAD=end+1 with Play status, not Busy
         }
     }
 }
