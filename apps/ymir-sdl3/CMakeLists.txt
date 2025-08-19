@@ -338,8 +338,6 @@ if (APPLE)
                 mkdir -p "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64"
             COMMAND mig
                 -arch x86_64
-                -user "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64/mach_exc_user.c"
-                -header "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64/mach_exc_user.h"
                 -server "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64/mach_exc_server.c"
                 -sheader "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64/mach_exc_server.h"
                 "${MACH_EXC_DEFS_DIR}/mach/mach_exc.defs"
@@ -349,8 +347,6 @@ if (APPLE)
                 mkdir -p "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64"
             COMMAND mig
                 -arch arm64
-                -user "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64/mach_exc_user.c"
-                -header "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64/mach_exc_user.h"
                 -server "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64/mach_exc_server.c"
                 -sheader "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64/mach_exc_server.h"
                 "${MACH_EXC_DEFS_DIR}/mach/mach_exc.defs"
