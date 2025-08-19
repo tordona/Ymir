@@ -923,21 +923,6 @@ bool CDBlock::SetupScan(uint8 direction) {
 
 void CDBlock::ProcessDriveState() {
     switch (m_status.statusCode & 0xF) {
-    case kStatusCodeBusy:
-        if (m_playEndPending) [[unlikely]] {
-            m_playEndPending = false;
-
-            m_status.frameAddress = m_playEndPos + 1;
-            m_targetDriveCycles = kDriveCyclesNotPlaying;
-
-            uint16 hirq = kHIRQ_PEND;
-            if (m_playFile) {
-                hirq |= kHIRQ_EFLS | kHIRQ_EHST;
-            }
-            SetInterrupt(hirq);
-            m_status.statusCode = kStatusCodePause;
-        }
-        break;
     case kStatusCodeSeek:
         // HACK: Extremely hacky way to make the status transition from Seek to Play
         if (m_seekTicks > 0) {
@@ -967,7 +952,9 @@ void CDBlock::ProcessDriveState() {
             m_bufferFullPause = false;
             m_status.statusCode = kStatusCodePlay;
         }
+        CheckPlayEnd();
         break;
+    default: CheckPlayEnd(); break;
     }
 
     if (m_readyForPeriodicReports && !m_processingCommand) {
@@ -1137,8 +1124,23 @@ void CDBlock::ProcessDriveStatePlay() {
             devlog::debug<grp::play>("Playback ended");
             m_playEndPending = true;
             m_status.statusCode = kStatusCodeBusy;
-            // FIXME: cdbtest somehow expects FAD=end+1 with Play status, not Busy
         }
+    }
+}
+
+void CDBlock::CheckPlayEnd() {
+    if (m_playEndPending) {
+        m_playEndPending = false;
+
+        m_status.frameAddress = m_playEndPos + 1;
+        m_targetDriveCycles = kDriveCyclesNotPlaying;
+
+        uint16 hirq = kHIRQ_PEND;
+        if (m_playFile) {
+            hirq |= kHIRQ_EFLS | kHIRQ_EHST;
+        }
+        SetInterrupt(hirq);
+        m_status.statusCode = kStatusCodePause;
     }
 }
 
@@ -1696,7 +1698,13 @@ void CDBlock::CmdGetStatus() {
     // <blank>
 
     // Output structure: standard CD status data
-    ReportCDStatus();
+    if (m_playEndPending) {
+        // HACK: Report Play status on the last sector of playback
+        // The response from this command doesn't always match the latest periodic report
+        ReportCDStatus(kStatusCodePlay);
+    } else {
+        ReportCDStatus();
+    }
 
     SetInterrupt(kHIRQ_CMOK);
 }

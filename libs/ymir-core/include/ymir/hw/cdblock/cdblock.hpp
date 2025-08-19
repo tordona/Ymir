@@ -157,6 +157,7 @@ private:
 
     void ProcessDriveState();
     void ProcessDriveStatePlay();
+    void CheckPlayEnd();
 
     // -------------------------------------------------------------------------
     // Interrupts
