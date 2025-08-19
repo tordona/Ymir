@@ -567,15 +567,17 @@ void SCSPSlotsView::Display() {
             }
             if (ImGui::TableNextColumn()) {
                 // Output
-                auto &output = m_tracer.slotOutputs[i];
-                const uint32 len = output.Count();
-                const uint32 max = std::min(len, 512u);
-                const uint32 ofs = len > 512 ? len - 512 : 0;
-                std::array<float, 512> waveform{};
-                for (uint32 j = 0; j < max; ++j) {
-                    waveform[j] = output.Read(j + ofs) / 32768.0f;
+                if (m_context.saturn.IsDebugTracingEnabled()) {
+                    auto &output = m_tracer.slotOutputs[i];
+                    const uint32 len = output.Count();
+                    const uint32 max = std::min(len, 512u);
+                    const uint32 ofs = len > 512 ? len - 512 : 0;
+                    std::array<float, 512> waveform{};
+                    for (uint32 j = 0; j < max; ++j) {
+                        waveform[j] = output.Read(j + ofs) / 32768.0f;
+                    }
+                    widgets::Oscilloscope(m_context, std::span{waveform}.first(max), wfSize);
                 }
-                widgets::Oscilloscope(m_context, std::span{waveform}.first(max), wfSize);
             }
 
             if (disabled) {
