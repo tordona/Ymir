@@ -284,7 +284,7 @@ namespace {
 
             struct {
                 mach_msg_header_t head;
-                std::array<std::byte, 2048> data; // Arbitrary size
+                std::array<std::byte, 2048> data;
             } msg_request, msg_reply;
 
             while (true) {
@@ -292,14 +292,14 @@ namespace {
                 msg_return = mach_msg(&msg_request.head, MACH_RCV_MSG | MACH_RCV_LARGE, 0, sizeof(msg_request),
                                       server_port, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
                 if (msg_return != MACH_MSG_SUCCESS) {
-                    fmt::print(stderr, "macOS MachHandler: Failed to get mach message: {:#08x} \"{}\"\n", msg_return,
+                    fmt::print(stderr, "MachHandler: Failed to get mach message: {:#08x} \"{}\"\n", msg_return,
                                mach_error_string(msg_return));
                     return;
                 }
 
                 // Handle the message
                 if (mach_exc_server(&msg_request.head, &msg_reply.head) == 0u) {
-                    fmt::print(stderr, "macOS MachHandler: Unexpected mach message\n");
+                    fmt::print(stderr, "MachHandler: Unexpected mach message {:#08x}\n", msg_request.head.msgh_id);
                     return;
                 }
 
@@ -307,7 +307,7 @@ namespace {
                 msg_return = mach_msg(&msg_reply.head, MACH_SEND_MSG, msg_reply.head.msgh_size, 0, MACH_PORT_NULL,
                                       MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
                 if (msg_return != MACH_MSG_SUCCESS) {
-                    fmt::print(stderr, "macOS MachHandler: Failed to send mach message. {:#08x} \"{}\"\n", msg_return,
+                    fmt::print(stderr, "MachHandler: Failed to send mach message: {:#08x} \"{}\"\n", msg_return,
                                mach_error_string(msg_return));
                     return;
                 }
@@ -330,12 +330,13 @@ namespace {
             task_set_exception_ports(mach_task_self(), exception_mask, server_port,
                                      EXCEPTION_STATE | MACH_EXCEPTION_CODES, MACHINE_THREAD_STATE);
 
-            // Start thread
+            // Start message-handler thread
             message_thread = std::thread(&MachHandler::MessageThreadProc, this);
             message_thread.detach();
         }
 
         ~MachHandler() {
+            // This will cause the message-thread to break out of its loop and be joinable again
             mach_port_deallocate(mach_task_self(), server_port);
         }
     };
@@ -374,10 +375,14 @@ mig_external kern_return_t catch_mach_exception_raise_state(
         return KERN_INVALID_ARGUMENT;
     }
 
-    // Exception should be the same arch
+    // Exception should be the same arch and represent a valid thread-state
     if (*flavor != MACHINE_THREAD_STATE || old_stateCnt != MACHINE_THREAD_STATE_COUNT ||
         *new_stateCnt < MACHINE_THREAD_STATE_COUNT) {
-        ShowFatalErrorDialog("mach_exception_raise_state: Unexpected flavor {}");
+        fmt::memory_buffer buf{};
+        auto out = std::back_inserter(buf);
+        fmt::format_to(out, "mach_exception_raise_state: Unexpected exception flavor {}", *flavor);
+        const std::string errMsg = fmt::to_string(buf);
+        ShowFatalErrorDialog(errMsg.c_str());
         return KERN_INVALID_ARGUMENT;
     }
 
