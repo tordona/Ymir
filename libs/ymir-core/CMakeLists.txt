@@ -269,51 +269,51 @@ endif ()
 # Build precompiled header
 target_precompile_headers(ymir-core
     PUBLIC
-        <algorithm>
-        <array>
-        <atomic>
-        <bit>
-        <cassert>
-        <charconv>
-        <cinttypes>
-        <climits>
-        <cmath>
-        <concepts>
-        <condition_variable>
-        <cstddef>
-        <cstdint>
-        <cstdlib>
-        <deque>
-        <filesystem>
-        <fstream>
-        <functional>
-        <initializer_list>
-        <iosfwd>
-        <iostream>
-        <limits>
-        <memory>
-        <mutex>
-        <new>
-        <numeric>
-        <optional>
-        <queue>
-        <set>
-        <span>
-        <sstream>
-        <string>
-        <thread>
-        <type_traits>
-        <unordered_map>
-        <unordered_set>
-        <utility>
-        <variant>
-        <vector>
+        "$<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<atomic$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<bit$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<cassert$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<charconv$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<cinttypes$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<climits$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<cmath$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<concepts$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<condition_variable$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<cstddef$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<cstdint$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<cstdlib$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<deque$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<filesystem$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<fstream$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<initializer_list$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<iosfwd$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<iostream$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<limits$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<memory$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<mutex$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<new$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<numeric$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<optional$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<queue$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<set$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<span$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<sstream$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<string$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<thread$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<type_traits$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<unordered_map$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<unordered_set$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<utility$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<variant$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>"
 
-        <fmt/format.h>
-        <fmt/std.h>
-        <fmt/xchar.h>
+        "$<$<COMPILE_LANGUAGE:CXX>:<fmt/format.h$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<fmt/std.h$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<fmt/xchar.h$<ANGLE-R>>"
 
-        <mio/mmap.hpp>
+        "$<$<COMPILE_LANGUAGE:CXX>:<mio/mmap.hpp$<ANGLE-R>>"
 )
 
 ## Define version macros
