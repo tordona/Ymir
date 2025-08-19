@@ -20,7 +20,11 @@
 #elif defined(__FreeBSD__)
     #include <signal.h>
 #elif defined(__APPLE__)
-// TODO: exception handling
+    #include <mach/mach.h>
+
+    // Generated MIG files
+    #include "mig/macos_mig.h"
+
 #endif
 
 #include <ymir/core/types.hpp>
@@ -265,8 +269,170 @@ void RegisterExceptionHandler(bool allExceptions) {
 // -----------------------------------------------------------------------------
 // macOS implementation
 
+namespace {
+
+    // Utility class to handle Mach exceptions
+    class MachHandler final {
+    private:
+        std::thread message_thread;
+        mach_port_t server_port;
+
+        void MessagePump() const {
+            mach_msg_return_t msg_return;
+
+            struct {
+                mach_msg_header_t head;
+                std::array<std::byte, 2048> data; // Arbitrary size
+            } msg_request, msg_reply;
+
+            while (true) {
+                // Get the current message
+                msg_return = mach_msg(&msg_request.head, MACH_RCV_MSG | MACH_RCV_LARGE, 0, sizeof(msg_request),
+                                      server_port, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+                if (msg_return != MACH_MSG_SUCCESS) {
+                    fmt::print(stderr, "macOS MachHandler: Failed to get mach message: {:#08x} \"{}\"\n", msg_return,
+                               mach_error_string(msg_return));
+                    return;
+                }
+
+                // Handle the message
+                if (mach_exc_server(&msg_request.head, &msg_reply.head) == 0u) {
+                    fmt::print(stderr, "macOS MachHandler: Unexpected mach message\n");
+                    return;
+                }
+
+                // Send message
+                msg_return = mach_msg(&msg_reply.head, MACH_SEND_MSG, msg_reply.head.msgh_size, 0, MACH_PORT_NULL,
+                                      MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+                if (msg_return != MACH_MSG_SUCCESS) {
+                    fmt::print(stderr, "macOS MachHandler: Failed to send mach message. {:#08x} \"{}\"\n", msg_return,
+                               mach_error_string(msg_return));
+                    return;
+                }
+            }
+        }
+
+    public:
+        explicit MachHandler(bool allExceptions) {
+            exception_mask_t exception_mask = EXC_MASK_BAD_ACCESS;
+            if (allExceptions) {
+                exception_mask = EXC_MASK_ALL;
+            }
+
+            // Allocate a recieve-right and create a send-right
+            mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &server_port);
+            mach_port_insert_right(mach_task_self(), server_port, server_port, MACH_MSG_TYPE_MAKE_SEND);
+
+            // Add new exception ports
+            task_set_exception_ports(mach_task_self(), exception_mask, server_port,
+                                     EXCEPTION_STATE | MACH_EXCEPTION_CODES, MACHINE_THREAD_STATE);
+
+            // Start thread
+            message_thread = std::thread(&MachHandler::MessagePump, this);
+            message_thread.detach();
+        }
+
+        ~MachHandler() {
+            mach_port_deallocate(mach_task_self(), server_port);
+        }
+    };
+} // namespace
+
+// Exported exception handlers
+mig_external kern_return_t catch_mach_exception_raise(mach_port_t, mach_port_t, mach_port_t, exception_type_t,
+                                                      mach_exception_data_t, mach_msg_type_number_t) {
+    fmt::print(stderr, "Unexpected mach message: mach_exception_raise\n");
+    return KERN_FAILURE;
+}
+
+mig_external kern_return_t catch_mach_exception_raise_state_identity(mach_port_t, mach_port_t, mach_port_t,
+                                                                     exception_type_t, mach_exception_data_t,
+                                                                     mach_msg_type_number_t, int *, thread_state_t,
+                                                                     mach_msg_type_number_t, thread_state_t,
+                                                                     mach_msg_type_number_t *) {
+    fmt::print(stderr, "Unexpected mach message: mach_exception_raise_state_identity\n");
+    return KERN_FAILURE;
+}
+
+mig_external kern_return_t catch_mach_exception_raise_state(
+    mach_port_t exception_port, exception_type_t exception, const mach_exception_data_t code,
+    mach_msg_type_number_t code_cnt, int *flavor, const thread_state_t old_state, mach_msg_type_number_t old_state_cnt,
+    thread_state_t new_state, mach_msg_type_number_t *new_state_cnt) {
+    if ((flavor == nullptr) || (new_state_cnt == nullptr)) {
+        fmt::print(stderr, "catch_mach_exception_raise_state: Invalid arguments\n");
+        return KERN_INVALID_ARGUMENT;
+    }
+
+    // Exception should be the same arch
+    if (*flavor != MACHINE_THREAD_STATE || old_state_cnt != MACHINE_THREAD_STATE_COUNT ||
+        *new_state_cnt < MACHINE_THREAD_STATE_COUNT) {
+        fmt::print(stderr, "catch_mach_exception_raise_state: Unexpected flavor {}\n", *flavor);
+        return KERN_INVALID_ARGUMENT;
+    }
+
+    #if defined(__x86_64__)
+    using thread_state_t = x86_thread_state64_t;
+    #elif defined(__aarch64__) || defined(__arm64__)
+    using thread_state_t = arm_thread_state64_t;
+    #else
+        #error "Unsupported mig architecture
+    #endif
+
+    // We aren't doing any modifications to the exception-thread, just copy it over
+    std::memcpy(new_state, old_state, sizeof(thread_state_t));
+    *new_state_cnt = MACHINE_THREAD_STATE_COUNT;
+
+    const thread_state_t &threadState = *(const thread_state_t *)old_state;
+
+    fmt::memory_buffer buf{};
+    auto out = std::back_inserter(buf);
+
+    #if defined(__x86_64__)
+    fmt::format_to(out, "RAX={:016X} RBX={:016X} RCX={:016X} RDX={:016X}\n", threadState.__rax, threadState.__rbx,
+                   threadState.__rcx, threadState.__rdx);
+    fmt::format_to(out, "RSP={:016X} RBP={:016X} RSI={:016X} RDI={:016X}\n", threadState.__rsp, threadState.__rbp,
+                   threadState.__rsi, threadState.__rdi);
+    fmt::format_to(out, "R8={:016X} R9={:016X} R10={:016X} R11={:016X}\n", threadState.__r8, threadState.__r9,
+                   threadState.__r10, threadState.__r11);
+    fmt::format_to(out, "R12={:016X} R13={:016X} R14={:016X} R15={:016X}\n", threadState.__r12, threadState.__r13,
+                   threadState.__r14, threadState.__r15);
+    fmt::format_to(out, "CS={:02X} FS={:02X} GS={:02X}\n", threadState.__cs, threadState.__fs, threadState.__gs);
+    fmt::format_to(out, "RIP={:016X} RFlags={:016X}", threadState.__rip, threadState.__rflags);
+
+    #elif defined(__aarch64__) || defined(__arm64__)
+    fmt::format_to(out, " X0={:016X}  X1={:016X}  X2={:016X}  X3={:016X}\n", threadState.__x[0], threadState.__x[1],
+                   threadState.__x[2], threadState.__x[3]);
+    fmt::format_to(out, " X4={:016X}  X5={:016X}  X6={:016X}  X7={:016X}\n", threadState.__x[4], threadState.__x[5],
+                   threadState.__x[6], threadState.__x[7]);
+    fmt::format_to(out, " X8={:016X}  X9={:016X} X10={:016X} X11={:016X}\n", threadState.__x[8], threadState.__x[9],
+                   threadState.__x[10], threadState.__x[11]);
+    fmt::format_to(out, "X12={:016X} X13={:016X} X14={:016X} X15={:016X}\n", threadState.__x[12], threadState.__x[13],
+                   threadState.__x[14], threadState.__x[15]);
+    fmt::format_to(out, "X16={:016X} X17={:016X} X18={:016X} X19={:016X}\n", threadState.__x[16], threadState.__x[17],
+                   threadState.__x[18], threadState.__x[19]);
+    fmt::format_to(out, "X20={:016X} X21={:016X} X22={:016X} X23={:016X}\n", threadState.__x[20], threadState.__x[21],
+                   threadState.__x[22], threadState.__x[23]);
+    fmt::format_to(out, "X24={:016X} X25={:016X} X26={:016X} X27={:016X}\n", threadState.__x[24], threadState.__x[25],
+                   threadState.__x[26], threadState.__x[27]);
+    fmt::format_to(out, "X28={:016X}  FP={:016X}  LR={:016X}  SP={:016X}\n", threadState.__x[28], threadState.__fp,
+                   threadState.__lr, threadState.__sp);
+    fmt::format_to(out, "PC={:X} CPSR={:X}", threadState.__pc, threadState.__cpsr);
+    #else
+        #error "Unsupported architecture
+    #endif
+
+    const std::string errMsg = fmt::to_string(buf);
+    ShowFatalErrorDialog(errMsg.c_str());
+
+    return KERN_FAILURE;
+}
+
+std::optional<MachHandler> mach_handler;
+
 void RegisterExceptionHandler(bool allExceptions) {
-    // TODO: implement
+    if (!mach_handler.has_value()) {
+        mach_handler.emplace(allExceptions);
+    }
 }
 
 #endif
