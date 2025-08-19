@@ -21,6 +21,7 @@
     #include <signal.h>
 #elif defined(__APPLE__)
     #include <mach/mach.h>
+    #include <ymir/util/thread_name.hpp>
 
     // Generated MIG files
     #include "mig/macos_mig.h"
@@ -277,7 +278,8 @@ namespace {
         std::thread message_thread;
         mach_port_t server_port;
 
-        void MessagePump() const {
+        void MessageThreadProc() const {
+            util::SetCurrentThreadName("MachHandler:Msg");
             mach_msg_return_t msg_return;
 
             struct {
@@ -314,7 +316,8 @@ namespace {
 
     public:
         explicit MachHandler(bool allExceptions) {
-            exception_mask_t exception_mask = EXC_MASK_BAD_ACCESS;
+            exception_mask_t exception_mask =
+                EXC_MASK_BAD_ACCESS | EXC_MASK_BAD_INSTRUCTION | EXC_MASK_ARITHMETIC | EXC_MASK_CRASH;
             if (allExceptions) {
                 exception_mask = EXC_MASK_ALL;
             }
@@ -328,7 +331,7 @@ namespace {
                                      EXCEPTION_STATE | MACH_EXCEPTION_CODES, MACHINE_THREAD_STATE);
 
             // Start thread
-            message_thread = std::thread(&MachHandler::MessagePump, this);
+            message_thread = std::thread(&MachHandler::MessageThreadProc, this);
             message_thread.detach();
         }
 
@@ -336,37 +339,45 @@ namespace {
             mach_port_deallocate(mach_task_self(), server_port);
         }
     };
+
+    std::optional<MachHandler> mach_handler;
 } // namespace
 
+void RegisterExceptionHandler(bool allExceptions) {
+    if (!mach_handler.has_value()) {
+        mach_handler.emplace(allExceptions);
+    }
+}
+
 // Exported exception handlers
-mig_external kern_return_t catch_mach_exception_raise(mach_port_t, mach_port_t, mach_port_t, exception_type_t,
-                                                      mach_exception_data_t, mach_msg_type_number_t) {
-    fmt::print(stderr, "Unexpected mach message: mach_exception_raise\n");
+mig_external kern_return_t catch_mach_exception_raise(mach_port_t exception_port, mach_port_t thread, mach_port_t task,
+                                                      exception_type_t exception, mach_exception_data_t code,
+                                                      mach_msg_type_number_t codeCnt) {
+    ShowFatalErrorDialog("Unhandled  mach message: mach_exception_raise");
     return KERN_FAILURE;
 }
 
-mig_external kern_return_t catch_mach_exception_raise_state_identity(mach_port_t, mach_port_t, mach_port_t,
-                                                                     exception_type_t, mach_exception_data_t,
-                                                                     mach_msg_type_number_t, int *, thread_state_t,
-                                                                     mach_msg_type_number_t, thread_state_t,
-                                                                     mach_msg_type_number_t *) {
-    fmt::print(stderr, "Unexpected mach message: mach_exception_raise_state_identity\n");
+mig_external kern_return_t catch_mach_exception_raise_state_identity(
+    mach_port_t exception_port, mach_port_t thread, mach_port_t task, exception_type_t exception,
+    mach_exception_data_t code, mach_msg_type_number_t codeCnt, int *flavor, thread_state_t old_state,
+    mach_msg_type_number_t old_stateCnt, thread_state_t new_state, mach_msg_type_number_t *new_stateCnt) {
+    ShowFatalErrorDialog("Unhandled mach message: mach_exception_raise_state_identity");
     return KERN_FAILURE;
 }
 
 mig_external kern_return_t catch_mach_exception_raise_state(
     mach_port_t exception_port, exception_type_t exception, const mach_exception_data_t code,
-    mach_msg_type_number_t code_cnt, int *flavor, const thread_state_t old_state, mach_msg_type_number_t old_state_cnt,
-    thread_state_t new_state, mach_msg_type_number_t *new_state_cnt) {
-    if ((flavor == nullptr) || (new_state_cnt == nullptr)) {
-        fmt::print(stderr, "catch_mach_exception_raise_state: Invalid arguments\n");
+    mach_msg_type_number_t codeCnt, int *flavor, const thread_state_t old_state, mach_msg_type_number_t old_stateCnt,
+    thread_state_t new_state, mach_msg_type_number_t *new_stateCnt) {
+    if ((flavor == nullptr) || (new_stateCnt == nullptr)) {
+        ShowFatalErrorDialog("mach_exception_raise_state: Invalid arguments");
         return KERN_INVALID_ARGUMENT;
     }
 
     // Exception should be the same arch
-    if (*flavor != MACHINE_THREAD_STATE || old_state_cnt != MACHINE_THREAD_STATE_COUNT ||
-        *new_state_cnt < MACHINE_THREAD_STATE_COUNT) {
-        fmt::print(stderr, "catch_mach_exception_raise_state: Unexpected flavor {}\n", *flavor);
+    if (*flavor != MACHINE_THREAD_STATE || old_stateCnt != MACHINE_THREAD_STATE_COUNT ||
+        *new_stateCnt < MACHINE_THREAD_STATE_COUNT) {
+        ShowFatalErrorDialog("mach_exception_raise_state: Unexpected flavor {}");
         return KERN_INVALID_ARGUMENT;
     }
 
@@ -375,12 +386,12 @@ mig_external kern_return_t catch_mach_exception_raise_state(
     #elif defined(__aarch64__) || defined(__arm64__)
     using thread_state_t = arm_thread_state64_t;
     #else
-        #error "Unsupported mig architecture
+        #error "Unsupported architecture
     #endif
 
-    // We aren't doing any modifications to the exception-thread, just copy it over
+    // No modifications to the exception-thread, just copy it over
     std::memcpy(new_state, old_state, sizeof(thread_state_t));
-    *new_state_cnt = MACHINE_THREAD_STATE_COUNT;
+    *new_stateCnt = old_stateCnt;
 
     const thread_state_t &threadState = *(const thread_state_t *)old_state;
 
@@ -425,14 +436,6 @@ mig_external kern_return_t catch_mach_exception_raise_state(
     ShowFatalErrorDialog(errMsg.c_str());
 
     return KERN_FAILURE;
-}
-
-std::optional<MachHandler> mach_handler;
-
-void RegisterExceptionHandler(bool allExceptions) {
-    if (!mach_handler.has_value()) {
-        mach_handler.emplace(allExceptions);
-    }
 }
 
 #endif
