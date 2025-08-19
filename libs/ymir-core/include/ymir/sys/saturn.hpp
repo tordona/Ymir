@@ -218,6 +218,8 @@ struct Saturn {
         masterSH2.UseTracer(nullptr);
         slaveSH2.UseTracer(nullptr);
         SCU.UseTracer(nullptr);
+        SCSP.UseTracer(nullptr);
+        CDBlock.UseTracer(nullptr);
     }
 
     // -------------------------------------------------------------------------
