@@ -328,6 +328,35 @@ cmrc_add_resource_library(ymir-sdl3-rc
 
 cmrk_copy_runtime_dlls(ymir-sdl3)
 
+## Generate MacOS mig IPC implementation
+if (APPLE)
+    find_path(MACH_EXC_DEFS_DIR "mach/mach_exc.defs")
+    message(STATUS "mach/mach_exc.defs location: ${MACH_EXC_DEFS_DIR}")
+    if(MACH_EXC_DEFS_DIR)        
+        execute_process(
+            COMMAND
+                mkdir -p "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64"
+            COMMAND mig
+                -arch x86_64
+                -server "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64/mach_exc_server.c"
+                -sheader "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/x64/mach_exc_server.h"
+                "${MACH_EXC_DEFS_DIR}/mach/mach_exc.defs"
+        )
+        execute_process(
+            COMMAND
+                mkdir -p "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64"
+            COMMAND mig
+                -arch arm64
+                -server "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64/mach_exc_server.c"
+                -sheader "${CMAKE_CURRENT_SOURCE_DIR}/src/util/mig/a64/mach_exc_server.h"
+                "${MACH_EXC_DEFS_DIR}/mach/mach_exc.defs"
+        )
+        target_sources(ymir-sdl3 PRIVATE
+            src/util/mig/macos_mig.c
+        )
+    endif()
+endif()
+
 ## Add icon
 if (WIN32)
     target_sources(ymir-sdl3 PRIVATE res/ymir.rc)
