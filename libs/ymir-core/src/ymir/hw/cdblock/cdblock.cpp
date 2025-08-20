@@ -1699,7 +1699,7 @@ void CDBlock::CmdGetStatus() {
     // <blank>
 
     // Output structure: standard CD status data
-    if (m_playEndPending) {
+    if (m_playEndPending && (m_status.statusCode & 0xF) == kStatusCodeBusy) {
         // HACK: Report Play status on the last sector of playback
         // The response from this command doesn't always match the latest periodic report
         ReportCDStatus(kStatusCodePlay);
