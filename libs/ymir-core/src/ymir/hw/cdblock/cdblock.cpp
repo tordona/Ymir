@@ -957,6 +957,9 @@ void CDBlock::ProcessDriveState() {
     default: CheckPlayEnd(); break;
     }
 
+    // TODO: Elevator Action stops loading at 2x read speed without this
+    CheckPlayEnd();
+
     if (m_readyForPeriodicReports && !m_processingCommand) {
         // HACK to ensure the system detects the absence of a disc properly
         if (m_disc.sessions.empty()) {
