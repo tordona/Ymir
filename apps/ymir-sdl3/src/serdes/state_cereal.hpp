@@ -972,7 +972,7 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
 
     ar(s.discHash);
     ar(s.CR, s.HIRQ, s.HIRQMASK);
-    ar(s.status);
+    serialize(ar, s.status, version);
     ar(s.readyForPeriodicReports);
     ar(s.currDriveCycles, s.targetDriveCycles);
     if (version >= 9) {
@@ -1047,7 +1047,11 @@ void serialize(Archive &ar, CDBlockState &s, const uint32 version) {
 }
 
 template <class Archive>
-void serialize(Archive &ar, CDBlockState::StatusState &s) {
+void serialize(Archive &ar, CDBlockState::StatusState &s, const uint32 version) {
+    // v9:
+    // - Changed fields
+    //   - statusCode no longer includes flags (&= 0xF)
+
     ar(s.statusCode);
     ar(s.frameAddress);
     ar(s.flags);
@@ -1055,6 +1059,10 @@ void serialize(Archive &ar, CDBlockState::StatusState &s) {
     ar(s.controlADR);
     ar(s.track);
     ar(s.index);
+
+    if (version < 9) {
+        s.statusCode &= 0xF;
+    }
 }
 
 template <class Archive>

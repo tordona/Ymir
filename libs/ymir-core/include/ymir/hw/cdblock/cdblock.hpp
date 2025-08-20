@@ -102,8 +102,9 @@ private:
     // Disc/drive state
 
     struct Status {
-        // Status code, one of kStatusCode* constants and kStatusFlag* flags, or kStatusReject.
-        // kStatusFlagPeriodic and kStatusFlagWait are mutually exclusive.
+        // Status code, one of kStatusCode* constants.
+        // Never kStatusCodeReject.
+        // Does not include kStatusFlag* constants.
         uint8 statusCode;
 
         uint32 frameAddress; // current frame address
@@ -176,6 +177,9 @@ private:
 
     // Updates CR1-4 with the current CD status, overriding the status code
     void ReportCDStatus(uint8 statusCode);
+
+    // Gets the current CD status code without the flags and taking into account the Play->Pause transition period
+    uint8 GetStatusCode() const;
 
     // -------------------------------------------------------------------------
     // Data transfers
