@@ -330,12 +330,34 @@ bool Load(std::filesystem::path chdPath, Disc &disc, bool preloadToRAM) {
                 // Add pregap on audio tracks
                 subviewOffset += pregap * track.sectorSize;
             } else {
-                // Round offset up to next hunk
-                const uintmax_t remainder = byteOffset % binaryReader->HunkSize();
-                if (remainder != 0) {
-                    byteOffset += binaryReader->HunkSize() - remainder;
-                    subviewOffset += binaryReader->HunkSize() - remainder;
+                // Find start of next sector and adjust offset accordingly
+                uintmax_t offset = 0;
+                while (true) {
+                    static constexpr std::array<uint8, 12> kSyncBytes = {
+                        0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00,
+                    };
+                    std::array<uint8, 12> syncBuf{};
+                    if (binaryReader->Read(byteOffset + offset, syncBuf.size(), syncBuf) == syncBuf.size() &&
+                        syncBuf == kSyncBytes) {
+                        std::array<uint8, 3> headerBuf{};
+                        if (binaryReader->Read(byteOffset + offset + 0xC, headerBuf.size(), headerBuf) ==
+                                headerBuf.size() &&
+                            headerBuf[0] == util::to_bcd(frameAddress / 75 / 60) &&
+                            headerBuf[1] == util::to_bcd((frameAddress / 75) % 60) &&
+                            headerBuf[2] == util::to_bcd(frameAddress % 75)) {
+                            break;
+                        }
+                    }
+
+                    offset += track.sectorSize;
+                    if (byteOffset + offset >= binaryReader->Size()) {
+                        // fmt::println("CHD: Could not find starting sector for track {}", track.index);
+                        return false;
+                    }
                 }
+
+                byteOffset += offset;
+                subviewOffset += offset;
             }
             track.binaryReader =
                 std::make_unique<SharedSubviewBinaryReader>(binaryReader, subviewOffset, frames * track.sectorSize);
