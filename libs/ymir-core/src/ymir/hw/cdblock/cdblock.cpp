@@ -688,6 +688,7 @@ bool CDBlock::SetupGenericPlayback(uint32 startParam, uint32 endParam, uint16 re
     m_playRepeatParam = repeatParam;
     m_playMaxRepeat = m_playRepeatParam & 0xF;
     m_playFile = false;
+    m_playEndPending = false;
 
     // Make sure we have a disc
     if (m_disc.sessions.empty()) {
@@ -956,9 +957,6 @@ void CDBlock::ProcessDriveState() {
         break;
     default: CheckPlayEnd(); break;
     }
-
-    // TODO: Elevator Action stops loading at 2x read speed without this
-    CheckPlayEnd();
 
     if (m_readyForPeriodicReports && !m_processingCommand) {
         // HACK to ensure the system detects the absence of a disc properly
