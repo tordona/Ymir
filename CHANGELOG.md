@@ -27,6 +27,7 @@ Introduced save state file version 9.
 - CD Block: Use CD Block clock ratios instead of SCSP's for drive state update events.
 - CD Block: Various state transition and playback nuances. (thanks to @celeriyacon)
 - CD Block: Various Put/Get/Delete Sector Data nuances. (thanks to @celeriyacon)
+- Media: Adjust sectors offsets when reading CHD images with multiple data tracks. Fixes some Last Bronx (USA) CHD images not booting. (#238)
 - Media: Fix handling of Unicode characters when loading or saving the recent game disc list.
 - Media: Properly handle UTF-8-encoded CUE files referencing other files with Unicode characters.
 - SCSP: Allow M68K to fetch instructions from SCSP registers. Fixes CroNSF audio playback.

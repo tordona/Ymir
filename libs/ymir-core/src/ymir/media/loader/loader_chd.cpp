@@ -334,6 +334,7 @@ bool Load(std::filesystem::path chdPath, Disc &disc, bool preloadToRAM) {
                 const uintmax_t remainder = byteOffset % binaryReader->HunkSize();
                 if (remainder != 0) {
                     byteOffset += binaryReader->HunkSize() - remainder;
+                    subviewOffset += binaryReader->HunkSize() - remainder;
                 }
             }
             track.binaryReader =

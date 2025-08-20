@@ -6,6 +6,7 @@
 
 #include <ymir/util/arith_ops.hpp>
 #include <ymir/util/data_ops.hpp>
+#include <ymir/util/dev_assert.hpp>
 
 #include "cdrom_crc.hpp"
 #include "saturn_header.hpp"
@@ -139,6 +140,10 @@ struct Track {
                 outBuf[0xF] = 0x00;
             }
             // fmt::println("  Added header");
+        } else {
+            YMIR_DEV_ASSERT(outBuf[0xC] == util::to_bcd(frameAddress / 75 / 60));
+            YMIR_DEV_ASSERT(outBuf[0xD] == util::to_bcd((frameAddress / 75) % 60));
+            YMIR_DEV_ASSERT(outBuf[0xE] == util::to_bcd(frameAddress % 75));
         }
         if (!hasSubheader) {
             // Fill out EDC, Intermediate, P-Parity and Q-Parity fields
