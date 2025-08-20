@@ -92,6 +92,7 @@ add_library(ymir-core
     include/ymir/hw/smpc/peripheral/peripheral_report.hpp
     include/ymir/hw/smpc/peripheral/peripheral_state_common.hpp
 
+    include/ymir/hw/vdp/slope.hpp
     include/ymir/hw/vdp/vdp.hpp
     include/ymir/hw/vdp/vdp_callbacks.hpp
     include/ymir/hw/vdp/vdp_defs.hpp
@@ -215,7 +216,6 @@ add_library(ymir-core
     src/ymir/hw/sh2/sh2_decode.cpp
     src/ymir/hw/sh2/sh2_disasm.cpp
 
-    src/ymir/hw/vdp/slope.hpp
     src/ymir/hw/vdp/vdp.cpp
 
     src/ymir/media/cdrom_crc.cpp

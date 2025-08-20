@@ -1,7 +1,5 @@
 #include <ymir/hw/vdp/vdp.hpp>
 
-#include "slope.hpp"
-
 #include <ymir/util/bit_ops.hpp>
 #include <ymir/util/constexpr_for.hpp>
 #include <ymir/util/dev_log.hpp>
@@ -10,6 +8,7 @@
 #include <ymir/util/unreachable.hpp>
 
 #include <cassert>
+#include <limits>
 
 #if defined(_M_X64) || defined(__x86_64__)
     #include <immintrin.h>
@@ -62,12 +61,10 @@ namespace grp {
     };
 
     struct vdp2_regs : public vdp2 {
-        // static constexpr devlog::Level level = devlog::level::trace;
         static constexpr std::string_view name = "VDP2-Regs";
     };
 
     struct vdp2_render : public vdp2 {
-        // static constexpr devlog::Level level = devlog::level::trace;
         static constexpr std::string_view name = "VDP2-Render";
     };
 
@@ -1624,10 +1621,10 @@ void VDP::VDP1ProcessCommand() {
             VDP1Cmd_DrawDistortedSprite<deinterlace, transparentMeshes>(cmdAddress, control);
             break;
 
-        case DrawPolygon: VDP1Cmd_DrawPolygon<deinterlace, transparentMeshes>(cmdAddress); break;
+        case DrawPolygon: VDP1Cmd_DrawPolygon<deinterlace, transparentMeshes>(cmdAddress, control); break;
         case DrawPolylines: [[fallthrough]];
-        case DrawPolylinesAlt: VDP1Cmd_DrawPolylines<deinterlace, transparentMeshes>(cmdAddress); break;
-        case DrawLine: VDP1Cmd_DrawLine<deinterlace, transparentMeshes>(cmdAddress); break;
+        case DrawPolylinesAlt: VDP1Cmd_DrawPolylines<deinterlace, transparentMeshes>(cmdAddress, control); break;
+        case DrawLine: VDP1Cmd_DrawLine<deinterlace, transparentMeshes>(cmdAddress, control); break;
 
         case UserClipping: [[fallthrough]];
         case UserClippingAlt: VDP1Cmd_SetUserClipping(cmdAddress); break;
@@ -1817,8 +1814,7 @@ FORCE_INLINE void VDP::VDP1CommitMeshPolygon(CoordS32 topLeft, CoordS32 bottomRi
 }
 
 template <bool deinterlace, bool transparentMeshes>
-FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
-                                     const VDP1GouraudParams &gouraudParams) {
+FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams) {
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
 
@@ -1891,42 +1887,8 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
             // the background are interpreted as 5:5:5 RGB.
 
             if (pixelParams.mode.gouraudEnable) {
-                // Calculate gouraud shading on source color
-                // Interpolate between A, B, C and D (ordered in the standard Saturn quad orientation) using U and V
-                // Gouraud channel values are offset by -16
-
-                auto lerp = [](sint64 x, sint64 y, uint64 t) -> sint16 {
-                    static constexpr uint64 shift = Slope::kFracBits;
-                    return ((x << shift) + (y - x) * t) >> shift;
-                };
-
-                const Color555 A = gouraudParams.colorA;
-                const Color555 B = gouraudParams.colorB;
-                const Color555 C = gouraudParams.colorC;
-                const Color555 D = gouraudParams.colorD;
-                const uint64 U = gouraudParams.U;
-                const uint64 V = gouraudParams.V;
-
-                const sint16 ABr = lerp(static_cast<sint16>(A.r), static_cast<sint16>(B.r), U);
-                const sint16 ABg = lerp(static_cast<sint16>(A.g), static_cast<sint16>(B.g), U);
-                const sint16 ABb = lerp(static_cast<sint16>(A.b), static_cast<sint16>(B.b), U);
-
-                const sint16 DCr = lerp(static_cast<sint16>(D.r), static_cast<sint16>(C.r), U);
-                const sint16 DCg = lerp(static_cast<sint16>(D.g), static_cast<sint16>(C.g), U);
-                const sint16 DCb = lerp(static_cast<sint16>(D.b), static_cast<sint16>(C.b), U);
-
-                srcColor.r = std::clamp(srcColor.r + lerp(ABr, DCr, V) - 0x10, 0, 31);
-                srcColor.g = std::clamp(srcColor.g + lerp(ABg, DCg, V) - 0x10, 0, 31);
-                srcColor.b = std::clamp(srcColor.b + lerp(ABb, DCb, V) - 0x10, 0, 31);
-
-                // HACK: replace with U/V coordinates
-                // srcColor.r = U >> (Slope::kFracBits - 5);
-                // srcColor.g = V >> (Slope::kFracBits - 5);
-
-                // HACK: replace with computed gouraud gradient
-                // srcColor.r = lerp(ABr, DCr, V);
-                // srcColor.g = lerp(ABg, DCg, V);
-                // srcColor.b = lerp(ABb, DCb, V);
+                // Apply gouraud shading to source color
+                srcColor = pixelParams.gouraud.Blend(srcColor);
             }
 
             switch (pixelParams.mode.colorCalcBits) {
@@ -1976,8 +1938,7 @@ FORCE_INLINE void VDP::VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixe
 }
 
 template <bool antiAlias, bool deinterlace, bool transparentMeshes>
-FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
-                                    VDP1GouraudParams &gouraudParams) {
+FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, VDP1LineParams &lineParams) {
     if (VDP1IsLineSystemClipped<deinterlace>(coord1, coord2)) {
         return;
     }
@@ -1986,23 +1947,35 @@ FORCE_INLINE void VDP::VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1
     const VDP2Regs &regs2 = VDP2GetRegs();
     const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
 
-    LineStepper line{coord1, coord2};
-    line.SystemClip(m_VDP1RenderContext.sysClipH, (m_VDP1RenderContext.sysClipV << doubleV) | doubleV);
+    LineStepper line{coord1, coord2, antiAlias};
+    const uint32 skipSteps =
+        line.SystemClip(m_VDP1RenderContext.sysClipH, (m_VDP1RenderContext.sysClipV << doubleV) | doubleV);
 
-    for (; line.CanStep(); line.Step()) {
-        gouraudParams.U = line.FracPos();
-        VDP1PlotPixel<deinterlace, transparentMeshes>(line.Coord(), pixelParams, gouraudParams);
+    VDP1PixelParams pixelParams{
+        .mode = lineParams.mode,
+        .color = lineParams.color,
+    };
+    if (pixelParams.mode.gouraudEnable) {
+        pixelParams.gouraud.Setup(line.Length() + 1, lineParams.gouraudLeft, lineParams.gouraudRight);
+        pixelParams.gouraud.Skip(skipSteps);
+    }
+
+    bool aa = false;
+    for (line.Step(); line.CanStep(); aa = line.Step()) {
+        VDP1PlotPixel<deinterlace, transparentMeshes>(line.Coord(), pixelParams);
         if constexpr (antiAlias) {
-            if (line.NeedsAntiAliasing()) {
-                VDP1PlotPixel<deinterlace, transparentMeshes>(line.AACoord(), pixelParams, gouraudParams);
+            if (aa) {
+                VDP1PlotPixel<deinterlace, transparentMeshes>(line.AACoord(), pixelParams);
             }
+        }
+        if (pixelParams.mode.gouraudEnable) {
+            pixelParams.gouraud.Step();
         }
     }
 }
 
 template <bool deinterlace, bool transparentMeshes>
-void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
-                               VDP1GouraudParams &gouraudParams) {
+void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, VDP1TexturedLineParams &lineParams) {
     if (VDP1IsLineSystemClipped<deinterlace>(coord1, coord2)) {
         return;
     }
@@ -2015,86 +1988,105 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
     const auto mode = lineParams.mode;
     const auto control = lineParams.control;
 
-    const uint32 v = lineParams.texFracV >> Slope::kFracBits;
-    gouraudParams.V = lineParams.texFracV;
-    if (charSizeV != 0) {
-        gouraudParams.V /= charSizeV;
+    const uint32 v = lineParams.texVStepper.Value();
+
+    const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+    LineStepper line{coord1, coord2, true};
+    const uint32 skipSteps =
+        line.SystemClip(m_VDP1RenderContext.sysClipH, (m_VDP1RenderContext.sysClipV << doubleV) | doubleV);
+
+    VDP1PixelParams pixelParams{
+        .mode = mode,
+    };
+    if (mode.gouraudEnable) {
+        assert(lineParams.gouraudLeft != nullptr);
+        assert(lineParams.gouraudRight != nullptr);
+        pixelParams.gouraud.Setup(line.Length() + 1, lineParams.gouraudLeft->Value(), lineParams.gouraudRight->Value());
+        pixelParams.gouraud.Skip(skipSteps);
     }
+
+    sint32 uStart = 0;
+    sint32 uEnd = charSizeH - 1;
+    if (control.flipH) {
+        std::swap(uStart, uEnd);
+    }
+    const bool useHighSpeedShrink = mode.highSpeedShrink && line.Length() < charSizeH - 1;
+
+    TextureStepper uStepper;
+    uStepper.Setup(line.Length() + 1, uStart, uEnd, useHighSpeedShrink, regs1.evenOddCoordSelect);
+    uStepper.SkipPixels(skipSteps);
 
     uint16 color = 0;
     bool transparent = true;
-    const bool flipU = control.flipH;
     bool hasEndCode = false;
-    int endCodeCount = 0;
-    uint32 nextU = flipU ? charSizeH - 1 : 0;
-    sint32 uInc = flipU ? -1 : +1;
-    bool first = true;
+    int endCodeCount = useHighSpeedShrink ? std::numeric_limits<int>::min() : 0;
 
-    const uint16 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
-    TexturedLineStepper line{coord1, coord2, charSizeH, flipU};
-    line.SystemClip(m_VDP1RenderContext.sysClipH, (m_VDP1RenderContext.sysClipV << doubleV) | doubleV);
+    auto readTexel = [&] {
+        const uint32 u = uStepper.Value();
 
-    for (; line.CanStep(); line.Step()) {
-        const uint32 currU = line.U();
+        const uint32 charIndex = u + v * charSizeH;
 
-        // Load new texels if U coordinate changed
-        for (uint32 u = nextU; u != currU + uInc; u += uInc) {
-            const bool useHighSpeedShrink = mode.highSpeedShrink && line.uinc > Slope::kFracOne;
-            const uint32 adjustedU = useHighSpeedShrink ? ((u & ~1) | (uint32)regs1.evenOddCoordSelect) : u;
-
-            const uint32 charIndex = adjustedU + v * charSizeH;
-
-            auto processEndCode = [&](bool endCode) {
-                if (endCode && !mode.endCodeDisable) {
-                    hasEndCode = true;
-                    endCodeCount++;
-                } else {
-                    hasEndCode = false;
-                }
-            };
-
-            // Read next texel
-            switch (mode.colorMode) {
-            case 0: // 4 bpp, 16 colors, bank mode
-                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
-                color = (color >> ((~u & 1) * 4)) & 0xF;
-                processEndCode(color == 0xF);
-                transparent = color == 0x0;
-                color |= lineParams.colorBank & 0xFFF0;
-                break;
-            case 1: // 4 bpp, 16 colors, lookup table mode
-                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
-                color = (color >> ((~u & 1) * 4)) & 0xF;
-                processEndCode(color == 0xF);
-                transparent = color == 0x0;
-                color = VDP1ReadRendererVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
-                break;
-            case 2: // 8 bpp, 64 colors, bank mode
-                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
-                processEndCode(color == 0xFF);
-                transparent = color == 0x00;
-                color &= 0x3F;
-                color |= lineParams.colorBank & 0xFFC0;
-                break;
-            case 3: // 8 bpp, 128 colors, bank mode
-                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
-                processEndCode(color == 0xFF);
-                transparent = color == 0x00;
-                color &= 0x7F;
-                color |= lineParams.colorBank & 0xFF80;
-                break;
-            case 4: // 8 bpp, 256 colors, bank mode
-                color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
-                processEndCode(color == 0xFF);
-                transparent = color == 0x00;
-                color |= lineParams.colorBank & 0xFF00;
-                break;
-            case 5: // 16 bpp, 32768 colors, RGB mode
-                color = VDP1ReadRendererVRAM<uint16>(lineParams.charAddr + charIndex * sizeof(uint16));
-                processEndCode(color == 0x7FFF);
-                transparent = !bit::test<15>(color);
-                break;
+        auto processEndCode = [&](bool endCode) {
+            if (endCode && !mode.endCodeDisable) {
+                hasEndCode = true;
+                endCodeCount++;
+            } else {
+                hasEndCode = false;
             }
+        };
+
+        // Read next texel
+        switch (mode.colorMode) {
+        case 0: // 4 bpp, 16 colors, bank mode
+            color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
+            color = (color >> ((~u & 1) * 4)) & 0xF;
+            processEndCode(color == 0xF);
+            transparent = color == 0x0;
+            color |= lineParams.colorBank & 0xFFF0;
+            break;
+        case 1: // 4 bpp, 16 colors, lookup table mode
+            color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + (charIndex >> 1));
+            color = (color >> ((~u & 1) * 4)) & 0xF;
+            processEndCode(color == 0xF);
+            transparent = color == 0x0;
+            color = VDP1ReadRendererVRAM<uint16>(color * sizeof(uint16) + lineParams.colorBank * 8);
+            break;
+        case 2: // 8 bpp, 64 colors, bank mode
+            color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
+            processEndCode(color == 0xFF);
+            transparent = color == 0x00;
+            color &= 0x3F;
+            color |= lineParams.colorBank & 0xFFC0;
+            break;
+        case 3: // 8 bpp, 128 colors, bank mode
+            color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
+            processEndCode(color == 0xFF);
+            transparent = color == 0x00;
+            color &= 0x7F;
+            color |= lineParams.colorBank & 0xFF80;
+            break;
+        case 4: // 8 bpp, 256 colors, bank mode
+            color = VDP1ReadRendererVRAM<uint8>(lineParams.charAddr + charIndex);
+            processEndCode(color == 0xFF);
+            transparent = color == 0x00;
+            color |= lineParams.colorBank & 0xFF00;
+            break;
+        case 5: // 16 bpp, 32768 colors, RGB mode
+            color = VDP1ReadRendererVRAM<uint16>(lineParams.charAddr + charIndex * sizeof(uint16));
+            processEndCode(color == 0x7FFF);
+            transparent = !bit::test<15>(color);
+            break;
+        }
+    };
+
+    readTexel();
+
+    bool aa = false;
+    for (line.Step(); line.CanStep(); aa = line.Step()) {
+        // Load new texels if U coordinate changed
+        while (uStepper.ShouldStepTexel()) {
+            uStepper.StepTexel();
+            readTexel();
 
             if (endCodeCount == 2) {
                 break;
@@ -2103,27 +2095,92 @@ void VDP::VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1Textu
         if (endCodeCount == 2) {
             break;
         }
-
-        nextU = currU + uInc;
-        first = false;
+        uStepper.StepPixel();
 
         if (hasEndCode || (transparent && !mode.transparentPixelDisable)) {
             continue;
         }
 
-        VDP1PixelParams pixelParams{
-            .mode = mode,
-            .color = color,
-        };
+        pixelParams.color = color;
 
-        gouraudParams.U = line.FracU();
-        if (charSizeH != 0) {
-            gouraudParams.U /= charSizeH;
+        VDP1PlotPixel<deinterlace, transparentMeshes>(line.Coord(), pixelParams);
+        if (aa) {
+            VDP1PlotPixel<deinterlace, transparentMeshes>(line.AACoord(), pixelParams);
         }
+        if (mode.gouraudEnable) {
+            pixelParams.gouraud.Step();
+        }
+    }
+}
 
-        VDP1PlotPixel<deinterlace, transparentMeshes>(line.Coord(), pixelParams, gouraudParams);
-        if (line.NeedsAntiAliasing()) {
-            VDP1PlotPixel<deinterlace, transparentMeshes>(line.AACoord(), pixelParams, gouraudParams);
+template <bool deinterlace, bool transparentMeshes>
+FORCE_INLINE void VDP::VDP1PlotTexturedQuad(uint32 cmdAddress, VDP1Command::Control control, VDP1Command::Size size,
+                                            CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD) {
+    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
+        return;
+    }
+
+    const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
+    const uint16 color = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x06);
+    const uint32 charAddr = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x08) * 8u;
+
+    const uint32 charSizeH = size.H * 8;
+    const uint32 charSizeV = size.V;
+
+    devlog::trace<grp::vdp1_render>("Textured quad parameters: color={:04X} mode={:04X} size={:2d}x{:<2d} char={:05X}",
+                                    color, mode.u16, charSizeH, charSizeV, charAddr);
+
+    VDP1TexturedLineParams lineParams{
+        .control = control,
+        .mode = mode,
+        .colorBank = color,
+        .charAddr = charAddr,
+        .charSizeH = charSizeH,
+        .charSizeV = charSizeV,
+    };
+
+    const bool flipV = control.flipV;
+    QuadStepper quad{coordA, coordB, coordC, coordD};
+
+    if (mode.gouraudEnable) {
+        const uint32 gouraudTable = static_cast<uint32>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
+
+        Color555 colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)};
+        Color555 colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)};
+        Color555 colorC{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 4u)};
+        Color555 colorD{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 6u)};
+
+        devlog::trace<grp::vdp1_render>(
+            "[{:05X}] Gouraud colors: ({},{},{}) ({},{},{}) ({},{},{}) ({},{},{})", gouraudTable, (uint8)colorA.r,
+            (uint8)colorA.g, (uint8)colorA.b, (uint8)colorB.r, (uint8)colorB.g, (uint8)colorB.b, (uint8)colorC.r,
+            (uint8)colorC.g, (uint8)colorC.b, (uint8)colorD.r, (uint8)colorD.g, (uint8)colorD.b);
+
+        quad.SetupGouraud(colorA, colorB, colorC, colorD);
+        lineParams.gouraudLeft = &quad.LeftEdge().Gouraud();
+        lineParams.gouraudRight = &quad.RightEdge().Gouraud();
+    }
+
+    quad.SetupTexture(lineParams.texVStepper, charSizeV, flipV);
+
+    // Interpolate linearly over edges A-D and B-C
+    for (; quad.CanStep(); quad.Step()) {
+        // Plot lines between the interpolated points
+        const CoordS32 coordL = quad.LeftEdge().Coord();
+        const CoordS32 coordR = quad.RightEdge().Coord();
+        while (lineParams.texVStepper.ShouldStepTexel()) {
+            lineParams.texVStepper.StepTexel();
+        }
+        lineParams.texVStepper.StepPixel();
+        VDP1PlotTexturedLine<deinterlace, transparentMeshes>(coordL, coordR, lineParams);
+    }
+
+    if constexpr (transparentMeshes) {
+        if (mode.meshEnable) {
+            const CoordS32 coordTL{std::min(std::min(coordA.x(), coordB.x()), std::min(coordC.x(), coordD.x())),
+                                   std::min(std::min(coordA.y(), coordB.y()), std::min(coordC.y(), coordD.y()))};
+            const CoordS32 coordBR{std::max(std::max(coordA.x(), coordB.x()), std::max(coordC.x(), coordD.x())),
+                                   std::max(std::max(coordA.y(), coordB.y()), std::max(coordC.y(), coordD.y()))};
+            VDP1CommitMeshPolygon<deinterlace>(coordTL, coordBR);
         }
     }
 }
@@ -2151,17 +2208,13 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
         return;
     }
 
-    auto &ctx = m_VDP1RenderContext;
-    const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
-    const uint16 color = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x06);
-    const uint32 charAddr = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x08) * 8u;
     const VDP1Command::Size size{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0A)};
-    const sint32 xa = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
-    const sint32 ya = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
-    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
-
     const uint32 charSizeH = size.H * 8;
     const uint32 charSizeV = size.V;
+
+    auto &ctx = m_VDP1RenderContext;
+    const sint32 xa = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
+    const sint32 ya = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
 
     const sint32 lx = xa;                                // left X
     const sint32 ty = ya;                                // top Y
@@ -2171,61 +2224,16 @@ void VDP::VDP1Cmd_DrawNormalSprite(uint32 cmdAddress, VDP1Command::Control contr
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
     const sint32 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+
     const CoordS32 coordA{lx, ty << doubleV};
     const CoordS32 coordB{rx, ty << doubleV};
     const CoordS32 coordC{rx, by << doubleV};
     const CoordS32 coordD{lx, by << doubleV};
 
-    devlog::trace<grp::vdp1_render>("[{:05X}] Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} "
-                                    "color={:04X} gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                                    cmdAddress, lx, ty, rx, ty, rx, by, lx, by, color, gouraudTable, mode.u16,
-                                    charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Draw normal sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d}",
+                                    cmdAddress, lx, ty, rx, ty, rx, by, lx, by);
 
-    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
-        return;
-    }
-
-    VDP1TexturedLineParams lineParams{
-        .control = control,
-        .mode = mode,
-        .colorBank = color,
-        .charAddr = charAddr,
-        .charSizeH = charSizeH,
-        .charSizeV = charSizeV,
-    };
-
-    VDP1GouraudParams gouraudParams{
-        .colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)},
-        .colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)},
-        .colorC{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 4u)},
-        .colorD{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 6u)},
-    };
-    if (control.flipH) {
-        std::swap(gouraudParams.colorA, gouraudParams.colorB);
-        std::swap(gouraudParams.colorD, gouraudParams.colorC);
-    }
-    if (control.flipV) {
-        std::swap(gouraudParams.colorA, gouraudParams.colorD);
-        std::swap(gouraudParams.colorB, gouraudParams.colorC);
-    }
-
-    // Interpolate linearly over edges A-D and B-C
-    const bool flipV = control.flipV;
-    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV, flipV}; edge.CanStep(); edge.Step()) {
-        // Plot lines between the interpolated points
-        const CoordS32 coordL{edge.LX(), edge.LY()};
-        const CoordS32 coordR{edge.RX(), edge.RY()};
-        lineParams.texFracV = edge.FracV();
-        VDP1PlotTexturedLine<deinterlace, transparentMeshes>(coordL, coordR, lineParams, gouraudParams);
-    }
-
-    if constexpr (transparentMeshes) {
-        if (mode.meshEnable) {
-            const CoordS32 coordTL{lx, ty};
-            const CoordS32 coordBR{rx, by};
-            VDP1CommitMeshPolygon<deinterlace>(coordTL, coordBR);
-        }
-    }
+    VDP1PlotTexturedQuad<deinterlace, transparentMeshes>(cmdAddress, control, size, coordA, coordB, coordC, coordD);
 }
 
 template <bool deinterlace, bool transparentMeshes>
@@ -2234,17 +2242,11 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
         return;
     }
 
-    auto &ctx = m_VDP1RenderContext;
-    const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
-    const uint16 color = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x06);
-    const uint32 charAddr = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x08) * 8u;
     const VDP1Command::Size size{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0A)};
+
+    auto &ctx = m_VDP1RenderContext;
     const sint32 xa = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0C));
     const sint32 ya = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E));
-    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
-
-    const uint32 charSizeH = size.H * 8;
-    const uint32 charSizeV = size.V;
 
     // Calculated quad coordinates
     sint32 qxa;
@@ -2337,63 +2339,16 @@ void VDP::VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control contr
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
     const sint32 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+
     const CoordS32 coordA{qxa, qya << doubleV};
     const CoordS32 coordB{qxb, qyb << doubleV};
     const CoordS32 coordC{qxc, qyc << doubleV};
     const CoordS32 coordD{qxd, qyd << doubleV};
 
-    devlog::trace<grp::vdp1_render>("[{:05X}] Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} "
-                                    "color={:04X} gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                                    cmdAddress, qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd, color, gouraudTable, mode.u16,
-                                    charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>("[{:05X}] Draw scaled sprite: {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d} {:3d}x{:<3d}",
+                                    cmdAddress, qxa, qya, qxb, qyb, qxc, qyc, qxd, qyd);
 
-    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
-        return;
-    }
-
-    VDP1TexturedLineParams lineParams{
-        .control = control,
-        .mode = mode,
-        .colorBank = color,
-        .charAddr = charAddr,
-        .charSizeH = charSizeH,
-        .charSizeV = charSizeV,
-    };
-
-    VDP1GouraudParams gouraudParams{
-        .colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)},
-        .colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)},
-        .colorC{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 4u)},
-        .colorD{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 6u)},
-    };
-    if (control.flipH) {
-        std::swap(gouraudParams.colorA, gouraudParams.colorB);
-        std::swap(gouraudParams.colorD, gouraudParams.colorC);
-    }
-    if (control.flipV) {
-        std::swap(gouraudParams.colorA, gouraudParams.colorD);
-        std::swap(gouraudParams.colorB, gouraudParams.colorC);
-    }
-
-    // Interpolate linearly over edges A-D and B-C
-    const bool flipV = control.flipV;
-    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV, flipV}; edge.CanStep(); edge.Step()) {
-        // Plot lines between the interpolated points
-        const CoordS32 coordL{edge.LX(), edge.LY()};
-        const CoordS32 coordR{edge.RX(), edge.RY()};
-        lineParams.texFracV = edge.FracV();
-        VDP1PlotTexturedLine<deinterlace, transparentMeshes>(coordL, coordR, lineParams, gouraudParams);
-    }
-
-    if constexpr (transparentMeshes) {
-        if (mode.meshEnable) {
-            const CoordS32 coordTL{std::min(std::min(qxa, qxb), std::min(qxc, qxd)),
-                                   std::min(std::min(qya, qyb), std::min(qyc, qyd))};
-            const CoordS32 coordBR{std::max(std::max(qxa, qxb), std::max(qxc, qxd)),
-                                   std::max(std::max(qya, qyb), std::max(qyc, qyd))};
-            VDP1CommitMeshPolygon<deinterlace>(coordTL, coordBR);
-        }
-    }
+    VDP1PlotTexturedQuad<deinterlace, transparentMeshes>(cmdAddress, control, size, coordA, coordB, coordC, coordD);
 }
 
 template <bool deinterlace, bool transparentMeshes>
@@ -2402,11 +2357,9 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
         return;
     }
 
-    auto &ctx = m_VDP1RenderContext;
-    const VDP1Command::DrawMode mode{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x04)};
-    const uint16 color = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x06);
-    const uint32 charAddr = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x08) * 8u;
     const VDP1Command::Size size{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0A)};
+
+    auto &ctx = m_VDP1RenderContext;
     const sint32 xa = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0C)) + ctx.localCoordX;
     const sint32 ya = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x0E)) + ctx.localCoordY;
     const sint32 xb = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x10)) + ctx.localCoordX;
@@ -2415,75 +2368,25 @@ void VDP::VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control co
     const sint32 yc = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x16)) + ctx.localCoordY;
     const sint32 xd = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x18)) + ctx.localCoordX;
     const sint32 yd = bit::sign_extend<13>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1A)) + ctx.localCoordY;
-    const uint32 gouraudTable = static_cast<uint32>(VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x1C)) << 3u;
-
-    const uint32 charSizeH = size.H * 8;
-    const uint32 charSizeV = size.V;
 
     const VDP1Regs &regs1 = VDP1GetRegs();
     const VDP2Regs &regs2 = VDP2GetRegs();
     const sint32 doubleV = deinterlace && regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity && !regs1.dblInterlaceEnable;
+
     const CoordS32 coordA{xa, ya << doubleV};
     const CoordS32 coordB{xb, yb << doubleV};
     const CoordS32 coordC{xc, yc << doubleV};
     const CoordS32 coordD{xd, yd << doubleV};
 
-    devlog::trace<grp::vdp1_render>("[{:05X}] Draw distorted sprite: {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d} "
-                                    "{:6d}x{:<6d} color={:04X} gouraud={:04X} mode={:04X} size={:2d}x{:<2d} char={:X}",
-                                    cmdAddress, xa, ya, xb, yb, xc, yc, xd, yd, color, gouraudTable, mode.u16,
-                                    charSizeH, charSizeV, charAddr);
+    devlog::trace<grp::vdp1_render>(
+        "[{:05X}] Draw distorted sprite: {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d} {:6d}x{:<6d}", cmdAddress, xa, ya, xb,
+        yb, xc, yc, xd, yd);
 
-    if (VDP1IsQuadSystemClipped<deinterlace>(coordA, coordB, coordC, coordD)) {
-        return;
-    }
-
-    VDP1TexturedLineParams lineParams{
-        .control = control,
-        .mode = mode,
-        .colorBank = color,
-        .charAddr = charAddr,
-        .charSizeH = charSizeH,
-        .charSizeV = charSizeV,
-    };
-
-    VDP1GouraudParams gouraudParams{
-        .colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)},
-        .colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)},
-        .colorC{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 4u)},
-        .colorD{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 6u)},
-    };
-    if (control.flipH) {
-        std::swap(gouraudParams.colorA, gouraudParams.colorB);
-        std::swap(gouraudParams.colorD, gouraudParams.colorC);
-    }
-    if (control.flipV) {
-        std::swap(gouraudParams.colorA, gouraudParams.colorD);
-        std::swap(gouraudParams.colorB, gouraudParams.colorC);
-    }
-
-    // Interpolate linearly over edges A-D and B-C
-    const bool flipV = control.flipV;
-    for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, charSizeV, flipV}; edge.CanStep(); edge.Step()) {
-        // Plot lines between the interpolated points
-        const CoordS32 coordL{edge.LX(), edge.LY()};
-        const CoordS32 coordR{edge.RX(), edge.RY()};
-        lineParams.texFracV = edge.FracV();
-        VDP1PlotTexturedLine<deinterlace, transparentMeshes>(coordL, coordR, lineParams, gouraudParams);
-    }
-
-    if constexpr (transparentMeshes) {
-        if (mode.meshEnable) {
-            const CoordS32 coordTL{std::min(std::min(xa, xb), std::min(xc, xd)),
-                                   std::min(std::min(ya, yb), std::min(yc, yd))};
-            const CoordS32 coordBR{std::max(std::max(xa, xb), std::max(xc, xd)),
-                                   std::max(std::max(ya, yb), std::max(yc, yd))};
-            VDP1CommitMeshPolygon<deinterlace>(coordTL, coordBR);
-        }
-    }
+    VDP1PlotTexturedQuad<deinterlace, transparentMeshes>(cmdAddress, control, size, coordA, coordB, coordC, coordD);
 }
 
 template <bool deinterlace, bool transparentMeshes>
-void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
+void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress, VDP1Command::Control control) {
     if (!m_layerEnabled[0]) {
         return;
     }
@@ -2518,27 +2421,47 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
         return;
     }
 
-    const VDP1PixelParams pixelParams{
+    VDP1LineParams lineParams{
         .mode = mode,
         .color = color,
     };
 
-    VDP1GouraudParams gouraudParams{
-        .colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)},
-        .colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)},
-        .colorC{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 4u)},
-        .colorD{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 6u)},
-    };
+    QuadStepper quad{coordA, coordB, coordC, coordD};
+
+    if (mode.gouraudEnable) {
+        Color555 colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)};
+        Color555 colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)};
+        Color555 colorC{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 4u)};
+        Color555 colorD{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 6u)};
+
+        // TODO: check if swapping is needed
+        if (control.flipH) {
+            std::swap(colorA, colorB);
+            std::swap(colorD, colorC);
+        }
+        if (control.flipV) {
+            std::swap(colorA, colorD);
+            std::swap(colorB, colorC);
+        }
+        devlog::trace<grp::vdp1_render>("Gouraud colors: ({},{},{}) ({},{},{}) ({},{},{}) ({},{},{})", (uint8)colorA.r,
+                                        (uint8)colorA.g, (uint8)colorA.b, (uint8)colorB.r, (uint8)colorB.g,
+                                        (uint8)colorB.b, (uint8)colorC.r, (uint8)colorC.g, (uint8)colorC.b,
+                                        (uint8)colorD.r, (uint8)colorD.g, (uint8)colorD.b);
+
+        quad.SetupGouraud(colorA, colorB, colorC, colorD);
+    }
 
     // Interpolate linearly over edges A-D and B-C
-    for (QuadEdgesStepper edge{coordA, coordB, coordC, coordD}; edge.CanStep(); edge.Step()) {
-        const CoordS32 coordL{edge.LX(), edge.LY()};
-        const CoordS32 coordR{edge.RX(), edge.RY()};
-
-        gouraudParams.V = edge.FracPos();
+    for (; quad.CanStep(); quad.Step()) {
+        const CoordS32 coordL = quad.LeftEdge().Coord();
+        const CoordS32 coordR = quad.RightEdge().Coord();
 
         // Plot lines between the interpolated points
-        VDP1PlotLine<true, deinterlace, transparentMeshes>(coordL, coordR, pixelParams, gouraudParams);
+        if (mode.gouraudEnable) {
+            lineParams.gouraudLeft = quad.LeftEdge().GouraudValue();
+            lineParams.gouraudRight = quad.RightEdge().GouraudValue();
+        }
+        VDP1PlotLine<true, deinterlace, transparentMeshes>(coordL, coordR, lineParams);
     }
 
     if constexpr (transparentMeshes) {
@@ -2553,7 +2476,7 @@ void VDP::VDP1Cmd_DrawPolygon(uint32 cmdAddress) {
 }
 
 template <bool deinterlace, bool transparentMeshes>
-void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
+void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress, VDP1Command::Control control) {
     if (!m_layerEnabled[0]) {
         return;
     }
@@ -2588,7 +2511,7 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
         return;
     }
 
-    const VDP1PixelParams pixelParams{
+    VDP1LineParams lineParams{
         .mode = mode,
         .color = color,
     };
@@ -2597,16 +2520,30 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
     const Color555 B{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)};
     const Color555 C{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 4u)};
     const Color555 D{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 6u)};
+    devlog::trace<grp::vdp1_render>("Gouraud colors: ({},{},{}) ({},{},{}) ({},{},{}) ({},{},{})", (uint8)A.r,
+                                    (uint8)A.g, (uint8)A.b, (uint8)B.r, (uint8)B.g, (uint8)B.b, (uint8)C.r, (uint8)C.g,
+                                    (uint8)C.b, (uint8)D.r, (uint8)D.g, (uint8)D.b);
 
-    VDP1GouraudParams gouraudParamsAB{.colorA = A, .colorB = B, .V = 0};
-    VDP1GouraudParams gouraudParamsBC{.colorA = B, .colorB = C, .V = 0};
-    VDP1GouraudParams gouraudParamsCD{.colorA = C, .colorB = D, .V = 0};
-    VDP1GouraudParams gouraudParamsDA{.colorA = D, .colorB = A, .V = 0};
-
-    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordA, coordB, pixelParams, gouraudParamsAB);
-    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordB, coordC, pixelParams, gouraudParamsBC);
-    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordC, coordD, pixelParams, gouraudParamsCD);
-    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordD, coordA, pixelParams, gouraudParamsDA);
+    if (mode.gouraudEnable) {
+        lineParams.gouraudLeft = A;
+        lineParams.gouraudRight = B;
+    }
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordA, coordB, lineParams);
+    if (mode.gouraudEnable) {
+        lineParams.gouraudLeft = B;
+        lineParams.gouraudRight = C;
+    }
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordB, coordC, lineParams);
+    if (mode.gouraudEnable) {
+        lineParams.gouraudLeft = C;
+        lineParams.gouraudRight = D;
+    }
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordC, coordD, lineParams);
+    if (mode.gouraudEnable) {
+        lineParams.gouraudLeft = D;
+        lineParams.gouraudRight = A;
+    }
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordD, coordA, lineParams);
 
     if constexpr (transparentMeshes) {
         if (mode.meshEnable) {
@@ -2620,7 +2557,7 @@ void VDP::VDP1Cmd_DrawPolylines(uint32 cmdAddress) {
 }
 
 template <bool deinterlace, bool transparentMeshes>
-void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
+void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress, VDP1Command::Control control) {
     if (!m_layerEnabled[0]) {
         return;
     }
@@ -2649,18 +2586,23 @@ void VDP::VDP1Cmd_DrawLine(uint32 cmdAddress) {
         return;
     }
 
-    const VDP1PixelParams pixelParams{
+    VDP1LineParams lineParams{
         .mode = mode,
         .color = color,
     };
 
-    VDP1GouraudParams gouraudParams{
-        .colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)},
-        .colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)},
-        .V = 0,
-    };
+    if (mode.gouraudEnable) {
+        const Color555 colorA{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 0u)};
+        const Color555 colorB{.u16 = VDP1ReadRendererVRAM<uint16>(gouraudTable + 2u)};
 
-    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordA, coordB, pixelParams, gouraudParams);
+        lineParams.gouraudLeft = colorA;
+        lineParams.gouraudRight = colorB;
+
+        devlog::trace<grp::vdp1_render>("Gouraud colors: ({},{},{}) ({},{},{})", (uint8)colorA.r, (uint8)colorA.g,
+                                        (uint8)colorA.b, (uint8)colorB.r, (uint8)colorB.g, (uint8)colorB.b);
+    }
+
+    VDP1PlotLine<false, deinterlace, transparentMeshes>(coordA, coordB, lineParams);
 
     if constexpr (transparentMeshes) {
         if (mode.meshEnable) {

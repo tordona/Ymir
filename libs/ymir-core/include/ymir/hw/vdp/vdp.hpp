@@ -10,6 +10,8 @@
 #include "vdp_callbacks.hpp"
 #include "vdp_internal_callbacks.hpp"
 
+#include "slope.hpp"
+
 #include <ymir/core/configuration.hpp>
 #include <ymir/core/scheduler.hpp>
 #include <ymir/sys/bus.hpp>
@@ -735,18 +737,17 @@ private:
         std::array<std::array<bool, kVDP1FramebufferRAMSize>, 2> stagingFBValid;
     } m_VDP1RenderContext;
 
-    struct VDP1GouraudParams {
-        Color555 colorA;
-        Color555 colorB;
-        Color555 colorC;
-        Color555 colorD;
-        uint32 U; // 16 fractional bits, from 0.0 to 1.0
-        uint32 V; // 16 fractional bits, from 0.0 to 1.0
-    };
-
     struct VDP1PixelParams {
         VDP1Command::DrawMode mode;
         uint16 color;
+        GouraudStepper gouraud;
+    };
+
+    struct VDP1LineParams {
+        VDP1Command::DrawMode mode;
+        uint16 color;
+        Color555 gouraudLeft;
+        Color555 gouraudRight;
     };
 
     struct VDP1TexturedLineParams {
@@ -756,7 +757,9 @@ private:
         uint32 charAddr;
         uint32 charSizeH;
         uint32 charSizeV;
-        uint64 texFracV;
+        TextureStepper texVStepper;
+        const GouraudStepper *gouraudLeft;
+        const GouraudStepper *gouraudRight;
     };
 
     // Character modes, a combination of Character Size from the Character Control Register (CHCTLA-B) and Character
@@ -1125,12 +1128,11 @@ private:
 
     TPL_DEINTERLACE void VDP1CommitMeshPolygon(CoordS32 topLeft, CoordS32 bottomRight);
 
-    TPL_TRAITS void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams,
-                                  const VDP1GouraudParams &gouraudParams);
-    TPL_LINE_TRAITS void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, const VDP1PixelParams &pixelParams,
-                                      VDP1GouraudParams &gouraudParams);
-    TPL_TRAITS void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, const VDP1TexturedLineParams &lineParams,
-                                         VDP1GouraudParams &gouraudParams);
+    TPL_TRAITS void VDP1PlotPixel(CoordS32 coord, const VDP1PixelParams &pixelParams);
+    TPL_LINE_TRAITS void VDP1PlotLine(CoordS32 coord1, CoordS32 coord2, VDP1LineParams &lineParams);
+    TPL_TRAITS void VDP1PlotTexturedLine(CoordS32 coord1, CoordS32 coord2, VDP1TexturedLineParams &lineParams);
+    TPL_TRAITS void VDP1PlotTexturedQuad(uint32 cmdAddress, VDP1Command::Control control, VDP1Command::Size size,
+                                         CoordS32 coordA, CoordS32 coordB, CoordS32 coordC, CoordS32 coordD);
 
     // Individual VDP1 command processors
 
@@ -1138,9 +1140,9 @@ private:
     TPL_TRAITS void VDP1Cmd_DrawScaledSprite(uint32 cmdAddress, VDP1Command::Control control);
     TPL_TRAITS void VDP1Cmd_DrawDistortedSprite(uint32 cmdAddress, VDP1Command::Control control);
 
-    TPL_TRAITS void VDP1Cmd_DrawPolygon(uint32 cmdAddress);
-    TPL_TRAITS void VDP1Cmd_DrawPolylines(uint32 cmdAddress);
-    TPL_TRAITS void VDP1Cmd_DrawLine(uint32 cmdAddress);
+    TPL_TRAITS void VDP1Cmd_DrawPolygon(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_TRAITS void VDP1Cmd_DrawPolylines(uint32 cmdAddress, VDP1Command::Control control);
+    TPL_TRAITS void VDP1Cmd_DrawLine(uint32 cmdAddress, VDP1Command::Control control);
 
     void VDP1Cmd_SetSystemClipping(uint32 cmdAddress);
     void VDP1Cmd_SetUserClipping(uint32 cmdAddress);

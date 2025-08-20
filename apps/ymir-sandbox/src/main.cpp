@@ -1,7 +1,5 @@
 ﻿#include <ymir/util/scope_guard.hpp>
 
-#include "../../../libs/ymir-core/src/ymir/hw/vdp/slope.hpp"
-
 #include <ymir/sys/backup_ram.hpp>
 
 #include <ymir/hw/vdp/vdp.hpp>
@@ -19,6 +17,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <vector>
@@ -409,20 +408,34 @@ struct Sandbox {
         // bool swapped;
         uint32 texSize = polygonFillMode == 2 ? 8 : polygonFillMode == 3 ? 32 : 256;
         uint32 texShift = polygonFillMode == 2 ? 13 : polygonFillMode == 3 ? 11 : 8;
+        QuadStepper quad{coordA, coordB, coordC, coordD};
+        TextureStepper texVStepper;
+        quad.SetupTexture(texVStepper, texSize, false);
         bool first = true;
         int lineIndex = 0;
-        for (TexturedQuadEdgesStepper edge{coordA, coordB, coordC, coordD, texSize, false}; edge.CanStep();
-             edge.Step()) {
-            const CoordS32 coordL{edge.LX(), edge.LY()};
-            const CoordS32 coordR{edge.RX(), edge.RY()};
+        for (; quad.CanStep(); quad.Step()) {
+            const CoordS32 coordL = quad.LeftEdge().Coord();
+            const CoordS32 coordR = quad.RightEdge().Coord();
 
-            const uint32 v = altUVCalc ? (edge.FracPos() >> texShift) : edge.V();
+            while (texVStepper.ShouldStepTexel()) {
+                texVStepper.StepTexel();
+            }
+            texVStepper.StepPixel();
+            const uint32 v = texVStepper.Value();
 
             bool firstPixel = true;
             if (lineIndex % lineStep == lineOffset) {
-                for (TexturedLineStepper line{coordL, coordR, texSize, false}; line.CanStep(); line.Step()) {
+                LineStepper line{coordL, coordR};
+                TextureStepper texUStepper;
+                texUStepper.Setup(line.Length() + 1, 0, texSize);
+                bool needsAA = false;
+                for (; line.CanStep(); needsAA = line.Step()) {
                     auto [x, y] = line.Coord();
-                    const uint32 u = altUVCalc ? (line.FracPos() >> texShift) : line.U();
+                    while (texUStepper.ShouldStepTexel()) {
+                        texUStepper.StepTexel();
+                    }
+                    texUStepper.StepPixel();
+                    const uint32 u = texUStepper.Value();
 
                     uint32 color;
                     switch (polygonFillMode) {
@@ -438,7 +451,7 @@ struct Sandbox {
                     }
 
                     DrawPixel(x, y, color);
-                    if (antialias && line.NeedsAntiAliasing()) {
+                    if (antialias && needsAA) {
                         auto [aax, aay] = line.AACoord();
                         DrawPixel(aax, aay, color);
                     }
@@ -963,10 +976,7 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
     fmt::println("Reading tests from {}", testPath);
 
     for (auto &test : g_samples) {
-        fmt::println("VRAM: {}", test.vramFile);
-        fmt::println("CRAM: {}", test.cramFile);
-        fmt::println("FB:   {}", test.fbFile);
-        fmt::println("Size: {}x{}", test.width, test.height);
+        fmt::println("{}x{}  {:22s}  {:18s} {}", test.width, test.height, test.vramFile, test.cramFile, test.fbFile);
 
         bool renderDone = false;
         ymir::core::Scheduler scheduler{};
@@ -1003,6 +1013,8 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
             in.read((char *)cram.data(), ymir::vdp::kVDP2CRAMSize);
         }
 
+        probe.VDP1WriteReg(0x00, 0); // TVMR
+        probe.VDP1WriteReg(0x02, 3); // FBCR
         probe.VDP1WriteReg(0x04, 3); // PTMR
         probe.VDP1WriteReg(0x06, 0); // EWDR
 
@@ -1054,6 +1066,9 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
         stbi_uc *img = stbi_load(fbPath.string().c_str(), &imgX, &imgY, &ch, 4);
         std::vector<uint32> deltaFB = finalFB;
         if (img != nullptr) {
+            auto refFile = outPath / fmt::format("{}-ref.png", filename);
+            stbi_write_png(refFile.string().c_str(), imgX, imgY, 4, img, imgX * sizeof(uint32));
+
             bool hasDelta = false;
             for (uint32 i = 0; i < deltaFB.size(); ++i) {
                 deltaFB[i] ^= reinterpret_cast<uint32 *>(img)[i];
@@ -1062,10 +1077,12 @@ void runVDP1AccuracySandbox(std::filesystem::path testPath) {
                     hasDelta = true;
                 }
             }
+            auto deltaFile = outPath / fmt::format("{}-delta.png", filename);
             if (hasDelta) {
-                auto deltaFile = outPath / fmt::format("{}-delta.png", filename);
                 stbi_write_png(deltaFile.string().c_str(), test.width, test.height, 4, deltaFB.data(),
                                test.width * sizeof(uint32));
+            } else {
+                std::filesystem::remove(deltaFile);
             }
         } else {
             fmt::println("WARNING: file {} not found", fbPath);
