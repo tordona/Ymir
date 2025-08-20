@@ -29,6 +29,7 @@ namespace grp {
     // base
     //   vdp1
     //     vdp1_regs
+    //     vdp1_cmd
     //     vdp1_render
     //   vdp2
     //     vdp2_regs
@@ -46,6 +47,10 @@ namespace grp {
 
     struct vdp1_regs : public vdp1 {
         static constexpr std::string_view name = "VDP1-Regs";
+    };
+
+    struct vdp1_cmd : public vdp1 {
+        static constexpr std::string_view name = "VDP1-Command";
     };
 
     struct vdp1_render : public vdp1 {
@@ -1603,9 +1608,9 @@ void VDP::VDP1ProcessCommand() {
     auto &cmdAddress = m_state.regs1.currCommandAddress;
 
     const VDP1Command::Control control{.u16 = VDP1ReadRendererVRAM<uint16>(cmdAddress)};
-    devlog::trace<grp::vdp1_render>("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
+    devlog::trace<grp::vdp1_cmd>("Processing command {:04X} @ {:05X}", control.u16, cmdAddress);
     if (control.end) [[unlikely]] {
-        devlog::trace<grp::vdp1_render>("End of command list");
+        devlog::trace<grp::vdp1_cmd>("End of command list");
         VDP1EndFrame();
     } else if (!control.skip) {
         // Process command
@@ -1630,8 +1635,8 @@ void VDP::VDP1ProcessCommand() {
         case SetLocalCoordinates: VDP1Cmd_SetLocalCoordinates(cmdAddress); break;
 
         default:
-            devlog::debug<grp::vdp1_render>("Unexpected command type {:X}; aborting",
-                                            static_cast<uint16>(control.command));
+            devlog::debug<grp::vdp1_cmd>("Unexpected command type {:X}; aborting",
+                                         static_cast<uint16>(control.command));
             VDP1EndFrame();
             return;
         }
@@ -1645,11 +1650,11 @@ void VDP::VDP1ProcessCommand() {
         case Next: cmdAddress += 0x20; break;
         case Assign: {
             cmdAddress = (VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
-            devlog::trace<grp::vdp1_render>("Jump to {:05X}", cmdAddress);
+            devlog::trace<grp::vdp1_cmd>("Jump to {:05X}", cmdAddress);
 
             // HACK: Sonic R attempts to jump back to 0 in some cases
             if (cmdAddress == 0) {
-                devlog::warn<grp::vdp1_render>("Possible infinite loop detected; aborting");
+                devlog::warn<grp::vdp1_cmd>("Possible infinite loop detected; aborting");
                 VDP1EndFrame();
                 return;
             }
@@ -1661,7 +1666,7 @@ void VDP::VDP1ProcessCommand() {
                 m_state.regs1.returnAddress = cmdAddress + 0x20;
             }
             cmdAddress = (VDP1ReadRendererVRAM<uint16>(cmdAddress + 0x02) << 3u) & ~0x1F;
-            devlog::trace<grp::vdp1_render>("Call {:05X}", cmdAddress);
+            devlog::trace<grp::vdp1_cmd>("Call {:05X}", cmdAddress);
             break;
         }
         case Return: {
@@ -1672,7 +1677,7 @@ void VDP::VDP1ProcessCommand() {
             } else {
                 cmdAddress += 0x20;
             }
-            devlog::trace<grp::vdp1_render>("Return to {:05X}", cmdAddress);
+            devlog::trace<grp::vdp1_cmd>("Return to {:05X}", cmdAddress);
             break;
         }
         }
