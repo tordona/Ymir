@@ -3,7 +3,7 @@ name: CI build
 on:
   push:
     branches:
-      - main
+      - ci-test-stub
   pull_request:
 
 jobs:
