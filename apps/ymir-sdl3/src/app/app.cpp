@@ -147,6 +147,13 @@ using MidiPortType = app::Settings::Audio::MidiPort::Type;
 
 namespace app {
 
+template <typename... TArgs>
+static void ShowStartupFailure(fmt::format_string<TArgs...> fmt, TArgs &&...args) {
+    std::string message = fmt::format(fmt, static_cast<TArgs &&>(args)...);
+    devlog::error<grp::base>("{}", message);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Ymir startup error", message.c_str(), nullptr);
+}
+
 App::App()
     : m_systemStateWindow(m_context)
     , m_bupMgrWindow(m_context)
@@ -464,7 +471,7 @@ void App::RunEmulator() {
     // Initialize SDL subsystems
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS)) {
-        devlog::error<grp::base>("Unable to initialize SDL: {}", SDL_GetError());
+        ShowStartupFailure("Failed to initialize SDL: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgQuit{[&] { SDL_Quit(); }};
@@ -514,7 +521,7 @@ void App::RunEmulator() {
 
     SDL_PropertiesID windowProps = SDL_CreateProperties();
     if (windowProps == 0) {
-        devlog::error<grp::base>("Unable to create window properties: {}", SDL_GetError());
+        ShowStartupFailure("Failed to create window properties: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyWindowProps{[&] { SDL_DestroyProperties(windowProps); }};
@@ -598,7 +605,7 @@ void App::RunEmulator() {
 
     screen.window = SDL_CreateWindowWithProperties(windowProps);
     if (screen.window == nullptr) {
-        devlog::error<grp::base>("Unable to create window: {}", SDL_GetError());
+        ShowStartupFailure("Failed to create window: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyWindow{[&] {
@@ -612,7 +619,7 @@ void App::RunEmulator() {
 
     SDL_PropertiesID rendererProps = SDL_CreateProperties();
     if (rendererProps == 0) {
-        devlog::error<grp::base>("Unable to create renderer properties: {}", SDL_GetError());
+        ShowStartupFailure("Failed to create renderer properties: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyRendererProps{[&] { SDL_DestroyProperties(rendererProps); }};
@@ -624,7 +631,7 @@ void App::RunEmulator() {
 
     m_context.screen.renderer = SDL_CreateRendererWithProperties(rendererProps);
     if (m_context.screen.renderer == nullptr) {
-        devlog::error<grp::base>("Unable to create renderer: {}", SDL_GetError());
+        ShowStartupFailure("Failed to create renderer: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyRenderer{[&] { SDL_DestroyRenderer(m_context.screen.renderer); }};
@@ -651,7 +658,7 @@ void App::RunEmulator() {
     auto fbTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, vdp::kMaxResH,
                                        vdp::kMaxResV);
     if (fbTexture == nullptr) {
-        devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
+        ShowStartupFailure("Failed to create framebuffer texture: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyFbTexture{[&] { SDL_DestroyTexture(fbTexture); }};
@@ -661,7 +668,7 @@ void App::RunEmulator() {
     auto dispTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_TARGET,
                                          vdp::kMaxResH * screen.fbScale, vdp::kMaxResV * screen.fbScale);
     if (dispTexture == nullptr) {
-        devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
+        ShowStartupFailure("Failed to create display texture: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyDispTexture{[&] { SDL_DestroyTexture(dispTexture); }};
@@ -710,12 +717,12 @@ void App::RunEmulator() {
         stbi_uc *imgData =
             stbi_load_from_memory((const stbi_uc *)ymirLogoFile.begin(), ymirLogoFile.size(), &imgW, &imgH, &chans, 4);
         if (imgData == nullptr) {
-            devlog::error<grp::base>("Could not read logo image");
+            ShowStartupFailure("Could not read logo image");
             return;
         }
         ScopeGuard sgFreeImageData{[&] { stbi_image_free(imgData); }};
         if (chans != 4) {
-            devlog::error<grp::base>("Unexpected logo image format");
+            ShowStartupFailure("Unexpected logo image format");
             return;
         }
 
@@ -723,7 +730,7 @@ void App::RunEmulator() {
         m_context.images.ymirLogo.texture =
             SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, imgW, imgH);
         if (m_context.images.ymirLogo.texture == nullptr) {
-            devlog::error<grp::base>("Unable to create texture: {}", SDL_GetError());
+            ShowStartupFailure("Failed to create logo texture: {}", SDL_GetError());
             return;
         }
         SDL_SetTextureScaleMode(m_context.images.ymirLogo.texture, SDL_SCALEMODE_LINEAR);
@@ -819,7 +826,7 @@ void App::RunEmulator() {
     static constexpr uint32 kBufferSize = 512; // TODO: make this configurable
 
     if (!m_context.audioSystem.Init(kSampleRate, kSampleFormat, kChannels, kBufferSize)) {
-        devlog::error<grp::base>("Unable to create audio stream: {}", SDL_GetError());
+        ShowStartupFailure("Failed to create audio stream: {}", SDL_GetError());
         return;
     }
     ScopeGuard sgDeinitAudio{[&] { m_context.audioSystem.Deinit(); }};
@@ -836,7 +843,7 @@ void App::RunEmulator() {
         SDL_AudioFormat audioFormat;
         int channels;
         if (!m_context.audioSystem.GetAudioStreamFormat(&sampleRate, &audioFormat, &channels)) {
-            devlog::error<grp::base>("Unable to get audio stream format: {}", SDL_GetError());
+            ShowStartupFailure("Failed to get audio stream format: {}", SDL_GetError());
             return;
         }
         auto formatName = [&] {
@@ -857,11 +864,12 @@ void App::RunEmulator() {
                                 (channels == 1 ? "" : "s"), formatName());
         if (sampleRate != kSampleRate || channels != kChannels || audioFormat != kSampleFormat) {
             // Hopefully this never happens
-            devlog::error<grp::base>("Audio format mismatch");
+            ShowStartupFailure("Audio format mismatch");
             return;
         }
     } else {
-        devlog::error<grp::base>("Unable to start audio stream: {}", SDL_GetError());
+        ShowStartupFailure("Failed to start audio stream: {}", SDL_GetError());
+        return;
     }
 
     m_context.saturn.instance->SCSP.SetSampleCallback(
@@ -891,7 +899,7 @@ void App::RunEmulator() {
 
     m_fileDialogProps = SDL_CreateProperties();
     if (m_fileDialogProps == 0) {
-        devlog::error<grp::base>("Failed to create file dialog properties: {}\n", SDL_GetError());
+        ShowStartupFailure("Failed to create file dialog properties: {}\n", SDL_GetError());
         return;
     }
     ScopeGuard sgDestroyGenericFileDialogProps{[&] { SDL_DestroyProperties(m_fileDialogProps); }};

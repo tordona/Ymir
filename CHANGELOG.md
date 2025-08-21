@@ -8,6 +8,7 @@ Introduced save state file version 9.
 
 ### New features and improvements
 
+- App: Provide user feedback if any part of the app initialization fails.
 - Backup RAM: Per-game internal backup RAM file names changed from `bup-int-[<game code>] <title>.bin` to `bup-int-<title> [<game code>].bin` to allow sorting files alphabetically in file browsers. Existing files will be automatically renamed as they are loaded.
 - Cart: Automatically insert Backup RAM cartridges for games that recommend their use, such as Dezaemon 2 and Sega Ages - Galaxy Force II. (#356)
 - CD Block: Allow querying files at specific frame addresses and display file being read in System State window.
