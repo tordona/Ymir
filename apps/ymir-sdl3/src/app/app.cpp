@@ -2431,6 +2431,11 @@ void App::RunEmulator() {
                 }
                 if (ImGui::BeginMenu("System")) {
                     ImGui::MenuItem("System state", nullptr, &m_systemStateWindow.Open);
+                    if (ImGui::MenuItem("Copy disc hash")) {
+                        std::unique_lock lock{m_context.locks.disc};
+                        std::string hash = ToString(m_context.saturn.instance->CDBlock.GetDiscHash());
+                        SDL_SetClipboardText(hash.c_str());
+                    }
 
                     ImGui::Separator();
 
