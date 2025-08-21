@@ -2516,7 +2516,7 @@ FORCE_INLINE uint64 SH2::MOVLI(const DecodedArgs &args) {
 // mova @(disp,PC), R0
 template <bool delaySlot>
 FORCE_INLINE uint64 SH2::MOVA(const DecodedArgs &args) {
-    const uint32 pc = (delaySlot ? m_delaySlotTarget - 4u : PC);
+    const uint32 pc = (delaySlot ? m_delaySlotTarget - 2u : PC);
     const uint32 address = (pc & ~3u) + args.dispImm;
     R[0] = address;
     AdvancePC<delaySlot>();
