@@ -146,7 +146,16 @@ bool Load(std::filesystem::path cuePath, Disc &disc, bool preloadToRAM) {
 
             std::u8string u8filename{filename.begin(), filename.end()};
 
-            fs::path binPath = cuePath.parent_path() / u8filename;
+            fs::path filePath = u8filename;
+            fs::path binPath;
+            if (filePath.is_absolute()) {
+                binPath = filePath;
+                if (!fs::is_regular_file(binPath)) {
+                    binPath = cuePath.parent_path() / filePath.filename();
+                }
+            } else {
+                binPath = cuePath.parent_path() / filePath;
+            }
             if (!fs::is_regular_file(binPath)) {
                 // fmt::println("BIN/CUE: File not found: {} (line {})", binPath, lineNum);
                 return false;
