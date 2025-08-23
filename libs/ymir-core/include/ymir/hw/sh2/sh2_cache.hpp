@@ -261,18 +261,18 @@ public:
     FORCE_INLINE T ReadDataArray(uint32 address) const {
         const uint32 index = bit::extract<4, 9>(address);
         const uint32 way = bit::extract<10, 11>(address);
-        const uint32 byte = bit::extract<0, 3>(address);
+        const uint32 byte = bit::extract<0, 3>(address) ^ (4 - sizeof(T));
         const auto &line = m_entries[index].line[way];
-        return util::ReadBE<T>(&line[byte]);
+        return util::ReadNE<T>(&line[byte]);
     }
 
     template <mem_primitive T>
     FORCE_INLINE void WriteDataArray(uint32 address, T value) {
         const uint32 index = bit::extract<4, 9>(address);
         const uint32 way = bit::extract<10, 11>(address);
-        const uint32 byte = bit::extract<0, 3>(address);
+        const uint32 byte = bit::extract<0, 3>(address) ^ (4 - sizeof(T));
         auto &line = m_entries[index].line[way];
-        util::WriteBE<T>(&line[byte], value);
+        util::WriteNE<T>(&line[byte], value);
     }
 
     FORCE_INLINE void Purge() {
