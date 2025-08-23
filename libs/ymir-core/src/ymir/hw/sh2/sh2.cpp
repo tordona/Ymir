@@ -3152,12 +3152,12 @@ FORCE_INLINE uint64 SH2::CLRMAC() {
 // mac.w @Rm+, @Rn+
 template <bool debug, bool enableCache, bool delaySlot>
 FORCE_INLINE uint64 SH2::MACW(const DecodedArgs &args) {
-    const uint32 address1 = R[args.rm];
-    const sint32 op1 = static_cast<sint16>(MemReadWord<enableCache>(address1));
-    R[args.rm] += 2;
     const uint32 address2 = R[args.rn];
     const sint32 op2 = static_cast<sint16>(MemReadWord<enableCache>(address2));
     R[args.rn] += 2;
+    const uint32 address1 = R[args.rm];
+    const sint32 op1 = static_cast<sint16>(MemReadWord<enableCache>(address1));
+    R[args.rm] += 2;
 
     const sint32 mul = op1 * op2;
     if (SR.S) {
@@ -3180,12 +3180,12 @@ FORCE_INLINE uint64 SH2::MACW(const DecodedArgs &args) {
 // mac.l @Rm+, @Rn+
 template <bool debug, bool enableCache, bool delaySlot>
 FORCE_INLINE uint64 SH2::MACL(const DecodedArgs &args) {
-    const uint32 address1 = R[args.rm];
-    const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong<enableCache>(address1)));
-    R[args.rm] += 4;
     const uint32 address2 = R[args.rn];
     const sint64 op2 = static_cast<sint64>(static_cast<sint32>(MemReadLong<enableCache>(address2)));
     R[args.rn] += 4;
+    const uint32 address1 = R[args.rm];
+    const sint64 op1 = static_cast<sint64>(static_cast<sint32>(MemReadLong<enableCache>(address1)));
+    R[args.rm] += 4;
 
     const sint64 mul = op1 * op2;
     sint64 result = mul + MAC.u64;

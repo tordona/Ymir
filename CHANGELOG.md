@@ -37,6 +37,7 @@ Introduced save state file version 9.
 - SCSP: Silence audio when MVOL=0. Fixes lingering sound/music when pausing in Sega Ages - Galaxy Force II. (#427)
 - SH2: Fix byte order of direct cache data accesses. (thanks to @celeriyacon)
 - SH2: Fix MOVA offset when in delay slot. (thanks to @celeriyacon)
+- SH2: Swap memory read order for MAC.W and MAC.L operands. (thanks to @celeriyacon)
 - VDP1: Various rendering accuracy improvements. (thanks to Lordus)
 - VDP2: Always read line screen scroll data even for disabled NBGs. Fixes one-frame offset on system settings screen and Deep Fear's GUI elements.
 - VDP2: Fix exclusive monitor resolution sizes and out-of-bounds reads from lookup tables. (thanks to @celeriyacon)
