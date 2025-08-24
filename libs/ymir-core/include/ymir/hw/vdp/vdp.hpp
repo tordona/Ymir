@@ -220,25 +220,24 @@ private:
 
     // -------------------------------------------------------------------------
 
+    // RAMCTL.CRMD modes 2 and 3 shuffle address bits as follows:
+    //   11 10 09 08 07 06 05 04 03 02 01 00 -- input
+    //   01 11 10 09 08 07 06 05 04 03 02 00 -- output
+    // In short, bits 11-02 are shifted right and bit 01 is shifted to the top.
+    // This results in the lower 2 bytes of every longword to be stored at 000..3FF and the upper 2 bytes at 400..7FF.
     static constexpr auto kCRAMAddressMapping = [] {
         std::array<std::array<uint32, 4096>, 2> addrs{};
         for (uint32 addr = 0; addr < 4096; addr++) {
             addrs[0][addr] = addr;
-            addrs[1][addr] = bit::extract<0>(addr) | (bit::extract<11>(addr) << 1u) | (bit::extract<1, 10>(addr) << 2u);
+            addrs[1][addr] = (bit::extract<1>(addr) << 11u) | (bit::extract<2, 11>(addr) << 1u) | bit::extract<0>(addr);
         }
         return addrs;
     }();
 
-    // RAMCTL.CRMD modes 2 and 3 shuffle address bits as follows:
-    //   10 09 08 07 06 05 04 03 02 01 11 00
-    //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
     FORCE_INLINE uint32 MapCRAMAddress(uint32 address) const {
         return kCRAMAddressMapping[m_state.regs2.vramControl.colorRAMMode >> 1][address & 0xFFF];
     }
 
-    // RAMCTL.CRMD modes 2 and 3 shuffle address bits as follows:
-    //   10 09 08 07 06 05 04 03 02 01 11 00
-    //   in short, bits 10-01 are shifted left and bit 11 takes place of bit 01
     FORCE_INLINE uint32 MapRendererCRAMAddress(uint32 address) const {
         return kCRAMAddressMapping[m_VDPRenderContext.vdp2.regs.vramControl.colorRAMMode >> 1][address & 0xFFF];
     }
