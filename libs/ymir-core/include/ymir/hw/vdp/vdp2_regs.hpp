@@ -2411,8 +2411,8 @@ struct VDP2Regs {
         bit::deposit_into<9>(value, spriteParams.windowSet.enabled[0]);
         bit::deposit_into<10>(value, spriteParams.windowSet.inverted[1]);
         bit::deposit_into<11>(value, spriteParams.windowSet.enabled[1]);
-        bit::deposit_into<12>(value, spriteParams.windowSet.inverted[2]);
-        bit::deposit_into<13>(value, spriteParams.windowSet.enabled[2]);
+        bit::deposit_into<12>(value, spriteParams.spriteWindowInverted);
+        bit::deposit_into<13>(value, spriteParams.spriteWindowEnabled);
         bit::deposit_into<15>(value, static_cast<uint16>(spriteParams.windowSet.logic));
         return value;
     }
@@ -2430,8 +2430,8 @@ struct VDP2Regs {
         spriteParams.windowSet.enabled[0] = bit::test<9>(value);
         spriteParams.windowSet.inverted[1] = bit::test<10>(value);
         spriteParams.windowSet.enabled[1] = bit::test<11>(value);
-        spriteParams.windowSet.inverted[2] = bit::test<12>(value);
-        spriteParams.windowSet.enabled[2] = bit::test<13>(value);
+        spriteParams.spriteWindowInverted = bit::test<12>(value);
+        spriteParams.spriteWindowEnabled = bit::test<13>(value);
         spriteParams.windowSet.logic = static_cast<WindowLogic>(bit::extract<15>(value));
     }
 
@@ -2567,7 +2567,7 @@ struct VDP2Regs {
     FORCE_INLINE uint16 ReadSPCTL() const {
         uint16 value = 0;
         bit::deposit_into<0, 3>(value, spriteParams.type);
-        bit::deposit_into<4>(value, spriteParams.spriteWindowEnable);
+        bit::deposit_into<4>(value, spriteParams.useSpriteWindow);
         bit::deposit_into<5>(value, spriteParams.mixedFormat);
         bit::deposit_into<8, 10>(value, spriteParams.colorCalcValue);
         bit::deposit_into<12, 13>(value, static_cast<uint16>(spriteParams.colorCalcCond));
@@ -2576,7 +2576,7 @@ struct VDP2Regs {
 
     FORCE_INLINE void WriteSPCTL(uint16 value) {
         spriteParams.type = bit::extract<0, 3>(value);
-        spriteParams.spriteWindowEnable = bit::test<4>(value);
+        spriteParams.useSpriteWindow = bit::test<4>(value);
         spriteParams.mixedFormat = bit::test<5>(value);
         spriteParams.colorCalcValue = bit::extract<8, 10>(value);
         spriteParams.colorCalcCond = static_cast<SpriteColorCalculationCondition>(bit::extract<12, 13>(value));

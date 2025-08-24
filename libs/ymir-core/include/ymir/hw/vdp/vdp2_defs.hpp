@@ -615,7 +615,7 @@ struct SpriteParams {
 
     void Reset() {
         type = 0;
-        spriteWindowEnable = false;
+        useSpriteWindow = false;
         mixedFormat = false;
         colorCalcEnable = false;
         colorCalcValue = 0;
@@ -625,6 +625,8 @@ struct SpriteParams {
         colorDataOffset = 0;
         lineColorScreenEnable = false;
         windowSet.Reset();
+        spriteWindowEnabled = false;
+        spriteWindowInverted = false;
     }
 
     // The sprite type (0..F).
@@ -633,7 +635,7 @@ struct SpriteParams {
 
     // Whether sprite window is in use.
     // Derived from SPCTL.SPWINEN
-    bool spriteWindowEnable;
+    bool useSpriteWindow;
 
     // Whether sprite data uses palette only (false) or mixed palette/RGB (true) data.
     // Derived from SPCTL.SPCLMD
@@ -668,16 +670,24 @@ struct SpriteParams {
     // Derived from LNCLEN.SPLCEN
     bool lineColorScreenEnable;
 
-    // Window parameters.
+    // Window parameters (except sprite window).
     // Derived from WCTLA/B/C/D
-    WindowSet<true> windowSet;
+    WindowSet<false> windowSet;
+
+    // Sprite window enable flag for the sprite layer.
+    // Derived from WCTLC.SPSWE
+    bool spriteWindowEnabled;
+
+    // Determines if the active area of the sprite window is inside (false) or outside (true) for the sprite layer.
+    // Derived from WCTLC.SPSWA
+    bool spriteWindowInverted;
 };
 
 struct SpriteData {
     enum class Special : uint8 {
         Normal,      // Any other value
-        Shadow,      // Normal shadow pattern (all ones in DC except LSB)
-        Transparent, // Raw value is all zeros
+        Shadow,      // Normal shadow pattern (DC=0b...11110)
+        Transparent, // Raw 16-bit value is 0x0000
     };
 
     uint16 colorData = 0;              // DC10-0

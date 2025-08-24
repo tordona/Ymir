@@ -3009,10 +3009,6 @@ FORCE_INLINE void VDP::VDP2CalcWindows(uint32 y) {
     VDP2CalcWindow<altField>(y, regs.commonRotParams.windowSet, regs.windowParams,
                              std::span{m_rotParamsWindow[altField]}.first(m_HRes));
 
-    // Calculate window for sprite layer
-    VDP2CalcWindow<altField>(y, regs.spriteParams.windowSet, regs.windowParams,
-                             std::span{m_spriteLayerState[altField].window}.first(m_HRes));
-
     // Calculate window for color calculations
     VDP2CalcWindow<altField>(y, regs.colorCalcParams.windowSet, regs.windowParams,
                              std::span{m_colorCalcWindow[altField]}.first(m_HRes));
@@ -3587,15 +3583,24 @@ void VDP::VDP2DrawLine(uint32 y, bool altField) {
     const bool interlaced = regs2.TVMD.IsInterlaced();
     const bool doubleDensity = regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity;
 
-    // Precalculate window state
+    // Calculate window for sprite layer
+    if (altField) {
+        VDP2CalcWindow<true>(y, regs2.spriteParams.windowSet, regs2.windowParams,
+                             std::span{m_spriteLayerState[altField].window}.first(m_HRes));
+    } else {
+        VDP2CalcWindow<false>(y, regs2.spriteParams.windowSet, regs2.windowParams,
+                              std::span{m_spriteLayerState[altField].window}.first(m_HRes));
+    }
+
+    // Draw sprite layer
+    (this->*fnDrawSprite[colorMode][rotate][altField])(y);
+
+    // Calculate window state for all other layers
     if (altField) {
         VDP2CalcWindows<deinterlace, true>(y);
     } else {
         VDP2CalcWindows<deinterlace, false>(y);
     }
-
-    // Draw sprite layer
-    (this->*fnDrawSprite[colorMode][rotate][altField])(y);
 
     // Draw background layers
     if (regs2.bgEnabled[5]) {
@@ -3717,6 +3722,7 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     if (spriteLayerState.window[x]) {
         if constexpr (!applyMesh) {
             layerState.pixels.transparent[x] = true;
+            attr.shadowOrWindow = false;
         }
         return;
     }
@@ -3734,13 +3740,15 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
                 if (bit::extract<0, 7>(spriteDataValue) == 0) {
                     if constexpr (!applyMesh) {
                         layerState.pixels.transparent[x] = true;
+                        attr.shadowOrWindow = false;
                     }
                     return;
                 }
             } else if (params.type >= 2) {
-                if (params.spriteWindowEnable && bit::extract<0, 14>(spriteDataValue) == 0) {
+                if (params.useSpriteWindow && bit::extract<0, 14>(spriteDataValue) == 0) {
                     if constexpr (!applyMesh) {
                         layerState.pixels.transparent[x] = true;
+                        attr.shadowOrWindow = false;
                     }
                     return;
                 }
@@ -3784,6 +3792,16 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
             return;
         }
     }
+
+    // Handle sprite window
+    if (params.useSpriteWindow && params.spriteWindowEnabled && spriteData.shadowOrWindow) {
+        if constexpr (!applyMesh) {
+            layerState.pixels.transparent[x] = true;
+            attr.shadowOrWindow = true;
+        }
+        return;
+    }
+
     const uint32 colorIndex = params.colorDataOffset + spriteData.colorData;
     const Color888 color = VDP2FetchCRAMColor<colorMode>(0, colorIndex);
     if constexpr (applyMesh) {
@@ -5156,7 +5174,7 @@ FORCE_INLINE void VDP::VDP2ComposeLine(uint32 y, bool altField) {
         // Sprite layer doesn't have shadow
         const bool isNormalShadow = m_spriteLayerState[altField].attrs[x].normalShadow;
         const bool isMSBShadow =
-            !regs.spriteParams.spriteWindowEnable && m_spriteLayerState[altField].attrs[x].shadowOrWindow;
+            !regs.spriteParams.useSpriteWindow && m_spriteLayerState[altField].attrs[x].shadowOrWindow;
         if (!isNormalShadow && !isMSBShadow) {
             layer0ShadowEnabled[x] = false;
             continue;
