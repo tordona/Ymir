@@ -8,6 +8,7 @@ Introduced save state file version 9.
 
 ### New features and improvements
 
+- App: Implement exception handler for macOS. (#460; @Wunkolo)
 - App: Provide user feedback if any part of the app initialization fails.
 - Backup RAM: Per-game internal backup RAM file names changed from `bup-int-[<game code>] <title>.bin` to `bup-int-<title> [<game code>].bin` to allow sorting files alphabetically in file browsers. Existing files will be automatically renamed as they are loaded.
 - Build: FreeBSD support for ARM64 systems. (#421; @bsdcode)
