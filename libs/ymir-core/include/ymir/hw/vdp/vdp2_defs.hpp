@@ -949,7 +949,7 @@ union RegTVMD {
     };
 
     [[nodiscard]] FORCE_INLINE bool IsInterlaced() const noexcept {
-        return LSMDn == InterlaceMode::SingleDensity || LSMDn == InterlaceMode::DoubleDensity;
+        return LSMDn != InterlaceMode::None;
     }
 };
 static_assert(sizeof(RegTVMD) == sizeof(uint16));

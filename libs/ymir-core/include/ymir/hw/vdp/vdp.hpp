@@ -252,10 +252,12 @@ private:
     // Display resolution (derived from TVMODE)
     uint32 m_HRes; // Horizontal display resolution
     uint32 m_VRes; // Vertical display resolution
+    bool m_exclusiveMonitor;
 
     // Display timings
-    std::array<uint32, 4> m_HTimings;
-    std::array<uint32, 6> m_VTimings;
+    std::array<uint32, 4> m_HTimings;                // [phase]
+    std::array<std::array<uint32, 6>, 2> m_VTimings; // [even/odd][phase]
+    uint32 m_VTimingField;
     uint16 m_VCounterSkip;
 
     // Moves to the next phase.

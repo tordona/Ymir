@@ -102,6 +102,7 @@ VDP::~VDP() {
 void VDP::Reset(bool hard) {
     m_HRes = 320;
     m_VRes = 224;
+    m_exclusiveMonitor = false;
 
     m_state.Reset(hard);
     if (hard) {
@@ -880,6 +881,7 @@ void VDP::UpdateResolution() {
         // Interlaced modes double the vertical resolution
         m_VRes *= 2;
     }
+    m_exclusiveMonitor = exclusiveMonitor;
 
     // Timing tables
 
@@ -915,31 +917,65 @@ void VDP::UpdateResolution() {
     // TODO: interlaced mode timings for odd fields:
     // - normal modes: 1 less line
     // - exclusive modes: 2 more lines
-    static constexpr std::array<std::array<std::array<uint32, 6>, 4>, 3> vTimingsNormal{{
+    static constexpr std::array<std::array<std::array<std::array<uint32, 6>, 2>, 4>, 3> vTimingsNormal{{
         // NTSC
         {{
             // BBd, BSy, VCS, TBd, LLn, ADp
-            {224, 232, 237, 255, 262, 263},
-            {240, 240, 245, 255, 262, 263},
-            {224, 232, 237, 255, 262, 263},
-            {240, 240, 245, 255, 262, 263},
+            {{
+                {224, 232, 237, 255, 262, 263}, // even/progressive
+                {224, 232, 237, 255, 261, 262}, // odd
+            }},
+            {{
+                {240, 240, 245, 255, 262, 263},
+                {240, 240, 245, 255, 261, 262},
+            }},
+            {{
+                {224, 232, 237, 255, 262, 263},
+                {224, 232, 237, 255, 261, 262},
+            }},
+            {{
+                {240, 240, 245, 255, 262, 263},
+                {240, 240, 245, 255, 261, 262},
+            }},
         }},
         // PAL
         {{
             // BBd, BSy, VCS, TBd, LLn, ADp
-            {224, 256, 259, 281, 312, 313},
-            {240, 264, 267, 289, 312, 313},
-            {256, 272, 275, 297, 312, 313},
-            {256, 272, 275, 297, 312, 313},
+            {{
+                {224, 256, 259, 281, 312, 313},
+                {224, 256, 259, 281, 311, 312},
+            }},
+            {{
+                {240, 264, 267, 289, 312, 313},
+                {240, 264, 267, 289, 311, 312},
+            }},
+            {{
+                {256, 272, 275, 297, 312, 313},
+                {256, 272, 275, 297, 311, 312},
+            }},
+            {{
+                {256, 272, 275, 297, 312, 313},
+                {256, 272, 275, 297, 311, 312},
+            }},
         }},
     }};
-    static constexpr std::array<std::array<uint32, 6>, 2> vTimingsExclusive{{
-        // BBd, BSy, VCS, TBd, LLn, ADp
-        {480, 496, 506, 509, 524, 525}, // Exclusive monitor A (wild guess)
-        {480, 496, 506, 546, 561, 562}, // Exclusive monitor B (wild guess)
+    static constexpr std::array<std::array<std::array<uint32, 6>, 2>, 2> vTimingsExclusive{{
+        // Exclusive monitor A (wild guess)
+        {{
+            // BBd, BSy, VCS, TBd, LLn, ADp
+            {480, 496, 506, 509, 524, 525}, // even/progressive
+            {480, 496, 506, 509, 526, 527}, // odd
+        }},
+        // Exclusive monitor B (wild guess)
+        {{
+            // BBd, BSy, VCS, TBd, LLn, ADp
+            {480, 496, 506, 546, 561, 562},
+            {480, 496, 506, 546, 563, 564},
+        }},
     }};
     m_VTimings = exclusiveMonitor ? vTimingsExclusive[m_state.regs2.TVMD.HRESOn & 1]
                                   : vTimingsNormal[m_state.regs2.TVSTAT.PAL][m_state.regs2.TVMD.VRESOn];
+    m_VTimingField = static_cast<uint32>(interlaced) & m_state.regs2.TVSTAT.ODD;
 
     // Adjust for dot clock
     const uint32 dotClockMult = (m_state.regs2.TVMD.HRESOn & 2) ? 2 : 4;
@@ -949,13 +985,11 @@ void VDP::UpdateResolution() {
 
     m_state.regs2.VCNTShift = m_state.regs2.TVMD.LSMDn == InterlaceMode::DoubleDensity ? 1 : 0;
 
+    // TODO: field skips must be handled per frame
     if (exclusiveMonitor) {
         const uint16 baseSkip = (m_state.regs2.TVMD.HRESOn & 1) ? 562 : 525;
-        m_VCounterSkip = 0x400 - baseSkip;
-        if (interlaced && m_state.regs2.TVSTAT.ODD) {
-            m_VCounterSkip -= 2;
-        }
-        m_VCounterSkip >>= 1u;
+        const uint16 fieldSkip = ~m_state.regs2.TVSTAT.ODD & static_cast<uint16>(interlaced);
+        m_VCounterSkip = ((0x400 - baseSkip) >> 1u) - fieldSkip;
     } else {
         const uint16 baseSkip = m_state.regs2.TVSTAT.PAL ? 313 : 263;
         const uint16 fieldSkip = ~m_state.regs2.TVSTAT.ODD & static_cast<uint16>(interlaced);
@@ -977,9 +1011,9 @@ void VDP::UpdateResolution() {
 
 FORCE_INLINE void VDP::IncrementVCounter() {
     ++m_state.regs2.VCNT;
-    while (m_state.regs2.VCNT >= m_VTimings[static_cast<uint32>(m_state.VPhase)]) {
+    while (m_state.regs2.VCNT >= m_VTimings[m_VTimingField][static_cast<uint32>(m_state.VPhase)]) {
         auto nextPhase = static_cast<uint32>(m_state.VPhase) + 1;
-        if (nextPhase == m_VTimings.size()) {
+        if (nextPhase == m_VTimings[m_VTimingField].size()) {
             m_state.regs2.VCNT = 0;
             nextPhase = 0;
         }
@@ -1012,7 +1046,6 @@ void VDP::BeginHPhaseActiveDisplay() {
                 m_cbVDP1DrawFinished();
                 m_VDPRenderContext.vdp1Done = false;
             }
-
             m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::VDP2DrawLine(m_state.regs2.VCNT));
             VDP2CalcAccessPatterns(m_state.regs2);
         } else {
@@ -1036,8 +1069,11 @@ void VDP::BeginHPhaseRightBorder() {
     m_state.regs2.TVSTAT.HBLANK = 1;
     m_cbHBlankStateChange(true, m_state.regs2.TVSTAT.VBLANK);
 
+    const uint32 interlaced = m_state.regs2.TVMD.IsInterlaced();
+    const uint32 field = interlaced & m_state.regs2.TVSTAT.ODD;
+
     // Start erasing if we just entered VBlank IN
-    if (m_state.regs2.VCNT == m_VTimings[static_cast<uint32>(VerticalPhase::Active)]) {
+    if (m_state.regs2.VCNT == m_VTimings[m_VTimingField][static_cast<uint32>(VerticalPhase::Active)]) {
         devlog::trace<grp::base>("## HBlank IN + VBlank IN  VBE={:d} manualerase={:d}", m_state.regs1.vblankErase,
                                  m_state.regs1.fbManualErase);
 
@@ -1058,6 +1094,7 @@ void VDP::BeginHPhaseRightBorder() {
         // If we just entered the bottom blanking vertical phase, switch fields
         if (m_state.regs2.TVMD.LSMDn != InterlaceMode::None) {
             m_state.regs2.TVSTAT.ODD ^= 1;
+            m_VTimingField = m_state.regs2.TVSTAT.ODD;
             devlog::trace<grp::base>("Switched to {} field", (m_state.regs2.TVSTAT.ODD ? "odd" : "even"));
             if (m_threadedVDPRendering) {
                 m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
@@ -1065,6 +1102,7 @@ void VDP::BeginHPhaseRightBorder() {
         } else {
             if (m_state.regs2.TVSTAT.ODD != 1) {
                 m_state.regs2.TVSTAT.ODD = 1;
+                m_VTimingField = 0;
                 if (m_threadedVDPRendering) {
                     m_VDPRenderContext.EnqueueEvent(VDPRenderEvent::OddField(m_state.regs2.TVSTAT.ODD));
                 }
@@ -6342,7 +6380,7 @@ template <bool deinterlace>
 FORCE_INLINE uint32 VDP::VDP2GetY(uint32 y) const {
     const VDP2Regs &regs = VDP2GetRegs();
 
-    if (regs.TVMD.IsInterlaced()) {
+    if (regs.TVMD.IsInterlaced() && !m_exclusiveMonitor) {
         return (y << 1) | (regs.TVSTAT.ODD & !deinterlace);
     } else {
         return y;
