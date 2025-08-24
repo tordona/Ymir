@@ -177,8 +177,13 @@ struct VDPState {
         uint16 COBB;
     } regs2;
 
-    enum class HorizontalPhase { Active, RightBorder, Sync, OBSOLETE_VBlankOut, LeftBorder, OBSOLETE_LastDot };
-    HorizontalPhase HPhase; // Current horizontal display phase
+    enum class HorizontalPhase {
+        Active = 0,
+        RightBorder = 1,
+        Sync = 2,
+        LeftBorder = 4,
+    };
+    HorizontalPhase HPhase;
 
     enum class VerticalPhase {
         Active = 0,
@@ -186,9 +191,9 @@ struct VDPState {
         BlankingAndSync = 2,
         VCounterSkip = 5,
         TopBorder = 3,
-        LastLine = 4
+        LastLine = 4,
     };
-    VerticalPhase VPhase; // Current vertical display phase
+    VerticalPhase VPhase;
 
     struct VDPRendererState {
         struct VDP1RenderState {

@@ -370,9 +370,9 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
         }
 
         // Replace obsolete horizontal phases
-        switch (s.HPhase) {
-        case VDPState::HorizontalPhase::OBSOLETE_VBlankOut: s.HPhase = VDPState::HorizontalPhase::Sync; break;
-        case VDPState::HorizontalPhase::OBSOLETE_LastDot: s.HPhase = VDPState::HorizontalPhase::LeftBorder; break;
+        switch (static_cast<uint8>(s.HPhase)) {
+        case 3 /*VBlankOut*/: s.HPhase = VDPState::HorizontalPhase::Sync; break;
+        case 5 /*LastDot*/: s.HPhase = VDPState::HorizontalPhase::LeftBorder; break;
         default: break;
         }
     }
