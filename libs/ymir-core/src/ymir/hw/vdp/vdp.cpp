@@ -1070,7 +1070,6 @@ void VDP::BeginHPhaseRightBorder() {
 }
 
 void VDP::BeginHPhaseSync() {
-    IncrementVCounter();
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal sync phase", m_state.regs2.VCNT);
 }
 
@@ -1080,6 +1079,8 @@ void VDP::BeginHPhaseVBlankOut() {
 
 void VDP::BeginHPhaseLeftBorder() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.regs2.VCNT);
+
+    IncrementVCounter();
 
     if (m_state.VPhase == VerticalPhase::LastLine) {
         devlog::trace<grp::base>("## HBlank end + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",

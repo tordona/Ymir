@@ -45,6 +45,7 @@ Introduced save state file version 9.
 - VDP2: Fix exclusive monitor resolution sizes and out-of-bounds reads from lookup tables. (thanks to @celeriyacon)
 - VDP2: Fix palette-based transparent meshes not blending with VDP2 layer (such as in Bulk Slash).
 - VDP2: Implement VCNT skip as a dedicated vertical phase. (thanks to @celeriyacon)
+- VDP2: Move VCNT update to the left border horizontal phase where HBLANK switches to zero. (thanks to @celeriyacon)
 - VDP2: Recalculate RBG0/1 page base addresses when changed mid-frame. Fixes broken ground on NiGHTS into Dreams's boss fights. (#423)
 
 
