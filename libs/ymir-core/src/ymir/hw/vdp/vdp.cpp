@@ -139,10 +139,10 @@ void VDP::Reset(bool hard) {
     }
     m_lineBackLayerState.Reset();
 
+    UpdateResolution<false>();
+
     BeginHPhaseActiveDisplay();
     BeginVPhaseActiveDisplay();
-
-    UpdateResolution<false>();
 
     VDP2UpdateEnabledBGs();
 
