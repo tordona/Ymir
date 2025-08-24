@@ -10,6 +10,7 @@ Introduced save state file version 9.
 
 - App: Provide user feedback if any part of the app initialization fails.
 - Backup RAM: Per-game internal backup RAM file names changed from `bup-int-[<game code>] <title>.bin` to `bup-int-<title> [<game code>].bin` to allow sorting files alphabetically in file browsers. Existing files will be automatically renamed as they are loaded.
+- Build: FreeBSD support for ARM64 systems. (#421; @bsdcode)
 - Cart: Automatically insert Backup RAM cartridges for games that recommend their use, such as Dezaemon 2 and Sega Ages - Galaxy Force II. (#356)
 - CD Block: Allow querying files at specific frame addresses and display file being read in System State window.
 - Debug: Allow exporting debug output to a file.
@@ -62,6 +63,7 @@ Introduced save state file version 8.
 - App: Display error dialog on unhandled exceptions.
 - App: Show actual emulation speed in title bar and frame rate OSD.
 - App: Show actual VDP1 frame rate separated from VDP1 draw calls.
+- Build: FreeBSD support for x86-64 systems. (#389; @bsdcode)
 - Build: macOS builds are now universal -- one binary supports both Intel and Apple Silicon Macs. (#351; @Wunkolo)
 - Build: Nightly builds are now available [here](https://github.com/StrikerX3/Ymir/releases/latest-nightly).
 - Core: Improve manual reset event performance by using OS-specific implementations based on [cppcoro](https://github.com/lewissbaker/cppcoro).
