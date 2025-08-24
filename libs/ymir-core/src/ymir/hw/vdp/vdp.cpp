@@ -1074,8 +1074,6 @@ void VDP::BeginHPhaseSync() {
 void VDP::BeginHPhaseLeftBorder() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering left border phase", m_state.regs2.VCNT);
 
-    IncrementVCounter();
-
     if (m_state.VPhase == VerticalPhase::LastLine) {
         devlog::trace<grp::base>("## HBlank end + VBlank OUT  FCM={:d} FCT={:d} manualswap={:d} PTM={:d}",
                                  m_state.regs1.fbSwapMode, m_state.regs1.fbSwapTrigger, m_state.regs1.fbManualSwap,
@@ -1109,6 +1107,8 @@ void VDP::BeginHPhaseLeftBorder() {
     if (m_state.VPhase == VerticalPhase::Active) {
         m_cbHBlankStateChange(false, m_state.regs2.TVSTAT.VBLANK);
     }
+
+    IncrementVCounter();
 
     // TODO: draw border
 }
