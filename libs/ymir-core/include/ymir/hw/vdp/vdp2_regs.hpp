@@ -83,8 +83,8 @@ struct VDP2Regs {
         case 0x016: return ReadCYCA1U(); // write-only?
         case 0x018: return ReadCYCB0L(); // write-only?
         case 0x01A: return ReadCYCB0U(); // write-only?
-        case 0x01E: return ReadCYCB1L(); // write-only?
-        case 0x01C: return ReadCYCB1U(); // write-only?
+        case 0x01C: return ReadCYCB1L(); // write-only?
+        case 0x01E: return ReadCYCB1U(); // write-only?
         case 0x020: return ReadBGON();   // write-only?
         case 0x022: return ReadMZCTL();  // write-only?
         case 0x024: return ReadSFSEL();  // write-only?
@@ -235,8 +235,8 @@ struct VDP2Regs {
         case 0x016: WriteCYCA1U(value); break;
         case 0x018: WriteCYCB0L(value); break;
         case 0x01A: WriteCYCB0U(value); break;
-        case 0x01E: WriteCYCB1U(value); break;
         case 0x01C: WriteCYCB1L(value); break;
+        case 0x01E: WriteCYCB1U(value); break;
         case 0x020: WriteBGON(value); break;
         case 0x022: WriteMZCTL(value); break;
         case 0x024: WriteSFSEL(value); break;
