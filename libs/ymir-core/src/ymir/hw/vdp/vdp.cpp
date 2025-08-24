@@ -850,9 +850,7 @@ FORCE_INLINE void VDP::UpdatePhase() {
     case HorizontalPhase::Active: BeginHPhaseActiveDisplay(); break;
     case HorizontalPhase::RightBorder: BeginHPhaseRightBorder(); break;
     case HorizontalPhase::Sync: BeginHPhaseSync(); break;
-    case HorizontalPhase::VBlankOut: BeginHPhaseVBlankOut(); break;
     case HorizontalPhase::LeftBorder: BeginHPhaseLeftBorder(); break;
-    case HorizontalPhase::LastDot: BeginHPhaseLastDot(); break;
     }
 }
 
@@ -888,18 +886,16 @@ void VDP::UpdateResolution() {
     // Horizontal phase timings (cycles until):
     //   RBd = Right Border
     //   HSy = Horizontal Sync
-    //   VBC = VBlank Clear
     //   LBd = Left Border
-    //   LDt = Last Dot
     //   ADp = Active Display
     // NOTE: these timings specify the HCNT interval between phases
     // TODO: exclusive monitor timings: (HRESOn & 1) ? 212 : 213
-    static constexpr std::array<std::array<uint32, 6>, 4> hTimings{{
-        // RBd, HSy, VBC, LBd, LDt, ADp
-        {320, 27, 27, 26, 26, 1}, // {320, 347, 374, 400, 426, 427},
-        {352, 23, 28, 29, 22, 1}, // {352, 375, 403, 432, 454, 455},
-        {640, 54, 54, 52, 52, 2}, // {640, 694, 748, 800, 852, 854},
-        {704, 46, 56, 58, 44, 2}, // {704, 750, 806, 864, 908, 910},
+    static constexpr std::array<std::array<uint32, 4>, 4> hTimings{{
+        // RBd, HSy, LBd, ADp
+        {320, 54, 26, 27},  // {320, 374, 400, 427},
+        {352, 51, 29, 23},  // {352, 403, 432, 455},
+        {640, 108, 52, 54}, // {640, 748, 800, 854},
+        {704, 102, 58, 46}, // {704, 806, 864, 910},
     }};
     m_HTimings = hTimings[m_state.regs2.TVMD.HRESOn & 3];
 
@@ -1071,10 +1067,8 @@ void VDP::BeginHPhaseRightBorder() {
 
 void VDP::BeginHPhaseSync() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal sync phase", m_state.regs2.VCNT);
-}
 
-void VDP::BeginHPhaseVBlankOut() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering VBlank OUT horizontal phase", m_state.regs2.VCNT);
+    // This phase intentionally does nothing to insert a gap between the two border phases
 }
 
 void VDP::BeginHPhaseLeftBorder() {
@@ -1117,10 +1111,6 @@ void VDP::BeginHPhaseLeftBorder() {
     }
 
     // TODO: draw border
-}
-
-void VDP::BeginHPhaseLastDot() {
-    devlog::trace<grp::base>("(VCNT = {:3d})  Entering last dot phase", m_state.regs2.VCNT);
 }
 
 // ----

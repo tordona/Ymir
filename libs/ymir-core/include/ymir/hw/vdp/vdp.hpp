@@ -254,7 +254,7 @@ private:
     uint32 m_VRes; // Vertical display resolution
 
     // Display timings
-    std::array<uint32, 6> m_HTimings;
+    std::array<uint32, 4> m_HTimings;
     std::array<uint32, 6> m_VTimings;
     uint16 m_VCounterSkip;
 
@@ -276,9 +276,7 @@ private:
     void BeginHPhaseActiveDisplay();
     void BeginHPhaseRightBorder();
     void BeginHPhaseSync();
-    void BeginHPhaseVBlankOut();
     void BeginHPhaseLeftBorder();
-    void BeginHPhaseLastDot();
 
     void BeginVPhaseActiveDisplay();
     void BeginVPhaseBottomBorder();

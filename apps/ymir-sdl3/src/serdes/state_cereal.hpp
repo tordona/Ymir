@@ -341,6 +341,7 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
         s.regs2.VCNT = VCounter;
     }
     if (version < 9) {
+        // The VCNT skip phase timing was slightly shifted. Adjust the phase here.
         uint16 lowerBound, upperBound;
         if (s.regs2.TVSTAT & 1) {
             // PAL
@@ -366,6 +367,13 @@ void serialize(Archive &ar, VDPState &s, const uint32 version) {
         }
         if (s.regs2.VCNT >= lowerBound && s.regs2.VCNT < upperBound) {
             s.VPhase = VDPState::VerticalPhase::VCounterSkip;
+        }
+
+        // Replace obsolete horizontal phases
+        switch (s.HPhase) {
+        case VDPState::HorizontalPhase::OBSOLETE_VBlankOut: s.HPhase = VDPState::HorizontalPhase::Sync; break;
+        case VDPState::HorizontalPhase::OBSOLETE_LastDot: s.HPhase = VDPState::HorizontalPhase::LeftBorder; break;
+        default: break;
         }
     }
     serialize(ar, s.renderer, version);

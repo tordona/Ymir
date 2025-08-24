@@ -218,9 +218,7 @@ struct VDPState {
         case HorizontalPhase::Active: state.HPhase = state::VDPState::HorizontalPhase::Active; break;
         case HorizontalPhase::RightBorder: state.HPhase = state::VDPState::HorizontalPhase::RightBorder; break;
         case HorizontalPhase::Sync: state.HPhase = state::VDPState::HorizontalPhase::Sync; break;
-        case HorizontalPhase::VBlankOut: state.HPhase = state::VDPState::HorizontalPhase::VBlankOut; break;
         case HorizontalPhase::LeftBorder: state.HPhase = state::VDPState::HorizontalPhase::LeftBorder; break;
-        case HorizontalPhase::LastDot: state.HPhase = state::VDPState::HorizontalPhase::LastDot; break;
         }
 
         switch (VPhase) {
@@ -239,9 +237,7 @@ struct VDPState {
         case state::VDPState::HorizontalPhase::Active: break;
         case state::VDPState::HorizontalPhase::RightBorder: break;
         case state::VDPState::HorizontalPhase::Sync: break;
-        case state::VDPState::HorizontalPhase::VBlankOut: break;
         case state::VDPState::HorizontalPhase::LeftBorder: break;
-        case state::VDPState::HorizontalPhase::LastDot: break;
         default: return false;
         }
 
@@ -428,9 +424,7 @@ struct VDPState {
         case state::VDPState::HorizontalPhase::Active: HPhase = HorizontalPhase::Active; break;
         case state::VDPState::HorizontalPhase::RightBorder: HPhase = HorizontalPhase::RightBorder; break;
         case state::VDPState::HorizontalPhase::Sync: HPhase = HorizontalPhase::Sync; break;
-        case state::VDPState::HorizontalPhase::VBlankOut: HPhase = HorizontalPhase::VBlankOut; break;
         case state::VDPState::HorizontalPhase::LeftBorder: HPhase = HorizontalPhase::LeftBorder; break;
-        case state::VDPState::HorizontalPhase::LastDot: HPhase = HorizontalPhase::LastDot; break;
         }
 
         switch (state.VPhase) {

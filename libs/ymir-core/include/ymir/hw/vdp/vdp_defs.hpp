@@ -141,7 +141,7 @@ struct Dimensions {
 // -----------------------------------------------------------------------------
 // Display phases
 
-enum class HorizontalPhase { Active, RightBorder, Sync, VBlankOut, LeftBorder, LastDot };
+enum class HorizontalPhase { Active, RightBorder, Sync, LeftBorder };
 enum class VerticalPhase { Active, BottomBorder, BlankingAndSync, VCounterSkip, TopBorder, LastLine };
 
 // -----------------------------------------------------------------------------
