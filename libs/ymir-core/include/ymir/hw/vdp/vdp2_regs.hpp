@@ -378,7 +378,7 @@ struct VDP2Regs {
     FORCE_INLINE void WriteTVMD(uint16 value) {
         const RegTVMD oldTVMD = TVMD;
         TVMD.u16 = value & 0x81F7;
-        TVMDDirty |= TVMD.u16 != oldTVMD.u16;
+        TVMDDirty |= ((TVMD.u16 ^ oldTVMD.u16) & 0x1F7) != 0;
         accessPatternsDirty |= TVMD.HRESOn != oldTVMD.HRESOn;
     }
 
