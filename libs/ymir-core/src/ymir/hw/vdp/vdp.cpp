@@ -889,15 +889,19 @@ void VDP::UpdateResolution() {
     //   LBd = Left Border
     //   ADp = Active Display
     // NOTE: these timings specify the HCNT interval between phases
-    // TODO: exclusive monitor timings: (HRESOn & 1) ? 212 : 213
-    static constexpr std::array<std::array<uint32, 4>, 4> hTimings{{
+    // TODO: check exclusive monitor timings
+    static constexpr std::array<std::array<uint32, 4>, 8> hTimings{{
         // RBd, HSy, LBd, ADp
-        {320, 54, 26, 27},  // {320, 374, 400, 427},
-        {352, 51, 29, 23},  // {352, 403, 432, 455},
-        {640, 108, 52, 54}, // {640, 748, 800, 854},
-        {704, 102, 58, 46}, // {704, 806, 864, 910},
+        {320, 54, 26, 27},  // {320, 374, 400, 427}, // Normal Graphic A
+        {352, 51, 29, 23},  // {352, 403, 432, 455}, // Normal Graphic B
+        {640, 108, 52, 54}, // {640, 748, 800, 854}, // Hi-Res Graphic A
+        {704, 102, 58, 46}, // {704, 806, 864, 910}, // Hi-Res Graphic B
+        {160, 27, 13, 13},  // {160, 187, 200, 213}, // Exclusive Normal Graphic A (wild guess)
+        {176, 11, 13, 12},  // {176, 187, 200, 212}, // Exclusive Normal Graphic B (wild guess)
+        {320, 54, 26, 26},  // {320, 374, 400, 426}, // Exclusive Hi-Res Graphic A (wild guess)
+        {352, 22, 26, 24},  // {352, 374, 400, 424}, // Exclusive Hi-Res Graphic B (wild guess)
     }};
-    m_HTimings = hTimings[m_state.regs2.TVMD.HRESOn & 3];
+    m_HTimings = hTimings[m_state.regs2.TVMD.HRESOn];
 
     // Vertical phase timings (to reach):
     //   BBd = Bottom Border
@@ -907,11 +911,11 @@ void VDP::UpdateResolution() {
     //   LLn = Last Line
     //   ADp = Active Display
     // NOTE: these timings indicate the VCNT at which the specified phase begins
-    // TODO: exclusive monitor timings: (HRESOn & 1) ? 562 : 525
+    // TODO: check exclusive monitor timings
     // TODO: interlaced mode timings for odd fields:
-    // - normal modes: vTimings - 1
-    // - exclusive modes: vTimings + 2
-    static constexpr std::array<std::array<std::array<uint32, 6>, 4>, 2> vTimings{{
+    // - normal modes: 1 less line
+    // - exclusive modes: 2 more lines
+    static constexpr std::array<std::array<std::array<uint32, 6>, 4>, 3> vTimingsNormal{{
         // NTSC
         {{
             // BBd, BSy, VCS, TBd, LLn, ADp
@@ -929,7 +933,13 @@ void VDP::UpdateResolution() {
             {256, 272, 275, 297, 312, 313},
         }},
     }};
-    m_VTimings = vTimings[m_state.regs2.TVSTAT.PAL][m_state.regs2.TVMD.VRESOn];
+    static constexpr std::array<std::array<uint32, 6>, 2> vTimingsExclusive{{
+        // BBd, BSy, VCS, TBd, LLn, ADp
+        {480, 496, 506, 509, 524, 525}, // Exclusive monitor A (wild guess)
+        {480, 496, 506, 546, 561, 562}, // Exclusive monitor B (wild guess)
+    }};
+    m_VTimings = exclusiveMonitor ? vTimingsExclusive[m_state.regs2.TVMD.HRESOn & 1]
+                                  : vTimingsNormal[m_state.regs2.TVSTAT.PAL][m_state.regs2.TVMD.VRESOn];
 
     // Adjust for dot clock
     const uint32 dotClockMult = (m_state.regs2.TVMD.HRESOn & 2) ? 2 : 4;
