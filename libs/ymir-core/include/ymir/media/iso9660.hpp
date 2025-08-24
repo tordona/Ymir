@@ -8,6 +8,7 @@
 
 #include <ymir/util/data_ops.hpp>
 
+#include <algorithm>
 #include <array>
 #include <span>
 #include <string>

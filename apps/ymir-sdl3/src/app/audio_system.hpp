@@ -8,6 +8,7 @@
 
 #include <array>
 #include <atomic>
+#include <span>
 
 namespace app {
 

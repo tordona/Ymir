@@ -6,6 +6,7 @@
 #include <xxh3.h>
 
 #include <cassert>
+#include <unordered_map>
 #include <vector>
 
 using namespace ymir::media::iso9660;
