@@ -90,7 +90,9 @@ void SCUDMATraceView::Display() {
                 ImGui::PopFont();
             }
             if (ImGui::TableNextColumn()) {
-                ImGui::Text("%u", trace.xferCount);
+                ImGui::PushFont(m_context.fonts.monospace.regular, m_context.fontSizes.medium);
+                ImGui::Text("%X", trace.xferCount);
+                ImGui::PopFont();
             }
         }
 

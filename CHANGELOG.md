@@ -43,6 +43,7 @@ Introduced save state file version 9.
 - VDP1: Pixel-perfect rendering. (thanks to Lordus)
 - VDP2: Always read line screen scroll data even for disabled NBGs. Fixes one-frame offset on system settings screen and Deep Fear's GUI elements.
 - VDP2: Fix exclusive monitor timings and resolution sizes, and out-of-bounds reads from lookup tables. (thanks to @celeriyacon)
+- VDP2: Fix interlaced mode timings. (thanks to @celeriyacon)
 - VDP2: Fix palette-based transparent meshes not blending with VDP2 layer (such as in Bulk Slash).
 - VDP2: Implement VCNT skip as a dedicated vertical phase. (thanks to @celeriyacon)
 - VDP2: Move VCNT update to the left border horizontal phase where HBLANK switches to zero. (thanks to @celeriyacon)
