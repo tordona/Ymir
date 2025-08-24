@@ -1035,7 +1035,7 @@ FORCE_INLINE void VDP::IncrementVCounter() {
 void VDP::BeginHPhaseActiveDisplay() {
     devlog::trace<grp::base>("(VCNT = {:3d})  Entering horizontal active display phase", m_state.regs2.VCNT);
     if (m_state.VPhase == VerticalPhase::Active) {
-        if (m_state.regs2.VCNT == 210) { // ~1ms before VBlank IN
+        if (m_state.regs2.VCNT == m_VTimings[m_VTimingField][0] - 16) { // ~1ms before VBlank IN
             m_cbTriggerOptimizedINTBACKRead();
         }
 
