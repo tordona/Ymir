@@ -2,6 +2,19 @@
 Bugs that are actually game bugs and not emulator bugs
 ======================================================
 
+Battle Monsters
+---------------
+  The loading screen displays the selected arena then fades to the character portraits with a "VS" text. If the game
+  loads data fast enough to skip the transition from arena to fighters (such as when boosting CD read speeds), it gets
+  confused and performs the transition in-game, leaving some garbage on the UI layer (NBG2) such as the "VS" text and a
+  copy of the fighters' names at the bottom of the screen where the portrait frames are supposed to be.
+
+
+Keriotosse
+----------
+  Displays garbage graphics for a few frames right before the title screen.
+
+
 Panzer Dragoon 2 Zwei
 ---------------------
   Sound corruption during boot up with save data on both System and Cartridge Memory
@@ -27,8 +40,3 @@ Panzer Dragoon 2 Zwei
   The sound bank gets fixed when you play any other Episode music then go back to Episode 1.
   This issue does not happen if you start a new game. It only happens if you boot up the game, go straight to Options
   and attempt to play the Episode 1 song right away.
-
-
-Keriotosse
-----------
-  Displays garbage graphics for a few frames right before the title screen.

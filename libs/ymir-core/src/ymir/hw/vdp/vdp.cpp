@@ -5464,7 +5464,7 @@ NO_INLINE void VDP::VDP2DrawRotationScrollBG(uint32 y, const BGParams &bgParams,
             // Plot pixel
             const Pixel pixel = VDP2FetchScrollBGPixel<true, charMode, fourCellChar, colorFormat, colorMode>(
                 bgParams, rotParamState.pageBaseAddresses[bgIndex], rotParams.pageShiftH, rotParams.pageShiftV,
-                scrollCoord, m_vramFetchers[altField][rotParamSelector]);
+                scrollCoord, m_vramFetchers[altField][rotParamSelector + 4]);
             if (!doubleResH || !windowState[xx]) {
                 layerState.pixels.SetPixel(xx, pixel);
             }
