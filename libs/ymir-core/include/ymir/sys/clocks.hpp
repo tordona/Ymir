@@ -11,8 +11,8 @@ namespace ymir::sys {
 inline constexpr double kNTSCClock = 39375000.0 * 8.0 / 11.0;
 inline constexpr double kPALClock = 28437500.0;
 
-inline constexpr uint64 kNTSCClocksPerFrame = 455 * 263 * 4;
-inline constexpr uint64 kPALClocksPerFrame = 455 * 313 * 4;
+inline constexpr uint64 kNTSCClocksPerFrame = 455 * 525 * 2;
+inline constexpr uint64 kPALClocksPerFrame = 455 * 625 * 2;
 
 inline constexpr double kNTSCFrameRate = ymir::sys::kNTSCClock / ymir::sys::kNTSCClocksPerFrame;
 inline constexpr double kPALFrameRate = ymir::sys::kPALClock / ymir::sys::kPALClocksPerFrame;
