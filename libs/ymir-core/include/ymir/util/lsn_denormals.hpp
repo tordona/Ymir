@@ -35,6 +35,44 @@ constexpr bool HasNoSubnormalsControl() {
 #endif
 }
 
+#if defined(__aarch64__) || defined(_M_ARM64)
+static inline std::uint64_t GetFPCR() {
+    #if __has_builtin(__builtin_aarch64_get_fpcr)
+    return __builtin_aarch64_get_fpcr();
+    #else
+    std::uint64_t ullFpcr;
+    __asm__ __volatile__("MRS %[fpcr], fpcr" : [fpcr] "=r"(ullFpcr));
+    return ullFpcr;
+    #endif
+}
+
+static inline void SetFPCR(std::uint64_t ullFpcr) {
+    #if __has_builtin(__builtin_aarch64_set_fpcr)
+    __builtin_aarch64_set_fpcr(ullFpcr);
+    #else
+    __asm__ __volatile__("MSR fpcr, %[fpcr]" : : [fpcr] "r"(ullFpcr));
+    #endif
+}
+#elif defined(__arm__) || defined(_M_ARM)
+static inline std::uint32_t GetFPSCR() {
+    #if __has_builtin(__builtin_arm_get_fpscr) && __has_builtin(__builtin_arm_set_fpscr)
+    return __builtin_arm_get_fpscr();
+    #else
+    std::uint32_t uiFpscr;
+    __asm__ __volatile__("VMRS %[fpscr], fpscr" : [fpscr] "=r"(uiFpscr));
+    return uiFpscr;
+    #endif
+}
+
+static inline void SetFPSCR(std::uint32_t uiFpscr) {
+    #if __has_builtin(__builtin_arm_get_fpscr) && __has_builtin(__builtin_arm_set_fpscr)
+    __builtin_arm_set_fpscr(uiFpscr);
+    #else
+    __asm__ __volatile__("VMSR fpscr, %[fpscr]" : : [fpscr] "r"(uiFpscr));
+    #endif
+}
+#endif
+
 /**
  * Enables "no subnormals" for the current thread.
  * x86/x64 -> MXCSR: set FTZ (bit 15) and DAZ (bit 6).
@@ -42,13 +80,13 @@ constexpr bool HasNoSubnormalsControl() {
  */
 static inline void EnableNoSubnormals() {
 #if defined(__aarch64__) || defined(_M_ARM64)
-    std::uint64_t ullFpcr = __builtin_aarch64_get_fpcr();
+    std::uint64_t ullFpcr = GetFPCR();
     ullFpcr |= (1ULL << 24) | (1ULL << 19);
-    __builtin_aarch64_set_fpcr(ullFpcr);
+    SetFPCR(ullFpcr);
 #elif defined(__arm__) || defined(_M_ARM)
-    std::uint32_t uiFpscr = __builtin_arm_get_fpscr();
+    std::uint32_t uiFpscr = GetFPSCR();
     uiFpscr |= (1U << 24);
-    __builtin_arm_set_fpscr(uiFpscr);
+    SetFPSCR(uiFpscr);
 #elif defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
     unsigned int uiMxcsr = _mm_getcsr();
     uiMxcsr |= 0x8000U; // FTZ.
@@ -64,13 +102,13 @@ static inline void EnableNoSubnormals() {
  */
 static inline void DisableNoSubnormals() {
 #if defined(__aarch64__) || defined(_M_ARM64)
-    std::uint64_t ullFpcr = __builtin_aarch64_get_fpcr();
+    std::uint64_t ullFpcr = GetFPCR();
     ullFpcr &= ~((1ULL << 24) | (1ULL << 19));
-    __builtin_aarch64_set_fpcr(ullFpcr);
+    SetFPCR(ullFpcr);
 #elif defined(__arm__) || defined(_M_ARM)
-    std::uint32_t uiFpscr = __builtin_arm_get_fpscr();
+    std::uint32_t uiFpscr = GetFPSCR();
     uiFpscr &= ~(1U << 24);
-    __builtin_arm_set_fpscr(uiFpscr);
+    SetFPSCR(uiFpscr);
 #elif defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
     unsigned int uiMxcsr = _mm_getcsr();
     uiMxcsr &= ~0x8000U; // Clear FTZ.
@@ -103,10 +141,10 @@ public:
      */
     CScopedNoSubnormals() {
 #if defined(__aarch64__) || defined(_M_ARM64)
-        m_ullSaved = __builtin_aarch64_get_fpcr();
+        m_ullSaved = GetFPCR();
         EnableNoSubnormals();
 #elif defined(__arm__) || defined(_M_ARM)
-        m_uiSaved = __builtin_arm_get_fpscr();
+        m_uiSaved = GetFPSCR();
         EnableNoSubnormals();
 #elif defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
         m_uiSaved = _mm_getcsr();
@@ -121,9 +159,9 @@ public:
      */
     ~CScopedNoSubnormals() {
 #if defined(__aarch64__) || defined(_M_ARM64)
-        __builtin_aarch64_set_fpcr(m_ullSaved);
+        SetFPCR(m_ullSaved);
 #elif defined(__arm__) || defined(_M_ARM)
-        __builtin_arm_set_fpscr(m_uiSaved);
+        SetFPSCR(m_uiSaved);
 #elif defined(__SSE__) || defined(__x86_64__) || defined(_M_X64) || (defined(_M_IX86_FP) && _M_IX86_FP >= 1)
         _mm_setcsr(m_uiSaved);
 #else
