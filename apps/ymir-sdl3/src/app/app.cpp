@@ -1584,6 +1584,21 @@ void App::RunEmulator() {
 
     SDL_ShowWindow(screen.window);
 
+    // Load gamepad database
+    {
+        std::filesystem::path gcdbPath = m_context.profile.GetPath(ProfilePath::Root) / "gamecontrollerdb.txt";
+        if (std::filesystem::is_regular_file(gcdbPath)) {
+            int result = SDL_AddGamepadMappingsFromFile(gcdbPath.string().c_str());
+            if (result < 0) {
+                devlog::warn<grp::base>("Failed to load game controller database: {}", SDL_GetError());
+            } else {
+                devlog::info<grp::base>("Game controller database loaded: {} controllers", result);
+            }
+        }
+        char **list = SDL_GetGamepadMappings(&m_context.gameControllerDBCount);
+        SDL_free(list);
+    }
+
     // Track connected gamepads and player indices
     // NOTE: SDL3 has a bug with Windows raw input where new controllers are always assigned to player index 0.
     // We'll manage player indices manually instead.
@@ -2001,6 +2016,7 @@ void App::RunEmulator() {
             case EvtType::FitWindowToScreen: fitWindowToScreenNow = true; break;
 
             case EvtType::RebindInputs: RebindInputs(); break;
+            case EvtType::ReloadGameControllerDatabase: ReloadSDLGameControllerDatabase(); break;
 
             case EvtType::ShowErrorMessage: OpenSimpleErrorModal(std::get<std::string>(evt.value)); break;
 
@@ -2586,6 +2602,16 @@ void App::RunEmulator() {
                     if (ImGui::MenuItem("Tweaks")) {
                         m_settingsWindow.OpenTab(ui::SettingsTab::Tweaks);
                     }
+
+                    ImGui::Separator();
+
+                    if (ImGui::MenuItem("Reload game controller database")) {
+                        ReloadSDLGameControllerDatabase();
+                    }
+                    ImGui::SetItemTooltip(
+                        "The database will be loaded from %s",
+                        fmt::format("{}", m_context.profile.GetPath(ProfilePath::Root) / "gamecontrollerdb.txt")
+                            .c_str());
                     ImGui::EndMenu();
                 }
                 if (ImGui::BeginMenu("Debug")) {
@@ -3954,6 +3980,23 @@ void App::ReadPeripheral(ymir::peripheral::PeripheralReport &report) {
         break;
     }
     default: break;
+    }
+}
+
+void App::ReloadSDLGameControllerDatabase() {
+    std::filesystem::path gcdbPath = m_context.profile.GetPath(ProfilePath::Root) / "gamecontrollerdb.txt";
+    if (std::filesystem::is_regular_file(gcdbPath)) {
+        int result = SDL_AddGamepadMappingsFromFile(gcdbPath.string().c_str());
+        if (result < 0) {
+            OpenSimpleErrorModal(fmt::format("Failed to load game controller database: {}", SDL_GetError()));
+        } else {
+            char **list = SDL_GetGamepadMappings(&m_context.gameControllerDBCount);
+            SDL_free(list);
+            m_context.DisplayMessage(
+                fmt::format("Game controller database loaded: {} controllers", m_context.gameControllerDBCount));
+        }
+    } else {
+        OpenSimpleErrorModal(fmt::format("Game controller database not found at {}", gcdbPath));
     }
 }
 

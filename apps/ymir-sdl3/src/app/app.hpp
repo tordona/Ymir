@@ -90,6 +90,8 @@ private:
     template <int port>
     void ReadPeripheral(ymir::peripheral::PeripheralReport &report);
 
+    void ReloadSDLGameControllerDatabase();
+
     void ScanIPLROMs();
     util::IPLROMLoadResult LoadIPLROM();
     std::filesystem::path GetIPLROMPath();

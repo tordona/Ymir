@@ -67,6 +67,7 @@ struct GUIEvent {
         FitWindowToScreen,
 
         RebindInputs,
+        ReloadGameControllerDatabase,
 
         ShowErrorMessage,
 

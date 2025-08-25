@@ -435,6 +435,8 @@ struct SharedContext {
     std::array<ArcadeRacerInput, 2> arcadeRacerInputs;
     std::array<MissionStickInput, 2> missionStickInputs;
 
+    int gameControllerDBCount = 0;
+
     Profile profile;
     Settings settings{*this};
 

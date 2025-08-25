@@ -109,29 +109,39 @@ jobs:
       #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
       #  run: ctest --build-config ${{ matrix.build_type }}
 
+      - name: Get gamecontrollerdb.txt
+        uses: actions/checkout@v4
+        with:
+          repository: mdqinc/SDL_GameControllerDB
+          sparse-checkout: |
+            gamecontrollerdb.txt
+          sparse-checkout-cone-mode: false
+          path: gcdb
+
       - name: Package Ymir artifact
         run: |
           md licenses
-          Copy-Item -Path ".\apps\ymir-sdl3\res\licenses\*"            -Destination ".\licenses\"  -Recurse
-          Copy-Item -Path ".\vendor\Catch2\LICENSE.txt"                -Destination ".\licenses\Catch2-LICENSE.txt"
-          Copy-Item -Path ".\vendor\cereal\LICENSE"                    -Destination ".\licenses\cereal-LICENSE"
-          Copy-Item -Path ".\vendor\concurrentqueue\LICENSE.md"        -Destination ".\licenses\concurrentqueue-LICENSE.md"
-          Copy-Item -Path ".\vendor\cxxopts\LICENSE"                   -Destination ".\licenses\cxxopts-LICENSE"
-          Copy-Item -Path ".\vendor\fmt\LICENSE"                       -Destination ".\licenses\fmt-LICENSE"
-          Copy-Item -Path ".\vendor\imgui\imgui\LICENSE.txt"           -Destination ".\licenses\imgui-LICENSE.txt"
-          Copy-Item -Path ".\vendor\libchdr\LICENSE.txt"               -Destination ".\licenses\libchdr-LICENSE.txt"
-          Copy-Item -Path ".\vendor\libchdr\deps\lzma-24.05\LICENSE"   -Destination ".\licenses\lzma-LICENSE"
-          Copy-Item -Path ".\vendor\libchdr\deps\zlib-1.3.1\LICENSE"   -Destination ".\licenses\zlib-LICENSE"
-          Copy-Item -Path ".\vendor\libchdr\deps\zstd-1.5.6\LICENSE"   -Destination ".\licenses\zstd-LICENSE"
-          Copy-Item -Path ".\vendor\lz4\lz4\lib\LICENSE"               -Destination ".\licenses\lz4-LICENSE"
-          Copy-Item -Path ".\vendor\mio\LICENSE"                       -Destination ".\licenses\mio-LICENSE"
-          Copy-Item -Path ".\vendor\rtmidi\LICENSE"                    -Destination ".\licenses\RtMidi-LICENSE"
-          Copy-Item -Path ".\vendor\SDL\LICENSE.txt"                   -Destination ".\licenses\SDL-LICENSE.txt"
-          Copy-Item -Path ".\vendor\stb\stb\LICENSE"                   -Destination ".\licenses\stb-LICENSE"
-          Copy-Item -Path ".\vendor\tomlplusplus\LICENSE"              -Destination ".\licenses\tomlplusplus-LICENSE"
-          Copy-Item -Path ".\vendor\xxHash\xxHash\LICENSE"             -Destination ".\licenses\xxHash-LICENSE"
-          Copy-Item -Path ".\LICENSE"                                  -Destination ".\licenses\Ymir-LICENSE"
-          Compress-Archive -Path "README.md","CHANGELOG.md","licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
+          Copy-Item -Path ".\apps\ymir-sdl3\res\licenses\*"                   -Destination ".\licenses\"  -Recurse
+          Copy-Item -Path ".\vendor\Catch2\LICENSE.txt"                       -Destination ".\licenses\Catch2-LICENSE.txt"
+          Copy-Item -Path ".\vendor\cereal\LICENSE"                           -Destination ".\licenses\cereal-LICENSE"
+          Copy-Item -Path ".\vendor\concurrentqueue\LICENSE.md"               -Destination ".\licenses\concurrentqueue-LICENSE.md"
+          Copy-Item -Path ".\vendor\cxxopts\LICENSE"                          -Destination ".\licenses\cxxopts-LICENSE"
+          Copy-Item -Path ".\vendor\fmt\LICENSE"                              -Destination ".\licenses\fmt-LICENSE"
+          Copy-Item -Path ".\vendor\imgui\imgui\LICENSE.txt"                  -Destination ".\licenses\imgui-LICENSE.txt"
+          Copy-Item -Path ".\vendor\libchdr\LICENSE.txt"                      -Destination ".\licenses\libchdr-LICENSE.txt"
+          Copy-Item -Path ".\vendor\libchdr\deps\lzma-24.05\LICENSE"          -Destination ".\licenses\lzma-LICENSE"
+          Copy-Item -Path ".\vendor\libchdr\deps\zlib-1.3.1\LICENSE"          -Destination ".\licenses\zlib-LICENSE"
+          Copy-Item -Path ".\vendor\libchdr\deps\zstd-1.5.6\LICENSE"          -Destination ".\licenses\zstd-LICENSE"
+          Copy-Item -Path ".\vendor\lz4\lz4\lib\LICENSE"                      -Destination ".\licenses\lz4-LICENSE"
+          Copy-Item -Path ".\vendor\mio\LICENSE"                              -Destination ".\licenses\mio-LICENSE"
+          Copy-Item -Path ".\vendor\rtmidi\LICENSE"                           -Destination ".\licenses\RtMidi-LICENSE"
+          Copy-Item -Path ".\vendor\SDL\LICENSE.txt"                          -Destination ".\licenses\SDL-LICENSE.txt"
+          Copy-Item -Path ".\vendor\stb\stb\LICENSE"                          -Destination ".\licenses\stb-LICENSE"
+          Copy-Item -Path ".\vendor\tomlplusplus\LICENSE"                     -Destination ".\licenses\tomlplusplus-LICENSE"
+          Copy-Item -Path ".\vendor\xxHash\xxHash\LICENSE"                    -Destination ".\licenses\xxHash-LICENSE"
+          Copy-Item -Path ".\LICENSE"                                         -Destination ".\licenses\Ymir-LICENSE"
+          Copy-Item -Path "{{ github.workspace }}\gcdb\gamecontrollerdb.txt"  -Destination ".\gamecontrollerdb.txt"
+          Compress-Archive -Path "README.md","CHANGELOG.md","gamecontrollerdb.txt","licenses/","build/apps/ymir-sdl3/ymir-sdl3.exe" -DestinationPath "${{ steps.strings.outputs.ymir-artifact-name }}.zip"
 
       - name: Upload Ymir artifact
         uses: actions/upload-artifact@v4
@@ -221,29 +231,39 @@ jobs:
       #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
       #  run: ctest --build-config ${{ matrix.build_type }}
 
+      - name: Get gamecontrollerdb.txt
+        uses: actions/checkout@v4
+        with:
+          repository: mdqinc/SDL_GameControllerDB
+          sparse-checkout: |
+            gamecontrollerdb.txt
+          sparse-checkout-cone-mode: false
+          path: gcdb
+
       - name: Package artifacts
         run: |
           mkdir licenses
-          cp -Rf apps/ymir-sdl3/res/licenses/* ./licenses/
-          cp -f vendor/Catch2/LICENSE.txt              licenses/Catch2-LICENSE.txt
-          cp -f vendor/cereal/LICENSE                  licenses/cereal-LICENSE
-          cp -f vendor/concurrentqueue/LICENSE.md      licenses/concurrentqueue-LICENSE.md
-          cp -f vendor/cxxopts/LICENSE                 licenses/cxxopts-LICENSE
-          cp -f vendor/fmt/LICENSE                     licenses/fmt-LICENSE
-          cp -f vendor/imgui/imgui/LICENSE.txt         licenses/imgui-LICENSE.txt
-          cp -f vendor/libchdr/LICENSE.txt             licenses/libchdr-LICENSE.txt
-          cp -f vendor/libchdr/deps/lzma-24.05/LICENSE licenses/lzma-LICENSE
-          cp -f vendor/libchdr/deps/zlib-1.3.1/LICENSE licenses/zlib-LICENSE
-          cp -f vendor/libchdr/deps/zstd-1.5.6/LICENSE licenses/zstd-LICENSE
-          cp -f vendor/lz4/lz4/lib/LICENSE             licenses/lz4-LICENSE
-          cp -f vendor/mio/LICENSE                     licenses/mio-LICENSE
-          cp -f vendor/rtmidi/LICENSE                  licenses/RtMidi-LICENSE
-          cp -f vendor/SDL/LICENSE.txt                 licenses/SDL-LICENSE.txt
-          cp -f vendor/stb/stb/LICENSE                 licenses/stb-LICENSE
-          cp -f vendor/tomlplusplus/LICENSE            licenses/tomlplusplus-LICENSE
-          cp -f vendor/xxHash/xxHash/LICENSE           licenses/xxHash-LICENSE
-          cp -f LICENSE                                licenses/Ymir-LICENSE
-          tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz README.md CHANGELOG.md licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
+          cp -Rf apps/ymir-sdl3/res/licenses/*                    ./licenses/
+          cp -f vendor/Catch2/LICENSE.txt                         licenses/Catch2-LICENSE.txt
+          cp -f vendor/cereal/LICENSE                             licenses/cereal-LICENSE
+          cp -f vendor/concurrentqueue/LICENSE.md                 licenses/concurrentqueue-LICENSE.md
+          cp -f vendor/cxxopts/LICENSE                            licenses/cxxopts-LICENSE
+          cp -f vendor/fmt/LICENSE                                licenses/fmt-LICENSE
+          cp -f vendor/imgui/imgui/LICENSE.txt                    licenses/imgui-LICENSE.txt
+          cp -f vendor/libchdr/LICENSE.txt                        licenses/libchdr-LICENSE.txt
+          cp -f vendor/libchdr/deps/lzma-24.05/LICENSE            licenses/lzma-LICENSE
+          cp -f vendor/libchdr/deps/zlib-1.3.1/LICENSE            licenses/zlib-LICENSE
+          cp -f vendor/libchdr/deps/zstd-1.5.6/LICENSE            licenses/zstd-LICENSE
+          cp -f vendor/lz4/lz4/lib/LICENSE                        licenses/lz4-LICENSE
+          cp -f vendor/mio/LICENSE                                licenses/mio-LICENSE
+          cp -f vendor/rtmidi/LICENSE                             licenses/RtMidi-LICENSE
+          cp -f vendor/SDL/LICENSE.txt                            licenses/SDL-LICENSE.txt
+          cp -f vendor/stb/stb/LICENSE                            licenses/stb-LICENSE
+          cp -f vendor/tomlplusplus/LICENSE                       licenses/tomlplusplus-LICENSE
+          cp -f vendor/xxHash/xxHash/LICENSE                      licenses/xxHash-LICENSE
+          cp -f LICENSE                                           licenses/Ymir-LICENSE
+          cp -f {{ github.workspace }}/gcdb/gamecontrollerdb.txt  gamecontrollerdb.txt
+          tar cJvfh ${{ steps.strings.outputs.ymir-artifact-name }}.tar.xz README.md CHANGELOG.md gamecontrollerdb.txt licenses/ -C build/apps/ymir-sdl3 ymir-sdl3
 
       - name: Upload Ymir artifact
         uses: actions/upload-artifact@v4
@@ -304,29 +324,39 @@ jobs:
       #  working-directory: ${{ steps.strings.outputs.build-output-dir }}
       #  run: ctest --build-config ${{ matrix.build_type }}
 
+      - name: Get gamecontrollerdb.txt
+        uses: actions/checkout@v4
+        with:
+          repository: mdqinc/SDL_GameControllerDB
+          sparse-checkout: |
+            gamecontrollerdb.txt
+          sparse-checkout-cone-mode: false
+          path: gcdb
+
       - name: Package artifacts
         run: |
           mkdir licenses
-          cp -Rf apps/ymir-sdl3/res/licenses/* ./licenses/
-          cp -f vendor/Catch2/LICENSE.txt              licenses/Catch2-LICENSE.txt
-          cp -f vendor/cereal/LICENSE                  licenses/cereal-LICENSE
-          cp -f vendor/concurrentqueue/LICENSE.md      licenses/concurrentqueue-LICENSE.md
-          cp -f vendor/cxxopts/LICENSE                 licenses/cxxopts-LICENSE
-          cp -f vendor/fmt/LICENSE                     licenses/fmt-LICENSE
-          cp -f vendor/imgui/imgui/LICENSE.txt         licenses/imgui-LICENSE.txt
-          cp -f vendor/libchdr/LICENSE.txt             licenses/libchdr-LICENSE.txt
-          cp -f vendor/libchdr/deps/lzma-24.05/LICENSE licenses/lzma-LICENSE
-          cp -f vendor/libchdr/deps/zlib-1.3.1/LICENSE licenses/zlib-LICENSE
-          cp -f vendor/libchdr/deps/zstd-1.5.6/LICENSE licenses/zstd-LICENSE
-          cp -f vendor/lz4/lz4/lib/LICENSE             licenses/lz4-LICENSE
-          cp -f vendor/mio/LICENSE                     licenses/mio-LICENSE
-          cp -f vendor/rtmidi/LICENSE                  licenses/RtMidi-LICENSE
-          cp -f vendor/SDL/LICENSE.txt                 licenses/SDL-LICENSE.txt
-          cp -f vendor/stb/stb/LICENSE                 licenses/stb-LICENSE
-          cp -f vendor/tomlplusplus/LICENSE            licenses/tomlplusplus-LICENSE
-          cp -f vendor/xxHash/xxHash/LICENSE           licenses/xxHash-LICENSE
-          cp -f LICENSE                                licenses/Ymir-LICENSE
-          zip -r ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip licenses README.md CHANGELOG.md
+          cp -Rf apps/ymir-sdl3/res/licenses/*                    ./licenses/
+          cp -f vendor/Catch2/LICENSE.txt                         licenses/Catch2-LICENSE.txt
+          cp -f vendor/cereal/LICENSE                             licenses/cereal-LICENSE
+          cp -f vendor/concurrentqueue/LICENSE.md                 licenses/concurrentqueue-LICENSE.md
+          cp -f vendor/cxxopts/LICENSE                            licenses/cxxopts-LICENSE
+          cp -f vendor/fmt/LICENSE                                licenses/fmt-LICENSE
+          cp -f vendor/imgui/imgui/LICENSE.txt                    licenses/imgui-LICENSE.txt
+          cp -f vendor/libchdr/LICENSE.txt                        licenses/libchdr-LICENSE.txt
+          cp -f vendor/libchdr/deps/lzma-24.05/LICENSE            licenses/lzma-LICENSE
+          cp -f vendor/libchdr/deps/zlib-1.3.1/LICENSE            licenses/zlib-LICENSE
+          cp -f vendor/libchdr/deps/zstd-1.5.6/LICENSE            licenses/zstd-LICENSE
+          cp -f vendor/lz4/lz4/lib/LICENSE                        licenses/lz4-LICENSE
+          cp -f vendor/mio/LICENSE                                licenses/mio-LICENSE
+          cp -f vendor/rtmidi/LICENSE                             licenses/RtMidi-LICENSE
+          cp -f vendor/SDL/LICENSE.txt                            licenses/SDL-LICENSE.txt
+          cp -f vendor/stb/stb/LICENSE                            licenses/stb-LICENSE
+          cp -f vendor/tomlplusplus/LICENSE                       licenses/tomlplusplus-LICENSE
+          cp -f vendor/xxHash/xxHash/LICENSE                      licenses/xxHash-LICENSE
+          cp -f LICENSE                                           licenses/Ymir-LICENSE
+          cp -f {{ github.workspace }}/gcdb/gamecontrollerdb.txt  gamecontrollerdb.txt
+          zip -r ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip licenses README.md CHANGELOG.md gamecontrollerdb.txt
           cd ${{ github.workspace }}/build/apps/ymir-sdl3/
           zip ${{ github.workspace }}/${{ steps.strings.outputs.ymir-artifact-name }}.zip ymir-sdl3
 

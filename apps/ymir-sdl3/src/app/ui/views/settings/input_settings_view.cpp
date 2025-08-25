@@ -7,6 +7,8 @@
 
 #include <app/input/input_utils.hpp>
 
+#include <SDL3/SDL_misc.h>
+
 using namespace ymir;
 
 namespace app::ui {
@@ -40,6 +42,21 @@ void InputSettingsView::Display() {
     ImGui::PushFont(m_context.fonts.sansSerif.bold, m_context.fontSizes.large);
     ImGui::SeparatorText("Gamepads");
     ImGui::PopFont();
+
+    if (m_context.gameControllerDBCount == 0) {
+        ImGui::TextUnformatted("Game controller database not found or empty");
+    } else {
+        ImGui::Text("Game controller database: %d controllers", m_context.gameControllerDBCount);
+    }
+    ImGui::Text("Database path: %s",
+                fmt::format("{}", m_context.profile.GetPath(ProfilePath::Root) / "gamecontrollerdb.txt").c_str());
+    if (ImGui::Button("Open containing folder##gamecontrollerdb")) {
+        SDL_OpenURL(fmt::format("file:///{}", m_context.profile.GetPath(ProfilePath::Root)).c_str());
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reload database")) {
+        m_context.EnqueueEvent(events::gui::ReloadGameControllerDatabase());
+    }
 
     auto &settings = m_context.settings.input;
 

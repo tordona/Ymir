@@ -71,6 +71,10 @@ inline GUIEvent RebindInputs() {
     return {.type = GUIEvent::Type::RebindInputs};
 }
 
+inline GUIEvent ReloadGameControllerDatabase() {
+    return {.type = GUIEvent::Type::ReloadGameControllerDatabase};
+}
+
 inline GUIEvent ShowError(std::string message) {
     return {.type = GUIEvent::Type::ShowErrorMessage, .value = message};
 }
