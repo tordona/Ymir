@@ -165,6 +165,7 @@ add_library(ymir-core
     include/ymir/util/event.hpp
     include/ymir/util/function_info.hpp
     include/ymir/util/inline.hpp
+    include/ymir/util/lsn_denormals.hpp
     include/ymir/util/process.hpp
     include/ymir/util/scope_guard.hpp
     include/ymir/util/size_ops.hpp

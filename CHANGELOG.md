@@ -55,7 +55,6 @@ Introduced save state file version 9.
 - VDP2: Use the correct character fetcher for scroll RBGs. Fixes background glitches in Battle Monsters. (#340)
 
 
-
 ## Version 0.1.7
 
 Released 2025-08-10.

@@ -85,6 +85,7 @@
 
 #include <ymir/db/game_db.hpp>
 
+#include <ymir/util/lsn_denormals.hpp>
 #include <ymir/util/process.hpp>
 #include <ymir/util/scope_guard.hpp>
 #include <ymir/util/thread_name.hpp>
@@ -444,6 +445,8 @@ void App::RunEmulator() {
     // NOTE: Setting the main thread name on Linux and macOS replaces the process name displayed on tools like `top`.
     util::SetCurrentThreadName("Main thread");
 #endif
+
+    lsn::CScopedNoSubnormals snsNoSubnormals{};
 
     using namespace std::chrono_literals;
     using namespace ymir;
@@ -3276,6 +3279,7 @@ end_loop:; // the semicolon is not a typo!
 void App::EmulatorThread() {
     util::SetCurrentThreadName("Emulator thread");
     util::BoostCurrentThreadPriority(m_context.settings.general.boostEmuThreadPriority);
+    lsn::CScopedNoSubnormals snsNoSubnormals{};
 
     enum class StepAction { Noop, RunFrame, FrameStep, StepMSH2, StepSSH2 };
 
