@@ -303,8 +303,6 @@ struct LineStepper {
     // Clips the slope to the area 0x0..width x height.
     // Returns the number of increments skipped.
     FORCE_INLINE uint32 SystemClip(sint32 width, sint32 height) {
-        return 0u;
-
         static constexpr sint32 kPadding = 1;
 
         // Add padding to compensate for minor inaccuracies
@@ -393,6 +391,10 @@ struct LineStepper {
         sint32 tempAccum = m_accum - m_num * numEndSteps;
         m_xEnd = m_x;
         m_yEnd = m_y;
+        /*const sint32 numEndIncs = m_den == 0 ? 0 : (m_den - 1 - tempAccum) / m_den;
+        tempAccum += m_den * numEndIncs;
+        m_xEnd += m_xMinInc * numEndIncs;
+        m_yEnd += m_yMinInc * numEndIncs;*/
         while (tempAccum <= m_accumTarget) {
             tempAccum += m_den;
             m_xEnd += m_xMinInc;
