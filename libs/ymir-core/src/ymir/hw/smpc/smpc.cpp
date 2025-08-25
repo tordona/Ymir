@@ -345,6 +345,11 @@ void SMPC::Write(uint32 address, uint8 value) {
                     devlog::trace<grp::base>("INTBACK continue request");
                     SF = true;
                     if (!m_optimize) {
+                        // TODO: Virtua Racing needs the status report before VBlank OUT and the peripheral report after
+                        // VBlank OUT. Discworld needs both within the VBlank period.
+
+                        // TODO: delay even longer if PAL
+                        // TODO: shorten delay for Discworld
                         // HACK: delay by a long while to fix Virtua Racing which expects the status report before
                         // VBlank OUT and the peripheral reports after VBlank OUT
                         m_scheduler.ScheduleFromNow(m_commandEvent, 100000);

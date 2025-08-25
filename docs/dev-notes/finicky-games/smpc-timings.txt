@@ -15,10 +15,15 @@ Soukyuu Gurentai
 Games that require INTBACK peripheral reports to be delayed
 ===========================================================
 
+Discworld
+  Requests an INTBACK 01 08 F0 (both reports, no timing optimization) ~12 lines after VBlank IN.
+  Once the INTBACK interrupt is handled (still within VBlank), processes the status report and sends a continue request.
+  Expects both reports to be delivered before VBlank OUT. Fails to respond to input otherwise.
+
 Virtua Racing
-  Requests an INTBACK 01 08 F0 -> include status and peripheral reports without peripheral data collection timing optimization.
-  Once the INTBACK interrupt is handled, it sends a continue request.
-  Expects the status report to be delivered before VBlank OUT and peripheral reports to happen a bit after VBlank OUT.
+  Requests an INTBACK 01 08 F0 (both reports, no timing optimization) right at the start of VBlank IN.
+  Once the INTBACK interrupt is handled (still within VBlank), processes the status report and sends a continue request.
+  Expects the status report to be delivered before VBlank OUT and peripheral reports to be delivered after VBlank OUT.
   The SMPC interrupt handler copies OREG data to a buffer and updates write pointer/counter.
   The VBlank OUT interrupt handler resets the write pointer/counter.
   Fails to respond to inputs otherwise.
