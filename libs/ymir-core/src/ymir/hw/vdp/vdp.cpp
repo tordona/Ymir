@@ -3794,7 +3794,8 @@ FORCE_INLINE void VDP::VDP2DrawSpritePixel(uint32 x, const SpriteParams &params,
     }
 
     // Handle sprite window
-    if (params.useSpriteWindow && params.spriteWindowEnabled && spriteData.shadowOrWindow) {
+    if (params.useSpriteWindow && params.spriteWindowEnabled &&
+        spriteData.shadowOrWindow != params.spriteWindowInverted) {
         if constexpr (!applyMesh) {
             layerState.pixels.transparent[x] = true;
             attr.shadowOrWindow = true;
